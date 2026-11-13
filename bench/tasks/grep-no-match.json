@@ -1,0 +1,59 @@
+{
+  "id": "grep-no-match",
+  "group": "grep",
+  "prompt": "Search src for NEEDLE_ followed by digits.",
+  "files": {
+    "src/a.ts": "export const a = 1;\n"
+  },
+  "script": [
+    {
+      "text": "Searching.",
+      "calls": [
+        {
+          "name": "grep",
+          "args": {
+            "pattern": "NEEDLE_[0-9]+",
+            "path": "src"
+          }
+        }
+      ]
+    },
+    {
+      "text": "No matches.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "No matches found",
+            "evidence": [
+              "grep returned no matches"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "grep"
+    },
+    {
+      "type": "tool_data",
+      "tool": "grep",
+      "path": "count",
+      "equals": 0
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "grep",
+      "text": "No matches found"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

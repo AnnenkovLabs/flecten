@@ -1,0 +1,44 @@
+{
+  "id": "read-config",
+  "group": "read",
+  "prompt": "Read config/app.json and report the port.",
+  "files": {
+    "config/app.json": "{\n  \"port\": 8080,\n  \"host\": \"127.0.0.1\"\n}\n"
+  },
+  "script": [
+    {
+      "text": "Reading the config.",
+      "calls": [
+        {
+          "name": "read",
+          "args": {
+            "path": "config/app.json"
+          }
+        }
+      ]
+    },
+    {
+      "text": "The port is 8080."
+    },
+    {
+      "text": "No further work is needed."
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "end"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "read"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "read",
+      "text": "\"port\": 8080"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

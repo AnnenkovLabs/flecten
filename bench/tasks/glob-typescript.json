@@ -1,0 +1,76 @@
+{
+  "id": "glob-typescript",
+  "group": "glob",
+  "prompt": "List every TypeScript file in the project.",
+  "files": {
+    "a.ts": "export const a = 1;\n",
+    "b.ts": "export const b = 2;\n",
+    "src/c.ts": "export const c = 3;\n",
+    "src/d.md": "# notes\n"
+  },
+  "script": [
+    {
+      "text": "Listing TypeScript files.",
+      "calls": [
+        {
+          "name": "glob",
+          "args": {
+            "pattern": "**/*.ts"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Three files listed.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Listed three TypeScript files",
+            "evidence": [
+              "glob returned a.ts, b.ts and src/c.ts"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "glob"
+    },
+    {
+      "type": "tool_data",
+      "tool": "glob",
+      "path": "count",
+      "equals": 3
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "glob",
+      "text": "a.ts"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "glob",
+      "text": "b.ts"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "glob",
+      "text": "src/c.ts"
+    },
+    {
+      "type": "tool_output_not_contains",
+      "tool": "glob",
+      "text": "src/d.md"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

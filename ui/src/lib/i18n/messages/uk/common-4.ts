@@ -1,0 +1,26 @@
+// Plain interface copy. Keep runtime values as numeric parts.
+export default {
+  "Auto-compaction at {0}%": ["Автоматичне стиснення за ", 0, "%"],
+  "Input tokens": "Вхідні токени",
+  "Output tokens": "Вихідні токени",
+  "Reasoning tokens": "Токени міркування",
+  "Cache read tokens": "Токени читання з кешу",
+  "Cache write tokens": "Токени запису в кеш",
+  "Token usage": "Використання токенів",
+  "Not reported": "Не вказано",
+  session: "сеанс",
+  "last turn": "останній обмін",
+  "Usage by model": "Використання за моделями",
+  "Input / output tokens": "Вхідні / вихідні токени",
+  "Worker activity": "Активність Worker",
+  "No tool calls yet": "Викликів інструментів поки немає",
+  "Stop Worker": "Зупинити Worker",
+  "Talker and Worker": "Talker і Worker",
+  "Separate conversation from execution": "Відокремити спілкування від виконання",
+  "New chats use a Talker and an independent Worker. Both use the selected model. English handoffs replace automatic translation; tool output stays live.":
+    "У нових розмовах працюють Talker і незалежний Worker. Обидва використовують вибрану модель. Замість автоматичного перекладу вони передають завдання англійською; результати роботи інструментів і далі надходять у реальному часі.",
+  Undo: "Скасувати дію",
+  Redo: "Повторити дію",
+  "Worker failed": "Помилка Worker",
+  "Call interrupted; completion was not confirmed": "Виклик перервано; завершення не підтверджено",
+} as const;

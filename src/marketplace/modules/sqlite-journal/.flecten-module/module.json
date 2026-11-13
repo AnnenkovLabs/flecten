@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "sqlite-journal",
+  "version": "1.0.0",
+  "description": "Replace the session journal and index with a local SQLite backend.",
+  "capabilities": ["session-storage"],
+  "platform": { "entry": "platform.mjs", "scope": "project" }
+}

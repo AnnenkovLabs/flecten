@@ -1,0 +1,38 @@
+{
+  "id": "read-missing",
+  "group": "read",
+  "prompt": "Open missing.txt and tell me what is inside.",
+  "files": {},
+  "script": [
+    {
+      "text": "Opening the file.",
+      "calls": [
+        {
+          "name": "read",
+          "args": {
+            "path": "missing.txt"
+          }
+        }
+      ]
+    },
+    {
+      "text": "The file does not exist."
+    },
+    {
+      "text": "No further work is needed."
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "end"
+    },
+    {
+      "type": "tool_error",
+      "tool": "read",
+      "contains": "File not found: missing.txt"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

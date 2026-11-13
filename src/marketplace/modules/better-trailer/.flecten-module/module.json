@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "name": "better-trailer",
+  "version": "1.0.0",
+  "description": "Plan trailer pacing, inspect a frame-accurate timeline and verify timings. This example does not encode video.",
+  "capabilities": ["video", "trailers", "storyboards"],
+  "instructions": ["instructions.md"],
+  "resources": [{ "id": "pacing", "path": "guides/pacing.md", "description": "Trailer pacing and verification guide" }],
+  "runtime": { "entry": "runtime.mjs" },
+  "surfaces": [{ "id": "timeline", "title": "Trailer timeline", "entry": "timeline.html", "tools": ["mcp_module_better-trailer__runtime_timeline"], "resources": ["pacing"] }]
+}

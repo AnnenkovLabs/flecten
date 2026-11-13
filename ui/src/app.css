@@ -1,0 +1,317 @@
+@font-face {
+  font-family: "Manrope";
+  src: url("./assets/fonts/manrope-cyrillic.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("./assets/fonts/manrope-latin.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #171717;
+  --sidebar: #0e0e0e;
+  --panel: #0e0e0e;
+  --surface: #1b1b1b;
+  --raised: #242424;
+  --raised-hover: #303030;
+  --text: #f0efed;
+  --text-body: rgba(240, 239, 237, 0.82);
+  --text-2: #b5b3b0;
+  --muted: #999693;
+  --line: rgba(240, 239, 237, 0.07);
+  --line-strong: rgba(240, 239, 237, 0.12);
+  --primary: #b7a1e8;
+  --primary-end: #a48dd3;
+  --primary-hover: #c8b5f1;
+  --on-primary: #1b1422;
+  --success: #b2b9af;
+  --warning: #d3bd91;
+  --error: #e2a2a2;
+  --add: #a6c19f;
+  --del: #d8a3a3;
+  --provider-glyph-foreground: #211e28;
+  --provider-glyph-0: #a99bc5;
+  --provider-glyph-1: #90abc5;
+  --provider-glyph-2: #b39abe;
+  --provider-glyph-3: #bf9aa7;
+  --provider-glyph-4: #9da1c8;
+  --provider-glyph-5: #8faeba;
+  --subagent-0-light: #cbbaeb;
+  --subagent-0-body: #b09bd8;
+  --subagent-0-shade: #8a78ac;
+  --subagent-1-light: #90cfe4;
+  --subagent-1-body: #60b5cf;
+  --subagent-1-shade: #458ea4;
+  --subagent-2-light: #a4d1ac;
+  --subagent-2-body: #7eb88a;
+  --subagent-2-shade: #5f916a;
+  --subagent-3-light: #eab2c6;
+  --subagent-3-body: #d590aa;
+  --subagent-3-shade: #aa6f86;
+  --subagent-4-light: #dcc091;
+  --subagent-4-body: #c6a264;
+  --subagent-4-shade: #9c7e49;
+  --subagent-5-light: #eeb5a6;
+  --subagent-5-body: #da9381;
+  --subagent-5-shade: #ae7262;
+  --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-panel: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-jelly: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-goo: cubic-bezier(0.22, 1.32, 0.36, 1);
+  --t-touch: 150ms;
+  --t-panel: 720ms;
+  --t-enter: 860ms;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --control-h: 32px;
+  --control-sm-h: 28px;
+  --sidebar-w: clamp(270px, 18vw, 300px);
+  --panel-w: clamp(500px, 35vw, 700px);
+  --content-w: 780px;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control-h: 44px;
+    --control-sm-h: 44px;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
+}
+
+#app {
+  height: 100%;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: default;
+  user-select: none;
+}
+
+a {
+  cursor: pointer;
+}
+
+button,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+[role="tab"],
+summary {
+  user-select: none;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 26%, transparent);
+  color: var(--text);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+kbd {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+code,
+.mono {
+  font-family: var(--mono);
+}
+
+.add {
+  color: var(--add);
+}
+
+.del {
+  color: var(--del);
+}
+
+.icon {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button:active:not(:disabled) { scale: 0.96; }
+}
+
+:where(button, input, textarea, select):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Rings can live on the control, its label or the adjacent checkbox visual. */
+:root[data-focus-navigation="pointer"] :focus-visible,
+:root[data-focus-navigation="pointer"] :focus-visible > *,
+:root[data-focus-navigation="pointer"] input:focus-visible + * {
+  outline: none !important;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(240, 239, 237, 0.16);
+  background-clip: content-box;
+  transition:
+    background-color 240ms var(--ease),
+    border-radius 460ms var(--ease-jelly);
+}
+
+:where(:hover, :focus-within)::-webkit-scrollbar-thumb {
+  background-color: rgba(240, 239, 237, 0.24);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  border-width: 2px;
+  background-color: rgba(240, 239, 237, 0.34);
+}
+
+::-webkit-scrollbar-thumb:active {
+  border-width: 1px;
+  border-radius: 6px;
+  background-color: rgba(240, 239, 237, 0.44);
+}
+
+@media (max-width: 1220px) {
+  :root {
+    --sidebar-w: 250px;
+    --panel-w: 420px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
+    transition-duration: 160ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}

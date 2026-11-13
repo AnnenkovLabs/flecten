@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "studio-harness",
+  "version": "1.0.0",
+  "description": "A complete alternative harness with a project brief, conversation, sessions and live agent controls",
+  "instructions": ["instructions.md"],
+  "styles": ["theme.css"],
+  "runtime": { "entry": "runtime.mjs" },
+  "surfaces": [{
+    "id": "studio",
+    "title": "Studio harness",
+    "entry": "studio.html",
+    "placement": { "selector": "[data-harness-region=\"shell\"]", "position": "replace" },
+    "tools": ["mcp_module_studio-harness__runtime_brief"],
+    "harness": {
+      "state": true,
+      "events": true,
+      "commands": ["run", "stop", "sessions.new", "sessions.select", "settings.open", "window.control", "model.set", "approval.respond", "interface.styles"]
+    }
+  }]
+}

@@ -1,0 +1,68 @@
+{
+  "id": "compact-summary",
+  "group": "compaction",
+  "prompt": "Run a large command and keep working after the context compacts.",
+  "files": {},
+  "script": [
+    {
+      "text": "Collecting a large command output.",
+      "calls": [
+        {
+          "name": "bash",
+          "args": {
+            "command": "seq 1 4000"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details.Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details. Progress note with details.",
+      "stop": "max_tokens"
+    },
+    {
+      "text": "Finished after compaction.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Completed after compaction",
+            "evidence": [
+              "done tool ran after a context.compacted event"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "bash"
+    },
+    {
+      "type": "compaction_count",
+      "min": 1
+    },
+    {
+      "type": "compaction_summary_contains",
+      "text": "bash"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex",
+  "options": {
+    "contextWindow": 2000,
+    "reserveTokens": 200,
+    "maxTurns": 8,
+    "continuations": 1,
+    "tools": [
+      "bash",
+      "done"
+    ],
+    "maxOutputTokens": 256
+  }
+}

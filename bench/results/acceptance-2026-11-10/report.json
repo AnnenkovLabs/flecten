@@ -1,0 +1,1716 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-10T18:22:01.593Z",
+  "environment": {
+    "bun": "1.4.2",
+    "platform": "linux-x64",
+    "commit": "c980ad7",
+    "dirty": true,
+    "cwd": "/home/oleksandr/liquidharness"
+  },
+  "suiteHash": "25716c4edf54c563b7e5c94f949bf489f8cd71c47dc891af3c15d0366feef72f",
+  "pricing": {
+    "inputUsdPerMTok": 0.15,
+    "outputUsdPerMTok": 0.6,
+    "cachedUsdPerMTok": 0.015,
+    "source": "default"
+  },
+  "tasks": [
+    {
+      "id": "bash-exit-code",
+      "group": "bash",
+      "hash": "b9693e45340cc8b3720e28a814be953b834584672e21223b88c420ae0d11c0e8",
+      "status": "passed",
+      "durationMs": 66,
+      "usage": {
+        "input": 15269,
+        "output": 65,
+        "cached": 0
+      },
+      "costUsd": 0.00232935,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "end",
+      "checksPassed": 3,
+      "checksTotal": 3,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=end pass=false"
+        },
+        {
+          "type": "tool_error",
+          "ok": true,
+          "detail": "Command exited with code 3 after 0.0 s"
+        },
+        {
+          "type": "tool_data",
+          "ok": true,
+          "detail": "bash.exitCode=3"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "bash-output",
+      "group": "bash",
+      "hash": "a043e0d18c4635bc944ec7a648da1fe78f3066f06cd8b94a5e4d60e4d78c89d8",
+      "status": "passed",
+      "durationMs": 46,
+      "usage": {
+        "input": 10123,
+        "output": 99,
+        "cached": 0
+      },
+      "costUsd": 0.00157785,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 4,
+      "checksTotal": 4,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "bash: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "bash: contains=true"
+        },
+        {
+          "type": "tool_data",
+          "ok": true,
+          "detail": "bash.exitCode=0"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "bash-writes-file",
+      "group": "bash",
+      "hash": "e3f411fa0332a5e4d57d5e64526c1ef994b85af01475cdc4ea8c3ef56bf52637",
+      "status": "passed",
+      "durationMs": 47,
+      "usage": {
+        "input": 10093,
+        "output": 100,
+        "cached": 0
+      },
+      "costUsd": 0.00157395,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 3,
+      "checksTotal": 3,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "bash: 1 call(s), ok=true"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "out.txt matches"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "checkpoint-edit-restore",
+      "group": "checkpoints",
+      "hash": "102093e6a8ed616dc261b04169482c9ecfde58b642008a0cc7d7b3fe2e5a0f7c",
+      "status": "passed",
+      "durationMs": 23,
+      "usage": {
+        "input": 15378,
+        "output": 146,
+        "cached": 0
+      },
+      "costUsd": 0.0023943,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "done",
+      "checksPassed": 8,
+      "checksTotal": 8,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "checkpoint_count",
+          "ok": true,
+          "detail": "1 checkpoint(s)"
+        },
+        {
+          "type": "checkpoint_tool",
+          "ok": true,
+          "detail": "latest tool=edit"
+        },
+        {
+          "type": "checkpoint_finalized",
+          "ok": true,
+          "detail": "finalized=true"
+        },
+        {
+          "type": "checkpoint_paths",
+          "ok": true,
+          "detail": "src/config.ts"
+        },
+        {
+          "type": "file_contains",
+          "ok": true,
+          "detail": "src/config.ts contains \"port = 9090\""
+        },
+        {
+          "type": "checkpoint_restore",
+          "ok": true,
+          "detail": "restored src/config.ts; removed none"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "src/config.ts matches"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "checkpoint-patch-redo",
+      "group": "checkpoints",
+      "hash": "35d8a6f4bc2e0d7023c8382b14dce873827e85d5b78ecf42f9970f834f35d6a5",
+      "status": "passed",
+      "durationMs": 11,
+      "usage": {
+        "input": 10142,
+        "output": 121,
+        "cached": 0
+      },
+      "costUsd": 0.0015939,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 11,
+      "checksTotal": 11,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "checkpoint_count",
+          "ok": true,
+          "detail": "1 checkpoint(s)"
+        },
+        {
+          "type": "checkpoint_tool",
+          "ok": true,
+          "detail": "latest tool=apply_patch"
+        },
+        {
+          "type": "checkpoint_paths",
+          "ok": true,
+          "detail": "data.txt, extra.txt"
+        },
+        {
+          "type": "file_contains",
+          "ok": true,
+          "detail": "data.txt contains \"two\""
+        },
+        {
+          "type": "checkpoint_restore",
+          "ok": true,
+          "detail": "restored data.txt; removed extra.txt"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "data.txt matches"
+        },
+        {
+          "type": "file_absent",
+          "ok": true,
+          "detail": "extra.txt is absent"
+        },
+        {
+          "type": "checkpoint_restore",
+          "ok": true,
+          "detail": "restored data.txt, extra.txt; removed none"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "data.txt matches"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "extra.txt matches"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "compact-prune",
+      "group": "compaction",
+      "hash": "0672a357ec06ff786b111a9ea51b5c04b85b1229bf2a528c23a7805490c2e971",
+      "status": "passed",
+      "durationMs": 178,
+      "usage": {
+        "input": 1931,
+        "output": 2437,
+        "cached": 0
+      },
+      "costUsd": 0.00175185,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "done",
+      "checksPassed": 4,
+      "checksTotal": 4,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "bash: 4 call(s), ok=true"
+        },
+        {
+          "type": "compaction_count",
+          "ok": true,
+          "detail": "1 compaction event(s)"
+        },
+        {
+          "type": "compaction_summary_contains",
+          "ok": true,
+          "detail": "summary contains=true"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "compact-request-summary",
+      "group": "compaction",
+      "hash": "917c9cb34e9dfde01d99ceb91fa611ae996380a140a332d802f5229e4eb86124",
+      "status": "passed",
+      "durationMs": 54,
+      "usage": {
+        "input": 1769,
+        "output": 2349,
+        "cached": 0
+      },
+      "costUsd": 0.00167475,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "done",
+      "checksPassed": 4,
+      "checksTotal": 4,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "compaction_count",
+          "ok": true,
+          "detail": "1 compaction event(s)"
+        },
+        {
+          "type": "request_contains",
+          "ok": true,
+          "detail": "contains=true"
+        },
+        {
+          "type": "request_count",
+          "ok": true,
+          "detail": "4 request(s)"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "compact-summary",
+      "group": "compaction",
+      "hash": "3a4530935111730d65d92dbaa9f9a9c1cad335459cf0af1af5121a2d29da70d7",
+      "status": "passed",
+      "durationMs": 53,
+      "usage": {
+        "input": 1766,
+        "output": 2349,
+        "cached": 0
+      },
+      "costUsd": 0.0016743,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "done",
+      "checksPassed": 4,
+      "checksTotal": 4,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "bash: 1 call(s), ok=true"
+        },
+        {
+          "type": "compaction_count",
+          "ok": true,
+          "detail": "1 compaction event(s)"
+        },
+        {
+          "type": "compaction_summary_contains",
+          "ok": true,
+          "detail": "summary contains=true"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "edit-guard-unread",
+      "group": "edit",
+      "hash": "0b4c180ba91e0801cdb3a14bd53fd933f9187a88ba46cb481c0e54af18597b08",
+      "status": "passed",
+      "durationMs": 6,
+      "usage": {
+        "input": 15332,
+        "output": 78,
+        "cached": 0
+      },
+      "costUsd": 0.0023466,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "end",
+      "checksPassed": 3,
+      "checksTotal": 3,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=end pass=false"
+        },
+        {
+          "type": "tool_error",
+          "ok": true,
+          "detail": "Read src/app.ts before editing it. The file must be read in this session."
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "src/app.ts matches"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "edit-version",
+      "group": "edit",
+      "hash": "4fb533441e03bfc5cdfd5b0b8a0e02a94a783eee99101da2d89a1372b7ac9c7a",
+      "status": "passed",
+      "durationMs": 9,
+      "usage": {
+        "input": 15398,
+        "output": 160,
+        "cached": 0
+      },
+      "costUsd": 0.0024057,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "done",
+      "checksPassed": 4,
+      "checksTotal": 4,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "read: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "edit: 1 call(s), ok=true"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "package.json matches"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "glob-limit",
+      "group": "glob",
+      "hash": "9ef01deae00ef4e05ec2a8b399580e80af6ae1809721a6c47e374d19a313f063",
+      "status": "passed",
+      "durationMs": 8,
+      "usage": {
+        "input": 10114,
+        "output": 96,
+        "cached": 0
+      },
+      "costUsd": 0.0015747,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 4,
+      "checksTotal": 4,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "glob: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_data",
+          "ok": true,
+          "detail": "glob.count=5"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "glob: contains=true"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "glob-typescript",
+      "group": "glob",
+      "hash": "b166e83cf65c373cf7dd6b51a877904dfea6ab49d8c6e2ff5b8ef749b70efca5",
+      "status": "passed",
+      "durationMs": 8,
+      "usage": {
+        "input": 10088,
+        "output": 98,
+        "cached": 0
+      },
+      "costUsd": 0.001572,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 7,
+      "checksTotal": 7,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "glob: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_data",
+          "ok": true,
+          "detail": "glob.count=3"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "glob: contains=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "glob: contains=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "glob: contains=true"
+        },
+        {
+          "type": "tool_output_not_contains",
+          "ok": true,
+          "detail": "glob: absent=true"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "grep-no-match",
+      "group": "grep",
+      "hash": "17240a96461ecba27e30e776d151feeafa7f494e539b249649b205f9cff38b98",
+      "status": "passed",
+      "durationMs": 11,
+      "usage": {
+        "input": 10115,
+        "output": 92,
+        "cached": 0
+      },
+      "costUsd": 0.00157245,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 4,
+      "checksTotal": 4,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "grep: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_data",
+          "ok": true,
+          "detail": "grep.count=0"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "grep: contains=true"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "grep-todos",
+      "group": "grep",
+      "hash": "86ccc67b48c143023b8c478de221e8defd13f8bf1ee63e0ee1b2fd4f6d0f67ad",
+      "status": "passed",
+      "durationMs": 10,
+      "usage": {
+        "input": 10125,
+        "output": 95,
+        "cached": 0
+      },
+      "costUsd": 0.00157575,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 6,
+      "checksTotal": 6,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "grep: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_data",
+          "ok": true,
+          "detail": "grep.count=2"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "grep: contains=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "grep: contains=true"
+        },
+        {
+          "type": "tool_output_not_contains",
+          "ok": true,
+          "detail": "grep: absent=true"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "patch-add-file",
+      "group": "apply_patch",
+      "hash": "b66f8af54e87018a74157f51c879571be201295612aa1e17356b989c745f7087",
+      "status": "passed",
+      "durationMs": 5,
+      "usage": {
+        "input": 10115,
+        "output": 117,
+        "cached": 0
+      },
+      "costUsd": 0.00158745,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 4,
+      "checksTotal": 4,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "apply_patch: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "apply_patch: contains=true"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "docs/new.md matches"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "patch-multi-file",
+      "group": "apply_patch",
+      "hash": "6aafeab81b260bdc4c67ac296022412b7cc50add930d0ca5d9991f138339d24f",
+      "status": "passed",
+      "durationMs": 5,
+      "usage": {
+        "input": 10150,
+        "output": 137,
+        "cached": 0
+      },
+      "costUsd": 0.0016047,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 8,
+      "checksTotal": 8,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "apply_patch: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "apply_patch: contains=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "apply_patch: contains=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "apply_patch: contains=true"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "a.txt matches"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "b.txt matches"
+        },
+        {
+          "type": "file_absent",
+          "ok": true,
+          "detail": "c.txt is absent"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "patch-reject-transaction",
+      "group": "apply_patch",
+      "hash": "cc487c8fcf4e8b4024ee8cf7fee0cabb00f37efa9b6a8b26108de9a9a1d1f0d1",
+      "status": "passed",
+      "durationMs": 5,
+      "usage": {
+        "input": 15357,
+        "output": 91,
+        "cached": 0
+      },
+      "costUsd": 0.00235815,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "end",
+      "checksPassed": 3,
+      "checksTotal": 3,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=end pass=false"
+        },
+        {
+          "type": "tool_error",
+          "ok": true,
+          "detail": "Hunk 1 for config.txt does not match the current file; read the file again and rebuild the patch"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "config.txt matches"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "read-config",
+      "group": "read",
+      "hash": "173504fab923538edf8fb0d0de15e9f0d5de334b0e725465782669f4f12bb305",
+      "status": "passed",
+      "durationMs": 5,
+      "usage": {
+        "input": 15335,
+        "output": 62,
+        "cached": 0
+      },
+      "costUsd": 0.00233745,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "end",
+      "checksPassed": 3,
+      "checksTotal": 3,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=end pass=false"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "read: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "read: contains=true"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "read-missing",
+      "group": "read",
+      "hash": "381e4e141c45810c55148568f11bc87ffda0fa267326487419d80ca91b62b51b",
+      "status": "passed",
+      "durationMs": 4,
+      "usage": {
+        "input": 15265,
+        "output": 62,
+        "cached": 0
+      },
+      "costUsd": 0.00232695,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "end",
+      "checksPassed": 2,
+      "checksTotal": 2,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=end pass=false"
+        },
+        {
+          "type": "tool_error",
+          "ok": true,
+          "detail": "File not found: missing.txt"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "read-paged-log",
+      "group": "read",
+      "hash": "72488e5ad8881aef6a1929bf467e842d5738b507ffd03b4751046f7521476054",
+      "status": "passed",
+      "durationMs": 4,
+      "usage": {
+        "input": 15367,
+        "output": 72,
+        "cached": 0
+      },
+      "costUsd": 0.00234825,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "end",
+      "checksPassed": 6,
+      "checksTotal": 6,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=end pass=false"
+        },
+        {
+          "type": "tool_ok",
+          "ok": true,
+          "detail": "read: 1 call(s), ok=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "read: contains=true"
+        },
+        {
+          "type": "tool_output_contains",
+          "ok": true,
+          "detail": "read: contains=true"
+        },
+        {
+          "type": "tool_output_not_contains",
+          "ok": true,
+          "detail": "read: absent=true"
+        },
+        {
+          "type": "tool_data",
+          "ok": true,
+          "detail": "read.totalLines=30"
+        }
+      ],
+      "scriptExhausted": false
+    }
+  ],
+  "summary": {
+    "total": 20,
+    "passed": 20,
+    "failed": 0,
+    "errors": 0,
+    "durationMs": 558,
+    "usage": {
+      "input": 219232,
+      "output": 8826,
+      "cached": 0
+    },
+    "costUsd": 0.0381804,
+    "byGroup": [
+      {
+        "group": "read",
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "durationMs": 13,
+        "usage": {
+          "input": 45967,
+          "output": 196,
+          "cached": 0
+        },
+        "costUsd": 0.00701265
+      },
+      {
+        "group": "edit",
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "durationMs": 15,
+        "usage": {
+          "input": 30730,
+          "output": 238,
+          "cached": 0
+        },
+        "costUsd": 0.0047523
+      },
+      {
+        "group": "grep",
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "durationMs": 21,
+        "usage": {
+          "input": 20240,
+          "output": 187,
+          "cached": 0
+        },
+        "costUsd": 0.0031482
+      },
+      {
+        "group": "glob",
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "durationMs": 16,
+        "usage": {
+          "input": 20202,
+          "output": 194,
+          "cached": 0
+        },
+        "costUsd": 0.0031467
+      },
+      {
+        "group": "bash",
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "durationMs": 159,
+        "usage": {
+          "input": 35485,
+          "output": 264,
+          "cached": 0
+        },
+        "costUsd": 0.00548115
+      },
+      {
+        "group": "apply_patch",
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "durationMs": 15,
+        "usage": {
+          "input": 35622,
+          "output": 345,
+          "cached": 0
+        },
+        "costUsd": 0.0055503
+      },
+      {
+        "group": "checkpoints",
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "durationMs": 34,
+        "usage": {
+          "input": 25520,
+          "output": 267,
+          "cached": 0
+        },
+        "costUsd": 0.0039882
+      },
+      {
+        "group": "compaction",
+        "total": 3,
+        "passed": 3,
+        "failed": 0,
+        "durationMs": 285,
+        "usage": {
+          "input": 5466,
+          "output": 7135,
+          "cached": 0
+        },
+        "costUsd": 0.0051009
+      }
+    ]
+  },
+  "baseline": {
+    "name": "codex",
+    "status": "ran",
+    "command": "/home/oleksandr/.local/bin/codex",
+    "runs": [
+      {
+        "id": "bash-exit-code",
+        "status": "unscored",
+        "durationMs": 13765,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_error",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_data",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "bash-output",
+        "status": "unscored",
+        "durationMs": 14458,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_data",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "bash-writes-file",
+        "status": "passed",
+        "durationMs": 14210,
+        "checksPassed": 1,
+        "checksTotal": 1,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": true,
+            "detail": "out.txt matches"
+          }
+        ]
+      },
+      {
+        "id": "checkpoint-edit-restore",
+        "status": "failed",
+        "durationMs": 30895,
+        "checksPassed": 1,
+        "checksTotal": 2,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_count",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_tool",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_finalized",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_paths",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_contains",
+            "ok": true,
+            "detail": "src/config.ts contains \"port = 9090\""
+          },
+          {
+            "type": "checkpoint_restore",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": false,
+            "detail": "src/config.ts is \"export const port = 9090;\\n\""
+          }
+        ]
+      },
+      {
+        "id": "checkpoint-patch-redo",
+        "status": "failed",
+        "durationMs": 29151,
+        "checksPassed": 2,
+        "checksTotal": 5,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_count",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_tool",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_paths",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_contains",
+            "ok": true,
+            "detail": "data.txt contains \"two\""
+          },
+          {
+            "type": "checkpoint_restore",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": false,
+            "detail": "data.txt is \"two\\n\""
+          },
+          {
+            "type": "file_absent",
+            "ok": false,
+            "detail": "extra.txt exists"
+          },
+          {
+            "type": "checkpoint_restore",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": true,
+            "detail": "data.txt matches"
+          },
+          {
+            "type": "file_equals",
+            "ok": false,
+            "detail": "extra.txt is \"extra\\n\""
+          }
+        ]
+      },
+      {
+        "id": "compact-prune",
+        "status": "unscored",
+        "durationMs": 30883,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "compaction_count",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "compaction_summary_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "compact-request-summary",
+        "status": "unscored",
+        "durationMs": 8294,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "compaction_count",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "request_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "request_count",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "compact-summary",
+        "status": "failed",
+        "durationMs": 120087,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": null,
+        "checks": [],
+        "error": "Reading additional input from stdin...\n2026-11-10T18:24:24.793057Z ERROR codex_models_manager::manager: failed to refresh available models: stream disconnected before completion: failed to decode models response: missing field `models` at line 1 column 6648; body: {\"data\":[{\"capabilities\":{\"image\":true,\"image_vision\":true,\"vision\":true},\"id\":\"claude-sonnet-4.6\",\"info\":{\"meta\":{\"capabilities\":{\"image_vision\":true,\"vision\":true}}},\"input_modalities\":[\"text\",\"image\"],\"modalities\":{\"input\":[\"text\",\""
+      },
+      {
+        "id": "edit-guard-unread",
+        "status": "failed",
+        "durationMs": 19405,
+        "checksPassed": 0,
+        "checksTotal": 1,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_error",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": false,
+            "detail": "src/app.ts is \"export const value = 2;\\n\""
+          }
+        ]
+      },
+      {
+        "id": "edit-version",
+        "status": "passed",
+        "durationMs": 26927,
+        "checksPassed": 1,
+        "checksTotal": 1,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": true,
+            "detail": "package.json matches"
+          }
+        ]
+      },
+      {
+        "id": "glob-limit",
+        "status": "unscored",
+        "durationMs": 14988,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_data",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "glob-typescript",
+        "status": "unscored",
+        "durationMs": 15991,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_data",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_not_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "grep-no-match",
+        "status": "unscored",
+        "durationMs": 13140,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_data",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "grep-todos",
+        "status": "unscored",
+        "durationMs": 14701,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_data",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_not_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "patch-add-file",
+        "status": "failed",
+        "durationMs": 46329,
+        "checksPassed": 0,
+        "checksTotal": 1,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": false,
+            "detail": "docs/new.md is \"# Note\\n\\nKeep documentation short, clear, and up to date.\\n\""
+          }
+        ]
+      },
+      {
+        "id": "patch-multi-file",
+        "status": "failed",
+        "durationMs": 43344,
+        "checksPassed": 1,
+        "checksTotal": 3,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": false,
+            "detail": "a.txt is \"alpha updated\\n\""
+          },
+          {
+            "type": "file_equals",
+            "ok": false,
+            "detail": "b.txt is \"beta updated\\n\""
+          },
+          {
+            "type": "file_absent",
+            "ok": true,
+            "detail": "c.txt is absent"
+          }
+        ]
+      },
+      {
+        "id": "patch-reject-transaction",
+        "status": "failed",
+        "durationMs": 27163,
+        "checksPassed": 0,
+        "checksTotal": 1,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_error",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_equals",
+            "ok": false,
+            "detail": "config.txt is \"port=9090\\nmode=prod\\n\""
+          }
+        ]
+      },
+      {
+        "id": "read-config",
+        "status": "unscored",
+        "durationMs": 18634,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "read-missing",
+        "status": "unscored",
+        "durationMs": 22425,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_error",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      },
+      {
+        "id": "read-paged-log",
+        "status": "unscored",
+        "durationMs": 18345,
+        "checksPassed": 0,
+        "checksTotal": 0,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_ok",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_output_not_contains",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "tool_data",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          }
+        ]
+      }
+    ]
+  }
+}

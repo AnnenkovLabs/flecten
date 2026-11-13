@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Trailer timeline</title>
+<style>
+main { max-width: 760px; margin: auto; padding: 24px; }
+h1 { font-size: 24px; font-weight: 500; }
+p { color: var(--text-2); line-height: 1.6; }
+form { display: flex; gap: 16px; flex-wrap: wrap; align-items: end; }
+label { display: grid; gap: 8px; }
+input, button { min-height: 36px; font: inherit; border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 12px; background: var(--surface); color: var(--text); }
+input { width: 100px; } button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+output { display: block; margin-top: 24px; font-variant-numeric: tabular-nums; }
+table { width: 100%; border-collapse: collapse; margin-top: 16px; text-align: left; }
+th, td { padding: 12px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; }
+</style></head>
+<body><main>
+<h1>Trailer timeline</h1><p>Check timing before editing. This example plans shots and does not render video.</p>
+<form><label>Duration, seconds<input name="duration" type="number" min="1" max="3600" value="12" required></label><label>Frames per second<input name="fps" type="number" min="1" max="240" value="24" required></label><button type="submit">Calculate timeline</button></form>
+<output aria-live="polite">Enter the timing to inspect whole frames.</output>
+<table hidden><caption>Shot timing</caption><thead><tr><th scope="col">Shot</th><th scope="col">Start frame</th><th scope="col">Frames</th></tr></thead><tbody></tbody></table>
+<script>
+document.querySelector('form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const output = document.querySelector('output');
+  const form = new FormData(event.currentTarget);
+  const button = document.querySelector('button');
+  button.disabled = true;
+  output.textContent = 'Calculating…';
+  try {
+    const result = await flecten.call('mcp_module_better-trailer__runtime_timeline', {
+      framesPerSecond: Number(form.get('fps')),
+      shots: [{ title: 'Trailer', seconds: Number(form.get('duration')) }],
+    });
+    if (!result.ok) throw new Error(result.error || 'Calculation failed');
+    const timeline = JSON.parse(result.output);
+    output.textContent = `${timeline.totalFrames} frames · ${timeline.seconds} seconds`;
+    const body = document.querySelector('tbody');
+    body.replaceChildren(...timeline.timeline.map((shot) => {
+      const row = document.createElement('tr');
+      for (const value of [shot.title, shot.startFrame, shot.frames]) {
+        const cell = document.createElement('td'); cell.textContent = String(value); row.append(cell);
+      }
+      return row;
+    }));
+    document.querySelector('table').hidden = false;
+  } catch (error) { output.textContent = `${error.message}. Check module permissions and try again.`; }
+  finally { button.disabled = false; }
+});
+</script></main></body></html>

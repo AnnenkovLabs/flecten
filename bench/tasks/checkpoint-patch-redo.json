@@ -1,0 +1,90 @@
+{
+  "id": "checkpoint-patch-redo",
+  "group": "checkpoints",
+  "prompt": "Update data.txt and add extra.txt as one patch, with undo and redo.",
+  "files": {
+    "data.txt": "one\n"
+  },
+  "script": [
+    {
+      "text": "Applying the patch.",
+      "calls": [
+        {
+          "name": "apply_patch",
+          "args": {
+            "patch": "*** Begin Patch\n*** Update File: data.txt\n@@\n-one\n+two\n*** Add File: extra.txt\n+extra\n*** End Patch"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Patch applied.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Updated two files",
+            "evidence": [
+              "data.txt contains two; extra.txt exists"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "checkpoint_count",
+      "count": 1
+    },
+    {
+      "type": "checkpoint_tool",
+      "tool": "apply_patch"
+    },
+    {
+      "type": "checkpoint_paths",
+      "paths": [
+        "data.txt",
+        "extra.txt"
+      ]
+    },
+    {
+      "type": "file_contains",
+      "path": "data.txt",
+      "text": "two"
+    },
+    {
+      "type": "checkpoint_restore",
+      "target": "before"
+    },
+    {
+      "type": "file_equals",
+      "path": "data.txt",
+      "content": "one\n"
+    },
+    {
+      "type": "file_absent",
+      "path": "extra.txt"
+    },
+    {
+      "type": "checkpoint_restore",
+      "target": "after"
+    },
+    {
+      "type": "file_equals",
+      "path": "data.txt",
+      "content": "two\n"
+    },
+    {
+      "type": "file_equals",
+      "path": "extra.txt",
+      "content": "extra"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

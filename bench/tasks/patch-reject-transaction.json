@@ -1,0 +1,45 @@
+{
+  "id": "patch-reject-transaction",
+  "group": "apply_patch",
+  "prompt": "Change the port in config.txt from 9999 to 9090.",
+  "files": {
+    "config.txt": "port=8080\nmode=prod\n"
+  },
+  "script": [
+    {
+      "text": "Applying the patch.",
+      "calls": [
+        {
+          "name": "apply_patch",
+          "args": {
+            "patch": "*** Begin Patch\n*** Update File: config.txt\n@@\n-port=9999\n+port=9090\n*** End Patch"
+          }
+        }
+      ]
+    },
+    {
+      "text": "The patch was rejected without changing the file."
+    },
+    {
+      "text": "No further work is needed."
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "end"
+    },
+    {
+      "type": "tool_error",
+      "tool": "apply_patch",
+      "contains": "does not match"
+    },
+    {
+      "type": "file_equals",
+      "path": "config.txt",
+      "content": "port=8080\nmode=prod\n"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

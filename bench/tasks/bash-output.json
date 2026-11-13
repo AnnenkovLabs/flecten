@@ -1,0 +1,56 @@
+{
+  "id": "bash-output",
+  "group": "bash",
+  "prompt": "Run a command that prints ready and show the output.",
+  "files": {},
+  "script": [
+    {
+      "text": "Running the command.",
+      "calls": [
+        {
+          "name": "bash",
+          "args": {
+            "command": "printf 'ready\\n'"
+          }
+        }
+      ]
+    },
+    {
+      "text": "The command printed ready.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Command printed ready",
+            "evidence": [
+              "bash exited 0 and printed ready"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "bash"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "bash",
+      "text": "ready"
+    },
+    {
+      "type": "tool_data",
+      "tool": "bash",
+      "path": "exitCode",
+      "equals": 0
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

@@ -1,0 +1,28 @@
+.dictionary-settings { min-width: 0; }
+.dictionary-settings p { margin: 0; }
+.dictionary-toolbar, .dictionary-origin, .dictionary-tabs, .dictionary-actions, .dictionary-links, .dictionary-heading { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.dictionary-toolbar, .dictionary-origin { justify-content: space-between; }
+.dictionary-origin { gap: var(--space-3); }
+.dictionary-origin > p { flex: 1 1 260px; }
+.dictionary-tabs .current { background: var(--raised); color: var(--text); box-shadow: inset 0 -2px var(--primary); }
+.dictionary-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 180px); gap: var(--space-2); }
+.dictionary-filters .st-search { min-width: 0; }
+.dictionary-count { font-variant-numeric: tabular-nums; }
+.dictionary-list { display: grid; min-width: 0; }
+.dictionary-entry { display: grid; gap: var(--space-3); padding: var(--space-5) 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.dictionary-entry:first-child { padding-top: 0; }
+.dictionary-heading { align-items: baseline; }
+.dictionary-heading h3, .dictionary-editor h3 { margin: 0; font-size: 15px; font-weight: 600; text-wrap: balance; }
+.dictionary-definition, .dictionary-clarification { max-width: 65ch; color: var(--text-2); font-size: 13px; line-height: 1.65; white-space: pre-wrap; text-wrap: pretty; overflow-wrap: anywhere; }
+.dictionary-clarification strong { font-weight: 600; color: var(--text); }
+.dictionary-aliases { overflow-wrap: anywhere; }
+.dictionary-links { gap: var(--space-3); font-size: 12px; overflow-wrap: anywhere; }
+.dictionary-links a { color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
+.dictionary-error, .dictionary-sync-error, .dictionary-confirm { display: grid; gap: var(--space-2); overflow-wrap: anywhere; }
+.dictionary-error > button { justify-self: start; }
+.dictionary-confirm { padding: var(--space-3); background: var(--surface); border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.dictionary-editor { display: grid; gap: var(--space-4); }
+.dictionary-editor fieldset { display: grid; gap: var(--space-3); min-width: 0; padding: 0; margin: 0; border: 0; }
+.dictionary-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 180px); gap: var(--space-3); }
+.dictionary-editor .dictionary-prose { font: inherit; font-size: 13px; line-height: 1.6; }
+@media (max-width: 700px) { .dictionary-filters, .dictionary-fields { grid-template-columns: minmax(0, 1fr); } }

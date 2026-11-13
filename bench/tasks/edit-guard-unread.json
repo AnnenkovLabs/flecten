@@ -1,0 +1,47 @@
+{
+  "id": "edit-guard-unread",
+  "group": "edit",
+  "prompt": "Change the exported value from 1 to 2 without reading the file.",
+  "files": {
+    "src/app.ts": "export const value = 1;\n"
+  },
+  "script": [
+    {
+      "text": "Editing immediately.",
+      "calls": [
+        {
+          "name": "edit",
+          "args": {
+            "path": "src/app.ts",
+            "oldString": "value = 1",
+            "newString": "value = 2"
+          }
+        }
+      ]
+    },
+    {
+      "text": "The harness refused the edit."
+    },
+    {
+      "text": "No further work is needed."
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "end"
+    },
+    {
+      "type": "tool_error",
+      "tool": "edit",
+      "contains": "Read src/app.ts before editing"
+    },
+    {
+      "type": "file_equals",
+      "path": "src/app.ts",
+      "content": "export const value = 1;\n"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

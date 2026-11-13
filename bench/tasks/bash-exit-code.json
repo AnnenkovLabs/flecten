@@ -1,0 +1,44 @@
+{
+  "id": "bash-exit-code",
+  "group": "bash",
+  "prompt": "Run exit 3 and report the failure.",
+  "files": {},
+  "script": [
+    {
+      "text": "Running the command.",
+      "calls": [
+        {
+          "name": "bash",
+          "args": {
+            "command": "exit 3"
+          }
+        }
+      ]
+    },
+    {
+      "text": "The command failed with code 3."
+    },
+    {
+      "text": "No further work is needed."
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "end"
+    },
+    {
+      "type": "tool_error",
+      "tool": "bash",
+      "contains": "code 3"
+    },
+    {
+      "type": "tool_data",
+      "tool": "bash",
+      "path": "exitCode",
+      "equals": 3
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "category": "design",
+  "entries": [
+    {
+      "id": "liquid-glass",
+      "term": "Liquid Glass",
+      "aliases": [
+        "liquid-glass",
+        "ликвид гласс",
+        "ликвид глас",
+        "ліквід глас",
+        "ліквід гласс",
+        "жидкое стекло",
+        "рідке скло"
+      ],
+      "category": "design",
+      "definition": "Apple's adaptive digital material introduced in 2025 for the iOS 26 generation and Apple's other platforms. It uses optical refraction, reflection, translucency and highlights that respond to content, geometry and interaction, with adaptive controls and navigation surfaces.",
+      "clarification": "A static blurred translucent rectangle alone does not reproduce Liquid Glass. Distinguish its optical behavior, adaptive tint and interaction from generic glassmorphism. Preserve text contrast, accessibility and the conventions of the target platform.",
+      "sources": [
+        "https://developer.apple.com/documentation/technologyoverviews/liquid-glass",
+        "https://www.apple.com/newsroom/2025/06/apple-introduces-a-delightful-and-elegant-new-software-design/"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "id": "grep-todos",
+  "group": "grep",
+  "prompt": "Find every TODO in the TypeScript sources.",
+  "files": {
+    "src/a.ts": "// TODO: alpha\nexport const a = 1;\n",
+    "src/b.ts": "// TODO: beta\nexport const b = 2;\n",
+    "src/c.md": "# TODO not code\n"
+  },
+  "script": [
+    {
+      "text": "Searching for TODOs.",
+      "calls": [
+        {
+          "name": "grep",
+          "args": {
+            "pattern": "TODO",
+            "glob": "*.ts"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Two TODOs found.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Found two TODOs",
+            "evidence": [
+              "src/a.ts and src/b.ts match"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "grep"
+    },
+    {
+      "type": "tool_data",
+      "tool": "grep",
+      "path": "count",
+      "equals": 2
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "grep",
+      "text": "src/a.ts"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "grep",
+      "text": "src/b.ts"
+    },
+    {
+      "type": "tool_output_not_contains",
+      "tool": "grep",
+      "text": "src/c.md"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

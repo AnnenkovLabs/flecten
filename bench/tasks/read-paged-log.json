@@ -1,0 +1,62 @@
+{
+  "id": "read-paged-log",
+  "group": "read",
+  "prompt": "Read only lines 10 through 12 of logs/app.log.",
+  "files": {
+    "logs/app.log": "line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8\nline 9\nline 10\nline 11\nline 12\nline 13\nline 14\nline 15\nline 16\nline 17\nline 18\nline 19\nline 20\nline 21\nline 22\nline 23\nline 24\nline 25\nline 26\nline 27\nline 28\nline 29\nline 30\n"
+  },
+  "script": [
+    {
+      "text": "Reading the requested page.",
+      "calls": [
+        {
+          "name": "read",
+          "args": {
+            "path": "logs/app.log",
+            "offset": 10,
+            "limit": 3
+          }
+        }
+      ]
+    },
+    {
+      "text": "Lines 10 to 12 are loaded."
+    },
+    {
+      "text": "No further work is needed."
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "end"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "read"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "read",
+      "text": "line 10"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "read",
+      "text": "line 12"
+    },
+    {
+      "type": "tool_output_not_contains",
+      "tool": "read",
+      "text": "line 13"
+    },
+    {
+      "type": "tool_data",
+      "tool": "read",
+      "path": "totalLines",
+      "equals": 30
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

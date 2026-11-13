@@ -1,0 +1,13 @@
+{
+  "source": "liquid-harness-trailer-v12",
+  "shaderSha256": "da79b3b5c9a853dc67962decb13d3b9a9e9c1b2a42ac6a53e979efc1ac694972",
+  "frames": {
+    "idle": 1180,
+    "learning": 1370,
+    "ready": 1518,
+    "answer": 1660,
+    "angry": 1180,
+    "furious": 1180
+  },
+  "changes": "Original purple shader; anger and fury extend the original face and rig. Static event-driven poses."
+}

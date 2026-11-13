@@ -1,0 +1,213 @@
+/* Settings primitives shared by dialogs: .st-dialog, titles, details, status, confirm, empty. */
+
+.st-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  background: var(--bg);
+  opacity: 0;
+  transition:
+    opacity 160ms var(--ease),
+    display 160ms allow-discrete,
+    overlay 160ms allow-discrete;
+}
+
+.st-dialog[open] {
+  opacity: 1;
+}
+
+.st-dialog::backdrop {
+  background: rgba(8, 8, 8, 0);
+  transition:
+    background 160ms var(--ease),
+    display 160ms allow-discrete,
+    overlay 160ms allow-discrete;
+}
+
+.st-dialog[open]::backdrop {
+  background: rgba(8, 8, 8, 0.66);
+}
+
+@starting-style {
+  .st-dialog[open] {
+    opacity: 0;
+  }
+
+  .st-dialog[open]::backdrop {
+    background: rgba(8, 8, 8, 0);
+  }
+}
+
+.st-dialog:focus {
+  outline: 0;
+}
+
+.st-title {
+  color: var(--text);
+  user-select: none;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.st-count {
+  margin-left: 6px;
+  user-select: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.st-sub {
+  max-width: 64ch;
+  user-select: none;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.st-details {
+  border-radius: 10px;
+  background: rgba(240, 239, 237, 0.025);
+}
+
+.st-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--t-touch) var(--ease);
+}
+
+.st-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.st-details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 4px 16px 20px;
+}
+
+.st-chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform 140ms var(--ease);
+}
+
+.st-details[open] .st-chevron {
+  transform: rotate(180deg);
+}
+
+@supports (interpolate-size: allow-keywords) {
+  .st-details::details-content {
+    interpolate-size: allow-keywords;
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 160ms var(--ease),
+      content-visibility 160ms allow-discrete;
+  }
+
+  .st-details[open]::details-content {
+    block-size: auto;
+    transition:
+      block-size 160ms var(--ease),
+      content-visibility 160ms allow-discrete;
+  }
+}
+
+.st-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.st-block-title {
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.st-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(240, 239, 237, 0.045);
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.st-status svg {
+  margin-top: 2px;
+}
+
+.st-status--ok {
+  background: rgba(178, 185, 175, 0.09);
+  color: var(--success);
+}
+
+.st-status--error {
+  background: rgba(226, 162, 162, 0.09);
+  color: var(--error);
+}
+
+.st-status--warn {
+  background: rgba(211, 189, 145, 0.09);
+  color: var(--warning);
+}
+
+.st-status-meta {
+  margin-left: auto;
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.st-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.st-confirm-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.st-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+}

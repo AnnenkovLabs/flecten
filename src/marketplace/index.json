@@ -1,0 +1,353 @@
+{
+  "schemaVersion": 1,
+  "name": "Flecten",
+  "modules": [
+    {
+      "title": "Computer",
+      "publisher": "Flecten",
+      "category": "workflow",
+      "manifest": {
+        "schemaVersion": 1,
+        "name": "computer-use",
+        "version": "1.0.1",
+        "description": "Operate a private Linux desktop with screenshot-grounded actions, guarded handoff and a live viewer. Requires Xvfb, xauth, xdotool, ImageMagick and Firefox. Shares the host account, files and network.",
+        "capabilities": [
+          "computer-use",
+          "desktop",
+          "browser"
+        ],
+        "requires": [],
+        "conflicts": [],
+        "instructions": [
+          "instructions.md"
+        ],
+        "styles": [],
+        "resources": [
+          {
+            "id": "computer-guide",
+            "path": "guide.md",
+            "description": "Desktop workflow, dependency setup, grounding, handoff, verification and recovery"
+          }
+        ],
+        "runtime": {
+          "entry": "runtime.mjs",
+          "readOnlyTools": [
+            "mcp_module_computer-use__runtime_status",
+            "mcp_module_computer-use__runtime_preview"
+          ]
+        },
+        "mcp": {
+          "servers": {}
+        },
+        "hooks": {
+          "sessionStart": [],
+          "userPromptSubmit": [],
+          "preToolUse": [],
+          "postToolUse": [],
+          "stop": [],
+          "sessionEnd": [],
+          "permission": [],
+          "compact": [],
+          "notification": [],
+          "subagent": [],
+          "toolBatch": []
+        },
+        "surfaces": [
+          {
+            "id": "desktop",
+            "title": "Computer",
+            "entry": "desktop.html",
+            "tools": [
+              "mcp_module_computer-use__runtime_status",
+              "mcp_module_computer-use__runtime_start",
+              "mcp_module_computer-use__runtime_observe",
+              "mcp_module_computer-use__runtime_preview",
+              "mcp_module_computer-use__runtime_interact",
+              "mcp_module_computer-use__runtime_control",
+              "mcp_module_computer-use__runtime_navigate"
+            ],
+            "resources": [
+              "computer-guide"
+            ],
+            "harness": {
+              "commands": [],
+              "state": false,
+              "events": false
+            }
+          }
+        ]
+      },
+      "revision": "f7bfaff4d837daf3bdedc9e756f133ab1b9329a5924ec9dd2ead3c6380d33cf7",
+      "packageUrl": "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/packages/computer-use.json"
+    },
+    {
+      "title": "Trailer timeline",
+      "publisher": "Flecten",
+      "category": "workflow",
+      "manifest": {
+        "schemaVersion": 1,
+        "name": "better-trailer",
+        "version": "1.0.0",
+        "description": "Plan trailer pacing, inspect a frame-accurate timeline and verify timings. This example does not encode video.",
+        "capabilities": [
+          "video",
+          "trailers",
+          "storyboards"
+        ],
+        "requires": [],
+        "conflicts": [],
+        "instructions": [
+          "instructions.md"
+        ],
+        "styles": [],
+        "resources": [
+          {
+            "id": "pacing",
+            "path": "guides/pacing.md",
+            "description": "Trailer pacing and verification guide"
+          }
+        ],
+        "runtime": {
+          "entry": "runtime.mjs"
+        },
+        "mcp": {
+          "servers": {}
+        },
+        "hooks": {
+          "sessionStart": [],
+          "userPromptSubmit": [],
+          "preToolUse": [],
+          "postToolUse": [],
+          "stop": [],
+          "sessionEnd": [],
+          "permission": [],
+          "compact": [],
+          "notification": [],
+          "subagent": [],
+          "toolBatch": []
+        },
+        "surfaces": [
+          {
+            "id": "timeline",
+            "title": "Trailer timeline",
+            "entry": "timeline.html",
+            "tools": [
+              "mcp_module_better-trailer__runtime_timeline"
+            ],
+            "resources": [
+              "pacing"
+            ],
+            "harness": {
+              "commands": [],
+              "state": false,
+              "events": false
+            }
+          }
+        ]
+      },
+      "revision": "420fbabf405dda3eb66af45e03390e8d7e74166044a832735571564e6fb7b80c",
+      "packageUrl": "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/packages/better-trailer.json"
+    },
+    {
+      "title": "Studio harness",
+      "publisher": "Flecten",
+      "category": "interface",
+      "manifest": {
+        "schemaVersion": 1,
+        "name": "studio-harness",
+        "version": "1.0.0",
+        "description": "A complete alternative harness with a project brief, conversation, sessions and live agent controls",
+        "capabilities": [],
+        "requires": [],
+        "conflicts": [],
+        "instructions": [
+          "instructions.md"
+        ],
+        "styles": [
+          "theme.css"
+        ],
+        "resources": [],
+        "runtime": {
+          "entry": "runtime.mjs"
+        },
+        "mcp": {
+          "servers": {}
+        },
+        "hooks": {
+          "sessionStart": [],
+          "userPromptSubmit": [],
+          "preToolUse": [],
+          "postToolUse": [],
+          "stop": [],
+          "sessionEnd": [],
+          "permission": [],
+          "compact": [],
+          "notification": [],
+          "subagent": [],
+          "toolBatch": []
+        },
+        "surfaces": [
+          {
+            "id": "studio",
+            "title": "Studio harness",
+            "entry": "studio.html",
+            "tools": [
+              "mcp_module_studio-harness__runtime_brief"
+            ],
+            "resources": [],
+            "placement": {
+              "selector": "[data-harness-region=\"shell\"]",
+              "position": "replace",
+              "order": 0
+            },
+            "harness": {
+              "commands": [
+                "run",
+                "stop",
+                "sessions.new",
+                "sessions.select",
+                "settings.open",
+                "window.control",
+                "model.set",
+                "approval.respond",
+                "interface.styles"
+              ],
+              "state": true,
+              "events": true
+            }
+          }
+        ]
+      },
+      "revision": "15efc3877118636f5689a45d6f24611228d4bf2c449ae9049e97a1ee3371ff52",
+      "packageUrl": "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/packages/studio-harness.json"
+    },
+    {
+      "title": "Frame workflow",
+      "publisher": "Flecten",
+      "category": "workflow",
+      "manifest": {
+        "schemaVersion": 1,
+        "name": "frame-workflow",
+        "version": "1.0.0",
+        "description": "Replace the agent driver with a deterministic timing workflow for a local brief.",
+        "capabilities": [
+          "trailer-workflow"
+        ],
+        "requires": [
+          "frame-service"
+        ],
+        "conflicts": [],
+        "instructions": [],
+        "styles": [],
+        "resources": [],
+        "platform": {
+          "entry": "platform.mjs",
+          "scope": "session"
+        },
+        "mcp": {
+          "servers": {}
+        },
+        "hooks": {
+          "sessionStart": [],
+          "userPromptSubmit": [],
+          "preToolUse": [],
+          "postToolUse": [],
+          "stop": [],
+          "sessionEnd": [],
+          "permission": [],
+          "compact": [],
+          "notification": [],
+          "subagent": [],
+          "toolBatch": []
+        },
+        "surfaces": []
+      },
+      "revision": "1b1671d361bb4b0316626f3787a57536f5075e6173b7afbcc77137d7d10429b7",
+      "packageUrl": "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/packages/frame-workflow.json"
+    },
+    {
+      "title": "Frame service",
+      "publisher": "Flecten",
+      "category": "platform",
+      "manifest": {
+        "schemaVersion": 1,
+        "name": "frame-service",
+        "version": "1.0.0",
+        "description": "A schema-defined service shared by other trailer modules.",
+        "capabilities": [
+          "trailer-timing"
+        ],
+        "requires": [],
+        "conflicts": [],
+        "instructions": [],
+        "styles": [],
+        "resources": [],
+        "platform": {
+          "entry": "platform.mjs",
+          "scope": "session"
+        },
+        "mcp": {
+          "servers": {}
+        },
+        "hooks": {
+          "sessionStart": [],
+          "userPromptSubmit": [],
+          "preToolUse": [],
+          "postToolUse": [],
+          "stop": [],
+          "sessionEnd": [],
+          "permission": [],
+          "compact": [],
+          "notification": [],
+          "subagent": [],
+          "toolBatch": []
+        },
+        "surfaces": []
+      },
+      "revision": "331d8922e67bfc62a9cf48ec1c41f79d9ee0ae7076526db049dddcb7326ed43e",
+      "packageUrl": "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/packages/frame-service.json"
+    },
+    {
+      "title": "SQLite journal",
+      "publisher": "Flecten",
+      "category": "platform",
+      "manifest": {
+        "schemaVersion": 1,
+        "name": "sqlite-journal",
+        "version": "1.0.0",
+        "description": "Replace the session journal and index with a local SQLite backend.",
+        "capabilities": [
+          "session-storage"
+        ],
+        "requires": [],
+        "conflicts": [],
+        "instructions": [],
+        "styles": [],
+        "resources": [],
+        "platform": {
+          "entry": "platform.mjs",
+          "scope": "project"
+        },
+        "mcp": {
+          "servers": {}
+        },
+        "hooks": {
+          "sessionStart": [],
+          "userPromptSubmit": [],
+          "preToolUse": [],
+          "postToolUse": [],
+          "stop": [],
+          "sessionEnd": [],
+          "permission": [],
+          "compact": [],
+          "notification": [],
+          "subagent": [],
+          "toolBatch": []
+        },
+        "surfaces": []
+      },
+      "revision": "e50eeb7d060d1841ce869119de21edf5013c027f8564bc130f3ee0112f6c748d",
+      "packageUrl": "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/packages/sqlite-journal.json"
+    }
+  ]
+}

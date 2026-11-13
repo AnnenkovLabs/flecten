@@ -1,0 +1,1 @@
+Inspect installed and active modules, their tool schemas and resource guides. Available operations are list, status, tools and read. Delegate activation, tool execution and deactivation to the Worker. The Worker's active modules and workspace surfaces belong to this conversation, while your model history and tool permissions remain separate.

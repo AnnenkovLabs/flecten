@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "name": "frame-workflow",
+  "version": "1.0.0",
+  "description": "Replace the agent driver with a deterministic timing workflow for a local brief.",
+  "capabilities": ["trailer-workflow"],
+  "requires": ["frame-service"],
+  "platform": { "entry": "platform.mjs", "scope": "session" }
+}

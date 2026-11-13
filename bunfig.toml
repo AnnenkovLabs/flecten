@@ -1,0 +1,4 @@
+[test]
+preload = ["./tests/helpers/svelte-runes.ts"]
+# Playwright owns this suite; bun run test:e2e launches its runner.
+pathIgnorePatterns = ["tests/e2e/**", "ansphare_v39/**"]

@@ -1,0 +1,400 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-10T18:34:41.852Z",
+  "environment": {
+    "bun": "1.4.2",
+    "platform": "linux-x64",
+    "commit": "c980ad7",
+    "dirty": true,
+    "cwd": "/home/oleksandr/liquidharness"
+  },
+  "suiteHash": "67ef11038c8b89e5e0498fee57acab15a89d22590265c8619076f58ecb3366e4",
+  "pricing": {
+    "inputUsdPerMTok": 0.15,
+    "outputUsdPerMTok": 0.6,
+    "cachedUsdPerMTok": 0.015,
+    "source": "default"
+  },
+  "tasks": [
+    {
+      "id": "checkpoint-edit-restore",
+      "group": "checkpoints",
+      "hash": "102093e6a8ed616dc261b04169482c9ecfde58b642008a0cc7d7b3fe2e5a0f7c",
+      "status": "passed",
+      "durationMs": 38,
+      "usage": {
+        "input": 15378,
+        "output": 146,
+        "cached": 0
+      },
+      "costUsd": 0.0023943,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 3,
+      "stopReason": "done",
+      "checksPassed": 8,
+      "checksTotal": 8,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "checkpoint_count",
+          "ok": true,
+          "detail": "1 checkpoint(s)"
+        },
+        {
+          "type": "checkpoint_tool",
+          "ok": true,
+          "detail": "latest tool=edit"
+        },
+        {
+          "type": "checkpoint_finalized",
+          "ok": true,
+          "detail": "finalized=true"
+        },
+        {
+          "type": "checkpoint_paths",
+          "ok": true,
+          "detail": "src/config.ts"
+        },
+        {
+          "type": "file_contains",
+          "ok": true,
+          "detail": "src/config.ts contains \"port = 9090\""
+        },
+        {
+          "type": "checkpoint_restore",
+          "ok": true,
+          "detail": "restored src/config.ts; removed none"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "src/config.ts matches"
+        }
+      ],
+      "scriptExhausted": false
+    },
+    {
+      "id": "checkpoint-patch-redo",
+      "group": "checkpoints",
+      "hash": "35d8a6f4bc2e0d7023c8382b14dce873827e85d5b78ecf42f9970f834f35d6a5",
+      "status": "passed",
+      "durationMs": 9,
+      "usage": {
+        "input": 10142,
+        "output": 121,
+        "cached": 0
+      },
+      "costUsd": 0.0015939,
+      "budgetTokens": 120000,
+      "withinBudget": true,
+      "turns": 2,
+      "stopReason": "done",
+      "checksPassed": 11,
+      "checksTotal": 11,
+      "checks": [
+        {
+          "type": "result",
+          "ok": true,
+          "detail": "stop=done pass=true"
+        },
+        {
+          "type": "checkpoint_count",
+          "ok": true,
+          "detail": "1 checkpoint(s)"
+        },
+        {
+          "type": "checkpoint_tool",
+          "ok": true,
+          "detail": "latest tool=apply_patch"
+        },
+        {
+          "type": "checkpoint_paths",
+          "ok": true,
+          "detail": "data.txt, extra.txt"
+        },
+        {
+          "type": "file_contains",
+          "ok": true,
+          "detail": "data.txt contains \"two\""
+        },
+        {
+          "type": "checkpoint_restore",
+          "ok": true,
+          "detail": "restored data.txt; removed extra.txt"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "data.txt matches"
+        },
+        {
+          "type": "file_absent",
+          "ok": true,
+          "detail": "extra.txt is absent"
+        },
+        {
+          "type": "checkpoint_restore",
+          "ok": true,
+          "detail": "restored data.txt, extra.txt; removed none"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "data.txt matches"
+        },
+        {
+          "type": "file_equals",
+          "ok": true,
+          "detail": "extra.txt matches"
+        }
+      ],
+      "scriptExhausted": false
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "errors": 0,
+    "durationMs": 47,
+    "usage": {
+      "input": 25520,
+      "output": 267,
+      "cached": 0
+    },
+    "costUsd": 0.0039882,
+    "byGroup": [
+      {
+        "group": "read",
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "durationMs": 0,
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cached": 0
+        },
+        "costUsd": 0
+      },
+      {
+        "group": "edit",
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "durationMs": 0,
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cached": 0
+        },
+        "costUsd": 0
+      },
+      {
+        "group": "grep",
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "durationMs": 0,
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cached": 0
+        },
+        "costUsd": 0
+      },
+      {
+        "group": "glob",
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "durationMs": 0,
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cached": 0
+        },
+        "costUsd": 0
+      },
+      {
+        "group": "bash",
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "durationMs": 0,
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cached": 0
+        },
+        "costUsd": 0
+      },
+      {
+        "group": "apply_patch",
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "durationMs": 0,
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cached": 0
+        },
+        "costUsd": 0
+      },
+      {
+        "group": "checkpoints",
+        "total": 2,
+        "passed": 2,
+        "failed": 0,
+        "durationMs": 47,
+        "usage": {
+          "input": 25520,
+          "output": 267,
+          "cached": 0
+        },
+        "costUsd": 0.0039882
+      },
+      {
+        "group": "compaction",
+        "total": 0,
+        "passed": 0,
+        "failed": 0,
+        "durationMs": 0,
+        "usage": {
+          "input": 0,
+          "output": 0,
+          "cached": 0
+        },
+        "costUsd": 0
+      }
+    ]
+  },
+  "baseline": {
+    "name": "codex",
+    "status": "ran",
+    "command": "/home/oleksandr/.local/bin/codex",
+    "runs": [
+      {
+        "id": "checkpoint-edit-restore",
+        "status": "passed",
+        "durationMs": 28645,
+        "checksPassed": 1,
+        "checksTotal": 1,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_count",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_tool",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_finalized",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_paths",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_contains",
+            "ok": true,
+            "detail": "src/config.ts contains \"port = 9090\""
+          },
+          {
+            "type": "checkpoint_restore",
+            "ok": null,
+            "detail": "Checkpoint restore and its subsequent checks are not observable in this baseline."
+          },
+          {
+            "type": "file_equals",
+            "ok": null,
+            "detail": "Checkpoint restore and its subsequent checks are not observable in this baseline."
+          }
+        ]
+      },
+      {
+        "id": "checkpoint-patch-redo",
+        "status": "passed",
+        "durationMs": 30659,
+        "checksPassed": 1,
+        "checksTotal": 1,
+        "exitCode": 0,
+        "checks": [
+          {
+            "type": "result",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_count",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_tool",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "checkpoint_paths",
+            "ok": null,
+            "detail": "not evaluable outside the harness"
+          },
+          {
+            "type": "file_contains",
+            "ok": true,
+            "detail": "data.txt contains \"two\""
+          },
+          {
+            "type": "checkpoint_restore",
+            "ok": null,
+            "detail": "Checkpoint restore and its subsequent checks are not observable in this baseline."
+          },
+          {
+            "type": "file_equals",
+            "ok": null,
+            "detail": "Checkpoint restore and its subsequent checks are not observable in this baseline."
+          },
+          {
+            "type": "file_absent",
+            "ok": null,
+            "detail": "Checkpoint restore and its subsequent checks are not observable in this baseline."
+          },
+          {
+            "type": "checkpoint_restore",
+            "ok": null,
+            "detail": "Checkpoint restore and its subsequent checks are not observable in this baseline."
+          },
+          {
+            "type": "file_equals",
+            "ok": null,
+            "detail": "Checkpoint restore and its subsequent checks are not observable in this baseline."
+          },
+          {
+            "type": "file_equals",
+            "ok": null,
+            "detail": "Checkpoint restore and its subsequent checks are not observable in this baseline."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+name: Quality
+
+on:
+  workflow_call:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-coverage:
+    name: docs and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/docs-check.mjs
+      - run: bun scripts/coverage.mjs
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: error
+          retention-days: 14
+
+  electron:
+    name: Electron and visual regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install-deps chromium
+      - run: bun run build:ui
+      - run: bun run build:agent
+      - name: Require a working Electron environment
+        run: bun -e 'const { environmentProblem } = await import("./tests/e2e/fixtures.ts"); const problem = environmentProblem(); if (problem) throw new Error(problem);'
+      - name: Electron scenarios and committed visual baselines
+        run: bunx playwright test --reporter=list,html
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+      - name: Upload Electron report and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-report
+          path: |
+            playwright-report/
+            .liquid/e2e-results/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

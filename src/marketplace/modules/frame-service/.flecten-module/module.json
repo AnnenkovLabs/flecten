@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "frame-service",
+  "version": "1.0.0",
+  "description": "A schema-defined service shared by other trailer modules.",
+  "capabilities": ["trailer-timing"],
+  "platform": { "entry": "platform.mjs", "scope": "session" }
+}

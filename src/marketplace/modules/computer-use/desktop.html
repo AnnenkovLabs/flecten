@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computer</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; min-width: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 13px/1.5 var(--font); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button, summary, select { cursor: pointer; }
+button { min-height: 32px; border: 0; padding: 6px 12px; background: var(--raised); border-radius: 6px; transition: background-color 150ms, scale 150ms; }
+button:hover:not(:disabled) { background: var(--raised-hover); }
+button:active:not(:disabled) { scale: .96; }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--primary); color: var(--on-primary); font-weight: 600; }
+button.primary:hover:not(:disabled) { background: var(--primary-hover); }
+button.quiet { background: transparent; color: var(--text-2); }
+button.danger { color: var(--error); }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+input, select, textarea { width: 100%; min-height: 36px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px; padding: 7px 10px; }
+input::placeholder, textarea::placeholder { color: var(--muted); }
+input[type=checkbox] { width: 16px; min-height: 16px; accent-color: var(--primary); }
+label { display: flex; flex-direction: column; gap: 6px; color: var(--text-2); }
+h1, h2, p { margin: 0; }
+h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+h2 { font-size: 22px; font-weight: 500; letter-spacing: -.03em; text-wrap: balance; }
+p { text-wrap: pretty; }
+svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; fill: none; flex: none; }
+[hidden] { display: none !important; }
+.app { min-height: 100%; display: flex; flex-direction: column; }
+.topbar { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 12px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; border-bottom: 1px solid var(--line); }
+.identity { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px; }
+.identity svg { color: var(--text-2); }
+.state { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.dot.live { background: var(--primary); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.icon-button { display: inline-flex; gap: 6px; align-items: center; justify-content: center; }
+.setup { width: min(100%, 500px); padding: 40px 24px; margin: auto; }
+.setup > p { color: var(--text-2); margin: 12px 0 24px; max-width: 48ch; }
+.setup form { display: grid; gap: 16px; }
+.setup .primary { justify-self: start; }
+.hint { font-size: 12px; color: var(--muted); }
+.setup details { color: var(--text-2); font-size: 12px; }
+.setup details p { margin-top: 8px; }
+.workspace { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+.observation-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; color: var(--text-2); }
+.observation-bar .meta { flex: 1; min-width: 120px; }
+.meta { font-size: 12px; color: var(--muted); }
+.view-options { display: flex; align-items: center; gap: 8px; }
+.check { display: flex; flex-direction: row; align-items: center; gap: 6px; font-size: 12px; }
+.screen-region { flex: none; min-height: 180px; margin: 0 16px; display: grid; place-items: center; position: relative; background: var(--surface); border-radius: 10px; overflow: auto; }
+.screen { position: relative; max-width: 100%; width: 100%; line-height: 0; min-height: 100px; display: grid; place-items: center; }
+.screen img { display: block; max-width: 100%; max-height: clamp(300px, 76vh, 740px); width: auto; height: auto; object-fit: contain; outline: 1px solid oklch(1 0 0 / .1); outline-offset: -1px; }
+.screen.interactive { cursor: crosshair; }
+.screen.interactive:focus-visible { outline-offset: -3px; }
+.screen-region.actual { display: block; }
+.screen-region.actual .screen { max-width: none; width: max-content; }
+.screen-region.actual img { max-width: none; max-height: none; }
+.placeholder { padding: 48px 24px; max-width: 48ch; color: var(--muted); text-align: center; }
+.ownership { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 16px; }
+.ownership strong { font-weight: 500; }
+.control-hint { color: var(--text-2); font-size: 12px; }
+.manual { padding: 0 16px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.manual label { flex: 1; min-width: 160px; }
+.manual input { min-height: 32px; }
+.key-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.manual-controls { padding: 0 16px 12px; }
+.manual-controls summary { color: var(--text-2); padding: 8px 0; }
+.point-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin-top: 8px; }
+.point-form label { flex: 1; min-width: 64px; }
+.point-form select { min-width: 130px; }
+.activity { margin: 0 16px 16px; border-top: 1px solid var(--line); }
+.activity summary { padding: 12px 0; color: var(--text-2); display: list-item; }
+.activity summary span { float: right; font-size: 12px; color: var(--muted); }
+.activity ol { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow-y: auto; }
+.activity li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 8px 0; }
+.activity .result { color: var(--muted); font-size: 12px; }
+.activity .failed { color: var(--error); }
+.activity .description { overflow-wrap: anywhere; }
+.notice { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin: 12px 16px 0; padding: 12px; border-radius: 8px; background: var(--surface); }
+.notice p { color: var(--error); overflow-wrap: anywhere; }
+.notice button { flex: none; }
+.screen-caption { padding: 8px 16px 0; min-height: 26px; }
+@media (max-width: 580px) { .topbar { padding: 10px 12px; } .identity { min-width: 150px; } .actions { width: 100%; } .actions button { flex: 1; } .setup { padding: 24px 16px; } .screen-region { margin: 0 12px; } .observation-bar { padding: 10px 12px; } .manual, .ownership { padding-left: 12px; padding-right: 12px; } }
+@media (pointer: coarse) { button, input, select { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) { button { transition: none; } button:active:not(:disabled) { scale: 1; } }
+</style>
+</head>
+<body>
+<main class="app" aria-label="Computer">
+  <header class="topbar">
+    <div class="identity">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
+      <div><h1 data-text="Computer">Computer</h1><div class="state" role="status"><span class="dot" id="dot"></span><span id="state">Connecting to module…</span></div></div>
+    </div>
+    <div class="actions" id="session-actions" hidden>
+      <button id="refresh" class="quiet icon-button" data-text="Refresh">Refresh</button>
+      <button id="take-control" data-text="Take control">Take control</button>
+      <button id="resume" class="primary" data-text="Return to agent" hidden>Return to agent</button>
+      <button id="disconnect" class="quiet danger" data-text="Stop desktop">Stop desktop</button>
+    </div>
+  </header>
+  <aside class="notice" id="notice" role="alert" hidden><p id="error"></p><button id="retry" data-text="Retry">Retry</button></aside>
+  <section class="setup" id="setup" aria-labelledby="setup-title">
+    <h2 id="setup-title" data-text="A desktop for this task">A desktop for this task</h2>
+    <p data-text="See what the agent sees, follow its actions, and take over whenever you need.">See what the agent sees, follow its actions, and take over whenever you need.</p>
+    <form id="connect-form">
+      <label><span data-text="Screen size">Screen size</span><select id="screen-size"><option value="1280,800">1280 × 800</option><option value="1440,900">1440 × 900</option><option value="1024,768">1024 × 768</option></select></label>
+      <p class="hint" data-text="A separate Linux desktop keeps the host pointer free. Files and network use this computer's account.">A separate Linux desktop keeps the host pointer free. Files and network use this computer's account.</p>
+      <button type="submit" class="primary" id="connect" data-text="Start desktop">Start desktop</button>
+      <details><summary data-text="Connection help">Connection help</summary><p id="connection-help" data-text="Linux needs Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 and GTK 3 PyGObject for Unicode typing. AT-SPI is optional. Missing tools are listed before input is sent.">Linux needs Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 and GTK 3 PyGObject for Unicode typing. AT-SPI is optional. Missing tools are listed before input is sent.</p></details>
+    </form>
+  </section>
+  <section class="workspace" id="workspace" aria-label="Desktop observation" hidden>
+    <div class="observation-bar"><span class="meta" id="observation-meta"></span><div class="view-options"><label class="check"><input id="live" type="checkbox" checked><span data-text="Follow activity">Follow activity</span></label><button class="quiet" id="fit" data-text="Actual size">Actual size</button></div></div>
+    <div class="screen-region" id="screen-region"><div class="screen" id="screen"><img id="image" alt="Current desktop screenshot" hidden><p class="placeholder" id="placeholder" data-text="Capture the desktop to see the current screen.">Capture the desktop to see the current screen.</p></div></div>
+    <p class="screen-caption meta" id="screen-caption" aria-live="polite"></p>
+    <div class="ownership"><div><strong id="owner"></strong><p class="control-hint" id="control-hint"></p></div></div>
+    <form class="manual" id="manual" hidden>
+      <label><span data-text="Type on desktop">Type on desktop</span><input id="type-text" autocomplete="off" spellcheck="false" maxlength="8000" required></label><button type="submit" data-text="Type text">Type text</button>
+      <div class="key-buttons"><button type="button" data-key="Return">Enter</button><button type="button" data-key="Tab">Tab</button><button type="button" data-key="Escape">Esc</button><button type="button" data-key="BackSpace">⌫</button></div>
+    </form>
+    <details class="manual-controls" id="manual-controls" hidden><summary data-text="Pointer and browser controls">Pointer and browser controls</summary>
+      <form class="point-form" id="point-form"><label><span>X</span><input id="point-x" type="number" min="0" value="0" required></label><label><span>Y</span><input id="point-y" type="number" min="0" value="0" required></label><label><span data-text="Action">Action</span><select id="pointer-action"><option value="click" data-text="Click">Click</option><option value="double" data-text="Double click">Double click</option><option value="right" data-text="Right click">Right click</option><option value="up" data-text="Scroll up">Scroll up</option><option value="down" data-text="Scroll down">Scroll down</option></select></label><button type="submit" data-text="Send input">Send input</button></form>
+      <form class="point-form" id="url-form"><label><span data-text="Open URL">Open URL</span><input id="url" type="url" placeholder="https://example.com" autocomplete="off" spellcheck="false" required></label><button type="submit" data-text="Open">Open</button></form>
+    </details>
+    <details class="activity" id="activity"><summary><span id="action-count"></span><b data-text="Activity">Activity</b></summary><ol id="timeline"></ol><p class="hint" id="empty-activity" data-text="Actions will appear here as the desktop is used.">Actions will appear here as the desktop is used.</p></details>
+  </section>
+</main>
+<script>
+// The host supplies flecten and the shared theme inside an opaque-origin frame.
+const translations = {
+  ru: {
+    "Computer":"Компьютер", "A desktop for this task":"Рабочий стол для этой задачи", "See what the agent sees, follow its actions, and take over whenever you need.":"Наблюдайте за экраном и действиями агента. При необходимости заберите управление.", "Screen size":"Размер экрана", "Start desktop":"Запустить рабочий стол", "Connection help":"Помощь с подключением", "A separate Linux desktop keeps the host pointer free. Files and network use this computer's account.":"Отдельный рабочий стол Linux не занимает ваш курсор. Файлы и сеть доступны от имени вашей учётной записи.", "Linux needs Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 and GTK 3 PyGObject for Unicode typing. AT-SPI is optional. Missing tools are listed before input is sent.":"Для Linux нужны Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 и GTK 3 PyGObject для ввода Unicode. AT-SPI необязателен. Недостающие программы перечисляются до отправки ввода.",
+    "Refresh":"Обновить", "Take control":"Забрать управление", "Stop desktop":"Остановить стол", "Return to agent":"Вернуть агенту", "Follow activity":"Следить за действиями", "Actual size":"Исходный размер", "Fit to view":"Вписать в окно", "Retry":"Повторить", "Activity":"Действия", "Actions will appear here as the desktop is used.":"Здесь появятся действия на рабочем столе.", "Capture the desktop to see the current screen.":"Обновите снимок рабочего стола.",
+    "Type on desktop":"Текст для рабочего стола", "Type text":"Ввести текст", "Pointer and browser controls":"Курсор и браузер", "Action":"Действие", "Click":"Клик", "Double click":"Двойной клик", "Right click":"Правый клик", "Scroll up":"Прокрутить вверх", "Scroll down":"Прокрутить вниз", "Send input":"Выполнить", "Open URL":"Открыть адрес", "Open":"Открыть", "Not started":"Не запущен", "Starting…":"Запуск…", "Agent has control":"Управляет агент", "You have control":"Управляете вы", "Stopped":"Остановлен", "Needs attention":"Нужна помощь", "Connecting to module…":"Подключение к модулю…", "Working…":"Выполняется…", "Agent input is paused. Click the screen or use the controls below.":"Ввод агента приостановлен. Нажмите на экран или используйте поля ниже.", "Take control to interact with the desktop.":"Заберите управление для работы с экраном.", "This is a screenshot, not a video stream.":"Это снимок экрана, а не видеотрансляция.", "Current desktop screenshot":"Текущий снимок рабочего стола", "No current observation":"Нет актуального снимка", "completed":"готово", "rejected":"отклонено", "uncertain":"результат неизвестен", "agent":"агент", "human":"вы", "start":"запуск", "click":"клик", "move":"движение курсора", "drag":"перетаскивание", "scroll":"прокрутка", "type":"ввод текста", "key":"нажатие клавиши", "wait":"ожидание", "navigate":"переход", "take_over":"передача вам", "resume":"возврат агенту", "stop":"остановка", "Desktop response is invalid. Refresh the module.":"Некорректный ответ рабочего стола. Переоткройте модуль.", "Module bridge is unavailable. Open Computer inside Flecten.":"Мост модуля недоступен. Откройте «Компьютер» внутри Flecten.", "Desktop screenshot is invalid.":"Некорректный снимок рабочего стола.", "Use an HTTP or HTTPS URL.":"Укажите адрес HTTP или HTTPS.", "Missing system tools":"Нужны системные программы", "Human input":"Ручной ввод", "Refresh the screen before sending input.":"Обновите снимок перед вводом.", "Refresh to inspect the result. Input is never retried automatically.":"Обновите экран для проверки результата. Ввод не повторяется автоматически."
+  },
+  uk: {
+    "Computer":"Комп’ютер", "A desktop for this task":"Робочий стіл для цього завдання", "See what the agent sees, follow its actions, and take over whenever you need.":"Спостерігайте за екраном і діями агента. За потреби переберіть керування.", "Screen size":"Розмір екрана", "Start desktop":"Запустити робочий стіл", "Connection help":"Допомога з підключенням", "A separate Linux desktop keeps the host pointer free. Files and network use this computer's account.":"Окремий робочий стіл Linux не займає ваш курсор. Файли та мережа доступні від вашого облікового запису.", "Linux needs Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 and GTK 3 PyGObject for Unicode typing. AT-SPI is optional. Missing tools are listed before input is sent.":"Для Linux потрібні Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 і GTK 3 PyGObject для вводу Unicode. AT-SPI необов’язковий. Відсутні програми буде показано до надсилання вводу.",
+    "Refresh":"Оновити", "Take control":"Перебрати керування", "Stop desktop":"Зупинити стіл", "Return to agent":"Повернути агенту", "Follow activity":"Стежити за діями", "Actual size":"Початковий розмір", "Fit to view":"Вписати у вікно", "Retry":"Повторити", "Activity":"Дії", "Actions will appear here as the desktop is used.":"Тут з’являться дії на робочому столі.", "Capture the desktop to see the current screen.":"Оновіть знімок робочого столу.",
+    "Type on desktop":"Текст для робочого столу", "Type text":"Увести текст", "Pointer and browser controls":"Курсор і браузер", "Action":"Дія", "Click":"Клік", "Double click":"Подвійний клік", "Right click":"Правий клік", "Scroll up":"Прокрутити вгору", "Scroll down":"Прокрутити вниз", "Send input":"Виконати", "Open URL":"Відкрити адресу", "Open":"Відкрити", "Not started":"Не запущено", "Starting…":"Запуск…", "Agent has control":"Керує агент", "You have control":"Керуєте ви", "Stopped":"Зупинено", "Needs attention":"Потрібна допомога", "Connecting to module…":"Підключення до модуля…", "Working…":"Виконується…", "Agent input is paused. Click the screen or use the controls below.":"Ввід агента призупинено. Натисніть на екран або скористайтеся полями нижче.", "Take control to interact with the desktop.":"Переберіть керування для роботи з екраном.", "This is a screenshot, not a video stream.":"Це знімок екрана, а не відеотрансляція.", "Current desktop screenshot":"Поточний знімок робочого столу", "No current observation":"Немає актуального знімка", "completed":"готово", "rejected":"відхилено", "uncertain":"результат невідомий", "agent":"агент", "human":"ви", "start":"запуск", "click":"клік", "move":"рух курсора", "drag":"перетягування", "scroll":"прокрутка", "type":"ввід тексту", "key":"натискання клавіші", "wait":"очікування", "navigate":"перехід", "take_over":"передача вам", "resume":"повернення агенту", "stop":"зупинка", "Desktop response is invalid. Refresh the module.":"Некоректна відповідь робочого столу. Відкрийте модуль знову.", "Module bridge is unavailable. Open Computer inside Flecten.":"Міст модуля недоступний. Відкрийте «Комп’ютер» у Flecten.", "Desktop screenshot is invalid.":"Некоректний знімок робочого столу.", "Use an HTTP or HTTPS URL.":"Укажіть адресу HTTP або HTTPS.", "Missing system tools":"Потрібні системні програми", "Human input":"Ручний ввід", "Refresh the screen before sending input.":"Оновіть знімок перед вводом.", "Refresh to inspect the result. Input is never retried automatically.":"Оновіть екран для перевірки результату. Ввід не повторюється автоматично."
+  },
+  "zh-Hans": {
+    "Computer":"电脑", "A desktop for this task":"此任务的工作桌面", "See what the agent sees, follow its actions, and take over whenever you need.":"查看智能体看到的画面和操作，随时接管控制。", "Screen size":"屏幕大小", "Start desktop":"启动桌面", "Connection help":"连接帮助", "A separate Linux desktop keeps the host pointer free. Files and network use this computer's account.":"独立的 Linux 桌面不会占用您的鼠标。文件与网络使用本机账户。", "Linux needs Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 and GTK 3 PyGObject for Unicode typing. AT-SPI is optional. Missing tools are listed before input is sent.":"Linux 需要 Xvfb、xauth、D-Bus、xdotool、ImageMagick、Firefox、Python 3 和 GTK 3 PyGObject，以支持 Unicode 输入。AT-SPI 为可选组件。发送输入前会列出缺少的工具。",
+    "Refresh":"刷新", "Take control":"接管控制", "Stop desktop":"停止桌面", "Return to agent":"交还智能体", "Follow activity":"跟随操作", "Actual size":"实际大小", "Fit to view":"适应窗口", "Retry":"重试", "Activity":"操作记录", "Actions will appear here as the desktop is used.":"桌面操作将显示在此处。", "Capture the desktop to see the current screen.":"刷新桌面截图以查看当前画面。", "Type on desktop":"在桌面输入", "Type text":"输入文字", "Pointer and browser controls":"鼠标与浏览器控制", "Action":"操作", "Click":"单击", "Double click":"双击", "Right click":"右键单击", "Scroll up":"向上滚动", "Scroll down":"向下滚动", "Send input":"执行输入", "Open URL":"打开网址", "Open":"打开", "Not started":"未启动", "Starting…":"正在启动…", "Agent has control":"智能体正在控制", "You have control":"您正在控制", "Stopped":"已停止", "Needs attention":"需要处理", "Connecting to module…":"正在连接模块…", "Working…":"正在执行…", "Agent input is paused. Click the screen or use the controls below.":"智能体输入已暂停。点击画面或使用下方控件。", "Take control to interact with the desktop.":"接管后即可操作桌面。", "This is a screenshot, not a video stream.":"当前画面是截图，不是视频流。", "Current desktop screenshot":"当前桌面截图", "No current observation":"暂无当前截图", "completed":"已完成", "rejected":"已拒绝", "uncertain":"结果不确定", "agent":"智能体", "human":"您", "start":"启动", "click":"单击", "move":"移动", "drag":"拖动", "scroll":"滚动", "type":"输入文字", "key":"按键", "wait":"等待", "navigate":"导航", "take_over":"接管", "resume":"交还控制", "stop":"停止", "Desktop response is invalid. Refresh the module.":"桌面响应无效。请重新打开模块。", "Module bridge is unavailable. Open Computer inside Flecten.":"模块连接不可用。请在 Flecten 中打开电脑。", "Desktop screenshot is invalid.":"桌面截图无效。", "Use an HTTP or HTTPS URL.":"请使用 HTTP 或 HTTPS 网址。", "Missing system tools":"缺少系统工具", "Human input":"手动输入", "Refresh the screen before sending input.":"发送输入前请刷新画面。", "Refresh to inspect the result. Input is never retried automatically.":"请刷新画面检查结果。输入不会自动重试。"
+  },
+  "pt-BR": {
+    "Computer":"Computador", "A desktop for this task":"Uma área de trabalho para esta tarefa", "See what the agent sees, follow its actions, and take over whenever you need.":"Veja a tela do agente, acompanhe as ações e assuma o controle quando precisar.", "Screen size":"Tamanho da tela", "Start desktop":"Iniciar área de trabalho", "Connection help":"Ajuda de conexão", "A separate Linux desktop keeps the host pointer free. Files and network use this computer's account.":"Uma área de trabalho Linux separada deixa seu mouse livre. Arquivos e rede usam a conta deste computador.", "Linux needs Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 and GTK 3 PyGObject for Unicode typing. AT-SPI is optional. Missing tools are listed before input is sent.":"O Linux precisa de Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 e GTK 3 PyGObject para digitar Unicode. AT-SPI é opcional. As ferramentas ausentes são listadas antes do envio.",
+    "Refresh":"Atualizar", "Take control":"Assumir controle", "Stop desktop":"Parar área de trabalho", "Return to agent":"Devolver ao agente", "Follow activity":"Acompanhar ações", "Actual size":"Tamanho real", "Fit to view":"Ajustar à janela", "Retry":"Tentar novamente", "Activity":"Atividade", "Actions will appear here as the desktop is used.":"As ações na área de trabalho aparecerão aqui.", "Capture the desktop to see the current screen.":"Atualize a captura para ver a tela atual.", "Type on desktop":"Texto para a área de trabalho", "Type text":"Digitar texto", "Pointer and browser controls":"Mouse e navegador", "Action":"Ação", "Click":"Clicar", "Double click":"Clique duplo", "Right click":"Clique direito", "Scroll up":"Rolar para cima", "Scroll down":"Rolar para baixo", "Send input":"Enviar entrada", "Open URL":"Abrir endereço", "Open":"Abrir", "Not started":"Não iniciada", "Starting…":"Iniciando…", "Agent has control":"Agente no controle", "You have control":"Você está no controle", "Stopped":"Parada", "Needs attention":"Precisa de atenção", "Connecting to module…":"Conectando ao módulo…", "Working…":"Executando…", "Agent input is paused. Click the screen or use the controls below.":"A entrada do agente está pausada. Clique na tela ou use os controles abaixo.", "Take control to interact with the desktop.":"Assuma o controle para usar a área de trabalho.", "This is a screenshot, not a video stream.":"Esta é uma captura de tela, não uma transmissão de vídeo.", "Current desktop screenshot":"Captura atual da área de trabalho", "No current observation":"Nenhuma captura atual", "completed":"concluída", "rejected":"rejeitado", "uncertain":"resultado incerto", "agent":"agente", "human":"você", "start":"início", "click":"clique", "move":"movimento", "drag":"arrasto", "scroll":"rolagem", "type":"digitação", "key":"tecla", "wait":"espera", "navigate":"navegação", "take_over":"controle assumido", "resume":"controle devolvido", "stop":"parada", "Desktop response is invalid. Refresh the module.":"A resposta é inválida. Reabra o módulo.", "Module bridge is unavailable. Open Computer inside Flecten.":"A conexão do módulo está indisponível. Abra Computador no Flecten.", "Desktop screenshot is invalid.":"A captura de tela é inválida.", "Use an HTTP or HTTPS URL.":"Use um endereço HTTP ou HTTPS.", "Missing system tools":"Ferramentas do sistema ausentes", "Human input":"Entrada manual", "Refresh the screen before sending input.":"Atualize a tela antes de enviar entrada.", "Refresh to inspect the result. Input is never retried automatically.":"Atualize a tela para conferir o resultado. A entrada nunca é repetida automaticamente."
+  },
+  es: {
+    "Computer":"Ordenador", "A desktop for this task":"Un escritorio para esta tarea", "See what the agent sees, follow its actions, and take over whenever you need.":"Observa la pantalla y las acciones del agente. Toma el control cuando lo necesites.", "Screen size":"Tamaño de pantalla", "Start desktop":"Iniciar escritorio", "Connection help":"Ayuda de conexión", "A separate Linux desktop keeps the host pointer free. Files and network use this computer's account.":"Un escritorio Linux independiente deja libre tu ratón. Los archivos y la red usan la cuenta de este ordenador.", "Linux needs Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 and GTK 3 PyGObject for Unicode typing. AT-SPI is optional. Missing tools are listed before input is sent.":"Linux necesita Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 y GTK 3 PyGObject para escribir Unicode. AT-SPI es opcional. Se muestran las herramientas que faltan antes de enviar entradas.",
+    "Refresh":"Actualizar", "Take control":"Tomar el control", "Stop desktop":"Detener escritorio", "Return to agent":"Devolver al agente", "Follow activity":"Seguir actividad", "Actual size":"Tamaño real", "Fit to view":"Ajustar a la ventana", "Retry":"Reintentar", "Activity":"Actividad", "Actions will appear here as the desktop is used.":"Aquí aparecerán las acciones del escritorio.", "Capture the desktop to see the current screen.":"Actualiza la captura para ver la pantalla actual.", "Type on desktop":"Texto para el escritorio", "Type text":"Escribir texto", "Pointer and browser controls":"Ratón y navegador", "Action":"Acción", "Click":"Clic", "Double click":"Doble clic", "Right click":"Clic derecho", "Scroll up":"Desplazar arriba", "Scroll down":"Desplazar abajo", "Send input":"Enviar entrada", "Open URL":"Abrir dirección", "Open":"Abrir", "Not started":"Sin iniciar", "Starting…":"Iniciando…", "Agent has control":"El agente tiene el control", "You have control":"Tienes el control", "Stopped":"Detenido", "Needs attention":"Requiere atención", "Connecting to module…":"Conectando al módulo…", "Working…":"Ejecutando…", "Agent input is paused. Click the screen or use the controls below.":"La entrada del agente está pausada. Haz clic en la pantalla o usa los controles inferiores.", "Take control to interact with the desktop.":"Toma el control para usar el escritorio.", "This is a screenshot, not a video stream.":"Es una captura de pantalla, no una transmisión de vídeo.", "Current desktop screenshot":"Captura actual del escritorio", "No current observation":"No hay captura actual", "completed":"completado", "rejected":"rechazado", "uncertain":"resultado incierto", "agent":"agente", "human":"tú", "start":"inicio", "click":"clic", "move":"movimiento", "drag":"arrastre", "scroll":"desplazamiento", "type":"escritura", "key":"tecla", "wait":"espera", "navigate":"navegación", "take_over":"toma de control", "resume":"control devuelto", "stop":"detención", "Desktop response is invalid. Refresh the module.":"La respuesta del escritorio no es válida. Vuelve a abrir el módulo.", "Module bridge is unavailable. Open Computer inside Flecten.":"La conexión del módulo no está disponible. Abre Ordenador en Flecten.", "Desktop screenshot is invalid.":"La captura del escritorio no es válida.", "Use an HTTP or HTTPS URL.":"Usa una dirección HTTP o HTTPS.", "Missing system tools":"Faltan herramientas del sistema", "Human input":"Entrada manual", "Refresh the screen before sending input.":"Actualiza la pantalla antes de enviar entradas.", "Refresh to inspect the result. Input is never retried automatically.":"Actualiza la pantalla para comprobar el resultado. Las entradas no se repiten automáticamente."
+  },
+  ja: {
+    "Computer":"コンピューター", "A desktop for this task":"このタスク用のデスクトップ", "See what the agent sees, follow its actions, and take over whenever you need.":"エージェントの画面と操作を確認し、必要なときに操作を引き継げます。", "Screen size":"画面サイズ", "Start desktop":"デスクトップを起動", "Connection help":"接続のヘルプ", "A separate Linux desktop keeps the host pointer free. Files and network use this computer's account.":"独立した Linux デスクトップで、手元のマウスを占有しません。ファイルとネットワークはこのコンピューターのアカウントを使います。", "Linux needs Xvfb, xauth, D-Bus, xdotool, ImageMagick, Firefox, Python 3 and GTK 3 PyGObject for Unicode typing. AT-SPI is optional. Missing tools are listed before input is sent.":"Linux には Xvfb、xauth、D-Bus、xdotool、ImageMagick、Firefox と、Unicode 入力用の Python 3 および GTK 3 PyGObject が必要です。AT-SPI は任意です。不足するツールは入力前に表示されます。",
+    "Refresh":"更新", "Take control":"操作を引き継ぐ", "Stop desktop":"デスクトップを停止", "Return to agent":"エージェントに戻す", "Follow activity":"操作を追跡", "Actual size":"実際のサイズ", "Fit to view":"画面に合わせる", "Retry":"再試行", "Activity":"操作履歴", "Actions will appear here as the desktop is used.":"デスクトップでの操作がここに表示されます。", "Capture the desktop to see the current screen.":"キャプチャを更新して現在の画面を確認してください。", "Type on desktop":"デスクトップに入力するテキスト", "Type text":"テキストを入力", "Pointer and browser controls":"マウスとブラウザー", "Action":"操作", "Click":"クリック", "Double click":"ダブルクリック", "Right click":"右クリック", "Scroll up":"上にスクロール", "Scroll down":"下にスクロール", "Send input":"入力を送信", "Open URL":"URL を開く", "Open":"開く", "Not started":"未起動", "Starting…":"起動中…", "Agent has control":"エージェントが操作中", "You have control":"あなたが操作中", "Stopped":"停止済み", "Needs attention":"確認が必要", "Connecting to module…":"モジュールに接続中…", "Working…":"実行中…", "Agent input is paused. Click the screen or use the controls below.":"エージェントの入力は一時停止中です。画面をクリックするか、下のコントロールを使ってください。", "Take control to interact with the desktop.":"デスクトップを使うには操作を引き継いでください。", "This is a screenshot, not a video stream.":"これはスクリーンショットです。動画配信ではありません。", "Current desktop screenshot":"現在のデスクトップのスクリーンショット", "No current observation":"現在のキャプチャなし", "completed":"完了", "rejected":"拒否", "uncertain":"結果は不明", "agent":"エージェント", "human":"あなた", "start":"起動", "click":"クリック", "move":"移動", "drag":"ドラッグ", "scroll":"スクロール", "type":"テキスト入力", "key":"キー入力", "wait":"待機", "navigate":"移動", "take_over":"引き継ぎ", "resume":"操作を戻す", "stop":"停止", "Desktop response is invalid. Refresh the module.":"デスクトップの応答が無効です。モジュールを開き直してください。", "Module bridge is unavailable. Open Computer inside Flecten.":"モジュールに接続できません。Flecten 内でコンピューターを開いてください。", "Desktop screenshot is invalid.":"スクリーンショットが無効です。", "Use an HTTP or HTTPS URL.":"HTTP または HTTPS の URL を使ってください。", "Missing system tools":"不足しているシステムツール", "Human input":"手動入力", "Refresh the screen before sending input.":"入力前に画面を更新してください。", "Refresh to inspect the result. Input is never retried automatically.":"画面を更新して結果を確認してください。入力は自動で再送されません。"
+  }
+};
+const $ = id => document.getElementById(id);
+let locale = document.documentElement.lang || navigator.language || "en";
+locale = locale.startsWith("zh") ? "zh-Hans" : locale.startsWith("pt") ? "pt-BR" : locale.split("-")[0];
+const t = key => translations[locale]?.[key] ?? key;
+document.documentElement.lang = locale;
+document.querySelectorAll("[data-text]").forEach(node => { node.textContent = t(node.dataset.text); });
+$("image").alt = t("Current desktop screenshot");
+const names = Object.fromEntries(["status", "start", "observe", "preview", "interact", "control", "navigate"].map(name => [name, `mcp_module_computer-use__runtime_${name}`]));
+let view = null, frameId = null, busy = false, operation = 0, timelineKey = "", timer = null, polling = false;
+function validView(value) {
+  if (!value || value.version !== 1 || !["idle","starting","ready","human","stopped","error"].includes(value.state) || !["agent","human"].includes(value.control) || !Array.isArray(value.history) || value.history.length > 100 || !value.capabilities || typeof value.capabilities !== "object") throw new Error(t("Desktop response is invalid. Refresh the module."));
+  for (const frame of [value.observation, value.preview]) if (frame && (typeof frame.id !== "string" || !Number.isInteger(frame.width) || !Number.isInteger(frame.height) || frame.width < 1 || frame.width > 1920 || frame.height < 1 || frame.height > 1200 || typeof frame.capturedAt !== "string" || !Number.isFinite(Date.parse(frame.capturedAt)))) throw new Error(t("Desktop response is invalid. Refresh the module."));
+  if (value.history.some(item => !item || typeof item.id !== "string" || typeof item.at !== "string" || !["agent","human"].includes(item.actor) || typeof item.action !== "string" || typeof item.status !== "string" || (item.reason !== undefined && typeof item.reason !== "string") || (item.error !== undefined && typeof item.error !== "string"))) throw new Error(t("Desktop response is invalid. Refresh the module."));
+  return value;
+}
+async function invoke(name, args = {}) {
+  const result = await flecten.call(names[name], args);
+  if (!result?.ok) throw new Error(result?.error || result?.output || t("Desktop response is invalid. Refresh the module."));
+  const next = validView(result.data?.structuredContent);
+  return { next, media: result.media };
+}
+function notice(error, input = false) {
+  $("notice").hidden = false;
+  const message = `${error instanceof Error ? error.message : String(error)}${input ? ` ${t("Refresh to inspect the result. Input is never retried automatically.")}` : ""}`;
+  if ($("error").textContent !== message) $("error").textContent = message;
+  $("retry").textContent = t("Refresh");
+}
+function render(result) {
+  view = result.next;
+  const active = ["ready","human"].includes(view.state), human = active && view.control === "human";
+  $("state").textContent = t({idle:"Not started",starting:"Starting…",ready:"Agent has control",human:"You have control",stopped:"Stopped",error:"Needs attention"}[view.state]);
+  $("dot").classList.toggle("live", active);
+  $("setup").hidden = active; $("workspace").hidden = !active; $("session-actions").hidden = !active;
+  $("take-control").hidden = human; $("resume").hidden = !human;
+  $("manual").hidden = !human; $("manual-controls").hidden = !human;
+  $("screen").classList.toggle("interactive", human && !busy);
+  $("owner").textContent = t(human ? "You have control" : "Agent has control");
+  $("control-hint").textContent = t(human ? "Agent input is paused. Click the screen or use the controls below." : "Take control to interact with the desktop.");
+  const observation = displayedObservation();
+  $("observation-meta").textContent = observation ? `${observation.width} × ${observation.height} · ${new Intl.DateTimeFormat(locale, {hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date(observation.capturedAt))}` : t("No current observation");
+  $("screen-caption").textContent = t("This is a screenshot, not a video stream.");
+  if (observation) { $("point-x").max = String(observation.width - 1); $("point-y").max = String(observation.height - 1); }
+  // Keep the last frame stable while input is in flight; a missing ID still disables manual input.
+  if (!observation && !frameId) { $("image").hidden = true; $("placeholder").hidden = false; }
+  if (observation && frameId !== observation.id) { $("image").hidden = true; $("placeholder").hidden = false; }
+  const image = Array.isArray(result.media) ? result.media.find(item => item?.mediaType === "image/png") : null;
+  if (observation && image) {
+    if (typeof image.data !== "string" || image.data.length > 14000000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(image.data)) throw new Error(t("Desktop screenshot is invalid."));
+    const id = observation.id;
+    $("image").onload = () => {
+      if (displayedObservation()?.id !== id) return;
+      if ($("image").naturalWidth !== observation.width || $("image").naturalHeight !== observation.height) { frameId = null; notice(t("Desktop screenshot is invalid.")); return; }
+      frameId = id; $("image").hidden = false; $("placeholder").hidden = true;
+    };
+    $("image").onerror = () => { frameId = null; notice(t("Desktop screenshot is invalid.")); };
+    $("image").src = `data:image/png;base64,${image.data}`;
+  }
+  const key = JSON.stringify(view.history);
+  if (key !== timelineKey) {
+    timelineKey = key; $("timeline").replaceChildren();
+    for (const item of [...view.history].reverse()) {
+      const row = document.createElement("li"), mark = document.createElement("span"), description = document.createElement("div"), meta = document.createElement("span");
+      mark.textContent = item.status === "completed" ? "✓" : "!"; mark.setAttribute("aria-hidden","true");
+      description.className = "description"; description.textContent = `${t(item.actor)} · ${t(item.action)} · ${t(item.status)}`;
+      if (item.reason || item.error) { const detail = document.createElement("p"); detail.className = item.error ? "failed" : "meta"; detail.textContent = item.error || item.reason; description.append(detail); }
+      meta.className = "result"; meta.textContent = Number.isFinite(Date.parse(item.at)) ? new Intl.DateTimeFormat(locale, {hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date(item.at)) : "";
+      row.append(mark,description,meta); $("timeline").append(row);
+    }
+    $("action-count").textContent = new Intl.NumberFormat(locale).format(view.history.length);
+    $("empty-activity").hidden = view.history.length > 0;
+    if (view.history.some(item => item.status !== "completed")) $("activity").open = true;
+  }
+  if (view.error) notice(view.error);
+  const missing = view.capabilities?.missingDependencies;
+  if (Array.isArray(missing) && missing.every(item => typeof item === "string") && missing.length) $("connection-help").textContent = `${t("Missing system tools")}: ${missing.join(", ")}`;
+}
+function setBusy(value) {
+  busy = value;
+  for (const id of ["connect","refresh"]) $(id).disabled = value;
+  $("manual").querySelectorAll("button,input").forEach(node => { node.disabled = value; });
+  $("manual-controls").querySelectorAll("button,input,select").forEach(node => { node.disabled = value; });
+  $("workspace").setAttribute("aria-busy", String(value));
+}
+function displayedObservation() { return view?.preview ?? view?.observation; }
+async function loadCurrent(ticket) {
+  const observation = displayedObservation();
+  if (!observation || frameId === observation.id) return;
+  const result = view?.preview ? await invoke("preview") : await invoke("observe", {refresh:false});
+  if (ticket === operation) render(result);
+}
+async function perform(name, args = {}, input = false) {
+  const ticket = ++operation; setBusy(true); $("notice").hidden = true;
+  try {
+    const result = await invoke(name,args);
+    if (ticket !== operation) return;
+    render(result);
+    if (!result.media?.length) await loadCurrent(ticket);
+  } catch (error) {
+    if (ticket === operation) {
+      notice(error,input);
+      try { const result = await invoke("status"); if (ticket === operation) render(result); }
+      catch { /* The original failure remains visible; a metadata refresh never retries input. */ }
+    }
+  } finally { if (ticket === operation) { setBusy(false); if (view) render({next:view}); } }
+}
+async function refresh() { if (view?.control === "human") await perform("observe", {refresh:true}); else await perform("preview"); }
+function send(action) {
+  if (busy || view?.control !== "human") return;
+  const observation = displayedObservation();
+  if (!observation || frameId !== observation.id) { notice(t("Refresh the screen before sending input.")); return; }
+  return perform("interact", {observationId:observation.id,action,reason:t("Human input")}, true);
+}
+$("connect-form").onsubmit = event => { event.preventDefault(); const [width,height] = $("screen-size").value.split(",").map(Number); perform("start",{width,height}); };
+$("take-control").onclick = () => perform("control",{operation:"take_over"});
+$("resume").onclick = () => perform("control",{operation:"resume"});
+$("disconnect").onclick = () => perform("control",{operation:"stop"});
+$("refresh").onclick = refresh;
+$("retry").onclick = () => view && ["ready","human"].includes(view.state) ? refresh() : perform("status");
+$("fit").onclick = () => { const actual = $("screen-region").classList.toggle("actual"); $("fit").textContent = t(actual ? "Fit to view" : "Actual size"); };
+$("manual").onsubmit = async event => { event.preventDefault(); const text = $("type-text").value; if (text) await send({type:"type",text}); };
+document.querySelectorAll("[data-key]").forEach(button => { button.onclick = () => send({type:"key",keys:[button.dataset.key]}); });
+$("point-form").onsubmit = event => {
+  event.preventDefault(); const x = Number($("point-x").value), y = Number($("point-y").value), action = $("pointer-action").value;
+  send(["up","down"].includes(action) ? {type:"scroll",x,y,direction:action,amount:3} : {type:"click",x,y,button:action === "right" ? "right" : "left",clickCount:action === "double" ? 2 : 1});
+};
+$("url-form").onsubmit = event => {
+  event.preventDefault(); const observation = displayedObservation();
+  if (busy || view?.control !== "human" || !observation || frameId !== observation.id) return;
+  const url = $("url").value; if (!["http:","https:"].includes(new URL(url).protocol)) { notice(t("Use an HTTP or HTTPS URL.")); return; }
+  perform("navigate",{observationId:observation.id,url,reason:t("Human input")},true);
+};
+$("image").onclick = event => {
+  const observation = displayedObservation();
+  if (busy || view?.control !== "human" || !observation || frameId !== observation.id) return;
+  const rect = $("image").getBoundingClientRect(), {width,height} = observation;
+  const x = Math.min(width-1,Math.max(0,Math.floor((event.clientX-rect.left)*width/rect.width)));
+  const y = Math.min(height-1,Math.max(0,Math.floor((event.clientY-rect.top)*height/rect.height)));
+  $("point-x").value = String(x); $("point-y").value = String(y); send({type:"click",x,y,button:"left",clickCount:1});
+};
+async function poll() {
+  if (document.hidden || busy || polling || !$("live").checked) return;
+  const ticket = operation; polling = true;
+  try { const result = await invoke(["ready","human"].includes(view?.state) ? "preview" : "status"); if (ticket !== operation) return; render(result); if (!result.media?.length) await loadCurrent(ticket); }
+  catch(error) { if (ticket === operation) { $("live").checked = false; notice(error); } }
+  finally { polling = false; }
+}
+async function initialize() {
+  if (!window.flecten) { notice(t("Module bridge is unavailable. Open Computer inside Flecten.")); return; }
+  try { const tools = await flecten.tools(); if (!tools?.ok) throw new Error(tools?.error || t("Desktop response is invalid. Refresh the module.")); await perform("status"); timer = setInterval(poll,1000); }
+  catch(error) { notice(error); }
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+addEventListener("pagehide", () => clearInterval(timer));
+addEventListener("flecten.locale", () => {
+  locale = document.documentElement.lang;
+  document.querySelectorAll("[data-text]").forEach(node => { node.textContent = t(node.dataset.text); });
+  $("image").alt = t("Current desktop screenshot");
+  $("fit").textContent = t($("screen-region").classList.contains("actual") ? "Fit to view" : "Actual size");
+  timelineKey = "";
+  if (view) render({ next: view });
+});
+initialize();
+</script>
+</body>
+</html>

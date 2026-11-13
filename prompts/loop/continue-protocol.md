@@ -1,0 +1,1 @@
+You stopped after using tools without a completion signal. If the task is complete, finish now with the done tool or a single trailing <summary> block. If more work remains, continue it. Do not ask whether to proceed.

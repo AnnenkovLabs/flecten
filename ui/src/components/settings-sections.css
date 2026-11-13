@@ -1,0 +1,264 @@
+/* Settings sections: MCP servers, hooks, skills, diagnostics, footer, responsive rules. */
+
+.server-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.server-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(240, 239, 237, 0.03);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.server-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.server-id {
+  flex: 1;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.server-toggle {
+  min-height: 32px;
+  flex: none;
+}
+
+.server-confirm {
+  flex: none;
+  color: var(--error);
+  font-size: 12px;
+}
+
+.server-remove {
+  width: 32px;
+  height: 32px;
+}
+
+.span-2 {
+  grid-column: 1 / -1;
+}
+
+.skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: rgba(240, 239, 237, 0.06);
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.diagnostic {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(211, 189, 145, 0.08);
+  color: var(--warning);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diagnostic.is-error {
+  background: rgba(226, 162, 162, 0.08);
+  color: var(--error);
+}
+
+.diagnostic-source {
+  font-family: var(--mono);
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.wrap {
+  overflow-wrap: anywhere;
+}
+
+.about-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.run-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 24px 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(211, 189, 145, 0.09);
+  color: var(--warning);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.run-banner svg {
+  margin-top: 1px;
+}
+
+.settings-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 64px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.foot-message {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.foot-error {
+  display: block;
+  max-width: 64ch;
+  text-wrap: pretty;
+}
+
+.foot-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+}
+
+.foot-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.discard-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 1;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.discard-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+@keyframes skel-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-dialog,
+  .st-dialog::backdrop {
+    transition: none;
+  }
+
+  .st-details::details-content,
+  .st-details[open]::details-content,
+  .st-chevron {
+    transition: none;
+  }
+
+  .skel {
+    animation: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .st-details > summary:hover {
+    background: rgba(240, 239, 237, 0.025);
+  }
+
+  .section-row:hover {
+    background: rgba(240, 239, 237, 0.04);
+    color: var(--text);
+  }
+
+  .provider-row:hover {
+    background: rgba(240, 239, 237, 0.04);
+  }
+}
+
+@media (max-width: 1220px) {
+  .settings-dialog {
+    width: calc(100vw - 24px);
+    height: calc(100vh - 20px);
+  }
+
+  .settings-body {
+    grid-template-columns: 264px minmax(0, 1fr);
+  }
+
+  .main-scroll {
+    padding: 0 20px 20px;
+  }
+
+  .settings-head {
+    padding: 12px 20px 6px;
+  }
+
+  .settings-foot {
+    padding: 10px 20px;
+  }
+
+  .run-banner {
+    margin: 0 20px 8px;
+  }
+}
+
+@media (max-height: 720px) {
+  .settings-head {
+    padding: 12px 20px 6px;
+  }
+
+  .settings-foot {
+    min-height: 56px;
+    padding: 8px 20px;
+  }
+
+  .settings-section {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .settings-body {
+    grid-template-columns: 232px minmax(0, 1fr);
+  }
+
+}

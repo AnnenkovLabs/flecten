@@ -1,0 +1,78 @@
+{
+  "id": "patch-multi-file",
+  "group": "apply_patch",
+  "prompt": "Update a.txt and b.txt and delete c.txt in one patch.",
+  "files": {
+    "a.txt": "alpha\n",
+    "b.txt": "beta\n",
+    "c.txt": "remove me\n"
+  },
+  "script": [
+    {
+      "text": "Applying one transactional patch.",
+      "calls": [
+        {
+          "name": "apply_patch",
+          "args": {
+            "patch": "*** Begin Patch\n*** Update File: a.txt\n@@\n-alpha\n+ALPHA\n*** Update File: b.txt\n@@\n-beta\n+BETA\n*** Delete File: c.txt\n*** End Patch"
+          }
+        }
+      ]
+    },
+    {
+      "text": "The patch was applied.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Updated and deleted files",
+            "evidence": [
+              "a.txt and b.txt changed; c.txt deleted"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "apply_patch"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "apply_patch",
+      "text": "M a.txt"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "apply_patch",
+      "text": "M b.txt"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "apply_patch",
+      "text": "D c.txt"
+    },
+    {
+      "type": "file_equals",
+      "path": "a.txt",
+      "content": "ALPHA\n"
+    },
+    {
+      "type": "file_equals",
+      "path": "b.txt",
+      "content": "BETA\n"
+    },
+    {
+      "type": "file_absent",
+      "path": "c.txt"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

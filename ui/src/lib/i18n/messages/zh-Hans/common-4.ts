@@ -1,0 +1,26 @@
+// Plain interface copy. Keep runtime values as numeric parts.
+export default {
+  "Auto-compaction at {0}%": ["达到 ", 0, "% 时自动压缩"],
+  "Input tokens": "输入 token",
+  "Output tokens": "输出 token",
+  "Reasoning tokens": "推理 token",
+  "Cache read tokens": "缓存读取 token",
+  "Cache write tokens": "缓存写入 token",
+  "Token usage": "Token 用量",
+  "Not reported": "未提供",
+  session: "本次会话",
+  "last turn": "上一轮",
+  "Usage by model": "各模型用量",
+  "Input / output tokens": "输入 / 输出 token",
+  "Worker activity": "Worker 活动",
+  "No tool calls yet": "暂无工具调用",
+  "Stop Worker": "停止 Worker",
+  "Talker and Worker": "Talker 与 Worker",
+  "Separate conversation from execution": "将对话与执行分开",
+  "New chats use a Talker and an independent Worker. Both use the selected model. English handoffs replace automatic translation; tool output stays live.":
+    "新对话使用 Talker 和独立的 Worker，两者均使用所选模型。任务交接使用英语，不再自动翻译；工具输出仍实时显示。",
+  Undo: "撤销",
+  Redo: "重做",
+  "Worker failed": "Worker 执行失败",
+  "Call interrupted; completion was not confirmed": "调用已中断，尚未确认是否完成",
+} as const;

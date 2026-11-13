@@ -1,0 +1,246 @@
+.lh-context {
+  position: relative;
+  display: inline-flex;
+}
+
+.lh-context-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  height: 32px;
+  padding: 0 7px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition:
+    background 150ms var(--ease),
+    color 150ms var(--ease);
+}
+
+.lh-context-button:hover,
+.lh-context-button[aria-expanded="true"] {
+  background: rgba(240, 239, 237, 0.05);
+  color: var(--text-2);
+}
+
+.lh-context-ring {
+  flex: none;
+  rotate: -90deg;
+}
+
+.lh-context-track,
+.lh-context-fill {
+  fill: none;
+  stroke-width: 2.2;
+}
+
+.lh-context-track {
+  stroke: rgba(240, 239, 237, 0.12);
+}
+
+.lh-context-fill {
+  stroke: var(--muted);
+  stroke-linecap: round;
+  transition: stroke-dasharray 420ms var(--ease);
+}
+
+.lh-context[data-level="warn"] .lh-context-fill {
+  stroke: #d7b46a;
+}
+
+.lh-context[data-level="high"] .lh-context-fill {
+  stroke: var(--warning);
+}
+
+.lh-context[data-level="critical"] .lh-context-fill {
+  stroke: #ef7b6b;
+}
+
+.lh-context[data-level="critical"] .lh-context-label,
+.lh-context[data-level="high"] .lh-context-label {
+  color: var(--text-2);
+}
+
+.floating-menu.lh-context-pop {
+  gap: 10px;
+  padding: 14px;
+  overflow: auto;
+  background: var(--raised);
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.lh-context-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lh-context-head strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lh-context-head span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lh-context-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(240, 239, 237, 0.08);
+}
+
+.lh-context-bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--muted);
+}
+
+.lh-context[data-level="warn"] .lh-context-bar span {
+  background: #d7b46a;
+}
+
+.lh-context[data-level="high"] .lh-context-bar span {
+  background: var(--warning);
+}
+
+.lh-context[data-level="critical"] .lh-context-bar span {
+  background: #ef7b6b;
+}
+
+.lh-context-note {
+  margin: 0;
+  color: var(--muted);
+}
+
+.lh-context-focus {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lh-context-focus input {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(240, 239, 237, 0.05);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.lh-context-focus input:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+.lh-context-compact {
+  height: 32px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.lh-context-compact:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 26%, transparent);
+}
+
+.lh-context-compact:disabled {
+  opacity: 0.5;
+}
+
+.lh-context-usage {
+  display: grid;
+  gap: 8px;
+  padding-block: 10px;
+  border-block: 1px solid var(--line);
+}
+
+.lh-context-usage > strong {
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.lh-context-tokens {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.lh-context-tokens > div,
+.lh-context-costs {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lh-context-tokens dt,
+.lh-context-costs,
+.lh-context-models {
+  color: var(--muted);
+}
+
+.lh-context-tokens dd {
+  margin: 0;
+  text-align: right;
+  color: var(--text-2);
+}
+
+.lh-context-costs {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.lh-context-costs b {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.lh-context-models {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 0 0;
+  list-style: none;
+  font-size: 11px;
+}
+
+.lh-context-models li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lh-context-model {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2);
+}
+
+.lh-context-model-tokens,
+.lh-context-models li > span:last-child {
+  white-space: nowrap;
+}
+
+.lh-context-model-tokens > span {
+  margin-left: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-context-fill { transition: none; }
+}

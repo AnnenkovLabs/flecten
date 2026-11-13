@@ -1,0 +1,87 @@
+{
+  "id": "checkpoint-edit-restore",
+  "group": "checkpoints",
+  "prompt": "Change the port to 9090 and make sure the edit can be undone.",
+  "files": {
+    "src/config.ts": "export const port = 8080;\n"
+  },
+  "script": [
+    {
+      "text": "Reading the file.",
+      "calls": [
+        {
+          "name": "read",
+          "args": {
+            "path": "src/config.ts"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Editing the port.",
+      "calls": [
+        {
+          "name": "edit",
+          "args": {
+            "path": "src/config.ts",
+            "oldString": "port = 8080",
+            "newString": "port = 9090"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Edit complete.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Changed the port",
+            "evidence": [
+              "src/config.ts contains port 9090"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "checkpoint_count",
+      "count": 1
+    },
+    {
+      "type": "checkpoint_tool",
+      "tool": "edit"
+    },
+    {
+      "type": "checkpoint_finalized"
+    },
+    {
+      "type": "checkpoint_paths",
+      "paths": [
+        "src/config.ts"
+      ]
+    },
+    {
+      "type": "file_contains",
+      "path": "src/config.ts",
+      "text": "port = 9090"
+    },
+    {
+      "type": "checkpoint_restore",
+      "target": "before"
+    },
+    {
+      "type": "file_equals",
+      "path": "src/config.ts",
+      "content": "export const port = 8080;\n"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

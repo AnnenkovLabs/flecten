@@ -1,0 +1,389 @@
+/* Shared controls for work surfaces, confirmations and settings. */
+.st-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--control-h);
+  min-width: var(--control-h);
+  flex: none;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: var(--raised);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background var(--t-touch) var(--ease),
+    color var(--t-touch) var(--ease),
+    border-radius 460ms var(--ease-jelly);
+}
+
+.st-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+.st-btn--primary:disabled {
+  background: var(--raised);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+  opacity: 1;
+}
+
+.st-btn--primary {
+  background: linear-gradient(180deg, var(--primary), var(--primary-end));
+  color: var(--on-primary);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.st-btn--quiet {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.st-btn--danger {
+  background: transparent;
+  color: var(--error);
+  box-shadow: inset 0 0 0 1px rgba(226, 162, 162, 0.24);
+}
+
+.st-btn--danger-fill {
+  background: rgba(226, 162, 162, 0.16);
+  color: var(--error);
+  box-shadow: inset 0 0 0 1px rgba(226, 162, 162, 0.32);
+}
+
+.st-btn--sm {
+  height: var(--control-sm-h);
+  padding: 0 8px;
+}
+
+.st-btn--sm::before {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
+}
+
+  .st-icon-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--control-h);
+    height: var(--control-h);
+    flex: none;
+    border-radius: 7px;
+    color: var(--muted);
+    transition:
+      background var(--t-touch) var(--ease),
+      color var(--t-touch) var(--ease),
+      border-radius 460ms var(--ease-jelly);
+  }
+
+.st-icon-btn::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+}
+
+.st-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.st-label {
+  color: var(--text-2);
+  user-select: none;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.st-hint {
+  color: var(--muted);
+  user-select: none;
+  font-size: 12px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.st-input,
+.st-select,
+.st-textarea {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  outline: 0;
+  background: #141414;
+  color: var(--text);
+  font-size: 13px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition: box-shadow var(--t-touch) var(--ease);
+}
+
+.st-input::placeholder,
+.st-textarea::placeholder {
+  color: rgba(153, 150, 147, 0.7);
+}
+
+.st-input:focus,
+.st-select:focus,
+.st-textarea:focus {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 62%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.st-textarea {
+  min-height: 72px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.st-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.st-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control-h);
+  flex: none;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: #1b1b1b;
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.st-search:focus-within {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+.st-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.st-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  flex: none;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: rgba(240, 239, 237, 0.06);
+  color: var(--text-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.st-badge--ok {
+  background: rgba(178, 185, 175, 0.12);
+  color: var(--success);
+}
+
+.st-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.st-switch-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.st-switch-copy strong {
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.st-switch-copy span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.st-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+  .st-switch-track {
+    position: relative;
+    width: 34px;
+    height: 20px;
+    flex: none;
+    border-radius: 999px;
+    background: rgba(240, 239, 237, 0.1);
+    box-shadow: inset 0 0 0 1px var(--line);
+    transition:
+      background var(--t-touch) var(--ease),
+      box-shadow var(--t-touch) var(--ease),
+      border-radius 460ms var(--ease-jelly);
+  }
+
+  .st-switch-track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition:
+      transform 460ms var(--ease-jelly),
+      width 260ms var(--ease-jelly),
+      border-radius 460ms var(--ease-jelly),
+      background var(--t-touch) var(--ease);
+  }
+
+.st-switch:active .st-switch-track::after {
+  width: 18px;
+  border-radius: 8px;
+}
+
+.st-switch input:checked + .st-switch-track {
+  background: rgba(240, 239, 237, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(240, 239, 237, 0.16);
+}
+
+.st-switch input:checked + .st-switch-track::after {
+  transform: translateX(14px);
+  background: var(--text);
+}
+
+.st-switch input:focus-visible + .st-switch-track {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+  .st-chip {
+    height: var(--control-h);
+    padding: 0 10px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+    transition:
+      background var(--t-touch) var(--ease),
+      color var(--t-touch) var(--ease),
+      border-radius 460ms var(--ease-jelly),
+      box-shadow var(--t-touch) var(--ease);
+  }
+
+.st-chip.is-on {
+  background: rgba(240, 239, 237, 0.1);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(240, 239, 237, 0.18);
+}
+
+.st-mono {
+  font-family: var(--mono);
+}
+
+.st-error {
+  color: var(--error);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .st-btn:hover:not(:disabled) {
+    border-radius: 12px;
+    background: var(--raised-hover);
+    color: var(--text);
+  }
+
+  .st-btn--primary:hover:not(:disabled) {
+    border-radius: 11px;
+    background: linear-gradient(180deg, var(--primary-hover), var(--primary));
+    color: var(--on-primary);
+  }
+
+  .st-btn--quiet:hover:not(:disabled) {
+    background: rgba(240, 239, 237, 0.05);
+  }
+
+  .st-btn--danger:hover:not(:disabled) {
+    background: rgba(226, 162, 162, 0.09);
+    color: var(--error);
+  }
+
+  .st-btn--danger-fill:hover:not(:disabled) {
+    background: rgba(226, 162, 162, 0.22);
+    color: var(--error);
+  }
+
+  .st-icon-btn:hover:not(:disabled) {
+    border-radius: 12px;
+    background: rgba(240, 239, 237, 0.06);
+    color: var(--text);
+  }
+
+  .st-chip:hover {
+    border-radius: 10px;
+    background: rgba(240, 239, 237, 0.05);
+    color: var(--text-2);
+  }
+}
+
+@media (pointer: coarse) {
+  .st-btn,
+  .st-btn--sm {
+    height: 44px;
+  }
+
+  .st-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .st-input,
+  .st-select,
+  .st-search {
+    min-height: 44px;
+  }
+
+  .st-input,
+  .st-select,
+  .st-search input,
+  .st-textarea {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "patch-add-file",
+  "group": "apply_patch",
+  "prompt": "Add docs/new.md with a short note.",
+  "files": {},
+  "script": [
+    {
+      "text": "Adding the file.",
+      "calls": [
+        {
+          "name": "apply_patch",
+          "args": {
+            "patch": "*** Begin Patch\n*** Add File: docs/new.md\n+# Notes\n+\n+Bench patch.\n*** End Patch"
+          }
+        }
+      ]
+    },
+    {
+      "text": "The file was added.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Added docs/new.md",
+            "evidence": [
+              "docs/new.md exists with the requested content"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "apply_patch"
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "apply_patch",
+      "text": "A docs/new.md"
+    },
+    {
+      "type": "file_equals",
+      "path": "docs/new.md",
+      "content": "# Notes\n\nBench patch."
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

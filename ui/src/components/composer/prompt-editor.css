@@ -1,0 +1,42 @@
+.prompt-editor {
+  position: relative;
+  width: 100%;
+  min-height: 28px;
+  max-height: 160px;
+  padding: var(--space-1) var(--space-1) var(--space-3);
+  overflow-y: auto;
+  outline: none;
+  color: var(--text);
+  caret-color: var(--primary);
+  font-size: 16px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.prompt-editor p { margin: 0; white-space: pre-wrap; }
+.prompt-editor[data-empty="true"]::before {
+  position: absolute;
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+.prompt-mention {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  max-width: min(240px, 100%);
+  margin: 0 1px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--raised-hover);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--text);
+  font-size: 0.875em;
+  line-height: 1.4;
+  vertical-align: baseline;
+  user-select: all;
+}
+.prompt-mention-mark { flex: none; color: var(--muted); }
+.prompt-mention-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prompt-mention.ProseMirror-selectednode { outline: 2px solid var(--primary); outline-offset: 1px; }
+.composer-wrap.is-hero .prompt-editor { min-height: 72px; max-height: 240px; }

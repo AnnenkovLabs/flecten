@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "name": "computer-use",
+  "version": "1.0.1",
+  "description": "Operate a private Linux desktop with screenshot-grounded actions, guarded handoff and a live viewer. Requires Xvfb, xauth, xdotool, ImageMagick and Firefox. Shares the host account, files and network.",
+  "capabilities": ["computer-use", "desktop", "browser"],
+  "instructions": ["instructions.md"],
+  "resources": [{ "id": "computer-guide", "path": "guide.md", "description": "Desktop workflow, dependency setup, grounding, handoff, verification and recovery" }],
+  "runtime": {
+    "entry": "runtime.mjs",
+    "readOnlyTools": ["mcp_module_computer-use__runtime_status", "mcp_module_computer-use__runtime_preview"]
+  },
+  "surfaces": [{
+    "id": "desktop", "title": "Computer", "entry": "desktop.html",
+    "tools": [
+      "mcp_module_computer-use__runtime_status", "mcp_module_computer-use__runtime_start",
+      "mcp_module_computer-use__runtime_observe", "mcp_module_computer-use__runtime_preview", "mcp_module_computer-use__runtime_interact",
+      "mcp_module_computer-use__runtime_control", "mcp_module_computer-use__runtime_navigate"
+    ],
+    "resources": ["computer-guide"]
+  }]
+}

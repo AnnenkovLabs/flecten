@@ -1,0 +1,69 @@
+{
+  "id": "edit-version",
+  "group": "edit",
+  "prompt": "Bump the package version from 1.0.0 to 1.1.0.",
+  "files": {
+    "package.json": "{\n  \"name\": \"demo\",\n  \"version\": \"1.0.0\"\n}\n"
+  },
+  "script": [
+    {
+      "text": "Reading the package first.",
+      "calls": [
+        {
+          "name": "read",
+          "args": {
+            "path": "package.json"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Updating the version.",
+      "calls": [
+        {
+          "name": "edit",
+          "args": {
+            "path": "package.json",
+            "oldString": "\"version\": \"1.0.0\"",
+            "newString": "\"version\": \"1.1.0\""
+          }
+        }
+      ]
+    },
+    {
+      "text": "Version bumped.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Version bumped to 1.1.0",
+            "evidence": [
+              "package.json contains version 1.1.0"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "read"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "edit"
+    },
+    {
+      "type": "file_equals",
+      "path": "package.json",
+      "content": "{\n  \"name\": \"demo\",\n  \"version\": \"1.1.0\"\n}\n"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

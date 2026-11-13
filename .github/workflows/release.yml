@@ -1,0 +1,181 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+    permissions:
+      contents: read
+
+  verify:
+    name: verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: Require the tag to match the application version
+        run: bun -e 'const { version } = await Bun.file("package.json").json(); if (process.env.GITHUB_REF_NAME !== `v${version}`) throw new Error(`Release tag must be v${version}`);'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - run: bun run check
+      - run: bun run lint
+      - run: bun run build:ui
+      - run: bun run build:agent
+
+  package:
+    name: package (${{ matrix.artifact }})
+    needs: [verify, quality]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: linux
+          - os: macos-latest
+            artifact: macos
+          - os: windows-latest
+            artifact: windows
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      CSC_LINK: ${{ secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ matrix.artifact == 'windows' && (secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD) || secrets.CSC_KEY_PASSWORD }}
+      WIN_CSC_LINK: ${{ matrix.artifact == 'windows' && (secrets.WIN_CSC_LINK || secrets.CSC_LINK) || '' }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - name: Pin update verification key in the application
+        env:
+          UPDATE_SIGNING_PUBLIC_KEY: ${{ vars.UPDATE_SIGNING_PUBLIC_KEY }}
+        run: bun scripts/sign-update-manifests.mjs --pin
+      - name: Package
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p diagnostics
+          bun run release 2>&1 | tee diagnostics/package.log
+      - name: Smoke the packaged release before upload
+        shell: bash
+        run: |
+          set -o pipefail
+          bun run smoke:packaged 2>&1 | tee diagnostics/smoke.log
+      - name: Capture window on failure
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          mkdir -p diagnostics
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a bun run app:shot > diagnostics/screenshot.log 2>&1 || true
+          else
+            bun run app:shot > diagnostics/screenshot.log 2>&1 || true
+          fi
+          bun -e 'const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path"); for (const name of fs.readdirSync(os.tmpdir())) { if (name.startsWith("liquid-ui") && name.endsWith(".png")) fs.copyFileSync(path.join(os.tmpdir(), name), path.join("diagnostics", name)); }'
+      - name: Upload packaging diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-diagnostics-${{ matrix.artifact }}
+          path: |
+            diagnostics/**
+            release/*/resources/**
+            release/*/*.app/Contents/Resources/**
+            release/*.yml
+            release/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.artifact }}
+          path: |
+            release/*.AppImage
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.yml
+            release/UNSIGNED-*.txt
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    needs: package
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+      - run: bun install --frozen-lockfile
+      - name: Sign update metadata and verify release artifact hashes
+        env:
+          UPDATE_SIGNING_PUBLIC_KEY: ${{ vars.UPDATE_SIGNING_PUBLIC_KEY }}
+          UPDATE_SIGNING_PRIVATE_KEY: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY }}
+        run: bun scripts/sign-update-manifests.mjs
+      - run: bun scripts/release-checksums.mjs
+      - name: Verify Linux AppImage checksum
+        shell: bash
+        run: grep -q '\.AppImage$' release/SHA256SUMS.txt
+      - name: Report signing status
+        shell: bash
+        run: |
+          shopt -s nullglob
+          markers=(release/UNSIGNED-*.txt)
+          if [ ${#markers[@]} -eq 0 ]; then
+            echo "All platform artifacts are signed and notarized." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cat "${markers[@]}"
+          echo "### Unsigned artifacts" >> "$GITHUB_STEP_SUMMARY"
+          for marker in "${markers[@]}"; do
+            echo "- $(basename "$marker")" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

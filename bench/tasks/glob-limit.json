@@ -1,0 +1,83 @@
+{
+  "id": "glob-limit",
+  "group": "glob",
+  "prompt": "List at most five TypeScript files.",
+  "files": {
+    "src/f01.ts": "export const value = 1;\n",
+    "src/f02.ts": "export const value = 2;\n",
+    "src/f03.ts": "export const value = 3;\n",
+    "src/f04.ts": "export const value = 4;\n",
+    "src/f05.ts": "export const value = 5;\n",
+    "src/f06.ts": "export const value = 6;\n",
+    "src/f07.ts": "export const value = 7;\n",
+    "src/f08.ts": "export const value = 8;\n",
+    "src/f09.ts": "export const value = 9;\n",
+    "src/f10.ts": "export const value = 10;\n",
+    "src/f11.ts": "export const value = 11;\n",
+    "src/f12.ts": "export const value = 12;\n",
+    "src/f13.ts": "export const value = 13;\n",
+    "src/f14.ts": "export const value = 14;\n",
+    "src/f15.ts": "export const value = 15;\n",
+    "src/f16.ts": "export const value = 16;\n",
+    "src/f17.ts": "export const value = 17;\n",
+    "src/f18.ts": "export const value = 18;\n",
+    "src/f19.ts": "export const value = 19;\n",
+    "src/f20.ts": "export const value = 20;\n",
+    "src/f21.ts": "export const value = 21;\n",
+    "src/f22.ts": "export const value = 22;\n",
+    "src/f23.ts": "export const value = 23;\n",
+    "src/f24.ts": "export const value = 24;\n",
+    "src/f25.ts": "export const value = 25;\n"
+  },
+  "script": [
+    {
+      "text": "Listing a capped set.",
+      "calls": [
+        {
+          "name": "glob",
+          "args": {
+            "pattern": "**/*.ts",
+            "maxResults": 5
+          }
+        }
+      ]
+    },
+    {
+      "text": "Five files listed.",
+      "calls": [
+        {
+          "name": "done",
+          "args": {
+            "summary": "Listed five files",
+            "evidence": [
+              "glob respected maxResults 5"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "type": "result",
+      "stopReason": "done"
+    },
+    {
+      "type": "tool_ok",
+      "tool": "glob"
+    },
+    {
+      "type": "tool_data",
+      "tool": "glob",
+      "path": "count",
+      "equals": 5
+    },
+    {
+      "type": "tool_output_contains",
+      "tool": "glob",
+      "text": "Showing 5 of 25 files"
+    }
+  ],
+  "budgetTokens": 120000,
+  "baseline": "codex"
+}

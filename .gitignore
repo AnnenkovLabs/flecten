@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+release/
+*.tsbuildinfo
+
+# Test and coverage artifacts
+coverage/
+playwright-report/
+/test-results/
+
+# Local runtime data, sessions, and profiles
+.liquid/
+/flecten.config.json
+
+# Agent and tool workspaces
+.kilo/
+.commandcode/
+
+# Secrets and local environment
+.env*
+!.env.example
+shell/update-public-key.pem
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editors and IDEs
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# Temp and cache
+.cache/
+.tmp/
+tmp/
+*.local
+
+# Private research data, never publish
+docs/SOURCE-MESSAGES.md
+
+# Legacy prototype, not part of the shipped app
+/web/
+
+# Deployment archives and downloaded references
+/.deploy/
+/ansphare_v39/
+
+# Generated benchmark runs; keep curated acceptance evidence
+/bench/results/20*/

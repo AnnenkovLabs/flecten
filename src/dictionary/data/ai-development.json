@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "category": "ai-development",
+  "entries": [
+    {
+      "id": "vibe-coding",
+      "term": "Vibe coding",
+      "aliases": [
+        "vibecoding",
+        "vibe-coding",
+        "вайбкодинг",
+        "вайбкодинга",
+        "вайбкодингу",
+        "вайбкодингом",
+        "вайбкодинге",
+        "вайб-кодинг",
+        "вайб кодинг",
+        "вайбкодінг",
+        "вайбкодінгу",
+        "вайбкодінгом",
+        "вайбкодінзі"
+      ],
+      "category": "ai-development",
+      "definition": "Creating software, products and projects by describing intent to AI coding agents, iterating on their output and directing implementation in natural language. The person steers the outcome while agents generate and change code.",
+      "clarification": "In this project's usage, the defining feature is working with AI coding agents, not programming casually or in a relaxed mood. The narrower original usage may also imply accepting generated code without reading it; do not impose that narrower meaning when the user means AI-assisted product creation.",
+      "sources": ["https://simonwillison.net/2025/Mar/19/vibe-coding/"]
+    }
+  ]
+}
