@@ -206,11 +206,9 @@ flowchart LR
 
 ## 🚦 状态
 
-智能体基础已可工作，并由测试和快照覆盖。11 月 10 日的验收审查关闭了 **221 项中的 217 项**。
+智能体基础已可工作，并由测试和快照覆盖。进行中：发布签名、Windows 沙箱、按命令的资源隔离，以及原生平台验收测试。Windows PTY 使用 Bun 1.4.2 的 ConPTY。
 
-仍未完成：真实的发布签名、Windows 沙箱、按命令的资源隔离，以及原生平台验收测试。Windows PTY 使用 Bun 1.4.2 的 ConPTY。
-
-自动更新使用 `FLECTEN_UPDATE_URL`，并在下载安装器之前用内置公钥验证 Ed25519 清单。阅读[验收报告](../ACCEPTANCE-2026-11-10.md)和[实现清单](../IMPLEMENTATION-CHECKLIST.md)。
+自动更新使用 `FLECTEN_UPDATE_URL`，并在下载安装器之前用内置公钥验证 Ed25519 清单。
 
 ## 🤝 参与贡献
 

@@ -206,11 +206,9 @@ Un cambio no está listo hasta que pasa `bun run verify`.
 
 ## 🚦 Estado
 
-La base del agente funciona y está cubierta por pruebas y capturas. La revisión de aceptación del 10 de noviembre cerró **217 de 221** puntos.
+La base del agente funciona y está cubierta por pruebas y capturas. En progreso: la firma de releases, el sandbox de Windows, el aislamiento de recursos por comando y la aceptación nativa por plataforma. El PTY de Windows usa ConPTY de Bun 1.4.2.
 
-Siguen abiertos: la firma real de releases, el sandbox de Windows, el aislamiento de recursos por comando y la aceptación nativa por plataforma. El PTY de Windows usa ConPTY de Bun 1.4.2.
-
-La actualización automática usa `FLECTEN_UPDATE_URL` y verifica un manifiesto Ed25519 con una clave pública incrustada antes de descargar el instalador. Lee el [informe de aceptación](../ACCEPTANCE-2026-11-10.md) y la [lista de implementación](../IMPLEMENTATION-CHECKLIST.md).
+La actualización automática usa `FLECTEN_UPDATE_URL` y verifica un manifiesto Ed25519 con una clave pública incrustada antes de descargar el instalador.
 
 ## 🤝 Contribuir
 

@@ -206,11 +206,9 @@ A change is not ready until it passes `bun run verify`.
 
 ## 🚦 Status
 
-The agent foundation works and is covered by tests and snapshots. The November 10 acceptance review closed **217 of 221** items.
+The agent foundation works and is covered by tests and snapshots. Still in progress: release signing, the Windows sandbox, per-command resource isolation, and native platform acceptance testing. Windows PTY uses ConPTY from Bun 1.4.2.
 
-Still open: actual release signing, the Windows sandbox, per-command resource isolation, and native platform acceptance testing. Windows PTY uses ConPTY from Bun 1.4.2.
-
-Auto-update uses `FLECTEN_UPDATE_URL` and verifies an Ed25519 manifest with an embedded public key before downloading the installer. Read the [acceptance report](docs/ACCEPTANCE-2026-11-10.md) and the [implementation checklist](docs/IMPLEMENTATION-CHECKLIST.md).
+Auto-update uses `FLECTEN_UPDATE_URL` and verifies an Ed25519 manifest with an embedded public key before downloading the installer.
 
 ## 🤝 Contributing
 

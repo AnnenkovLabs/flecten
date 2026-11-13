@@ -59,3 +59,16 @@ docs/SOURCE-MESSAGES.md
 
 # Generated benchmark runs; keep curated acceptance evidence
 /bench/results/20*/
+
+# Internal process documents: acceptance, research, plans, audits (kept locally)
+docs/ACCEPTANCE-*.md
+docs/COMPUTER-USE-ACCEPTANCE.md
+docs/audit-*.md
+docs/IMPLEMENTATION-CHECKLIST.md
+docs/IMPLEMENTATION-PLAN.md
+docs/ROADMAP.md
+docs/harness-plan.html
+docs/BENCH.md
+docs/BENCHMARK.md
+docs/research/
+docs/liquid-harness-teacher-guide*
