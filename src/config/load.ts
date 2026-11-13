@@ -77,17 +77,13 @@ export function inferProvider(model: string): string | undefined {
 }
 
 export async function loadConfig(cwd: string, explicitPath?: string): Promise<HarnessConfig> {
-  const boot = (s: string): void => void process.stderr.write(`[boot] cfg:${s}\n`);
-  boot("enter");
   const defaults = defaultConfig();
-  boot("defaults");
   const selectedPath = explicitPath ?? (productEnv("CONFIG")?.trim() || undefined);
   const path = configPath(cwd, explicitPath);
   const file = Bun.file(path);
   let input: unknown = {};
 
   const exists = await file.exists();
-  boot("exists");
   if (!exists) {
     if (selectedPath) {
       throw new HarnessError("invalid_input", `config not found: ${path}`);
@@ -95,7 +91,6 @@ export async function loadConfig(cwd: string, explicitPath?: string): Promise<Ha
   } else {
     try {
       input = await file.json();
-      boot("json");
     } catch (error) {
       throw new HarnessError("invalid_input", `cannot parse ${path}`, { cause: error });
     }
@@ -138,9 +133,7 @@ export async function loadConfig(cwd: string, explicitPath?: string): Promise<Ha
     model: envModel ?? explicit.model,
   };
 
-  boot("secrets-await");
   const secrets = await loadSecrets(cwd, Object.keys(config.providers));
-  boot("secrets");
   for (const [id, provider] of Object.entries(config.providers)) {
     const key = readProviderCredential(provider, secrets[id]);
     if (!provider.apiKey && key) provider.apiKey = key;
@@ -153,7 +146,6 @@ export async function loadConfig(cwd: string, explicitPath?: string): Promise<Ha
     );
   }
 
-  boot("done");
   return config;
 }
 
