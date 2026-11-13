@@ -77,21 +77,26 @@ import { voiceService } from "./voice";
 export type * from "./service-types";
 export async function createAppService(cwd: string): Promise<AppService> {
   const boot = (stage: string): void => void process.stderr.write(`[boot] svc:${stage}\n`);
-  let config: HarnessConfig = await loadConfig(cwd, productEnv("CONFIG")); boot("config");
+  let config: HarnessConfig = await loadConfig(cwd, productEnv("CONFIG"));
+  boot("config");
   const voice = voiceService(() => config);
   const ideTerminal = new IdeTerminal(cwd, () => terminalSettings(config));
   const language = translationOptions();
   try {
     await hydrateActiveModel(config, cwd);
-  } catch {} boot("model");
+  } catch {}
+  boot("model");
   const memory = projectMemory(cwd, () => configSecrets(config));
-  await memory.port.list().catch(() => undefined); boot("memory");
-  const dictionary = await projectDictionary(cwd, memory.port, () => configSecrets(config)); boot("dictionary");
+  await memory.port.list().catch(() => undefined);
+  boot("memory");
+  const dictionary = await projectDictionary(cwd, memory.port, () => configSecrets(config));
+  boot("dictionary");
 
   const skills = await discoverSkills(cwd, {
     sources: config.skills?.sources,
     trust: config.skills?.trust,
-  }); boot("skills");
+  });
+  boot("skills");
   const trustRequired = hasExecutableExtensions(config, skills.skills, cwd);
   let trusted = !trustRequired;
   const skillActivations: SkillActivations = new Map();
@@ -99,7 +104,8 @@ export async function createAppService(cwd: string): Promise<AppService> {
   let extensionRefresh: Promise<void> = Promise.resolve();
   const extensionControl = extensionRuntime(cwd, () => extensions, refreshExtensions);
   if (trusted)
-    extensions = await createExtensions(cwd, config, extensionControl.options, skillActivations); boot("extensions");
+    extensions = await createExtensions(cwd, config, extensionControl.options, skillActivations);
+  boot("extensions");
   let mcpConfiguration = trusted ? JSON.stringify(config.mcp) : undefined;
   const modules = moduleService(
     cwd,
@@ -115,9 +121,11 @@ export async function createAppService(cwd: string): Promise<AppService> {
     () => modules.runtime.services(),
     () => modules.runtime.project.prepare(new AbortController().signal),
   );
-  await modules.runtime.project.prepare(new AbortController().signal); boot("modules");
+  await modules.runtime.project.prepare(new AbortController().signal);
+  boot("modules");
   let tools = registryFor(() => extensions, config, modules.runtime.tool);
-  let prompt = await systemPrompt(cwd, config, extensions.sections, tools); boot("prompt");
+  let prompt = await systemPrompt(cwd, config, extensions.sections, tools);
+  boot("prompt");
 
   /** Config writes go one after another, so a remembered rule never races a settings save. */
   let writes: Promise<unknown> = Promise.resolve();
@@ -155,7 +163,8 @@ export async function createAppService(cwd: string): Promise<AppService> {
   let osSandbox = osSandboxFor(config, cwd);
 
   const checkpoints = new CheckpointStore({ cwd });
-  await checkpoints.init().catch(() => undefined); boot("checkpoints");
+  await checkpoints.init().catch(() => undefined);
+  boot("checkpoints");
   void pruneCheckpoints(checkpoints, config).catch(() => undefined);
   const shell = new ShellSnapshots(cwd, checkpoints);
   shell.configure(config);
