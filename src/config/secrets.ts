@@ -116,15 +116,19 @@ function keychainDelete(name: string, service = SERVICE): void {
 }
 
 export async function loadSecrets(cwd: string, names: string[] = []): Promise<Secrets> {
+  const boot = (s: string): void => void process.stderr.write(`[boot] sec:${s}\n`);
+  boot("enter");
   const output: Secrets = {};
   try {
     const value = (await Bun.file(secretsPath(cwd)).json()) as unknown;
+    boot("file");
     if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       for (const [key, entry] of Object.entries(value)) {
         if (typeof entry === "string" && entry.length > 0) output[key] = entry;
       }
     }
   } catch {}
+  boot("backend");
   if (secretBackend() === "keychain") {
     for (const name of names) {
       const key = account(cwd, name);
@@ -132,6 +136,7 @@ export async function loadSecrets(cwd: string, names: string[] = []): Promise<Se
       if (value) output[name] = value;
     }
   }
+  boot("done");
   return output;
 }
 
