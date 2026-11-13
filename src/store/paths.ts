@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { canonicalPath } from "../util/canonical-path";
 
 export interface ProjectPaths {
   liquid: string;
@@ -32,6 +33,7 @@ export function projectPaths(root: string): ProjectPaths {
 }
 
 export function sessionPaths(root: string, sessionId: string): SessionPaths {
+  root = canonicalPath(root);
   const session = join(root, ".liquid", "sessions", sessionId);
   return {
     root,

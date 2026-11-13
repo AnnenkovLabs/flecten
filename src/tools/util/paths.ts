@@ -1,17 +1,23 @@
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { canonicalPath } from "../../util/canonical-path";
 
 export function resolveToolPath(cwd: string, path: string): string {
   return isAbsolute(path) ? resolve(path) : resolve(cwd, path);
 }
 
 export function isInside(cwd: string, path: string): boolean {
-  const rel = relative(resolve(cwd), resolve(path));
+  return inside(resolve(cwd), path) || inside(canonicalPath(cwd), path);
+}
+
+function inside(root: string, path: string): boolean {
+  const rel = relative(root, resolve(path));
   return rel === "" || (!rel.startsWith(`..${sep}`) && rel !== ".." && !isAbsolute(rel));
 }
 
 export function displayPath(cwd: string, path: string): string {
   if (!isInside(cwd, path)) return path;
-  const rel = relative(resolve(cwd), resolve(path));
+  const root = inside(resolve(cwd), path) ? resolve(cwd) : canonicalPath(cwd);
+  const rel = relative(root, resolve(path));
   return rel === "" ? "." : rel.split(sep).join("/");
 }
 

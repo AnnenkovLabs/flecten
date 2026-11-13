@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { canonicalPath } from "../util/canonical-path";
 import type { PermissionRequest, PermissionRule } from "./types";
 
 export function permissionPath(path: string, cwd: string): string {
@@ -66,7 +67,15 @@ export function matchesPermissionRule(
   if (path === undefined) return false;
   const prefix = permissionPath(rule.pathPrefix, request.cwd);
   const actual = permissionPath(path, request.cwd);
-  return actual === prefix || actual.startsWith(prefix.endsWith("/") ? prefix : `${prefix}/`);
+  const matches = (root: string, target: string) =>
+    target === root || target.startsWith(root.endsWith("/") ? root : `${root}/`);
+  return (
+    matches(prefix, actual) ||
+    matches(
+      permissionPath(canonicalPath(prefix), request.cwd),
+      permissionPath(canonicalPath(actual), request.cwd),
+    )
+  );
 }
 
 export function grantLabel(request: PermissionRequest): string {

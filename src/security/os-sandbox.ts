@@ -3,6 +3,7 @@ import { createProcessScope } from "../terminal/process-scope";
 import { killProcessTree } from "../terminal/process-tree";
 import { ResourceMonitor, withResourceLimits } from "../terminal/resources";
 import type { TerminalResourceLimits } from "../terminal/settings";
+import { canonicalPath } from "../util/canonical-path";
 import { bubblewrapProtectionArgs, sandboxProtection } from "./sandbox-protection";
 
 const SANDBOX_EXEC = "/usr/bin/sandbox-exec";
@@ -123,7 +124,12 @@ export function buildBubblewrapArgs(options: SandboxCommandOptions): string[] {
 }
 
 export function buildSeatbeltProfile(policy: SandboxPolicy): string {
-  const writable = uniquePaths([policy.workspaceRoot, ...(policy.writablePaths ?? [])]);
+  const writable = uniquePaths(
+    [policy.workspaceRoot, ...(policy.writablePaths ?? [])].flatMap((path) => [
+      path,
+      canonicalPath(path),
+    ]),
+  );
   const protection = sandboxProtection(policy);
   const readOnly = protection.readOnly;
   const readable = uniquePaths([

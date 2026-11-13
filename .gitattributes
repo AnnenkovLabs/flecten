@@ -1,0 +1,2 @@
+# Preserve byte-identical module revisions and shell scripts on every build host.
+* text=auto eol=lf

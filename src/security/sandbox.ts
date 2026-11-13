@@ -1,6 +1,7 @@
 import { lstat, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { canonicalPath } from "../util/canonical-path";
 import { parseShell, programName } from "./shell-lexer";
 import type { SandboxDecision, SandboxOptions } from "./types";
 
@@ -72,7 +73,7 @@ export class SandboxPolicy {
 
   constructor(options: SandboxOptions) {
     this.workspaceRoot = resolve(options.workspaceRoot);
-    this.rootPath = normalizePath(this.workspaceRoot);
+    this.rootPath = normalizePath(canonicalPath(this.workspaceRoot));
     this.allowNetwork = options.allowNetwork ?? false;
     this.readDenyPrefixes = [
       ...DEFAULT_PROTECTED_READ_PREFIXES,
@@ -124,7 +125,10 @@ export class SandboxPolicy {
       for (const token of words) {
         const argument = absoluteArgument(token);
         if (argument === undefined || SAFE_DEVICE_PATHS.has(argument)) continue;
-        if (!this.insideWorkspace(normalizePath(argument))) {
+        if (
+          !containsPath(normalizePath(this.workspaceRoot), normalizePath(argument)) &&
+          !this.insideWorkspace(normalizePath(argument))
+        ) {
           return deny(`Shell: путь "${argument}" вне рабочей папки "${this.workspaceRoot}".`);
         }
       }
