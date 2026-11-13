@@ -2,6 +2,11 @@ name: Build installers
 
 on:
   workflow_dispatch:
+    inputs:
+      windows_only:
+        description: Build only Windows when investigating a platform-specific failure
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -18,15 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            artifact: linux-x64
-          - os: windows-latest
-            artifact: windows-x64
-          - os: macos-latest
-            artifact: macos-arm64
-          - os: macos-15-intel
-            artifact: macos-x64
+        include: ${{ fromJSON(inputs.windows_only && '[{"os":"windows-latest","artifact":"windows-x64"}]' || '[{"os":"ubuntu-latest","artifact":"linux-x64"},{"os":"windows-latest","artifact":"windows-x64"},{"os":"macos-latest","artifact":"macos-arm64"},{"os":"macos-15-intel","artifact":"macos-x64"}]') }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -54,6 +51,9 @@ jobs:
         run: bun scripts/sign-update-manifests.mjs --pin
       - run: bun run build:ui
       - run: bun run build:agent
+      - name: Verify the Windows agent starts independently of Electron
+        if: runner.os == 'Windows'
+        run: bun -e 'const { measureStartup } = await import("./scripts/measure-startup.mjs"); const { resolve } = await import("node:path"); console.log(await measureStartup(resolve("dist/flecten-agent.exe"), { iterations: 1 }));'
       - name: Package native installers
         run: bun scripts/package-installers.mjs --publish never
       - name: Launch the Linux AppImage with Chromium's user namespace sandbox
