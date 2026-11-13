@@ -18,21 +18,12 @@ concurrency:
 jobs:
   package:
     name: package (${{ matrix.artifact }})
-    if: ${{ !inputs.windows_only || matrix.artifact == 'windows-x64' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            artifact: linux-x64
-          - os: windows-latest
-            artifact: windows-x64
-          - os: macos-latest
-            artifact: macos-arm64
-          - os: macos-15-intel
-            artifact: macos-x64
+        include: ${{ fromJSON(inputs.windows_only && '[{"os":"windows-latest","artifact":"windows-x64"}]' || '[{"os":"ubuntu-latest","artifact":"linux-x64"},{"os":"windows-latest","artifact":"windows-x64"},{"os":"macos-latest","artifact":"macos-arm64"},{"os":"macos-15-intel","artifact":"macos-x64"}]') }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       CSC_LINK: ${{ secrets.CSC_LINK }}
