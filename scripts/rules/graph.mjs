@@ -85,7 +85,7 @@ export function resolveImport(from, specifier) {
   if (!specifier.startsWith(".")) return undefined;
   const base = resolve(dirname(from), specifier);
   for (const suffix of RESOLVE_SUFFIXES) {
-    const candidate = base + suffix;
+    const candidate = resolve(base + suffix);
     if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
   }
   if (base.endsWith(".js")) {

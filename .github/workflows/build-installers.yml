@@ -55,7 +55,12 @@ jobs:
       - run: bun run build:ui
       - run: bun run build:agent
       - name: Package native installers
-        run: bunx electron-builder --publish never
+        run: bun scripts/package-installers.mjs --publish never
+      - name: Configure the Linux Chromium sandbox helper
+        if: runner.os == 'Linux'
+        run: |
+          sudo chown root:root release/linux-unpacked/chrome-sandbox
+          sudo chmod 4755 release/linux-unpacked/chrome-sandbox
       - name: Launch the packaged application
         run: bun run smoke:packaged
         env:
