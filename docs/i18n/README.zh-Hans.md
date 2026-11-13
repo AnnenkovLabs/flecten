@@ -8,7 +8,7 @@
 对话、文件、工具与变更，尽在一个窗口。
 
 [![CI](https://github.com/AnnenkovLabs/flecten/actions/workflows/ci.yml/badge.svg)](https://github.com/AnnenkovLabs/flecten/actions/workflows/ci.yml)
-[![许可证: MIT](https://img.shields.io/badge/License-MIT-b7a1e8?style=flat-square)](../../LICENSE)
+[![许可证: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-b7a1e8?style=flat-square)](../../LICENSE)
 [![Bun 1.4](https://img.shields.io/badge/Bun-1.4-171717?style=flat-square&logo=bun&logoColor=f0efed)](https://bun.sh)
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?style=flat-square&logo=svelte&logoColor=white)](https://svelte.dev)
@@ -216,7 +216,7 @@ flowchart LR
 
 ## 📄 许可证
 
-MIT。见 [LICENSE](../../LICENSE)。
+AGPL-3.0。见 [LICENSE](../../LICENSE)。可自由使用、修改和分享；社区规范见 [ETHICS.md](../../ETHICS.md) 和[行为准则](../../CODE_OF_CONDUCT.md)。
 
 ---
 

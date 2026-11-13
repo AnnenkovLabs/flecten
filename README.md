@@ -8,7 +8,7 @@
 Conversations, files, tools, and changes in one window.
 
 [![CI](https://github.com/AnnenkovLabs/flecten/actions/workflows/ci.yml/badge.svg)](https://github.com/AnnenkovLabs/flecten/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-b7a1e8?style=flat-square)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-b7a1e8?style=flat-square)](LICENSE)
 [![Bun 1.4](https://img.shields.io/badge/Bun-1.4-171717?style=flat-square&logo=bun&logoColor=f0efed)](https://bun.sh)
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?style=flat-square&logo=svelte&logoColor=white)](https://svelte.dev)
@@ -216,7 +216,7 @@ Before opening a PR, read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUC
 
 ## 📄 License
 
-MIT. See [LICENSE](LICENSE).
+AGPL-3.0. See [LICENSE](LICENSE). Free to use, modify, and share; community norms live in [ETHICS.md](ETHICS.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 

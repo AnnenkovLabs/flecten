@@ -8,7 +8,7 @@
 会話、ファイル、ツール、変更をひとつのウィンドウに。
 
 [![CI](https://github.com/AnnenkovLabs/flecten/actions/workflows/ci.yml/badge.svg)](https://github.com/AnnenkovLabs/flecten/actions/workflows/ci.yml)
-[![ライセンス: MIT](https://img.shields.io/badge/License-MIT-b7a1e8?style=flat-square)](../../LICENSE)
+[![ライセンス: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-b7a1e8?style=flat-square)](../../LICENSE)
 [![Bun 1.4](https://img.shields.io/badge/Bun-1.4-171717?style=flat-square&logo=bun&logoColor=f0efed)](https://bun.sh)
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?style=flat-square&logo=svelte&logoColor=white)](https://svelte.dev)
@@ -216,7 +216,7 @@ PR を開く前に [CONTRIBUTING.md](../../CONTRIBUTING.md) と [CODE_OF_CONDUCT
 
 ## 📄 ライセンス
 
-MIT。[LICENSE](../../LICENSE) を参照。
+AGPL-3.0。[LICENSE](../../LICENSE) を参照。自由に使用・改変・共有できます。コミュニティの規範は [ETHICS.md](../../ETHICS.md) と [行動規範](../../CODE_OF_CONDUCT.md) を参照。
 
 ---
 
