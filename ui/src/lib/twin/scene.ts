@@ -107,7 +107,9 @@ export function createTwinScene(
     visibility();
   });
   const resize = new ResizeObserver(([entry]) => {
-    width = entry?.contentRect.width ?? 0;
+    const nextWidth = entry?.contentRect.width ?? 0;
+    if (width === nextWidth) return;
+    width = nextWidth;
     wake();
   });
   intersection.observe(canvas);

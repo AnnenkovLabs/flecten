@@ -23,7 +23,7 @@
   $effect(() => { scene?.pause(paused); });
 </script>
 
-<span class="twin-character" class:compact data-testid="twin-character" style={`--twin-size:${size}px`}>
+<span class="twin-character" class:compact aria-hidden={compact || undefined} data-testid="twin-character" style={`--twin-size:${size}px`}>
   <canvas bind:this={canvas} class:fallback aria-label={t("Your Twin")} width="64" height="64"></canvas>
   {#if fallback}<img src={`./twin/${pose}.webp`} alt={t("Your Twin")} width="640" height="640" draggable="false" />{/if}
   {#if interactive}

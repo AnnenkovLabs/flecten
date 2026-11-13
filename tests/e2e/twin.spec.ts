@@ -38,7 +38,18 @@ async function assertStopped(canvas: Locator) {
   const frame = await canvas.getAttribute("data-frame");
   // Observe beyond several 24fps intervals: no idle work may survive pause/reduced motion.
   await new Promise((resolve) => setTimeout(resolve, 600));
-  expect(await canvas.getAttribute("data-frame")).toBe(frame);
+  expect(
+    await canvas.getAttribute("data-frame"),
+    JSON.stringify(
+      await canvas.evaluate((element) => ({
+        width: element.clientWidth,
+        height: element.clientHeight,
+        parentWidth: element.parentElement?.clientWidth,
+        parentHeight: element.parentElement?.clientHeight,
+        attributes: (element as HTMLElement).dataset,
+      })),
+    ),
+  ).toBe(frame);
 }
 
 test("Twin live 3D, interactions and character workflow stay usable at both desktop sizes", async () => {
