@@ -28,6 +28,6 @@ The module currently supports this Linux backend only. It shows screenshots, not
 
 A current observation ID is required for every input. Old IDs and input from the wrong control owner fail before dispatch. Ambiguous failures are never automatically retried. Refresh the screen and inspect the result before deciding to repeat an action.
 
-Implementation, pinned source comparisons and design decisions: [research](research/computer-use.md). Package instructions and recovery reference: [guide](../src/marketplace/modules/computer-use/guide.md).
+Implementation, pinned source comparisons and design decisions are kept in internal materials. Package instructions and recovery reference: [guide](../src/marketplace/modules/computer-use/guide.md).
 
-Product-path checks, inspected interface states and remaining release blockers: [acceptance report](COMPUTER-USE-ACCEPTANCE.md).
+Product-path checks, inspected interface states and remaining release blockers are tracked internally.

@@ -87,4 +87,4 @@ CI secret `UPDATE_SIGNING_PRIVATE_KEY` доступен только publish job
 
 Updater проверяет подпись, версию и каждый artifact URL/hash/size до availability. Download разрешён только для проверенного immutable snapshot. Замена metadata после check и bytes после подписи блокируется. Differential и web installer paths отключены. Пользователь может отложить загрузку или установку.
 
-Installer больше350МиБ блокируется до публикации checksums. Agent имеет отдельный бюджет85МиБ. Итоговый текущий замер находится в [отчёте приёмки](ACCEPTANCE-2026-11-10.md).
+Installer больше350МиБ блокируется до публикации checksums. Agent имеет отдельный бюджет85МиБ. Итоговый текущий замер фиксируется во внутренних материалах.

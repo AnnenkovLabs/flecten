@@ -96,7 +96,7 @@
 - `.github/workflows/`: reusable quality, coverage text/LCOV, Electron visual regression, platform packaged smoke, packaging/signing и диагностика.
 - `docs/`: архитектура, решения, протокол, безопасность и приёмка.
 
-`docs/MEMORY.md` описывает действующий memory runtime и бюджеты. `docs/research/agent-memory-systems.md` связывает решение с чужими исходниками и эксплуатационными отказами. `src/tools/memory/run.ts` предоставляет инструмент, а checkpoint использует существующий `src/core/pages/writer.ts` без отдельного запроса модели.
+`docs/MEMORY.md` описывает действующий memory runtime и бюджеты. Внутренние материалы связывают решение с чужими исходниками и эксплуатационными отказами. `src/tools/memory/run.ts` предоставляет инструмент, а checkpoint использует существующий `src/core/pages/writer.ts` без отдельного запроса модели.
 
 ## Поток данных
 

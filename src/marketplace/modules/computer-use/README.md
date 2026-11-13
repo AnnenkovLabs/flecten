@@ -8,4 +8,4 @@ Requires Linux, Xvfb, xauth, dbus-daemon, xdotool and ImageMagick. Browser navig
 
 The authenticated display and temporary browser profile keep host mouse focus separate. Files and network still use the host account. This is not a security sandbox. Use a separate OS/container/VM boundary for untrusted programs.
 
-[User guide](../../../docs/COMPUTER-USE.md) · [Runtime guide](guide.md) · [Research and pinned sources](../../../docs/research/computer-use.md)
+[User guide](../../../docs/COMPUTER-USE.md) · [Runtime guide](guide.md)

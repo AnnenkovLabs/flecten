@@ -49,7 +49,7 @@ Si cambiaste la ventana, adjunta una captura o describe una comprobación en el 
 
 ## Dependencias
 
-Una nueva dependencia requiere una entrada en `docs/DECISIONS.md`: contexto, decisión, consecuencias. Revisa primero la biblioteca estándar de Bun, luego un paquete.
+Una nueva dependencia requiere un registro de decisión: contexto, decisión, consecuencias. Revisa primero la biblioteca estándar de Bun, luego un paquete.
 
 ## Commits
 

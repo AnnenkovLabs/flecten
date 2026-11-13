@@ -156,4 +156,4 @@ process.stdout.write(JSON.stringify({
 
 Trusted modules подключают hooks через существующий manifest и жизненный цикл модуля. Замена driver, model stream, tool execution и compaction принадлежит platform services. Отдельного произвольного JavaScript в интерфейсе нет.
 
-Источник решений и сравнение с OpenCode 2, Oh My Pi, Pi, Gemini CLI и Claude Code: [исследование](research/hooks-harnesses.md). Канонические схемы и возможности событий находятся в `shared/hooks.ts`; runtime в `src/core/hooks/`, ручная проверка в `src/app/hook-test.ts`.
+Источник решений и сравнение с OpenCode 2, Oh My Pi, Pi, Gemini CLI и Claude Code: внутренние материалы. Канонические схемы и возможности событий находятся в `shared/hooks.ts`; runtime в `src/core/hooks/`, ручная проверка в `src/app/hook-test.ts`.

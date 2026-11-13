@@ -49,7 +49,7 @@ If you changed the window, attach a screenshot or describe a browser check at 14
 
 ## Dependencies
 
-A new dependency requires an entry in `docs/DECISIONS.md`: context, decision, consequences. Check the Bun standard library first, then a package.
+A new dependency requires a decision record: context, decision, consequences. Check the Bun standard library first, then a package.
 
 ## Commits
 

@@ -443,7 +443,7 @@ Before shipping, answer:
 - "Done" means verified. Not verified means not done.
 - After edits: `bun test`, `bun run check`, `bun run lint`, and `bun run build:ui` for the interface.
 - Do not expand scope or change neighboring surfaces without an explicit request.
-- A new dependency requires an entry in `docs/DECISIONS.md`.
+- A new dependency requires a decision record.
 
 # Part II. Detailed rules
 

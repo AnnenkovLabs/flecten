@@ -49,7 +49,7 @@ Se você mudou a janela, anexe uma captura ou descreva uma verificação no nave
 
 ## Dependências
 
-Uma nova dependência exige uma entrada em `docs/DECISIONS.md`: contexto, decisão, consequências. Verifique primeiro a biblioteca padrão do Bun, depois um pacote.
+Uma nova dependência exige um registro de decisão: contexto, decisão, consequências. Verifique primeiro a biblioteca padrão do Bun, depois um pacote.
 
 ## Commits
 
