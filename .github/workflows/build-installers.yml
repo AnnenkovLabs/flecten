@@ -56,12 +56,18 @@ jobs:
       - run: bun run build:agent
       - name: Package native installers
         run: bun scripts/package-installers.mjs --publish never
-      - name: Configure the Linux Chromium sandbox helper
+      - name: Launch the Linux AppImage with Chromium's user namespace sandbox
         if: runner.os == 'Linux'
         run: |
-          sudo chown root:root release/linux-unpacked/chrome-sandbox
-          sudo chmod 4755 release/linux-unpacked/chrome-sandbox
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          for installer in release/*.AppImage; do
+            chmod +x "$installer"
+            FLECTEN_SMOKE_EXECUTABLE="$PWD/$installer" APPIMAGE_EXTRACT_AND_RUN=1 bun run smoke:packaged
+          done
+        env:
+          FLECTEN_HEADLESS: "1"
       - name: Launch the packaged application
+        if: runner.os != 'Linux'
         run: bun run smoke:packaged
         env:
           FLECTEN_HEADLESS: "1"

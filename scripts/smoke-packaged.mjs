@@ -44,7 +44,9 @@ function run(command, args, options = {}) {
 
 const workdir = mkdtempSync(join(tmpdir(), "liquid-smoke-"));
 const out = join(workdir, "status.json");
-const executable = findExecutable();
+const executable = process.env.FLECTEN_SMOKE_EXECUTABLE
+  ? resolve(process.env.FLECTEN_SMOKE_EXECUTABLE)
+  : findExecutable();
 const config = {
   useDefaults: false,
   provider: "smoke",

@@ -31,7 +31,15 @@ export function checkAgentSize(
 
 if (import.meta.main) {
   const build = Bun.spawnSync({
-    cmd: ["bun", "build", "--compile", "src/app/server.ts", "--outfile", AGENT_BINARY_PATH],
+    cmd: [
+      "bun",
+      "build",
+      "--compile",
+      "--minify",
+      "src/app/server.ts",
+      "--outfile",
+      AGENT_BINARY_PATH,
+    ],
     stdout: "inherit",
     stderr: "inherit",
   });

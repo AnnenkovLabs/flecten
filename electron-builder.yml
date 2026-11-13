@@ -9,7 +9,7 @@ directories:
 files:
   # CI pins update-public-key.pem here before packaging; runtime never trusts a remote key.
   - shell/**
-  - shared/environment.cjs
+  - shared/*.cjs
   - ui/dist/**
   - package.json
 
