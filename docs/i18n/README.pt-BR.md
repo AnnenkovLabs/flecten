@@ -201,7 +201,7 @@ Uma mudança não está pronta até passar em `bun run verify`.
 
 - 🏗️ [Arquitetura](../ARCHITECTURE.md) · 🗣️ [Talker e Worker](../TALKER-WORKER.md) · 🧠 [Memória](../MEMORY.md) · 📖 [Dicionário](../DICTIONARY.md)
 - 🧩 [Extensões](../EXTENSIONS.md) · 📦 [Módulos](../MODULES.md) · 🎙️ [Voz](../VOICE.md)
-- 🗂️ [Estrutura](../STRUCTURE.md) · 🎨 [Design](../../design.md) · 🧭 [Decisões](../DECISIONS.md) · 📐 [Convenções](../CONVENTIONS.md)
+- 🗂️ [Estrutura](../STRUCTURE.md) · 🎨 [Design](../../design.md) · 📐 [Convenções](../CONVENTIONS.md)
 - 🚢 [Release](../RELEASE.md) · 📝 [Changelog](../../CHANGELOG.md) · 🖼️ [Guia da interface](../../ui/README.md) · 🐚 [Guia do shell](../../shell/README.md)
 
 ## 🚦 Status

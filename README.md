@@ -201,7 +201,7 @@ A change is not ready until it passes `bun run verify`.
 
 - 🏗️ [Architecture](docs/ARCHITECTURE.md) · 🗣️ [Talker and Worker](docs/TALKER-WORKER.md) · 🧠 [Memory](docs/MEMORY.md) · 📖 [Dictionary](docs/DICTIONARY.md)
 - 🧩 [Extensions](docs/EXTENSIONS.md) · 📦 [Modules](docs/MODULES.md) · 🎙️ [Voice](docs/VOICE.md)
-- 🗂️ [Structure](docs/STRUCTURE.md) · 🎨 [Design](design.md) · 🧭 [Decisions](docs/DECISIONS.md) · 📐 [Conventions](docs/CONVENTIONS.md)
+- 🗂️ [Structure](docs/STRUCTURE.md) · 🎨 [Design](design.md) · 📐 [Conventions](docs/CONVENTIONS.md)
 - 🚢 [Release](docs/RELEASE.md) · 📝 [Changelog](CHANGELOG.md) · 🖼️ [UI guidelines](ui/README.md) · 🐚 [Shell guidelines](shell/README.md)
 
 ## 🚦 Status

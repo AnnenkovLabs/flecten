@@ -184,6 +184,7 @@ test("Twin live 3D, interactions and character workflow stay usable at both desk
     const sessionId = sessions.find((entry) => entry.isDirectory())?.name;
     if (!sessionId) throw new Error("The checkout review did not create a task session");
     const work = page.getByTestId("twin-work");
+    let previousEmotionHash = 0;
     for (const [emotion, voice, instructions, corrections] of [
       [
         "angry",
@@ -223,7 +224,11 @@ test("Twin live 3D, interactions and character workflow stay usable at both desk
       const portrait = work.locator("canvas");
       await expect(portrait).toHaveAttribute("data-emotion", emotion);
       await expect(portrait).toHaveAttribute("data-renderer", "webgl");
-      expect((await pixels(portrait)).colored).toBeGreaterThan(20);
+      await assertStopped(portrait);
+      const rendered = await pixels(portrait);
+      expect(rendered.colored).toBeGreaterThan(20);
+      expect(rendered.hash).not.toBe(previousEmotionHash);
+      previousEmotionHash = rendered.hash;
       if ((await work.getAttribute("open")) === null) {
         await work.locator(":scope > summary").click();
       }

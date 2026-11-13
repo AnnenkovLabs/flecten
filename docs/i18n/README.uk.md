@@ -201,7 +201,7 @@ flowchart LR
 
 - 🏗️ [Архітектура](../ARCHITECTURE.md) · 🗣️ [Talker і Worker](../TALKER-WORKER.md) · 🧠 [Пам'ять](../MEMORY.md) · 📖 [Словник](../DICTIONARY.md)
 - 🧩 [Розширення](../EXTENSIONS.md) · 📦 [Модулі](../MODULES.md) · 🎙️ [Голос](../VOICE.md)
-- 🗂️ [Структура](../STRUCTURE.md) · 🎨 [Дизайн](../../design.md) · 🧭 [Рішення](../DECISIONS.md) · 📐 [Домовленості](../CONVENTIONS.md)
+- 🗂️ [Структура](../STRUCTURE.md) · 🎨 [Дизайн](../../design.md) · 📐 [Домовленості](../CONVENTIONS.md)
 - 🚢 [Реліз](../RELEASE.md) · 📝 [Changelog](../../CHANGELOG.md) · 🖼️ [Гайдлайни інтерфейсу](../../ui/README.md) · 🐚 [Гайдлайни оболонки](../../shell/README.md)
 
 ## 🚦 Статус

@@ -201,7 +201,7 @@ flowchart LR
 
 - 🏗️ [架构](../ARCHITECTURE.md) · 🗣️ [Talker 与 Worker](../TALKER-WORKER.md) · 🧠 [记忆](../MEMORY.md) · 📖 [词典](../DICTIONARY.md)
 - 🧩 [扩展](../EXTENSIONS.md) · 📦 [模块](../MODULES.md) · 🎙️ [语音](../VOICE.md)
-- 🗂️ [结构](../STRUCTURE.md) · 🎨 [设计](../../design.md) · 🧭 [决策](../DECISIONS.md) · 📐 [约定](../CONVENTIONS.md)
+- 🗂️ [结构](../STRUCTURE.md) · 🎨 [设计](../../design.md) · 📐 [约定](../CONVENTIONS.md)
 - 🚢 [发布](../RELEASE.md) · 📝 [Changelog](../../CHANGELOG.md) · 🖼️ [界面指南](../../ui/README.md) · 🐚 [外壳指南](../../shell/README.md)
 
 ## 🚦 状态

@@ -201,7 +201,7 @@ flowchart LR
 
 - 🏗️ [アーキテクチャ](../ARCHITECTURE.md) · 🗣️ [Talker と Worker](../TALKER-WORKER.md) · 🧠 [メモリ](../MEMORY.md) · 📖 [辞書](../DICTIONARY.md)
 - 🧩 [拡張](../EXTENSIONS.md) · 📦 [モジュール](../MODULES.md) · 🎙️ [音声](../VOICE.md)
-- 🗂️ [構成](../STRUCTURE.md) · 🎨 [デザイン](../../design.md) · 🧭 [決定](../DECISIONS.md) · 📐 [規約](../CONVENTIONS.md)
+- 🗂️ [構成](../STRUCTURE.md) · 🎨 [デザイン](../../design.md) · 📐 [規約](../CONVENTIONS.md)
 - 🚢 [リリース](../RELEASE.md) · 📝 [Changelog](../../CHANGELOG.md) · 🖼️ [インターフェースガイド](../../ui/README.md) · 🐚 [シェルガイド](../../shell/README.md)
 
 ## 🚦 ステータス
