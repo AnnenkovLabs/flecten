@@ -51,11 +51,17 @@ function fail(requestId: string | undefined) {
 }
 
 async function main(): Promise<void> {
+  const boot = (stage: string): void => void process.stderr.write(`[boot] ${stage}\n`);
+  boot("start");
   const cwd = productEnv("CWD")?.trim() || process.cwd();
   // One core per project: a second window or app on the same folder waits, then gets project_locked.
+  boot("lock");
   const lock = await lockProject(cwd);
+  boot("locked");
   process.once("exit", () => lock.release());
+  boot("service");
   const app = await createAppService(cwd);
+  boot("service-ready");
   const diagnostics = new DiagnosticsRuntime(cwd);
   app.session.subscribe((event) => diagnostics.record(event));
   process.on("uncaughtExceptionMonitor", (error) => {
@@ -69,7 +75,9 @@ async function main(): Promise<void> {
 
   const ready = async (): Promise<void> => write(await status());
   app.session.subscribeStamped((event) => write(event));
+  boot("ready");
   await ready();
+  boot("status-sent");
   void app
     .resumeInterrupted()
     .then((result) => {
