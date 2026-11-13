@@ -5,14 +5,15 @@ const vertex = "#version 300 es\nin vec2 p; void main(){gl_Position=vec4(p,0.,1.
 
 /** The trailer's SDF/fur renderer. Scheduling belongs to the visible component. */
 export function createTwinRenderer(canvas: HTMLCanvasElement) {
-  const gl = canvas.getContext("webgl2", {
+  const context = canvas.getContext("webgl2", {
     alpha: true,
     antialias: false,
     premultipliedAlpha: true,
     preserveDrawingBuffer: true,
     powerPreference: "low-power",
   });
-  if (!gl) throw new Error("Twin requires WebGL2");
+  if (!context) throw new Error("Twin requires WebGL2");
+  const gl: WebGL2RenderingContext = context;
   const shaders: WebGLShader[] = [];
   let program: WebGLProgram | null = null;
   let buffer: WebGLBuffer | null = null;

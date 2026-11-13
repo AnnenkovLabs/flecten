@@ -1,25 +1,27 @@
-# Безопасность
+# Security
 
-## Поддерживаемые версии
+[English](SECURITY.md) · [简体中文](docs/i18n/SECURITY.zh-Hans.md) · [Português (Brasil)](docs/i18n/SECURITY.pt-BR.md) · [Español](docs/i18n/SECURITY.es.md) · [日本語](docs/i18n/SECURITY.ja.md) · [Українська](docs/i18n/SECURITY.uk.md) · [Русский](docs/i18n/SECURITY.ru.md)
 
-Поддерживается только ветка `main`.
+## Supported versions
 
-## Как сообщить
+Only the `main` branch is supported.
 
-Не открывай публичный issue для уязвимости. Используй приватный security advisory GitHub или напиши владельцу репозитория. Укажи версию, шаги воспроизведения и возможный ущерб.
+## How to report
 
-Ответ ожидай в течение 7 дней. Исправление и раскрытие деталей согласуются с автором отчёта.
+Do not open a public issue for a vulnerability. Use a private GitHub security advisory or write to the repository owner. Include the version, reproduction steps, and the potential impact.
 
-## Что проверять в первую очередь
+Expect a response within 7 days. The fix and the disclosure of details are coordinated with the reporter.
 
-- обход пути в протоколе `liquid://`;
-- мост `preload` и доступ к `ipcRenderer`;
-- `contextIsolation`, `sandbox` и `nodeIntegration` в окне;
-- CSP и загрузка внешних ресурсов;
-- вырезание токенов из логов и `events.jsonl`;
-- команды `bash` и запись файлов вне разрешённого набора;
-- запуск MCP серверов и hooks из `flecten.config.json`;
-- передача окружения дочерним MCP процессам;
-- внедрение инструкций через `SKILL.md` и ответы MCP.
+## What to check first
 
-Архитектурные границы безопасности описаны в [docs/SECURITY.md](docs/SECURITY.md).
+- path traversal in the `liquid://` protocol;
+- the `preload` bridge and access to `ipcRenderer`;
+- `contextIsolation`, `sandbox`, and `nodeIntegration` in the window;
+- CSP and loading of external resources;
+- redaction of tokens from logs and `events.jsonl`;
+- `bash` commands and writing files outside the allowed set;
+- launching MCP servers and hooks from `flecten.config.json`;
+- passing the environment to child MCP processes;
+- instruction injection through `SKILL.md` and MCP responses.
+
+The architectural security boundaries are described in [docs/SECURITY.md](docs/SECURITY.md).

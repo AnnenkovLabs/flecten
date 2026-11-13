@@ -1,8 +1,10 @@
-# Участие
+# Contributing
 
-## Подготовка
+[English](CONTRIBUTING.md) · [简体中文](docs/i18n/CONTRIBUTING.zh-Hans.md) · [Português (Brasil)](docs/i18n/CONTRIBUTING.pt-BR.md) · [Español](docs/i18n/CONTRIBUTING.es.md) · [日本語](docs/i18n/CONTRIBUTING.ja.md) · [Українська](docs/i18n/CONTRIBUTING.uk.md) · [Русский](docs/i18n/CONTRIBUTING.ru.md)
 
-Нужны Bun 1.4 и Node 20 или новее. Node нужен только для Electron.
+## Setup
+
+You need Bun 1.4 and Node 20 or newer. Node is only required for Electron.
 
 ```bash
 bun install
@@ -10,9 +12,9 @@ bun run dev help
 bun run app:dev
 ```
 
-## Перед PR
+## Before a PR
 
-Запусти все проверки:
+Run all checks:
 
 ```bash
 bun test
@@ -21,38 +23,38 @@ bun run lint
 bun run build:ui
 ```
 
-Если менял окно, приложи снимок или опиши проверку в браузере на 1480x940 и 1180x640. Проверь состояния: пустое, загрузка, остановка, reduced motion.
+If you changed the window, attach a screenshot or describe a browser check at 1480x940 and 1180x640. Check the states: empty, loading, stopped, reduced motion.
 
-## Правила кода
+## Code rules
 
-- Один файл отвечает за одну вещь. Мягкий предел 300 строк, жёсткий 500.
-- `core` не импортирует `ui`, `shell` и `store`.
-- Интерфейс не читает файлы и не зовёт модели.
-- Данные из модели, файлов и web проверяются схемой на границе.
-- Ядро не пишет в `console`. События идут через шину.
-- Промпты лежат в `prompts/`, а не в коде.
-- Секреты вырезаются до записи в лог.
-- Комментарий объясняет причину, а не действие.
-- Временное упрощение помечается `ponytail:` с пределом и путём развития.
+- One file owns one thing. Soft limit 300 lines, hard limit 500.
+- `core` does not import `ui`, `shell`, or `store`.
+- The interface does not read files or call models.
+- Data from the model, files, and the web is validated by a schema at the boundary.
+- The core does not write to `console`. Events go through the bus.
+- Prompts live in `prompts/`, not in code.
+- Secrets are redacted before anything is written to a log.
+- A comment explains the reason, not the action.
+- A temporary simplification is marked `ponytail:` with its limit and a path forward.
 
-## Интерфейс
+## Interface
 
-- Читай `design.md` перед изменением визуального поведения.
-- Компоненты лежат в `ui/src/components`, состояние и чистые функции в `ui/src/lib`.
-- Демо-данные меняются только в `ui/src/lib/demo.ts`. Компонент не хранит копию этих данных.
-- Токены, шрифты и базовые стили лежат в `ui/src/app.css`. Не добавляй второй набор токенов.
-- Новый компонент получает данные через props. Прямой импорт `demo.ts` допустим только в контейнерах экрана.
-- Интерактивные элементы работают с клавиатуры и имеют `aria-label` или видимую подпись.
-- Анимация не нужна для понимания состояния. `prefers-reduced-motion` должен оставлять статичный кадр.
+- Read `design.md` before changing visual behavior.
+- Components live in `ui/src/components`, state and pure functions in `ui/src/lib`.
+- Demo data changes only in `ui/src/lib/demo.ts`. A component does not keep a copy of that data.
+- Tokens, fonts, and base styles live in `ui/src/app.css`. Do not add a second set of tokens.
+- A new component receives data through props. A direct import of `demo.ts` is allowed only in screen containers.
+- Interactive elements work from the keyboard and have an `aria-label` or a visible label.
+- Animation is not required to understand state. `prefers-reduced-motion` must leave a static frame.
 
-## Зависимости
+## Dependencies
 
-Новая зависимость требует записи в `docs/DECISIONS.md`: контекст, решение, последствия. Сначала проверь стандартную библиотеку Bun, потом пакет.
+A new dependency requires an entry in `docs/DECISIONS.md`: context, decision, consequences. Check the Bun standard library first, then a package.
 
-## Коммиты
+## Commits
 
-Один коммит это одно изменение смысла. Сообщение в повелительном наклонении: `add spec parsing`, `fix page boundary`. Секреты и `.liquid/` не коммитятся.
+One commit is one change of meaning. Message in the imperative: `add spec parsing`, `fix page boundary`. Secrets and `.liquid/` are never committed.
 
-## Поведение
+## Behavior
 
-Обсуждай код и решения, не людей. Оскорбления, травля и публикация чужих данных недопустимы. О проблеме сообщи владельцу репозитория приватно.
+Discuss code and decisions, not people. Insults, harassment, and publishing others' data are unacceptable. Report a problem privately to the repository owner. See the [Code of Conduct](CODE_OF_CONDUCT.md).

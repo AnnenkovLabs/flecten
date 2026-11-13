@@ -21,7 +21,7 @@ uniform float uFur;         // fur growth 0 (liquid droplet) .. 1 (+ overshoot)
 uniform float uEyes;        // eye scale 0 .. 1
 uniform float uLift;        // body height above the floor (hop)
 uniform float uLimbs;       // feet + paws grow out of the droplet 0..1
-uniform vec3 uBend;         // v11 jelly: lateral (x) and fore-aft (z) offset of the top of the body, twist (rad) — grows with height
+uniform vec3 uBend;         // v11 jelly: lateral (x) and fore-aft (z) offset of the top of the body, twist (rad), grows with height
 uniform vec3 uCam;
 uniform vec3 uTarget;
 uniform float uFocal;       // 2.6 default
@@ -50,7 +50,7 @@ vec3 toBody(vec3 p) {
   p.y -= 1.0;
   return p;
 }
-// v11 · jelly bend: the body sways like a soft blob — the offset grows with height (feet stay planted).
+// v11 · jelly bend: the body sways like a soft blob, the offset grows with height (feet stay planted).
 // bendQ maps the deformed (visible) body space to the rest space where the SDF lives; unbendQ is the inverse (eyes).
 float bendW(float y) { float w = clamp((y + 1.0) / 2.45, 0.0, 1.0); return w * w; }
 vec3 bendQ(vec3 q) { float w = bendW(q.y); q.xz -= uBend.xy * w; q.xz = rot(uBend.z * w) * q.xz; return q; }

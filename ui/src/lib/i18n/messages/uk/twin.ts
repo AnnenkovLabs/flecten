@@ -116,4 +116,9 @@ export default {
   "Instructions to Worker": "Вказівки воркеру",
   "Representing your intent to the Worker": "Передаю воркеру твій задум",
   "Corrections: {0} / 4": ["Доопрацювання: ", 0, " / 4"],
+  "Interact with Twin": "Пограти з Twin",
+  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
+    "Тягни, щоб повернути. Twin стежить за курсором. Натисни, щоб привітатися. Стрілки повертають, Home скидає.",
+  "Resume motion": "Продовжити рух",
+  "Pause motion": "Зупинити рух",
 } as const;

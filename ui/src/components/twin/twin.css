@@ -18,7 +18,7 @@
 .twin-stage-status { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; }
 .twin-portrait { position: relative; display: grid; place-items: center; flex: 1; padding-block: 32px 8px; min-height: 300px; isolation: isolate; }
 .twin-portrait::before { content: ""; position: absolute; z-index: -1; left: 15%; right: 15%; bottom: 12%; height: 16%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--primary) 16%, transparent), transparent); }
-.twin-portrait img { max-width: 380px; }
+.twin-portrait .twin-character { max-width: 380px; }
 .twin-stage-copy { padding: 0 4px 4px; }
 .twin-stage-copy h2 { font-size: 20px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 8px; text-wrap: balance; }
 .twin-stage-copy p { color: var(--text-2); font-size: 13px; line-height: 1.6; max-width: 44ch; margin: 0; text-wrap: pretty; }
@@ -58,7 +58,7 @@
 .twin-trait > p, .twin-answer > p { font-size: 14px; line-height: 1.65; max-width: 65ch; white-space: pre-wrap; }
 .twin-trait > p.twin-hint, .twin-answer > p.twin-hint { font-size: 12px; }
 .twin-profile-intro { display: flex; align-items: center; gap: 24px; margin-bottom: 12px; }
-.twin-profile-intro > img { flex: none; }
+.twin-profile-intro > .twin-character { flex: none; }
 .twin-profile-intro h2 { font-size: 22px; font-weight: 500; letter-spacing: -.02em; margin: 0 0 8px; text-wrap: balance; }
 .twin-profile-intro p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-2); max-width: 55ch; }
 .twin-profile-controls { display: flex; gap: 12px; margin-block: 24px 8px; }
@@ -96,7 +96,7 @@
   .twin-toolbar { padding-inline: 24px; }
   .twin-content { padding-inline: 24px; }
   .twin-source-layout { grid-template-columns: minmax(220px, 0.8fr) minmax(340px, 1fr); gap: 20px; }
-  .twin-portrait img { max-width: 290px; }
+  .twin-portrait .twin-character { max-width: 290px; }
 }
 @media (max-width: 920px) {
   .twin-source-layout { grid-template-columns: minmax(0, 1fr); }
@@ -114,7 +114,7 @@
   .twin-stage-copy h2 { font-size: 18px; }
   .twin-source-count { max-width: 70px; }
   .twin-profile-intro { gap: 12px; }
-  .twin-profile-intro > img { width: 72px; }
+  .twin-profile-intro > .twin-character { width: 72px; }
   .twin-profile-controls { flex-wrap: wrap; }
   .twin-profile-controls .twin-search { flex-basis: 100%; }
 }

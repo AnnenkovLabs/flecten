@@ -31,7 +31,10 @@ export function createTwinScene(
 
   function draw(now: number): void {
     frame = 0;
-    if (!shown()) return stop();
+    if (!shown()) {
+      stop();
+      return;
+    }
     if (last && now - last < 1000 / 24) {
       frame = requestAnimationFrame(draw);
       return;
@@ -42,7 +45,7 @@ export function createTwinScene(
     try {
       renderer ??= createTwinRenderer(canvas);
       const pose = rig.frame(elapsed / 1000, still());
-      // ponytail: adaptive 192..512px framebuffer at 24fps; profile GPU timing before raising it.
+      // ponytail: size-adaptive framebuffer capped at 512px and 24fps; profile GPU timing before raising it.
       const resolution = Math.max(
         Math.min(64, width),
         Math.min(512, width * Math.min(devicePixelRatio || 1, 1.5)) * quality,
@@ -53,21 +56,27 @@ export function createTwinScene(
       canvas.dataset.yaw = String(pose.uYaw);
       canvas.dataset.look = String(pose.uLook);
       fallback(false);
-    } catch {
+    } catch (error) {
       renderer?.dispose();
       renderer = undefined;
       lost = true;
       canvas.dataset.renderer = "fallback";
+      canvas.dataset.error = error instanceof Error ? error.message : String(error);
       fallback(true);
-      return stop();
+      stop();
+      return;
     }
-    const animate = !still() || (!paused && !motion.matches && rig.settling);
+    const animate = !still();
     canvas.dataset.active = String(animate);
     if (animate) frame = requestAnimationFrame(draw);
+    else last = 0;
   }
 
   function wake(): void {
-    if (!shown()) return stop();
+    if (!shown()) {
+      stop();
+      return;
+    }
     if (!frame) frame = requestAnimationFrame(draw);
   }
 
@@ -80,6 +89,7 @@ export function createTwinScene(
     event.preventDefault();
     lost = true;
     canvas.dataset.renderer = "fallback";
+    canvas.dataset.error = "WebGL context lost";
     fallback(true);
     stop();
   }
@@ -88,6 +98,7 @@ export function createTwinScene(
     renderer?.dispose();
     renderer = undefined;
     lost = false;
+    delete canvas.dataset.error;
     wake();
   }
 

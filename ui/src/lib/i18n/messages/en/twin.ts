@@ -115,4 +115,9 @@ export default {
   "Instructions to Worker": "Instructions to Worker",
   "Representing your intent to the Worker": "Representing your intent to the Worker",
   "Corrections: {0} / 4": ["Corrections: ", 0, " / 4"],
+  "Interact with Twin": "Interact with Twin",
+  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
+    "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.",
+  "Resume motion": "Resume motion",
+  "Pause motion": "Pause motion",
 } as const;

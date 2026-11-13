@@ -1,10 +1,47 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import type { TwinActivityEvent } from "../../shared/twin-activity";
 import { environmentProblem, launchApp } from "./fixtures";
 
-test("Twin sources, character edits and original poses stay usable at both desktop sizes", async () => {
+async function pixels(canvas: Locator) {
+  return canvas.evaluate((element) => {
+    if (!(element instanceof HTMLCanvasElement)) throw new Error("Twin must render to canvas");
+    const gl = element.getContext("webgl2");
+    if (!gl) throw new Error("Twin must use a real WebGL2 context");
+    const data = new Uint8Array(element.width * element.height * 4);
+    gl.readPixels(0, 0, element.width, element.height, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    let hash = 2166136261;
+    let covered = 0;
+    let colored = 0;
+    for (let index = 0; index < data.length; index += 4) {
+      const red = data[index] ?? 0;
+      const green = data[index + 1] ?? 0;
+      const blue = data[index + 2] ?? 0;
+      if ((data[index + 3] ?? 0) > 0) covered++;
+      if (Math.max(red, green, blue) - Math.min(red, green, blue) > 10) colored++;
+      for (let offset = 0; offset < 4; offset++)
+        hash = Math.imul(hash ^ (data[index + offset] ?? 0), 16777619);
+    }
+    return { hash: hash >>> 0, covered, colored, width: element.width };
+  });
+}
+
+async function assertStopped(canvas: Locator) {
+  await expect(canvas).toHaveAttribute("data-active", "false");
+  await canvas.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  const frame = await canvas.getAttribute("data-frame");
+  // Observe beyond several 24fps intervals: no idle work may survive pause/reduced motion.
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  expect(await canvas.getAttribute("data-frame")).toBe(frame);
+}
+
+test("Twin live 3D, interactions and character workflow stay usable at both desktop sizes", async () => {
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
   const h = await launchApp({
@@ -21,12 +58,67 @@ test("Twin sources, character edits and original poses stay usable at both deskt
   });
   try {
     const { page } = h;
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Twin", exact: true }).click();
     const panel = page.getByTestId("twin-page");
     await expect(
       panel.getByRole("heading", { name: "Same ideas. Same thoughts.", exact: true }),
     ).toBeVisible();
     await expect(panel.locator(".twin-source")).toHaveCount(9);
+    const character = panel.locator(".twin-portrait [data-testid='twin-character']");
+    const canvas = character.locator("canvas");
+    const input = character.getByRole("button", { name: "Interact with Twin", exact: true });
+    await expect(canvas).toHaveAttribute("data-renderer", "webgl");
+    const original = await pixels(canvas);
+    expect(original.covered).toBeGreaterThan(100);
+    expect(original.colored).toBeGreaterThan(100);
+    await expect(character.locator("img")).toHaveCount(0);
+    await assertStopped(canvas);
+    await input.hover({ position: { x: 32, y: 32 } });
+    await expect.poll(async () => (await pixels(canvas)).hash).not.toBe(original.hash);
+    const gaze = await pixels(canvas);
+    expect(gaze.width).toBe(original.width);
+    const box = await input.boundingBox();
+    if (!box) throw new Error("Twin interaction surface is missing");
+    await page.mouse.move(box.x + box.width / 3, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + (box.width * 2) / 3, box.y + box.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await expect.poll(async () => (await pixels(canvas)).hash).not.toBe(gaze.hash);
+    const turned = await pixels(canvas);
+    await input.focus();
+    await input.press("ArrowRight");
+    await expect.poll(async () => (await pixels(canvas)).hash).not.toBe(turned.hash);
+    await input.press("Home");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    const frame = Number(await canvas.getAttribute("data-frame"));
+    await expect
+      .poll(async () => Number(await canvas.getAttribute("data-frame")))
+      .toBeGreaterThan(frame + 1);
+    await character.getByRole("button", { name: "Pause motion", exact: true }).click();
+    await assertStopped(canvas);
+    const paused = await pixels(canvas);
+    await input.press("ArrowLeft");
+    await expect.poll(async () => (await pixels(canvas)).hash).not.toBe(paused.hash);
+    await assertStopped(canvas);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await character.getByRole("button", { name: "Resume motion", exact: true }).click();
+    await assertStopped(canvas);
+    const restore = await canvas.evaluateHandle((element) => {
+      const extension = (element as HTMLCanvasElement)
+        .getContext("webgl2")
+        ?.getExtension("WEBGL_lose_context");
+      if (!extension) throw new Error("WebGL context loss extension is unavailable");
+      extension.loseContext();
+      return () => extension.restoreContext();
+    });
+    await expect(canvas).toHaveAttribute("data-renderer", "fallback");
+    await expect(character.locator("img")).toBeVisible();
+    await restore.evaluate((restoreContext) => restoreContext());
+    await restore.dispose();
+    await expect(canvas).toHaveAttribute("data-renderer", "webgl");
+    expect((await pixels(canvas)).colored).toBeGreaterThan(100);
+    await expect(character.locator("img")).toHaveCount(0);
     for (const [width, height] of [
       [1480, 940],
       [1180, 640],
@@ -128,16 +220,10 @@ test("Twin sources, character edits and original poses stay usable at both deskt
       await expect(work).toBeVisible();
       await expect(work).toHaveAttribute("data-state", "revise");
       await expect(work.locator(".work-round")).toHaveText(`Corrections: ${corrections} / 4`);
-      const portrait = work.locator(`img[src='./twin/${emotion}.webp']`);
-      await expect(portrait).toBeVisible();
-      await expect
-        .poll(() =>
-          portrait.evaluate(
-            (image) =>
-              image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
-          ),
-        )
-        .toBe(true);
+      const portrait = work.locator("canvas");
+      await expect(portrait).toHaveAttribute("data-emotion", emotion);
+      await expect(portrait).toHaveAttribute("data-renderer", "webgl");
+      expect((await pixels(portrait)).colored).toBeGreaterThan(20);
       if ((await work.getAttribute("open")) === null) {
         await work.locator(":scope > summary").click();
       }

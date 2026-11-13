@@ -28,23 +28,19 @@ export class TwinRig {
   #tuft = poses.idle.tuft;
   #impulse = -10;
   #time = 0;
-  #transition = 0;
 
   set(state: TwinState, emotion: TwinEmotion): void {
     if (state === this.state && emotion === this.emotion) return;
     this.state = state;
     this.emotion = emotion;
-    this.#transition = 1.2;
   }
 
   look(x: number, y: number): void {
     this.#look = [clamp(x, -1, 1), clamp(y, -1, 1)];
-    this.#transition = 1.2;
   }
 
   turn(delta: number): void {
     this.#turn += delta;
-    this.#transition = 1.2;
   }
 
   reset(): void {
@@ -54,17 +50,11 @@ export class TwinRig {
 
   greet(): void {
     this.#impulse = this.#time;
-    this.#transition = 1.5;
-  }
-
-  get settling(): boolean {
-    return this.#transition > 0;
   }
 
   frame(delta: number, still: boolean): TwinPose {
     const dt = clamp(delta, 0, 0.05);
     if (!still) this.#time += dt;
-    this.#transition = Math.max(0, this.#transition - dt);
     const t = this.#time;
     const age = t - this.#impulse;
     const pulse = still || age > 1.5 ? 0 : Math.sin(age * 18) * Math.exp(-age * 4);

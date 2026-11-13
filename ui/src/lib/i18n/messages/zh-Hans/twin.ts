@@ -111,4 +111,9 @@ export default {
   "Instructions to Worker": "给 Worker 的指示",
   "Representing your intent to the Worker": "向 Worker 传达你的意图",
   "Corrections: {0} / 4": ["修改：", 0, " / 4"],
+  "Interact with Twin": "与 Twin 互动",
+  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
+    "拖动旋转，移动光标跟随视线，点击打招呼。方向键旋转，Home 重置。",
+  "Resume motion": "恢复动作",
+  "Pause motion": "暂停动作",
 } as const;

@@ -116,4 +116,9 @@ export default {
   "Instructions to Worker": "Worker への指示",
   "Representing your intent to the Worker": "あなたの意図を Worker に伝えています",
   "Corrections: {0} / 4": ["修正: ", 0, " / 4"],
+  "Interact with Twin": "Twin と触れ合う",
+  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
+    "ドラッグで回転、カーソルを目で追います。クリックで挨拶。矢印キーで回転、Home でリセット。",
+  "Resume motion": "動きを再開",
+  "Pause motion": "動きを止める",
 } as const;

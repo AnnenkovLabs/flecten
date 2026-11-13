@@ -120,4 +120,4 @@
 
 Talker/Worker отображаются через `ui/src/lib/run/worker.svelte.ts`, `markdown/tool-references.ts`, `WorkerActivity.svelte` и `MirroredMarkdown.svelte`. Они используют существующую карточку `RunActionRow.svelte` и общий поток событий.
 
-Twin UI: `ui/src/components/twin/`, `ui/src/lib/twin.svelte.ts` и `ui/src/lib/run/twin-view.svelte.ts` показывают источники, характер, обучение, реплики и состояния исходного персонажа из `ui/public/twin/`.
+Twin UI: `ui/src/components/twin/`, `ui/src/lib/twin.svelte.ts` и `ui/src/lib/run/twin-view.svelte.ts` показывают источники, характер, обучение и реплики. `ui/src/lib/twin/` разделяет rig, lifecycle интерактивной сцены и WebGL2-рендер исходной 3D-геометрии и шерсти трейлера. Канонический shader находится там же; `scripts/twin/render-assets.mjs` создаёт из него fallback в `ui/public/twin/`.

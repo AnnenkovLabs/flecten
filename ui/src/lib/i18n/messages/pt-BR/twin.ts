@@ -117,4 +117,9 @@ export default {
   "Instructions to Worker": "Instruções para o Worker",
   "Representing your intent to the Worker": "Representando sua intenção para o Worker",
   "Corrections: {0} / 4": ["Revisões: ", 0, " / 4"],
+  "Interact with Twin": "Interagir com Twin",
+  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
+    "Arraste para girar. Mova para olhar. Clique para cumprimentar. As setas giram; Home redefine.",
+  "Resume motion": "Retomar movimento",
+  "Pause motion": "Pausar movimento",
 } as const;

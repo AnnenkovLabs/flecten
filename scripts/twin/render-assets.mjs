@@ -1,5 +1,5 @@
 // bun scripts/twin/render-assets.mjs /path/to/liquid-harness-trailer-v12
-// Uses the original rig and current checked-in shader. No model or live UI WebGL.
+// Generates fallback images from the original rig and the UI's canonical live shader.
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -9,7 +9,10 @@ import { chromium } from "@playwright/test";
 
 const trailer = resolve(process.argv[2] ?? "/home/oleksandr/workspace/liquid-harness-trailer-v12");
 const { twinPose } = await import(pathToFileURL(resolve(trailer, "src/v10/twin10.ts")));
-const original = await readFile(new URL("twin.frag", import.meta.url), "utf8");
+const original = await readFile(
+  new URL("../../ui/src/lib/twin/twin.frag", import.meta.url),
+  "utf8",
+);
 const output = resolve(import.meta.dirname, "../../ui/public/twin");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
@@ -117,7 +120,7 @@ try {
   }
   await writeFile(
     resolve(output, "provenance.json"),
-    `${JSON.stringify({ source: "liquid-harness-trailer-v12", shaderSha256: createHash("sha256").update(original).digest("hex"), frames: poses, changes: "Original purple shader; anger and fury extend the original face and rig. Static event-driven poses." }, null, 2)}\n`,
+    `${JSON.stringify({ source: "liquid-harness-trailer-v12", shaderSha256: createHash("sha256").update(original).digest("hex"), frames: poses, changes: "Original purple 3D shader and rig, with anger and fury expressions. Live interactive WebGL2 in the UI; these images are the fallback for unavailable or lost contexts." }, null, 2)}\n`,
   );
 } finally {
   await browser.close();
