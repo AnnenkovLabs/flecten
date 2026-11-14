@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import {
   buildBubblewrapArgs,
   buildSeatbeltProfile,
@@ -23,7 +24,7 @@ const POLICY = {
 } satisfies SandboxCommandOptions;
 
 async function sandboxTempDir(): Promise<string> {
-  const dir = await mkdtemp(join("/tmp", "liquid-os-sandbox-"));
+  const dir = await mkdtemp(join(tmpdir(), "liquid-os-sandbox-"));
   dirs.push(dir);
   return dir;
 }
@@ -153,7 +154,7 @@ describe("buildSeatbeltProfile", () => {
     expect(profile).toContain('(subpath "/tmp")');
     expect(profile).toContain('(subpath "/work/project")');
     expect(profile).toContain('(subpath "/work/cache")');
-    expect(profile).toContain('(subpath "/work/shared")');
+    expect(profile).toContain(`(subpath ${JSON.stringify(resolve("/work/shared"))})`);
   });
 
   test("allows network when it is enabled", () => {
@@ -168,7 +169,9 @@ describe("buildSeatbeltProfile", () => {
     const denyStart = profile.indexOf("(deny file-write*");
 
     expect(denyStart).toBeGreaterThan(-1);
-    expect(profile.slice(denyStart)).toContain('(subpath "/work/shared")');
+    expect(profile.slice(denyStart)).toContain(
+      `(subpath ${JSON.stringify(resolve("/work/shared"))})`,
+    );
     expect(profile.indexOf("(deny file-write*")).toBeGreaterThan(
       profile.indexOf("(allow file-write*"),
     );
@@ -185,12 +188,11 @@ describe("buildSeatbeltProfile", () => {
 describe("runSandboxed", () => {
   test("drains output while running and closes inherited pipes when the launcher exits", async () => {
     const root = await sandboxTempDir();
-    const launcher = join(root, "test-sandbox");
-    await writeFile(
-      launcher,
-      "#!/bin/sh\nhead -c 3000000 /dev/zero | tr '\\0' 'x'\nprintf tail >&2\nsleep 30 &\n",
-      { mode: 0o700 },
-    );
+    const launcher = join(root, process.platform === "win32" ? "test-sandbox.exe" : "test-sandbox");
+    await Bun.build({
+      entrypoints: [resolve(import.meta.dir, "../helpers/sandbox-launcher.ts")],
+      compile: { outfile: launcher },
+    });
     const result = await runSandboxed({
       ...POLICY,
       workspaceRoot: root,
@@ -202,7 +204,7 @@ describe("runSandboxed", () => {
     expect(result.reason).toBeUndefined();
     expect(result.output).toEndWith("[output truncated]");
     expect(Buffer.byteLength(result.output)).toBeLessThan(2 * 1024 * 1024 + 100);
-  });
+  }, 30_000);
 
   test("returns unsupported without running the command", async () => {
     const result = await runSandboxed({

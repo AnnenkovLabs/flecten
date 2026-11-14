@@ -68,7 +68,7 @@ describe("checkpoints", () => {
       const store = new CheckpointStore({ cwd: dir });
       const checkpoint = await store.capture(captureOptions(["note.txt"], "edit"));
       expect(checkpoint.files[0]?.beforeHash).toHaveLength(64);
-      expect(checkpoint.files[0]?.mode).toBe(0o640);
+      if (process.platform !== "win32") expect(checkpoint.files[0]?.mode).toBe(0o640);
       expect(checkpoint.bytes).toBe(6);
 
       await writeFile(file, "after");
@@ -78,7 +78,8 @@ describe("checkpoints", () => {
       const result = await store.restore(checkpoint.id);
       expect(result.restored).toEqual(["note.txt"]);
       expect(await readFile(file, "utf8")).toBe("before");
-      expect((await stat(file)).mode & 0o777).toBe(0o640);
+      // Windows does not expose POSIX permission bits; content restoration is checked everywhere.
+      if (process.platform !== "win32") expect((await stat(file)).mode & 0o777).toBe(0o640);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

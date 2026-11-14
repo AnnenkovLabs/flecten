@@ -1,6 +1,6 @@
 import type { Stats } from "node:fs";
 import { stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import type { ToolResult } from "../../core/types";
 import { withoutPrefix } from "../../util/text";
 import { displayPath, resolveToolPath } from "../util/paths";
@@ -87,11 +87,12 @@ export async function runGlobFallback(args: GlobArgs, context: SearchContext): P
   const glob = new Bun.Glob(scanPattern(args.pattern));
   const results: string[] = [];
 
-  for await (const relative of glob.scan({
+  for await (const nativePath of glob.scan({
     cwd: searchPath,
     onlyFiles: true,
     dot: args.hidden === true,
   })) {
+    const relative = nativePath.split(sep).join("/");
     if (context.signal.aborted) {
       return { ok: false, output: "", error: "Glob aborted" };
     }
@@ -114,7 +115,14 @@ export async function runGlob(args: GlobArgs, context: SearchContext): Promise<T
 
   const limit = args.maxResults ?? 500;
   const prefix = displayPath(context.cwd, searchPath);
-  const command = [rg, "--files", "--no-config", "--no-require-git", "--sort=path"];
+  const command = [
+    rg,
+    "--files",
+    "--no-config",
+    "--no-require-git",
+    "--sort=path",
+    "--path-separator=/",
+  ];
   if (args.hidden) command.push("--hidden");
   for (const directory of IGNORED) command.push("--glob", `!**/${directory}/**`);
   command.push(".");

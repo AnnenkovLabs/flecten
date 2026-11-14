@@ -41,7 +41,7 @@ export async function saveSessionMedia(
   for (const { bytes, ref } of prepared) {
     const path = join(sessionPaths(cwd, sessionId).attachments, `${ref.id}.bin`);
     await atomicWrite(path, bytes, 0o600);
-    const file = await open(path, "r");
+    const file = await open(path, "r+");
     try {
       await file.sync();
     } finally {

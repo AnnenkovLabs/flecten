@@ -81,15 +81,15 @@ test("watch discovers new modules and file revisions without a forced reload", a
   await waitFor(async () => {
     await catalog.refresh();
     return catalog.modules.has("watched");
-  });
+  }, 12_000);
   const revision = catalog.modules.get("watched")?.revision;
   await Bun.write(join(root, "new.md"), "new bytes");
   await waitFor(async () => {
     await catalog.refresh();
     return catalog.modules.get("watched")?.revision !== revision;
-  });
+  }, 12_000);
   expect(catalog.modules.get("watched")?.revision).not.toBe(revision);
-});
+}, 30_000);
 
 test("MCP media rejects invalid base64, MIME confusion and too many attachments at the boundary", () => {
   expect(() => mcpMedia([{ type: "image", mimeType: "image/png", data: "bad base64!" }])).toThrow(

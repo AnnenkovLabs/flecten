@@ -24,13 +24,24 @@ export function shellArgs(shell: string): string[] {
 export function shellCommandArgs(shell: string, command: string): string[] {
   switch (shellName(shell).toLowerCase()) {
     case "cmd":
-      return ["/d", "/s", "/c", command];
+      return ["/d", "/s", "/c", `"${command}"`];
     case "powershell":
     case "pwsh":
       return ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command];
     default:
       return ["-lc", command];
   }
+}
+
+/** CMD parses its command string itself; CRT escaping would turn quotes into literal bytes. */
+export function shellCommand(
+  shell: string,
+  command: string,
+): { cmd: string[]; windowsVerbatimArguments: boolean } {
+  return {
+    cmd: [shell, ...shellCommandArgs(shell, command)],
+    windowsVerbatimArguments: shellName(shell).toLowerCase() === "cmd",
+  };
 }
 
 export function resolveShell(shell: string): string | null {

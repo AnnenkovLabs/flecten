@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
+import { realpathSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 
 const { smokeEnvironment, validateSmokeResult } =
@@ -36,7 +37,7 @@ test("packaged smoke removes current and legacy product overrides", () => {
     FLECTEN_SMOKE: "1",
     FLECTEN_SMOKE_OUT: "/smoke/status.json",
     FLECTEN_CWD: "/smoke",
-    FLECTEN_CONFIG: "/smoke/flecten.config.json",
+    FLECTEN_CONFIG: resolve("/smoke", "flecten.config.json"),
     FLECTEN_HEADLESS: "1",
   });
   expect(() =>
@@ -55,8 +56,8 @@ test("packaged smoke refuses a development or external agent executable", async 
     expect(() => bundledAgent(expected, directory, false)).toThrow("installed package");
     expect(() => bundledAgent(external, directory, true)).toThrow("bundled agent");
     expect(bundledAgent(expected, directory, true)).toMatchObject({
-      command: expected,
-      expected,
+      command: realpathSync(expected),
+      expected: realpathSync(expected),
       packaged: true,
     });
   } finally {

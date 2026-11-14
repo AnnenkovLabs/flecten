@@ -49,7 +49,8 @@ describe("durable agent memory", () => {
     const store = new MemoryStore({ cwd });
     const first = await store.put(draft());
     expect(first.revision).toBe(1);
-    expect((await stat(store.path)).mode & 0o777).toBe(0o600);
+    // POSIX permission bits are not supported by Windows.
+    if (process.platform !== "win32") expect((await stat(store.path)).mode & 0o777).toBe(0o600);
     const original = await readFile(store.path, "utf8");
     expect(await store.put(draft())).toEqual(first);
     expect(await readFile(store.path, "utf8")).toBe(original);
@@ -199,7 +200,7 @@ describe("durable agent memory", () => {
     expect(record?.cues).toContain("legacy-unverified");
     expect(record?.content).toBe("Use Bun for tests");
     expect(JSON.parse(await readFile(store.path, "utf8")).version).toBe(2);
-    expect((await stat(store.path)).mode & 0o777).toBe(0o600);
+    if (process.platform !== "win32") expect((await stat(store.path)).mode & 0o777).toBe(0o600);
     expect(await store.list()).toEqual(record ? [record] : []);
 
     const invalid = JSON.stringify({

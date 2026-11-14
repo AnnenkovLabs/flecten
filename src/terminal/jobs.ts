@@ -3,7 +3,7 @@ import { killProcessTree } from "./process-tree";
 import { ResourceMonitor, withResourceLimits } from "./resources";
 import { type TerminalSandboxPolicy, wrapShellCommand } from "./session";
 import type { TerminalSettings } from "./settings";
-import { buildEnvironment, resolveShell, shellCommandArgs } from "./shell";
+import { buildEnvironment, resolveShell, shellCommand } from "./shell";
 
 export type TerminalJobStatus = "running" | "exited" | "failed" | "stopped";
 
@@ -113,10 +113,9 @@ export class TerminalJob {
       return;
     }
     const env = buildEnvironment(this.cwd, shell, this.env, this.settings.envAllowlist);
-    const setsid = Bun.which("setsid");
-    const command = this.command;
-    const shellArgs = shellCommandArgs(shell, command);
-    let cmd = setsid === null ? [shell, ...shellArgs] : [setsid, shell, ...shellArgs];
+    const setsid = process.platform === "win32" ? null : Bun.which("setsid");
+    const execution = shellCommand(shell, this.command);
+    let cmd = setsid === null ? execution.cmd : [setsid, ...execution.cmd];
     if (this.sandbox?.enabled) {
       const [program = shell, ...args] = cmd;
       const wrapped = wrapShellCommand(program, args, { ...this.sandbox, cwd: this.cwd });
@@ -129,6 +128,7 @@ export class TerminalJob {
     const scope = createProcessScope();
     try {
       const proc = Bun.spawn({
+        ...execution,
         cmd: withResourceLimits(cmd, this.settings.limits),
         cwd: this.cwd,
         env: { ...env, ...scope.environment },

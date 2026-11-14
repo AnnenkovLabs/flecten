@@ -4,6 +4,7 @@ import { HooksConfigSchema } from "../../src/config/schema-sections";
 import { PermissionEngine } from "../../src/security/permissions";
 import { scriptedProvider } from "../helpers/fake-provider";
 import { buildSession, cleanupHooks, httpHook, serve, tempDir } from "../helpers/hooks";
+import { bunFileCommand } from "../helpers/shell-command";
 
 afterEach(cleanupHooks);
 
@@ -58,7 +59,7 @@ test("a command hook gets explicit env but does not inherit provider credentials
   const cwd = await tempDir();
   const prior = process.env.FLECTEN_PRIVATE_HOOK_TEST;
   process.env.FLECTEN_PRIVATE_HOOK_TEST = "must-not-leak";
-  const hookPath = join(cwd, "hook.ts");
+  const hookPath = join(cwd, "hook with spaces.ts");
   await Bun.write(
     hookPath,
     `await Bun.stdin.text(); process.stdout.write(JSON.stringify({additionalContext: String(process.env.FLECTEN_PRIVATE_HOOK_TEST) + ':' + process.env.HOOK_EXPLICIT}));`,
@@ -68,7 +69,7 @@ test("a command hook gets explicit env but does not inherit provider credentials
     const hooks = HooksConfigSchema.parse({
       sessionStart: [
         {
-          command: `${JSON.stringify(process.execPath)} ${JSON.stringify(hookPath)}`,
+          command: bunFileCommand(hookPath),
           env: { HOOK_EXPLICIT: "allowed" },
         },
       ],

@@ -17,6 +17,7 @@ import { builtinTools } from "../../src/tools/builtin";
 import { ToolRegistry } from "../../src/tools/registry";
 import type { Tool } from "../../src/tools/types";
 import type { scriptedProvider } from "./fake-provider";
+import { bunFileCommand } from "./shell-command";
 
 export const dirs: string[] = [];
 export const servers: Array<ReturnType<typeof Bun.serve>> = [];
@@ -47,7 +48,7 @@ export function hook(
 ): HookDefinition {
   const script = join(import.meta.dir, "..", "fixtures", "hook.ts");
   return {
-    command: `${JSON.stringify(process.execPath)} ${JSON.stringify(script)}${action ? ` ${action}` : ""}`,
+    command: bunFileCommand(script, action ? [action] : []),
     envAllowlist: ["PATH", "HOME", "FLECTEN_HOOK_LOG", "FLECTEN_HOOK_MARK"],
     matcher,
     timeoutMs,

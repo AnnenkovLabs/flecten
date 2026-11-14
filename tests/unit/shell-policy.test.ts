@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "node:path";
 import { classifyTargets, findDestructive } from "../../src/security/destructive";
 import { isAssignment, parseShell, programName } from "../../src/security/shell-lexer";
 
@@ -89,7 +90,9 @@ describe("destructive commands", () => {
         .filter((match) => match.rule.id === "rm-recursive")
         .flatMap((match) => classifyTargets(match, cwd, root));
     expect(verdicts("rm -rf build")).toEqual([{ kind: "inside", path: "build", glob: false }]);
-    expect(verdicts("rm -rf ../other")).toEqual([{ kind: "outside", path: "/work/other" }]);
+    expect(verdicts("rm -rf ../other")).toEqual([
+      { kind: "outside", path: resolve(root, "../other") },
+    ]);
     expect(verdicts("rm -rf $TARGET")).toEqual([{ kind: "unknown", word: "$TARGET" }]);
     expect(verdicts("rm -rf .git")).toEqual([{ kind: "git-dir", path: ".git" }]);
     expect(verdicts("rm -rf .*")).toEqual([{ kind: "git-dir", path: "." }]);

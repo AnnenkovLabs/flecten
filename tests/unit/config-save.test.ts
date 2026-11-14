@@ -8,6 +8,7 @@ import { atomicWrite } from "../../src/util/atomic";
 
 const dirs: string[] = [];
 const savedConfig = process.env.FLECTEN_CONFIG;
+const supportsPosixModes = process.platform !== "win32";
 let umask = 0;
 
 beforeEach(() => {
@@ -44,16 +45,17 @@ describe("config and secret writes", () => {
     await saveConfig(cwd, { ...config, provider: config.provider }, { path: link });
     expect((await lstat(link)).isSymbolicLink()).toBe(true);
     expect(await Bun.file(target).text()).toContain('"schemaVersion"');
-    expect(await mode(target)).toBe(0o600);
+    if (supportsPosixModes) expect(await mode(target)).toBe(0o600);
     expect((await readdir(dotfiles)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 
-  test("the secrets file is never readable by others, even for a moment", async () => {
+  test("secret replacement preserves content and private POSIX permissions", async () => {
     const cwd = await tempDir();
     await saveSecrets(cwd, { openai: "sk-test-1" });
-    expect(await mode(secretsPath(cwd))).toBe(0o600);
+    expect(await Bun.file(secretsPath(cwd)).json()).toEqual({ openai: "sk-test-1" });
+    if (supportsPosixModes) expect(await mode(secretsPath(cwd))).toBe(0o600);
     await saveSecrets(cwd, { openai: "sk-test-2" });
-    expect(await mode(secretsPath(cwd))).toBe(0o600);
+    if (supportsPosixModes) expect(await mode(secretsPath(cwd))).toBe(0o600);
     expect(await Bun.file(secretsPath(cwd)).json()).toEqual({ openai: "sk-test-2" });
   });
 
@@ -65,6 +67,8 @@ describe("config and secret writes", () => {
     expect(await Bun.file(path).text()).toBe("old");
     expect((await readdir(dir)).sort()).toEqual(["state.json"]);
     await atomicWrite(join(dir, "nested", "deep", "file.json"), "{}", 0o600);
-    expect(await mode(join(dir, "nested", "deep", "file.json"))).toBe(0o600);
+    expect(await Bun.file(join(dir, "nested", "deep", "file.json")).text()).toBe("{}");
+    if (supportsPosixModes)
+      expect(await mode(join(dir, "nested", "deep", "file.json"))).toBe(0o600);
   });
 });

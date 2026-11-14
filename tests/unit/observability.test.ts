@@ -70,7 +70,7 @@ describe("crash and diagnostics", () => {
     expect(bundle.app).toEqual({ version: "0.1.0", commit: "abc123", platform: "linux" });
     expect(bundle.paths).toEqual({
       config: "/tmp/project/flecten.config.json",
-      home: "~/project",
+      home: join("~", "project"),
       sibling: siblingPath,
     });
     expect(bundle.providers).toEqual([

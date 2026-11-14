@@ -1,6 +1,6 @@
 import type { Stats } from "node:fs";
 import { stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import type { ToolResult } from "../../core/types";
 import { readGitignore } from "../glob/gitignore";
 import { displayPath, resolveToolPath } from "../util/paths";
@@ -186,11 +186,12 @@ async function searchFallback(
   } else {
     const relatives: string[] = [];
     const scanner = new Bun.Glob("**/*");
-    for await (const relative of scanner.scan({
+    for await (const nativePath of scanner.scan({
       cwd: searchPath,
       onlyFiles: true,
       dot: args.hidden === true,
     })) {
+      const relative = nativePath.split(sep).join("/");
       if (context.signal.aborted) return { ok: false, output: "", error: "Search aborted" };
       if (await accept(relative)) relatives.push(relative);
     }

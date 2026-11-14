@@ -64,7 +64,8 @@ describe("project lock", () => {
     expect(lock.path).toBe(lockFile(root));
     const holder = JSON.parse(await readFile(lockFile(root), "utf8"));
     expect(holder.pid).toBe(process.pid);
-    expect((await stat(lockFile(root))).mode & 0o777).toBe(0o600);
+    // POSIX permission bits are not supported by Windows.
+    if (process.platform !== "win32") expect((await stat(lockFile(root))).mode & 0o777).toBe(0o600);
     lock.release();
     lock.release();
     expect(await Bun.file(lockFile(root)).exists()).toBe(false);

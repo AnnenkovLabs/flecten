@@ -35,7 +35,9 @@ describe("IDE file saves", () => {
       });
       expect(saved).toMatchObject({ file: { text: "" } });
       expect(await readFile(join(cwd, "run.sh"), "utf8")).toBe("\uFEFF");
-      expect((await stat(join(cwd, "run.sh"))).mode & 0o777).toBe(0o755);
+      // Executable mode is POSIX-only; the BOM and saved bytes are checked on every platform.
+      if (process.platform !== "win32")
+        expect((await stat(join(cwd, "run.sh"))).mode & 0o777).toBe(0o755);
     });
   });
 

@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+import { bunFileCommand } from "./shell-command";
 
 /** A real Bun child exercises the configured native shell without POSIX fixture syntax. */
 export async function bunCommand(cwd: string, source: string): Promise<string> {
   const path = join(cwd, `terminal-${randomUUID()}.mjs`);
   await Bun.write(path, source);
-  return process.platform === "win32" ? `bun "${path}"` : `bun '${path.replaceAll("'", "'\\''")}'`;
+  return bunFileCommand(path);
 }
 
 export const idleSource = "setTimeout(() => {}, 30_000);";

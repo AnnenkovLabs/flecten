@@ -17,7 +17,7 @@ import {
   defaultTerminalShell,
   type TerminalResourceLimits,
 } from "../../terminal/settings";
-import { shellCommandArgs } from "../../terminal/shell";
+import { shellCommand } from "../../terminal/shell";
 import { seconds } from "../jobs/view";
 import { withShellCheckpoint } from "../shell-checkpoint";
 import type { OsSandboxContext, ToolContext } from "../types";
@@ -257,15 +257,16 @@ export async function runBash(
     }
   }
 
-  const setsid = Bun.which("setsid");
+  const setsid = process.platform === "win32" ? null : Bun.which("setsid");
   const shell = context.terminals?.settings.shell ?? defaultTerminalShell();
-  const shellArgs = shellCommandArgs(shell, args.command);
+  const execution = shellCommand(shell, args.command);
   const started = performance.now();
   const scope = createProcessScope();
   const spawn = () =>
     Bun.spawn({
+      ...execution,
       cmd: withResourceLimits(
-        setsid === null ? [shell, ...shellArgs] : [setsid, shell, ...shellArgs],
+        setsid === null ? execution.cmd : [setsid, ...execution.cmd],
         resourceLimits,
       ),
       cwd,

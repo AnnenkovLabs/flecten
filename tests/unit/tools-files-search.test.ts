@@ -146,6 +146,28 @@ describe("grep flags", () => {
 });
 
 describe("glob fallback", () => {
+  test("native scan paths share filtering and display rules when searching a nested directory", async () => {
+    const cwd = await tempDir();
+    await mkdir(join(cwd, "pkg", "src"), { recursive: true });
+    await mkdir(join(cwd, "pkg", "dist"));
+    await writeFile(join(cwd, "pkg", ".gitignore"), "/src/ignored.ts\n");
+    await writeFile(join(cwd, "pkg", "src", "keep.ts"), "needle\n");
+    await writeFile(join(cwd, "pkg", "src", "ignored.ts"), "needle\n");
+    await writeFile(join(cwd, "pkg", "dist", "output.ts"), "needle\n");
+
+    for (const result of [
+      await runGlob({ pattern: "*.ts", path: "pkg" }, context(cwd)),
+      await runGlobFallback({ pattern: "*.ts", path: "pkg" }, context(cwd)),
+      await runGrepFallback(
+        { pattern: "needle", path: "pkg", filesWithMatches: true },
+        context(cwd),
+      ),
+    ]) {
+      expect(result.ok).toBe(true);
+      expect(result.output).toBe("pkg/src/keep.ts");
+    }
+  });
+
   test("applies nested ignore scopes and cannot reinclude an excluded directory", async () => {
     const cwd = await tempDir();
     await mkdir(join(cwd, "pkg", "skip"), { recursive: true });

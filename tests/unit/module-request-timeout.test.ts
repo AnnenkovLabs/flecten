@@ -12,7 +12,7 @@ beforeAll(async () => {
       {
         name: "plain-i18n",
         setup(build) {
-          build.onLoad({ filter: /\/i18n\.svelte\.ts$/ }, () => ({
+          build.onLoad({ filter: /[\\/]i18n\.svelte\.ts$/ }, () => ({
             contents: "export const t = key => key;",
             loader: "js",
           }));

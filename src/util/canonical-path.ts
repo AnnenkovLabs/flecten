@@ -5,7 +5,8 @@ import { basename, dirname, join, resolve } from "node:path";
 export function canonicalPath(input: string): string {
   const path = resolve(input);
   try {
-    return realpathSync(path);
+    // The native resolver expands Windows 8.3 aliases just like async realpath.
+    return realpathSync.native(path);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     const parent = dirname(path);

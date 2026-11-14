@@ -7,7 +7,7 @@ import {
 } from "../../src/terminal/resources";
 import { TerminalSession } from "../../src/terminal/session";
 import { defaultTerminalShell } from "../../src/terminal/settings";
-import { shellArgs, shellCommandArgs } from "../../src/terminal/shell";
+import { shellArgs, shellCommand, shellCommandArgs } from "../../src/terminal/shell";
 import {
   parseWindowsSnapshot,
   windowsProcessSnapshot,
@@ -87,7 +87,7 @@ test("native Windows shells use explicit foreground and interactive arguments", 
     "/d",
     "/s",
     "/c",
-    "echo hello",
+    '"echo hello"',
   ]);
   expect(shellCommandArgs("powershell.exe", "Write-Output hello")).toEqual([
     "-NoLogo",
@@ -99,6 +99,13 @@ test("native Windows shells use explicit foreground and interactive arguments", 
   expect(shellCommandArgs("/bin/bash", "echo hello")).toEqual(["-lc", "echo hello"]);
   expect(shellArgs("C:\\Windows\\System32\\CMD.EXE")).toEqual(["/d", "/q", "/k"]);
   expect(shellArgs("powershell.exe")).toEqual(["-NoLogo", "-NoProfile", "-NoExit"]);
+  const command = '"C:\\Program Files\\Bun\\bun.exe" "C:\\work space\\script.mjs" && echo complete';
+  expect(shellCommand("cmd.exe", command)).toEqual({
+    cmd: ["cmd.exe", "/d", "/s", "/c", `"${command}"`],
+    windowsVerbatimArguments: true,
+  });
+  expect(shellCommand("powershell.exe", "Write-Output hello").windowsVerbatimArguments).toBe(false);
+  expect(shellCommand("/bin/bash", "echo hello").windowsVerbatimArguments).toBe(false);
 });
 
 test("resource monitor uses native Windows data and fails closed on query failure", async () => {

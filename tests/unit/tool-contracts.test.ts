@@ -62,16 +62,17 @@ describe("search tool contracts", () => {
     }
   });
 
-  test("context lines cannot impersonate matches through a colon-containing path", async () => {
+  test("context lines cannot impersonate matches through a path (with colons on POSIX)", async () => {
     const ctx = await context();
-    await writeFile(join(ctx.cwd, "part:12:source.ts"), "before\nneedle\nafter\nneedle\n");
+    const name = process.platform === "win32" ? "part-12-source.ts" : "part:12:source.ts";
+    await writeFile(join(ctx.cwd, name), "before\nneedle\nafter\nneedle\n");
     const result = await registry().run(
       { id: "context", name: "grep", args: { pattern: "needle", context: 1, maxResults: 1 } },
       ctx,
     );
     expect(result.ok).toBe(true);
-    expect(result.output).toContain("part:12:source.ts-1- before");
-    expect(result.output).toContain("part:12:source.ts:2: needle");
+    expect(result.output).toContain(`${name}-1- before`);
+    expect(result.output).toContain(`${name}:2: needle`);
     expect(result.output).toContain("limit reached");
     expect(result.data).toMatchObject({ count: 1 });
   });

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type ContextMessage, PROFILE_4 } from "../../src/context";
@@ -95,7 +95,7 @@ describe("page summaries", () => {
       "## Original request (verbatim)\nRename the helper and keep the public API",
     );
     expect(context.startsWith(PAGE_HEADER)).toBe(true);
-    expect(context).toContain(`Full page on disk: ${file}`);
+    expect(context).toContain(`Full page on disk: ${await realpath(file)}`);
     expect(await pageSink(paths).count?.()).toBe(1);
   });
 

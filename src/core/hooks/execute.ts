@@ -1,7 +1,7 @@
 import { createProcessScope } from "../../terminal/process-scope";
 import { killProcessTree } from "../../terminal/process-tree";
 import { defaultTerminalShell } from "../../terminal/settings";
-import { buildEnvironment, shellCommandArgs } from "../../terminal/shell";
+import { buildEnvironment, shellCommand } from "../../terminal/shell";
 import type { HookDefinition, HookInput, HookName } from "./types";
 
 export const MAX_HOOK_REQUEST_BYTES = 64 * 1024;
@@ -104,11 +104,13 @@ async function runCommand(
 
   const shell = defaultTerminalShell();
   const setsid = process.platform === "win32" ? null : Bun.which("setsid");
+  const execution = shellCommand(shell, hook.command);
   const scope = createProcessScope();
   let proc: Bun.Subprocess<"pipe", "pipe", "pipe">;
   try {
     proc = Bun.spawn({
-      cmd: [...(setsid ? [setsid] : []), shell, ...shellCommandArgs(shell, hook.command)],
+      ...execution,
+      cmd: [...(setsid ? [setsid] : []), ...execution.cmd],
       cwd,
       env: {
         ...buildEnvironment(cwd, shell, hook.env, hook.envAllowlist),
