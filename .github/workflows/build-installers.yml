@@ -1,37 +1,43 @@
 name: Build installers
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      windows_only:
-        description: Build only Windows when investigating a platform-specific failure
+      candidate:
+        description: Build release installers for a trusted CI candidate
         type: boolean
         default: false
+  workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: installers-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
   package:
     name: package (${{ matrix.artifact }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.windows_only && '[{"os":"windows-latest","artifact":"windows-x64"}]' || '[{"os":"ubuntu-latest","artifact":"linux-x64"},{"os":"windows-latest","artifact":"windows-x64"},{"os":"macos-latest","artifact":"macos-arm64"},{"os":"macos-15-intel","artifact":"macos-x64"}]') }}
+        include:
+          - os: ubuntu-latest
+            artifact: linux
+          - os: macos-latest
+            artifact: macos-arm64
+          - os: macos-15-intel
+            artifact: macos-x64
+          - os: windows-latest
+            artifact: windows
     env:
+      BUILD_INSTALLERS: ${{ inputs.candidate || github.event_name == 'workflow_dispatch' }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      CSC_LINK: ${{ secrets.CSC_LINK }}
-      CSC_KEY_PASSWORD: ${{ matrix.artifact == 'windows-x64' && (secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD) || secrets.CSC_KEY_PASSWORD }}
-      WIN_CSC_LINK: ${{ matrix.artifact == 'windows-x64' && (secrets.WIN_CSC_LINK || secrets.CSC_LINK) || '' }}
-      APPLE_ID: ${{ secrets.APPLE_ID }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      CSC_LINK: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.CSC_LINK || '' }}
+      CSC_KEY_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && (matrix.artifact == 'windows' && (secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD) || secrets.CSC_KEY_PASSWORD) || '' }}
+      WIN_CSC_LINK: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && matrix.artifact == 'windows' && (secrets.WIN_CSC_LINK || secrets.CSC_LINK) || '' }}
+      APPLE_ID: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_ID || '' }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+      APPLE_TEAM_ID: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_TEAM_ID || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -43,56 +49,91 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-bun-
       - run: bun install --frozen-lockfile
-      - run: bun run check
-      - run: bun run lint
-      - name: Pin update verification key
+      - name: Pin update verification key in the application
+        if: inputs.candidate || github.event_name == 'workflow_dispatch'
         env:
           UPDATE_SIGNING_PUBLIC_KEY: ${{ vars.UPDATE_SIGNING_PUBLIC_KEY }}
         run: bun scripts/sign-update-manifests.mjs --pin
-      - run: bun run build:ui
-      - run: bun run build:agent
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: ${{ runner.os }}-${{ runner.arch }}-electron-${{ hashFiles('bun.lock', 'electron-builder.yml') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-electron-
+      - name: Package
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p diagnostics
+          if [ "$BUILD_INSTALLERS" = "true" ]; then
+            bun run release 2>&1 | tee diagnostics/package.log
+          else
+            bun run package 2>&1 | tee diagnostics/package.log
+          fi
       - name: Verify the Windows agent starts independently of Electron
         if: runner.os == 'Windows'
         run: |
           bun -e 'const { measureStartup } = await import("./scripts/measure-startup.mjs"); const { resolve } = await import("node:path"); console.log(await measureStartup(resolve("dist/flecten-agent.exe"), { iterations: 1 }));'
-      - name: Package native installers
-        run: bun scripts/package-installers.mjs --publish never
-      - name: Launch the Linux AppImage with Chromium's user namespace sandbox
-        if: runner.os == 'Linux'
+      - name: Smoke the packaged release before upload
+        shell: bash
         run: |
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          for installer in release/*.AppImage; do
-            chmod +x "$installer"
-            FLECTEN_SMOKE_EXECUTABLE="$PWD/$installer" APPIMAGE_EXTRACT_AND_RUN=1 bun run smoke:packaged
-          done
-        env:
-          FLECTEN_HEADLESS: "1"
-      - name: Launch the packaged application
-        if: runner.os != 'Linux'
-        run: bun run smoke:packaged
-        env:
-          FLECTEN_HEADLESS: "1"
-      - name: Upload installers and update metadata
+          set -o pipefail
+          if [ "$RUNNER_OS" = "Linux" ] && [ "$BUILD_INSTALLERS" = "true" ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+            installers=(release/*.AppImage)
+            test -f "${installers[0]}"
+            for installer in "${installers[@]}"; do
+              chmod +x "$installer"
+              FLECTEN_SMOKE_EXECUTABLE="$PWD/$installer" APPIMAGE_EXTRACT_AND_RUN=1 bun run smoke:packaged 2>&1 | tee -a diagnostics/smoke.log
+            done
+          else
+            bun run smoke:packaged 2>&1 | tee diagnostics/smoke.log
+          fi
+      - name: Capture window on failure
+        if: failure()
+        continue-on-error: true
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          mkdir -p diagnostics
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a bun run app:shot > diagnostics/screenshot.log 2>&1 || true
+          else
+            bun run app:shot > diagnostics/screenshot.log 2>&1 || true
+          fi
+          bun -e 'const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path"); for (const name of fs.readdirSync(os.tmpdir())) { if (name.startsWith("liquid-ui") && name.endsWith(".png")) fs.copyFileSync(path.join(os.tmpdir(), name), path.join("diagnostics", name)); }'
+      - name: Upload packaging diagnostics
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: installers-${{ matrix.artifact }}
+          name: release-diagnostics-${{ matrix.artifact }}
+          path: |
+            diagnostics/**
+            release/*/resources/**
+            release/*/*.app/Contents/Resources/**
+            release/*.yml
+            release/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload release artifacts
+        if: inputs.candidate || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ matrix.artifact }}
+          overwrite: true
+          compression-level: 0
+          retention-days: 14
           path: |
             release/*.AppImage
             release/*.dmg
             release/*.zip
             release/*.exe
             release/*.blockmap
-            release/*.yml
+            release/beta*.yml
             release/UNSIGNED-*.txt
           if-no-files-found: error
-          retention-days: 14
-      - name: Upload packaging diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: installer-diagnostics-${{ matrix.artifact }}
-          path: |
-            release/*.yml
-            release/*.log
-          if-no-files-found: ignore
-          retention-days: 14

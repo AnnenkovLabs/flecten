@@ -21,6 +21,7 @@
     "format": "biome format --write .",
     "verify": "bun run test && bun run check && bun run lint && bun scripts/docs-check.mjs && bun run build:ui && bun run build:agent",
     "package": "bun run build:ui && bun run build:agent && bun scripts/package-installers.mjs --dir",
+    "release:publish": "bun scripts/publish-release.mjs",
     "release": "bun run build:ui && bun run build:agent && bun scripts/package-installers.mjs",
     "smoke:packaged": "bun scripts/smoke-packaged.mjs",
     "sbom": "bun scripts/sbom.mjs",
