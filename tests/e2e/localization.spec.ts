@@ -39,7 +39,7 @@ test("fresh English default, seven live languages, drafts and saved preference",
       ).toHaveValue(current);
       await dialog
         .locator(".rail")
-        .getByRole("button", { name: label(current, "Permissions"), exact: true })
+        .getByRole("button", { name: label(current, "Access"), exact: true })
         .click();
       await expect(dialog.locator("#settings-permissions")).toBeVisible();
       await page.screenshot({ path: test.info().outputPath(`permissions-${current}.png`) });

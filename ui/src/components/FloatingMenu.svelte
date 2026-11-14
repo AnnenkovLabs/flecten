@@ -66,7 +66,7 @@
   aria-label={label}
   tabindex="-1"
   {onkeydown}
-  ontoggle={(event) => { if (event.newState === "closed" && menu.isConnected) onClose(); }}
+  ontoggle={(event) => { if (event.newState === "closed" && event.currentTarget.isConnected) onClose(); }}
 >
   {@render children()}
 </div>

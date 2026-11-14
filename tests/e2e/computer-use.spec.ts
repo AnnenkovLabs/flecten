@@ -80,7 +80,8 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
     await expect(frame.getByRole("button", { name: "Start desktop", exact: true })).toBeEnabled();
     // Explicitly allow MCP in this isolated fixture for the remaining desktop acceptance actions.
     await page.getByRole("button", { name: "Settings", exact: true }).click();
-    await dialog.getByRole("button", { name: "Permissions", exact: true }).click();
+    await dialog.getByRole("button", { name: "Access", exact: true }).click();
+    await dialog.getByText("Advanced access settings", { exact: true }).click();
     await dialog
       .getByRole("group", { name: "Policy: MCP", exact: true })
       .getByRole("button", { name: "Allow", exact: true })

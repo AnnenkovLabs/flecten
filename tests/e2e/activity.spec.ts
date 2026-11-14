@@ -175,7 +175,7 @@ test("settings navigation fades the section without moving its text", async () =
         return animation;
       };
     });
-    await settings.getByRole("button", { name: "Разрешения", exact: true }).click();
+    await settings.getByRole("button", { name: "Доступ", exact: true }).click();
     const motion = await settings.locator(".main-scroll").evaluate((node) => {
       const animation = node.getAnimations()[0];
       const effect = animation?.effect;

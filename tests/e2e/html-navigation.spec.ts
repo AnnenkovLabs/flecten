@@ -51,7 +51,7 @@ test("model HTML opens real harness menus, panels and files through buttons and 
 
     await frame.getByRole("link", { name: "Проверить права" }).focus();
     await frame.getByRole("link", { name: "Проверить права" }).press("Enter");
-    await expect(page.locator('.section-nav [aria-current="true"]')).toHaveText("Разрешения");
+    await expect(page.locator('.section-nav [aria-current="true"]')).toHaveText("Доступ");
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog.settings-dialog")).toHaveCount(0);
 

@@ -288,13 +288,29 @@ describe("automatic permission reviewer through guarded execution", () => {
     let reviews = 0;
     const f = await fixture(async function* () {
       yield* verdict();
-      if (++reviews === 2) reviewed.resolve();
+      reviews += 1;
     });
     let source: string | undefined = "Run both local test commands.";
     f.context.permissionIntent = () => source;
     f.options.parallelTools = true;
     const started = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
+    f.options.hooks = {
+      async run(event, input) {
+        const args = input.toolArgs as { command?: string } | undefined;
+        if (event === "preToolUse" && args?.command === "bun test second") await started.promise;
+        return emptyHookOutcome();
+      },
+    };
+    const sandbox = new SandboxPolicy({ workspaceRoot: f.context.cwd });
+    const check = sandbox.checkRead.bind(sandbox);
+    sandbox.checkRead = async (path) => {
+      const result = await check(path);
+      // Authorization has consumed the second verdict before it waits for the mutation lock.
+      if (reviews === 2) reviewed.resolve();
+      return result;
+    };
+    f.context.sandbox = sandbox;
     const executed: string[] = [];
     const bash = f.options.tools.get("bash");
     if (!bash) throw new Error("Missing bash");

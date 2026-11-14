@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { executeCalls, type ToolExecutionOptions } from "../../src/core/loop/tools";
@@ -20,7 +29,7 @@ afterEach(async () => {
 });
 
 async function fixture(choice: ApprovalChoice = "allow_session") {
-  const root = await mkdtemp(join(tmpdir(), "flecten-directory-access-"));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "flecten-directory-access-")));
   dirs.push(root);
   const cwd = join(root, "project");
   const external = join(root, "reference");
