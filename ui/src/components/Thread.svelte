@@ -138,6 +138,11 @@
   }
   function rememberPosition(): void {
     if (!currentTask) return;
+    // Search and focus can move the viewport before its queued scroll event arrives.
+    if (scroller?.isConnected) {
+      viewport.scroll();
+      lastTop = scroller.scrollTop;
+    }
     const anchor = viewport.anchor();
     saveThreadPosition(currentTask, {
       // Children can be removed before onDestroy. Keep the last visible offset, not detached DOM geometry.

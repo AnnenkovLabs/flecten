@@ -62,8 +62,11 @@ test("install a module, let the agent activate it, and use its custom UI with th
       frame.getByRole("heading", { name: "Trailer timeline", exact: true }),
     ).toBeVisible();
     await frame.getByLabel("Duration, seconds").fill("15");
-    await frame.getByRole("button", { name: "Calculate timeline", exact: true }).click();
-    await page.getByRole("button", { name: "Allow once", exact: true }).click();
+    // Keyboard activation reaches the opaque frame while Electron remains minimized.
+    await frame.getByRole("button", { name: "Calculate timeline", exact: true }).press("Enter");
+    const approval = page.getByRole("button", { name: "Allow once", exact: true });
+    await approval.press("Enter");
+    await expect(approval).toHaveCount(0);
     await expect(frame.locator("output")).toHaveText("360 frames · 15 seconds");
     // Polling unchanged state must preserve the document and the user's form values.
     expect(
@@ -146,7 +149,11 @@ test("install a module, let the agent activate it, and use its custom UI with th
     await expect
       .poll(() => settings.evaluate((element) => element === document.activeElement))
       .toBe(true);
-    await tab.press("Home");
+    await tab.focus();
+    await expect
+      .poll(() => tab.evaluate((element) => element === document.activeElement))
+      .toBe(true);
+    await page.keyboard.press("Home");
     const conversation = page.getByRole("tab", { name: "Conversation", exact: true });
     await expect(conversation).toHaveAttribute("aria-selected", "true");
     await expect

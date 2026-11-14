@@ -80,18 +80,18 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
     await frame.getByRole("button", { name: "Start desktop", exact: true }).press("Enter");
     await expect(frame.getByText("Agent has control", { exact: true }).first()).toBeVisible();
     await expect(frame.locator("#image")).toBeVisible();
-    await frame.getByRole("button", { name: "Take control", exact: true }).click();
+    await frame.getByRole("button", { name: "Take control", exact: true }).press("Enter");
     await expect(frame.getByText("You have control", { exact: true }).first()).toBeVisible();
     await expect(frame.getByLabel("Type on desktop", { exact: true })).toBeVisible();
-    await frame.getByText("Pointer and browser controls", { exact: true }).click();
+    await frame.getByText("Pointer and browser controls", { exact: true }).press("Enter");
     await frame.getByLabel("Open URL", { exact: true }).fill(`http://127.0.0.1:${address.port}/`);
-    await frame.getByRole("button", { name: "Open", exact: true }).click();
+    await frame.getByRole("button", { name: "Open", exact: true }).press("Enter");
     await expect(frame.locator("#image")).toBeVisible();
     await expect(frame.locator("#notice")).toBeHidden();
     await expect.poll(() => requests).toBeGreaterThan(0);
-    await frame.getByRole("button", { name: "Refresh", exact: true }).first().click();
+    await frame.getByRole("button", { name: "Refresh", exact: true }).first().press("Enter");
     await frame.getByLabel("Type on desktop", { exact: true }).fill("Verified human input");
-    await frame.getByRole("button", { name: "Type text", exact: true }).click();
+    await frame.getByRole("button", { name: "Type text", exact: true }).press("Enter");
     await expect.poll(() => typed).toBe("Verified human input");
     await expect(frame.locator("#workspace")).toHaveAttribute("aria-busy", "false");
     for (const [width, height] of [
@@ -113,9 +113,9 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
       ).toBeLessThanOrEqual(1);
       await page.screenshot({ path: test.info().outputPath(`computer-native-${width}.png`) });
     }
-    await frame.getByRole("button", { name: "Return to agent", exact: true }).click();
+    await frame.getByRole("button", { name: "Return to agent", exact: true }).press("Enter");
     await expect(frame.getByText("Agent has control", { exact: true }).first()).toBeVisible();
-    await frame.getByRole("button", { name: "Stop desktop", exact: true }).click();
+    await frame.getByRole("button", { name: "Stop desktop", exact: true }).press("Enter");
     await expect(frame.getByRole("button", { name: "Start desktop", exact: true })).toBeVisible();
     expect(h.consoleErrors).toEqual([]);
   } finally {

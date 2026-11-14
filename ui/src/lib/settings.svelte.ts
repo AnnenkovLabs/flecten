@@ -78,7 +78,6 @@ export class SettingsStore {
     apiKey: "",
   });
 
-  #returnFocus: HTMLElement | null = null;
   get dirty(): boolean {
     return settingsDirty(this.settings, this.baseline);
   }
@@ -151,10 +150,6 @@ export class SettingsStore {
 
   async openPanel(section?: import("./settings/sections").SettingsSectionId): Promise<void> {
     this.requestedSection = section ?? null;
-    if (!this.open && typeof document !== "undefined") {
-      this.#returnFocus =
-        document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    }
     this.open = true;
     this.error = "";
     this.search = "";
@@ -171,9 +166,6 @@ export class SettingsStore {
     this.testResult = null;
     this.search = "";
     this.providerSearch = "";
-    const target = this.#returnFocus;
-    this.#returnFocus = null;
-    if (target) setTimeout(() => target.focus(), 0);
   }
 
   discard(): void {

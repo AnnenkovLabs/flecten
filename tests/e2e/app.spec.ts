@@ -40,7 +40,8 @@ test("opens the new session screen, runs a tool and renders the HTML summary", a
     ).toBeVisible();
     const summaryFrame = page.frameLocator("iframe.summary");
     await expect(summaryFrame.getByText("JS работает")).toBeVisible();
-    await summaryFrame.getByRole("tab", { name: "Второй" }).click();
+    // Keyboard input reaches opaque frames while the Electron window remains minimized.
+    await summaryFrame.getByRole("tab", { name: "Второй" }).press("Enter");
     await expect(summaryFrame.getByText("Второй раздел")).toBeVisible();
     await expect(summaryFrame.getByText("Первый раздел")).toBeHidden();
     await expect(page.locator(".thread-inner")).not.toContainText("<summary>");

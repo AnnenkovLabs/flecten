@@ -55,16 +55,19 @@ test("model HTML opens real harness menus, panels and files through buttons and 
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog.settings-dialog")).toHaveCount(0);
 
-    await frame.getByRole("link", { name: "Открыть README.md" }).click();
+    // Modal dismissal can leave CDP pointer routing stale in a minimized opaque frame.
+    await frame.getByRole("link", { name: "Открыть README.md" }).press("Enter");
     await expect(page.locator("dialog.viewer pre.code")).toContainText(README_MARKER);
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog.viewer")).toHaveCount(0);
 
-    await frame.getByRole("link", { name: "выбрать модель" }).click();
+    await frame.getByRole("link", { name: "выбрать модель" }).press("Enter");
     await expect(page.getByRole("combobox", { name: "Поиск модели или провайдера" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await frame.getByRole("button", { name: "Копировать путь" }).click();
-    expect(await harness.app.evaluate(({ clipboard }) => clipboard.readText())).toBe("README.md");
+    await frame.getByRole("button", { name: "Копировать путь" }).press("Enter");
+    await expect
+      .poll(() => harness.app.evaluate(({ clipboard }) => clipboard.readText()))
+      .toBe("README.md");
     await page.getByRole("button", { name: "Скрыть уведомление" }).click();
 
     for (const [name, panel] of [
@@ -72,7 +75,7 @@ test("model HTML opens real harness menus, panels and files through buttons and 
       ["История изменений", "history"],
       ["Терминал", "terminal"],
     ] as const) {
-      await frame.getByRole("link", { name, exact: true }).click();
+      await frame.getByRole("link", { name, exact: true }).press("Enter");
       await expect(page.locator(`#tab-${panel}`)).toHaveAttribute("aria-selected", "true");
       await expect(page.locator(`#pane-${panel}`)).toBeVisible();
       await page.locator("#tab-thread").click();
@@ -105,7 +108,7 @@ test("model HTML opens real harness menus, panels and files through buttons and 
         path: `.liquid/html-navigation/${width}x${height}.png`,
         animations: "disabled",
       });
-      await frame.getByRole("button", { name: "Настроить MCP" }).click();
+      await frame.getByRole("button", { name: "Настроить MCP" }).press("Enter");
       await expect(page.locator('.section-nav [aria-current="true"]')).toHaveText("MCP");
       await page.screenshot({
         path: `.liquid/html-navigation/mcp-${width}x${height}.png`,

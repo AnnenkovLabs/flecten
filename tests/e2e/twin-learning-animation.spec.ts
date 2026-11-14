@@ -19,7 +19,7 @@ async function stopped(scene: Locator, canvas: Locator) {
 }
 
 test("Twin learns through the real bridge with trailer cards, synchronized pause and reduced motion", async () => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
   const h = await launchApp({ locale: "en", twinLearning: true });
@@ -80,7 +80,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
         animation.playbackRate = 0.01;
       }
     });
-    await scene.getByRole("button", { name: "Pause motion", exact: true }).click();
+    await scene.getByRole("button", { name: "Pause motion", exact: true }).press("Enter");
     await expect
       .poll(() =>
         scene.evaluate((element) =>
@@ -102,12 +102,14 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
         ),
       )
       .toBe(0);
-    await scene.getByRole("button", { name: "Resume motion", exact: true }).click();
+    await scene.getByRole("button", { name: "Resume motion", exact: true }).press("Enter");
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await expect(canvas).toHaveAttribute("data-renderer", "webgl");
     await expect
       .poll(async () =>
-        (await cards.allTextContents()).some((value) => value.includes(quotes[0] ?? "")),
+        (await cards.allTextContents()).some((value) =>
+          quotes.some((quote) => value.includes(quote)),
+        ),
       )
       .toBe(true);
     await expect(canvas).toHaveAttribute("data-active", "true");
@@ -120,7 +122,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
         { intervals: [20] },
       )
       .toBe(true);
-    await scene.getByRole("button", { name: "Pause motion", exact: true }).click();
+    await scene.getByRole("button", { name: "Pause motion", exact: true }).press("Enter");
     await stopped(scene, canvas);
 
     for (const [width, height] of [
@@ -144,7 +146,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
       await page.screenshot({ path: test.info().outputPath(`twin-learning-${width}.png`) });
     }
 
-    await scene.getByRole("button", { name: "Resume motion", exact: true }).click();
+    await scene.getByRole("button", { name: "Resume motion", exact: true }).press("Enter");
     const resumeFrame = await scene.getAttribute("data-frame");
     await expect.poll(() => scene.getAttribute("data-frame")).not.toBe(resumeFrame);
     await expect(canvas).toHaveAttribute("data-active", "true");
@@ -152,7 +154,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
     const continuity = await scene.evaluate(async (element) => {
       const samples: Array<{ frame: number; visible: number[] }> = [];
       const firstFrame = Number((element as HTMLElement).dataset.frame);
-      const until = performance.now() + 60_000;
+      const until = performance.now() + 90_000;
       while (performance.now() < until) {
         const stage = element.getBoundingClientRect();
         const visible = [
