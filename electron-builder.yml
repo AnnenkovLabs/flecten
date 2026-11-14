@@ -43,6 +43,7 @@ artifactName: Flecten-${version}-${os}-${arch}.${ext}
 publish:
   provider: generic
   url: "updates"
+  channel: beta
 
 linux:
   target:

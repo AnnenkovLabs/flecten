@@ -46,10 +46,17 @@ async function waitForAnimations(page: Page): Promise<void> {
 
 async function scrollThreadToEnd(page: Page): Promise<void> {
   await waitForAnimations(page);
-  await page.locator(".thread").evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await expect(page.locator("button.jump")).toHaveCount(0);
+  const jump = page.locator("button.jump");
+  // The native action restores follow intent even while viewport measurements are adjusting.
+  if (await jump.count()) await jump.press("Enter");
+  await expect(jump).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page
+        .locator(".thread")
+        .evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight),
+    )
+    .toBeLessThanOrEqual(1);
   await page.waitForTimeout(300);
 }
 

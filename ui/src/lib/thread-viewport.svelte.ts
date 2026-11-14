@@ -100,6 +100,19 @@ export class ThreadViewport {
   }
 
   anchor(): ThreadAnchor | undefined {
+    const scroller = this.#scroller;
+    if (scroller?.isConnected) {
+      const top = scroller.getBoundingClientRect().top;
+      let visible: { id: string; top: number } | undefined;
+      for (const [id, element] of this.#rows) {
+        if (!element.isConnected) continue;
+        const bounds = element.getBoundingClientRect();
+        if (bounds.bottom > top && (!visible || bounds.top < visible.top))
+          visible = { id, top: bounds.top };
+      }
+      // Pending measurements can put the logical index ahead of the rendered rows.
+      if (visible) return { id: visible.id, offset: top - visible.top };
+    }
     return this.window.anchor(this.#top);
   }
 
