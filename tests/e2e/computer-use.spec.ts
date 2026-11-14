@@ -44,8 +44,21 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
     firstCalls: [{ name: "module", arguments: { operation: "activate", name: "computer-use" } }],
     reply: "Computer is available.",
   });
+  const desktopCalls: Array<{ tool: string; id: string }> = [];
   try {
     const { page } = h;
+    await page.exposeFunction("recordDesktopCall", (tool: string, id: string) =>
+      desktopCalls.push({ tool, id }),
+    );
+    await page.evaluate(() => {
+      window.addEventListener("message", (event) => {
+        const value = event.data;
+        if (value?.type === "flecten.module.request" && value.method === "call")
+          (
+            window as unknown as { recordDesktopCall(tool: string, id: string): void }
+          ).recordDesktopCall(value.tool, value.id);
+      });
+    });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     const dialog = page.locator("dialog.settings-dialog");
@@ -91,7 +104,16 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
     const url = frame.getByLabel("Open URL", { exact: true });
     await url.fill(`http://127.0.0.1:${address.port}/`);
     // Submit from the focused field without moving keyboard focus across a clipped button.
+    await url.scrollIntoViewIfNeeded();
     await url.press("Enter");
+    await expect
+      .poll(() =>
+        desktopCalls.some((call) => call.tool === "mcp_module_computer-use__runtime_navigate"),
+      )
+      .toBe(true);
+    await expect(frame.locator("#workspace")).toHaveAttribute("aria-busy", "false", {
+      timeout: 30_000,
+    });
     await expect(frame.locator("#image")).toBeVisible();
     await expect(frame.locator("#notice")).toBeHidden();
     await expect.poll(() => requests).toBeGreaterThan(0);
@@ -124,6 +146,23 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
     await frame.getByRole("button", { name: "Stop desktop", exact: true }).press("Enter");
     await expect(frame.getByRole("button", { name: "Start desktop", exact: true })).toBeVisible();
     expect(h.consoleErrors).toEqual([]);
+  } catch (error) {
+    const state = await h.page
+      .frameLocator('iframe[title="Computer"]')
+      .locator("body")
+      .evaluate((body) => ({
+        busy: body.querySelector("#workspace")?.getAttribute("aria-busy"),
+        notice: body.querySelector("#notice")?.textContent,
+        history: body.querySelector("#timeline")?.textContent,
+        imageVisible: !(body.querySelector("#image") as HTMLImageElement | null)?.hidden,
+        activeControl: document.activeElement?.id,
+      }))
+      .catch(() => undefined);
+    await test.info().attach("computer-runtime-evidence", {
+      body: JSON.stringify({ desktopCalls, requests, state }, null, 2),
+      contentType: "application/json",
+    });
+    throw error;
   } finally {
     await h.close();
     site.closeAllConnections();
