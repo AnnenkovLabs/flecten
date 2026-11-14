@@ -150,6 +150,14 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
     const resumeFrame = await scene.getAttribute("data-frame");
     await expect.poll(() => scene.getAttribute("data-frame")).not.toBe(resumeFrame);
     await expect(canvas).toHaveAttribute("data-active", "true");
+    // Keep the real WebGL renderer within CI raster capacity; layout was checked at both sizes.
+    const graphics = await page.context().newCDPSession(page);
+    await graphics.send("Emulation.setDeviceMetricsOverride", {
+      width: 1180,
+      height: 640,
+      deviceScaleFactor: 0.25,
+      mobile: false,
+    });
     // Advance beyond three old film loops, including on slow software WebGL renderers.
     const continuity = await scene.evaluate(async (element) => {
       const samples: Array<{ frame: number; visible: number[] }> = [];
@@ -193,6 +201,8 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
     expect(continuity.every((sample) => sample.visible.length > 0)).toBe(true);
     expect(continuity.flatMap((sample) => sample.visible).every(Number.isFinite)).toBe(true);
     expect(Math.max(...continuity.flatMap((sample) => sample.visible))).toBeGreaterThan(15);
+    await graphics.send("Emulation.clearDeviceMetricsOverride");
+    await graphics.detach();
     await page.screenshot({ path: test.info().outputPath("twin-learning-continuous.png") });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await stopped(scene, canvas);

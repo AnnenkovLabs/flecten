@@ -100,9 +100,9 @@ test("a module supplies the entire harness, persists its feature, hot reloads an
     await frame
       .getByLabel("Working brief", { exact: true })
       .fill("A short trailer for a local game.");
-    await frame.getByRole("button", { name: "Save brief", exact: true }).click();
+    await frame.getByRole("button", { name: "Save brief", exact: true }).press("Enter");
     const permission = frame.getByRole("button", { name: "Allow once", exact: true });
-    await permission.click();
+    await permission.press("Enter");
     await expect(frame.getByText("Brief saved", { exact: true })).toBeVisible();
     await frame.getByLabel("Task", { exact: true }).fill("Unsaved draft stays here");
     // A real polling response must not remount the custom shell.
@@ -148,8 +148,9 @@ test("a module supplies the entire harness, persists its feature, hot reloads an
         getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(),
       ),
     ).toBe("#17191b");
-    await frame.getByRole("button", { name: "Load saved brief", exact: true }).click();
-    await permission.click();
+    // Keyboard activation reaches the reloaded opaque frame while Electron is minimized.
+    await frame.getByRole("button", { name: "Load saved brief", exact: true }).press("Enter");
+    await permission.press("Enter");
     await expect(frame.getByLabel("Working brief", { exact: true })).toHaveValue(
       "A short trailer for a local game.",
     );

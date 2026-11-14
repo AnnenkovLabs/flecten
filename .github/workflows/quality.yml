@@ -43,9 +43,13 @@ jobs:
           retention-days: 14
 
   electron:
-    name: Electron and visual regression
+    name: Electron and visual regression (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -69,14 +73,14 @@ jobs:
       - name: Require a working Electron environment
         run: bun -e 'const { environmentProblem } = await import("./tests/e2e/fixtures.ts"); const problem = environmentProblem(); if (problem) throw new Error(problem);'
       - name: Electron scenarios and committed visual baselines
-        run: bunx playwright test --reporter=list,html
+        run: bunx playwright test --shard=${{ matrix.shard }}/3 --reporter=list,html
         env:
           PLAYWRIGHT_HTML_OPEN: never
       - name: Upload Electron report and failure evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: electron-report
+          name: electron-report-${{ matrix.shard }}
           path: |
             playwright-report/
             .liquid/e2e-results/

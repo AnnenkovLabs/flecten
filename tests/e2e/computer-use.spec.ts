@@ -80,12 +80,18 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
     await frame.getByRole("button", { name: "Start desktop", exact: true }).press("Enter");
     await expect(frame.getByText("Agent has control", { exact: true }).first()).toBeVisible();
     await expect(frame.locator("#image")).toBeVisible();
+    // Manual input uses one observed frame; refresh it explicitly after navigation below.
+    await frame.getByRole("checkbox", { name: "Follow activity", exact: true }).uncheck();
     await frame.getByRole("button", { name: "Take control", exact: true }).press("Enter");
     await expect(frame.getByText("You have control", { exact: true }).first()).toBeVisible();
+    await expect(frame.locator("#workspace")).toHaveAttribute("aria-busy", "false");
+    await expect(frame.locator("#image")).toBeVisible();
     await expect(frame.getByLabel("Type on desktop", { exact: true })).toBeVisible();
     await frame.getByText("Pointer and browser controls", { exact: true }).press("Enter");
-    await frame.getByLabel("Open URL", { exact: true }).fill(`http://127.0.0.1:${address.port}/`);
-    await frame.getByRole("button", { name: "Open", exact: true }).press("Enter");
+    const url = frame.getByLabel("Open URL", { exact: true });
+    await url.fill(`http://127.0.0.1:${address.port}/`);
+    // Submit from the focused field without moving keyboard focus across a clipped button.
+    await url.press("Enter");
     await expect(frame.locator("#image")).toBeVisible();
     await expect(frame.locator("#notice")).toBeHidden();
     await expect.poll(() => requests).toBeGreaterThan(0);
