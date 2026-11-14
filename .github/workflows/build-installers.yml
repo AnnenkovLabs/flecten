@@ -97,7 +97,7 @@ jobs:
       - name: Capture window on failure
         if: failure()
         continue-on-error: true
-        timeout-minutes: 5
+        timeout-minutes: 1
         shell: bash
         run: |
           mkdir -p diagnostics

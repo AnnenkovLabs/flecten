@@ -1,5 +1,12 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { smokeEnvironment, validateSmokeResult } from "./smoke-environment.mjs";
@@ -43,7 +50,7 @@ function run(command, args, options = {}) {
   });
 }
 
-const workdir = mkdtempSync(join(tmpdir(), "liquid-smoke-"));
+const workdir = realpathSync.native(mkdtempSync(join(tmpdir(), "liquid-smoke-")));
 const out = join(workdir, "status.json");
 const executable = process.env.FLECTEN_SMOKE_EXECUTABLE
   ? resolve(process.env.FLECTEN_SMOKE_EXECUTABLE)
