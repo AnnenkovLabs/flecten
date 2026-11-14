@@ -31,7 +31,7 @@ async function fixture() {
   const privateKey = keypair.privateKey.export({ type: "pkcs8", format: "pem" }).toString();
   const channels: Record<string, string[]> = {
     beta: ["win-x64.exe"],
-    "beta-linux": ["linux-x64.AppImage"],
+    "beta-linux": ["linux-x86_64.AppImage"],
     "beta-mac": ["mac-arm64.dmg", "mac-arm64.zip", "mac-x64.dmg", "mac-x64.zip"],
   };
   for (const [channel, targets] of Object.entries(channels)) {
@@ -100,7 +100,7 @@ test("a prepared, signed candidate is promoted with exactly the original bytes",
 test("missing, extra, modified and linked files cannot pass promotion", async () => {
   const { directory, publicKey } = await fixture();
   await createCandidate(directory, provenance, publicKey);
-  const installer = join(directory, "Flecten-0.1.2-linux-x64.AppImage");
+  const installer = join(directory, "Flecten-0.1.2-linux-x86_64.AppImage");
   const original = await readFile(installer);
   await writeFile(installer, "changed installer");
   await expect(verifyCandidate(directory, provenance, publicKey)).rejects.toThrow(

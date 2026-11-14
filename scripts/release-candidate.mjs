@@ -66,7 +66,7 @@ async function validateContents(directory, files, version, publicKey) {
     if (!names.has(name)) throw new Error(`Candidate is missing ${name}.`);
   // Fixed native targets, taken from electron-builder.yml. Both macOS architectures are mandatory.
   for (const name of [
-    `Flecten-${version}-linux-x64.AppImage`,
+    `Flecten-${version}-linux-x86_64.AppImage`,
     `Flecten-${version}-win-x64.exe`,
     ...["arm64", "x64"].flatMap((arch) => [
       `Flecten-${version}-mac-${arch}.dmg`,
