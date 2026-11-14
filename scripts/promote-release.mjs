@@ -19,6 +19,21 @@ const releaseSchema = z.object({
   assets: z.array(assetSchema),
 });
 
+export function assertReleaseTag(output, tag, sha) {
+  const refs = new Map(
+    output
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [commit, ref] = line.split("\t");
+        return [ref, commit];
+      }),
+  );
+  if ((refs.get(`refs/tags/${tag}^{}`) ?? refs.get(`refs/tags/${tag}`)) !== sha)
+    throw new Error("Remote release tag changed after preparation.");
+}
+
 export function validateExistingAssets(release, files, notes) {
   const current = releaseSchema.parse(release);
   for (const asset of current.assets) {
@@ -69,7 +84,7 @@ export async function promoteRelease(directory) {
   ];
   const assertTag = () => {
     // The ref can be an annotated tag. Peel it to the actual commit through git.
-    const lines = execFileSync(
+    const output = execFileSync(
       "git",
       [
         "ls-remote",
@@ -79,12 +94,8 @@ export async function promoteRelease(directory) {
         `refs/tags/${tag}^{}`,
       ],
       { encoding: "utf8" },
-    )
-      .trim()
-      .split("\n");
-    const refs = new Map(lines.filter(Boolean).map((line) => line.split("\t")));
-    if ((refs.get(`refs/tags/${tag}^{}`) ?? refs.get(`refs/tags/${tag}`)) !== sha)
-      throw new Error("Remote release tag changed after preparation.");
+    );
+    assertReleaseTag(output, tag, sha);
   };
   assertTag();
   const response = await fetch(`https://api.github.com/repos/${REPOSITORY}/releases/tags/${tag}`, {
