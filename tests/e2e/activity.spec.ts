@@ -21,7 +21,7 @@ test("activity stays compact until inspected and failed actions remain accessibl
     await expect(prompt).toBeVisible();
     await prompt.fill("Прочитай README.md");
     await prompt.press("Enter");
-    await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden();
     const run = page.locator(".run").first();
     const summary = run.locator("button.run-summary");
     await expect(summary).toHaveAttribute("aria-expanded", "false");

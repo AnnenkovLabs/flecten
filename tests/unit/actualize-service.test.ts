@@ -64,20 +64,24 @@ describe("provider actualize through the app service", () => {
       }),
     );
     const service = await createAppService(dir);
-    const result = await service.actualizeProvider("local");
+    try {
+      const result = await service.actualizeProvider("local");
 
-    expect(result.added).toEqual(["new-model"]);
-    expect(result.removed).toEqual(["stale-model"]);
-    expect(result.updated).toEqual(["kept-model"]);
-    expect(result.warnings.some((line) => line.includes("active-gone"))).toBe(true);
+      expect(result.added).toEqual(["new-model"]);
+      expect(result.removed).toEqual(["stale-model"]);
+      expect(result.updated).toEqual(["kept-model"]);
+      expect(result.warnings.some((line) => line.includes("active-gone"))).toBe(true);
 
-    const saved = JSON.parse(await readFile(join(dir, "flecten.config.json"), "utf8"));
-    const models = saved.providers.local.models;
-    expect(saved.model).toBe("active-gone");
-    expect(models["kept-model"].name).toBe("My renamed model");
-    expect(models["kept-model"].context).toBe(64_000);
-    expect(models["active-gone"].name).toBe("Active model");
-    expect(models["stale-model"]).toBeUndefined();
-    expect(models["new-model"]).toBeDefined();
+      const saved = JSON.parse(await readFile(join(dir, "flecten.config.json"), "utf8"));
+      const models = saved.providers.local.models;
+      expect(saved.model).toBe("active-gone");
+      expect(models["kept-model"].name).toBe("My renamed model");
+      expect(models["kept-model"].context).toBe(64_000);
+      expect(models["active-gone"].name).toBe("Active model");
+      expect(models["stale-model"]).toBeUndefined();
+      expect(models["new-model"]).toBeDefined();
+    } finally {
+      await service.dispose();
+    }
   });
 });

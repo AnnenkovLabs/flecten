@@ -9,7 +9,7 @@ test("context details show real usage, fit both viewports and survive reopening"
     models: {
       "e2e-model": {
         name: "E2E Mock",
-        context: 32768,
+        context: 131072,
         output: 4096,
         tools: true,
         reasoning: false,
@@ -60,7 +60,7 @@ test("context details show real usage, fit both viewports and survive reopening"
         "4k",
         "Нет данных",
       ]);
-      await expect(popup.locator("[role=progressbar]")).toHaveAttribute("aria-valuenow", "43");
+      await expect(popup.locator("[role=progressbar]")).toHaveAttribute("aria-valuenow", "6");
       await expect(popup).toContainText("Автосжатие при 100%");
       await expect(popup.locator(".lh-context-models")).toContainText("e2e-model");
       await expect(popup.locator(".lh-context-costs")).toContainText("$0.02");

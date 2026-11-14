@@ -146,6 +146,7 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
     ).toHaveCount(0);
     await expect(mirror.locator(".detail")).toContainText("WORKER_STREAM_END");
     await expect(mirror.locator(".action-cancel")).toBeDisabled();
+    await page.getByRole("button", { name: "Вниз, к последнему сообщению", exact: true }).click();
     await expect(page.locator(".summary-frame")).toHaveCount(1);
     await expect(page.locator(".thread .tool-mirror")).toHaveCount(5);
     const workerId = (await readdir(join(h.cwd, ".liquid/sessions"))).find((id) =>

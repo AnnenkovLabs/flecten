@@ -120,7 +120,8 @@ test("ChatGPT OAuth login leads to schema-validated search and full post retriev
   ]) {
     expect(encrypted.includes(Buffer.from(sensitive))).toBe(false);
   }
-  expect((await stat(app.config.storePath)).mode & 0o777).toBe(0o600);
+  if (process.platform !== "win32")
+    expect((await stat(app.config.storePath)).mode & 0o777).toBe(0o600);
 });
 
 test("links survive restart, refresh tokens rotate once, and revocation blocks subsequent MCP calls", async () => {

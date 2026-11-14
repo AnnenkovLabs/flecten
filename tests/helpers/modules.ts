@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAppService } from "../../src/app/service";
 import { readModule } from "../../src/modules/package";
+import { bunFileCommand } from "./shell-command";
 
 export interface ProviderInput {
   messages: Array<{ role: string; content?: unknown }>;
@@ -38,7 +39,7 @@ export async function moduleFixture(options: { conversation?: boolean } = {}) {
     hooks: {
       preToolUse: [
         {
-          command: `${process.execPath} "$FLECTEN_MODULE_ROOT/hook.mjs"`,
+          command: bunFileCommand(join(root, "hook.mjs")),
           matcher: { tool: "read" },
           timeoutMs: 1000,
         },

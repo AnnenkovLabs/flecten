@@ -111,7 +111,6 @@ export async function conversationReply(body) {
       ],
     };
   }
-  const latest = messages.findLast((message) => message.role === "user")?.content ?? "";
   if (
     !messages.some((message) => message.tool_calls?.some((call) => call.id === "inspect-worker"))
   ) {
@@ -123,9 +122,8 @@ export async function conversationReply(body) {
   }
   commentary.resolve();
   return {
-    text:
-      typeof latest === "string" && latest.includes("Worker status: done")
-        ? "<summary><h2>Проверка завершена</h2><p>Команда выполнена успешно. API сохранён.</p></summary>"
-        : "Прогоняем E2E тесты. **Можем общаться во время работы.**",
+    text: workerPageCompleted
+      ? "<summary><h2>Проверка завершена</h2><p>Команда выполнена успешно. API сохранён.</p></summary>"
+      : "Прогоняем E2E тесты. **Можем общаться во время работы.**",
   };
 }

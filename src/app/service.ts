@@ -155,7 +155,7 @@ export async function createAppService(cwd: string): Promise<AppService> {
 
   const checkpoints = new CheckpointStore({ cwd });
   await checkpoints.init().catch(() => undefined);
-  void pruneCheckpoints(checkpoints, config).catch(() => undefined);
+  const pruning = pruneCheckpoints(checkpoints, config).catch(() => undefined);
   const shell = new ShellSnapshots(cwd, checkpoints);
   shell.configure(config);
 
@@ -488,6 +488,7 @@ export async function createAppService(cwd: string): Promise<AppService> {
       extensionControl.close();
       await pool.dispose();
       await writes.catch(() => undefined);
+      await Promise.all([shell.settled(), pruning]);
       await logs.closeAll();
       await modules.dispose();
       providers.clearDrafts();

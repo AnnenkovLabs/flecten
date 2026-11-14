@@ -194,5 +194,7 @@ describe("shell checkpoints", () => {
     const result = await snapshots.capture({ deadline: Date.now() });
     expect(Date.now() - started).toBeLessThan(1000);
     expect(result.ok).toBe(false);
+    // A capture deadline does not cancel background warm-up; release its git cwd before cleanup.
+    await snapshots.warm();
   });
 });

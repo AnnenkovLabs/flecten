@@ -16,7 +16,7 @@ test("local speech settings expose models, check missing installs and persist en
     const whisper = dialog.getByLabel("Локальная модель faster-whisper", { exact: true });
     await expect(whisper.locator("option")).toHaveCount(6);
     await whisper.selectOption("large-v3-turbo");
-    await expect(dialog.getByLabel("Вычисления распознавания")).toHaveValue("cpu");
+    await expect(dialog.getByLabel("Устройство для распознавания речи")).toHaveValue("cpu");
     await expect(dialog.getByLabel("Модель распознавания", { exact: true })).toHaveCount(0);
     await dialog.getByRole("button", { name: "Проверить установку", exact: true }).click();
     await expect(

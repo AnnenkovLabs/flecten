@@ -45,10 +45,10 @@ test("opens the new session screen, runs a tool and renders the HTML summary", a
     await expect(summaryFrame.getByText("Первый раздел")).toBeHidden();
     await expect(page.locator(".thread-inner")).not.toContainText("<summary>");
 
-    await expect(page.getByRole("button", { name: "Остановить" })).toBeHidden({ timeout: 45_000 });
+    await expect(page.getByRole("button", { name: "Остановка" })).toBeHidden({ timeout: 45_000 });
     await expect(page.locator(".run-details").first()).toHaveAttribute("hidden", "");
 
-    const toolRow = page.locator("button.action").filter({ hasText: "Прочитал README.md" });
+    const toolRow = page.locator("button.action").filter({ hasText: "Чтение файла README.md" });
     for (let attempt = 0; attempt < 3 && !(await toolRow.isVisible()); attempt += 1) {
       await runSummary.click();
       await page.waitForTimeout(300);
@@ -59,7 +59,7 @@ test("opens the new session screen, runs a tool and renders the HTML summary", a
 
     const output = page
       .locator(".detail-section")
-      .filter({ hasText: "Вывод" })
+      .filter({ hasText: "Выход" })
       .locator("pre.code")
       .first();
     await expect(output).toContainText(README_MARKER);
@@ -96,7 +96,7 @@ test("shows a skeleton while the summary html is streaming", async () => {
     await page.locator("#prompt").fill(PROMPT);
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
 
-    const skeleton = page.getByRole("status", { name: "Сводка собирается" });
+    const skeleton = page.getByRole("status", { name: "Готовим сводку" });
     await expect(skeleton).toBeVisible({ timeout: 20_000 });
     await expect(page.locator(".thread-inner")).not.toContainText("<summary>");
 
@@ -124,16 +124,16 @@ test("queues a message during a run and finishes it", async () => {
     await page.locator("#prompt").fill(PROMPT);
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
 
-    await expect(page.getByRole("button", { name: "Остановить" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Остановка" })).toBeVisible();
     await page.locator("#prompt").fill("Добавь в очередь ещё один шаг");
-    await page.getByRole("button", { name: "В очередь", exact: true }).click();
+    await page.getByRole("button", { name: "Добавить в очередь", exact: true }).click();
 
     const queueTray = page.locator('section[aria-label="Очередь сообщений"]');
     await expect(queueTray).toBeVisible();
     await expect(queueTray).toContainText("Добавь в очередь ещё один шаг");
 
     await expect(queueTray).toBeHidden({ timeout: 45_000 });
-    await expect(page.getByRole("button", { name: "Остановить" })).toBeHidden({ timeout: 45_000 });
+    await expect(page.getByRole("button", { name: "Остановка" })).toBeHidden({ timeout: 45_000 });
     await expect(page.locator(".live-run")).toBeHidden();
     await expect(page.locator("button.run-summary").first()).toBeVisible();
     await expectSummaryFrame(page);
@@ -161,6 +161,7 @@ const CODE_AND_DIAGRAM = [
   "  B -- да --> C[Ответ из кеша]",
   "  B -- нет --> D[Провайдер]",
   "```",
+  "<summary><p>Пример и схема готовы.</p></summary>",
 ].join("\n");
 
 test("labels and copies code fences and draws mermaid diagrams with their text", async () => {
@@ -172,6 +173,7 @@ test("labels and copies code fences and draws mermaid diagrams with their text",
     await page.locator("#prompt").fill("Покажи код и схему");
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
 
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden();
     const diagram = page.locator(".mermaid-diagram svg");
     await expect(diagram).toBeVisible({ timeout: 30_000 });
     // Labels survive sanitizing: without them the diagram is a set of empty boxes.
@@ -180,7 +182,7 @@ test("labels and copies code fences and draws mermaid diagrams with their text",
     }
     await expect(page.locator(".mermaid-canvas")).toHaveAttribute(
       "aria-label",
-      "Диаграмма Mermaid, исходник ниже",
+      "Диаграмма Mermaid, исходный код ниже",
     );
     const block = page
       .locator(".code-block")
@@ -194,6 +196,14 @@ test("labels and copies code fences and draws mermaid diagrams with their text",
     expect(await harness.app.evaluate(({ clipboard }) => clipboard.readText())).toContain(
       "export const sum",
     );
+
+    await page.locator("#prompt").fill("Покажи ещё одну схему");
+    await page.getByRole("button", { name: "Отправить", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden();
+    await expect(diagram).toHaveCount(2);
+    const ids = await diagram.evaluateAll((nodes) => nodes.map((node) => node.id));
+    expect(new Set(ids).size).toBe(2);
+    for (const rendered of await diagram.all()) await expect(rendered).toContainText("Запрос");
 
     expect(harness.consoleErrors, harness.consoleErrors.join("\n")).toEqual([]);
   } finally {

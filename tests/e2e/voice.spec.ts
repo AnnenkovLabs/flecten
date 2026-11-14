@@ -41,7 +41,7 @@ test("voice records audio, reacts to the mic, transcribes into the draft, cancel
       await page.screenshot({ path: `.liquid/voice-${width}x${height}.png` });
     }
     await page.getByRole("button", { name: "Остановить голосовой ввод" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Распознаю речь" })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Распознавание речи" })).toBeVisible();
     await page.screenshot({ path: ".liquid/voice-processing.png" });
     await expect(editor).toHaveText("Задача: Добавь голосовой ввод.");
     await expect(page.locator(".voice-glow")).toHaveCount(0);

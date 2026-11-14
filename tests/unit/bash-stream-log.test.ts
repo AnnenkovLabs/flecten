@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { runSandboxed } from "../../src/security/os-sandbox";
 import { runBash } from "../../src/tools/bash/run";
 import { builtinTools } from "../../src/tools/builtin";
 import { ToolRegistry } from "../../src/tools/registry";
 import { ReadTracker } from "../../src/tools/util/read-tracker";
+import { bunFileCommand } from "../helpers/shell-command";
+import { bunCommand } from "../helpers/terminal-fixtures";
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -18,8 +20,8 @@ const limits = {
   maxOutputLines: 2000,
   readLimitLines: 100,
 };
-const command =
-  "head -c 4000000 /dev/zero | tr '\\0' 'x'; printf '\\nTOKEN=arbitrary-secret-value\\nopaque credential across words\\nTAIL-привіт\\n'";
+const source = resolve(import.meta.dir, "../helpers/shell-output.ts");
+const command = bunFileCommand(source);
 
 async function workspace() {
   const cwd = await mkdtemp(join(tmpdir(), "liquid-stream-log-"));
@@ -52,8 +54,10 @@ describe("streaming bash logs", () => {
     const ctx = await workspace();
     const result = await runBash(
       {
-        command:
-          "printf 'TOKEN='; sleep .02; printf 'innocent\\n' >&2; sleep .02; printf 'private-fragment\\n'",
+        command: await bunCommand(
+          ctx.cwd,
+          'process.stdout.write("TOKEN="); await Bun.sleep(20); process.stderr.write("innocent\\n"); await Bun.sleep(20); process.stdout.write("private-fragment\\n");',
+        ),
       },
       ctx,
     );
@@ -74,8 +78,11 @@ describe("streaming bash logs", () => {
   test("streams sandbox output through the same redacted log", async () => {
     const ctx = await workspace();
     await mkdir(ctx.logDir, { recursive: true });
-    const launcher = join(ctx.cwd, "fake-sandbox");
-    await writeFile(launcher, `#!/bin/sh\n${command}\n`, { mode: 0o700 });
+    const launcher = join(
+      ctx.cwd,
+      process.platform === "win32" ? "fake-sandbox.exe" : "fake-sandbox",
+    );
+    await Bun.build({ entrypoints: [source], compile: { outfile: launcher } });
     const result = await runBash(
       { command: "ignored" },
       {

@@ -33,6 +33,7 @@ export class ShellSnapshots {
   #key = "";
   #service: ShellCheckpointService | undefined;
   #state: ShellCheckpointState = { state: "off" };
+  readonly #warming = new Set<Promise<string | undefined>>();
 
   constructor(cwd: string, store: CheckpointStore) {
     this.#cwd = cwd;
@@ -47,6 +48,11 @@ export class ShellSnapshots {
     return this.#state;
   }
 
+  /** Background indexing owns git processes whose cwd must be released before shutdown. */
+  async settled(): Promise<void> {
+    await Promise.all(this.#warming);
+  }
+
   /** Rebuilds snapshots only when their settings change: warming a big tree costs time. */
   configure(config: HarnessConfig): void {
     const key = JSON.stringify(checkpointSettings(config));
@@ -59,16 +65,20 @@ export class ShellSnapshots {
       return;
     }
     this.#state = { state: "indexing", reason: "первичная индексация рабочей папки ещё идёт" };
-    void current.ready().then(
-      (reason) => {
-        if (this.#service !== current) return;
-        this.#state = reason ? { state: "unavailable", reason } : { state: "ready" };
-      },
-      (error: unknown) => {
-        if (this.#service === current)
-          this.#state = { state: "unavailable", reason: String(error) };
-      },
-    );
+    const warming = current.ready();
+    this.#warming.add(warming);
+    void warming
+      .then(
+        (reason) => {
+          if (this.#service !== current) return;
+          this.#state = reason ? { state: "unavailable", reason } : { state: "ready" };
+        },
+        (error: unknown) => {
+          if (this.#service === current)
+            this.#state = { state: "unavailable", reason: String(error) };
+        },
+      )
+      .finally(() => this.#warming.delete(warming));
   }
 }
 

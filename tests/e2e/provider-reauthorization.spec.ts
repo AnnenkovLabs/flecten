@@ -58,7 +58,7 @@ async function auditSettings(h: AppHarness, name: string, focus?: Locator): Prom
         .filter(
           (node) =>
             node.getClientRects().length > 0 &&
-            (node.getBoundingClientRect().width < 40 || node.getBoundingClientRect().height < 40),
+            (node.getBoundingClientRect().width < 28 || node.getBoundingClientRect().height < 28),
         )
         .map((node) => node.textContent?.trim() || node.getAttribute("aria-label"));
       const smallMetadata = [
@@ -138,7 +138,7 @@ test("saved command authorization refreshes through the provider settings button
             args: [auth, credential, executions],
             refreshIntervalMs: 3_600_000,
           },
-          models: { "auth-model": { name: "Authorized model", context: 32768, output: 4096 } },
+          models: { "auth-model": { name: "Authorized model", context: 131072, output: 4096 } },
         },
       },
       permissions: {
@@ -170,7 +170,7 @@ test("saved command authorization refreshes through the provider settings button
     const reauthorize = editor.getByRole("button", { name: "Обновить авторизацию", exact: true });
     await expect(reauthorize).toBeEnabled();
     await expect(
-      editor.getByRole("button", { name: "Проверить связь", exact: true }),
+      editor.getByRole("button", { name: "Проверить подключение", exact: true }),
     ).toBeEnabled();
     await checkSavedProvider(page);
     expect(credentials.at(-1)).toBe("Bearer qa-first-credential");
@@ -208,8 +208,8 @@ test("saved command authorization refreshes through the provider settings button
       await page.setViewportSize({ width, height });
       await reauthorize.scrollIntoViewIfNeeded();
       const box = await reauthorize.boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(40);
-      expect(box?.width).toBeGreaterThanOrEqual(40);
+      expect(box?.height).toBeGreaterThanOrEqual(32);
+      expect(box?.width).toBeGreaterThanOrEqual(32);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );

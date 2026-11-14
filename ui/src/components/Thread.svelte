@@ -21,7 +21,6 @@
   import ThreadSearch from "./ThreadSearch.svelte";
   import ToolCallProgress from "./ToolCallProgress.svelte";
   import UserMessage from "./UserMessage.svelte";
-
   interface Props {
     taskId: string;
     items: ThreadItem[];
@@ -33,7 +32,6 @@
     onRepeat: (prompt?: string) => void;
     onNavigateSummary?: (destination: SummaryDestination) => void;
   }
-
   let {
     taskId,
     items: entries,
@@ -45,14 +43,12 @@
     onRepeat,
     onNavigateSummary,
   }: Props = $props();
-
   const NEAR_BOTTOM = 72;
   let scroller: HTMLDivElement;
   let threadInner: HTMLDivElement;
   let focusToken = $state(0);
   const toolMirrors = $derived(workerMirrors(entries));
   const items = $derived(conversationItems(entries, toolMirrors));
-
   let now = $state(Date.now());
   let atBottom = $state(true);
   let unread = $state(0);
@@ -67,7 +63,6 @@
   const rowIds = $derived(threadRowKeys(items));
   const window = $derived(viewport.range);
   const visible = $derived(items.slice(window.start, window.end));
-
   const revision = $derived(
     items
       .map((item) => {
@@ -103,16 +98,14 @@
   const jumpLabel = $derived(
     unread > 0 ? t("Scroll down, new messages: {0}", [unread]) : t("Scroll to latest message"),
   );
-
   function distanceToEnd(): number {
     if (!scroller) return 0;
     return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
   }
-
-  function followEnd(): void {
+  function followEnd(afterRender = false): void {
     if (!scroller || scroller.clientHeight === 0) return;
     // A resize can run before the browser delivers the user's queued scroll event.
-    if (releaseFollowOnScrollUp()) {
+    if (!afterRender && releaseFollowOnScrollUp()) {
       onScroll();
       return;
     }
@@ -120,7 +113,6 @@
     viewport.scroll();
     lastTop = scroller.scrollTop;
   }
-
   function releaseFollowOnScrollUp(): boolean {
     if (scroller.scrollTop >= lastTop - 1 || distanceToEnd() <= 1) return false;
     if (atBottom) {
@@ -129,12 +121,11 @@
     }
     return true;
   }
-
   function onScroll(): void {
     viewport.scroll();
     if (restoring || taskId !== currentTask || scroller.clientHeight === 0) return;
     const movedDown = scroller.scrollTop > lastTop + 1;
-    const movedUp = releaseFollowOnScrollUp();
+    const movedUp = viewport.adjusting ? false : releaseFollowOnScrollUp();
     lastTop = scroller.scrollTop;
     if (!movedUp && viewport.adjusting) return;
     const distance = distanceToEnd();
@@ -145,7 +136,6 @@
     }
     rememberPosition();
   }
-
   function rememberPosition(): void {
     if (!currentTask) return;
     const anchor = viewport.anchor();
@@ -157,7 +147,6 @@
       ...(!atBottom && anchor ? { anchor } : {}),
     });
   }
-
   function jumpToBottom(): void {
     atBottom = true;
     unread = 0;
@@ -167,12 +156,10 @@
     const reduce = globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches;
     scroller.scrollTo({ top: scroller.scrollHeight, behavior: reduce ? "auto" : "smooth" });
   }
-
   function openSearch(): void {
     if (searchOpen) focusToken += 1;
     else searchOpen = true;
   }
-
   function closeSearch(): void {
     if (!searchOpen) return;
     searchOpen = false;
@@ -180,7 +167,6 @@
     searchIndex = 0;
     focusComposer();
   }
-
   $effect.pre(() => {
     const nextTask = taskId;
     const ids = rowIds;
@@ -210,26 +196,35 @@
       restoring = false;
     });
   });
-
+  $effect.pre(() => {
+    revision;
+    live;
+    if (scroller && !restoring) untrack(() => releaseFollowOnScrollUp());
+  });
   $effect(() => {
     revision;
     live;
-
     if (restoring) return;
-
     if (searchOpen) {
       seenMessages = messageCount;
       return;
     }
-
     if (atBottom) {
       seenMessages = messageCount;
       unread = 0;
       followEnd();
       return;
     }
-
     unread = Math.max(0, messageCount - seenMessages);
+  });
+
+  $effect(() => {
+    const { start, end, before, after } = window;
+    void [start, end, before, after];
+    const frame = requestAnimationFrame(() => {
+      if (!restoring && atBottom && !searchOpen) followEnd(true);
+    });
+    return () => cancelAnimationFrame(frame);
   });
 
   $effect(() => {

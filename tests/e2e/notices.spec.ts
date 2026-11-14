@@ -61,7 +61,7 @@ test("temporary notices stay clear of the composer and pause while being read", 
     // In a task the notice rises above the docked composer as well.
     await page.locator("#prompt").fill("Прочитай README.md и покажи краткий итог.");
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Остановить" })).toBeHidden({ timeout: 45_000 });
+    await expect(page.getByRole("button", { name: "Остановка" })).toBeHidden({ timeout: 45_000 });
     await agentEvent(app, {
       type: "error",
       code: "provider_failed",

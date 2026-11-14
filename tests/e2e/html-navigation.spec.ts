@@ -22,7 +22,7 @@ test("model HTML opens real harness menus, panels and files through buttons and 
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
     const frame = page.frameLocator("iframe.summary");
     await expect(frame.getByRole("heading", { name: "Подключение инструментов" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden();
 
     // An action forged by a different source cannot control the summary's host.
     await page.evaluate(() =>

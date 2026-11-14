@@ -62,7 +62,7 @@ test("workspace focuses one surface, preserves drafts and restores a fitting spl
     await prompt.fill("Прочитай README.md и проверь результат");
     await prompt.press("Enter");
     await expect(page.locator(".answer").last()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden();
 
     const dialog = page.getByRole("tab", { name: "Диалог", exact: true });
     const changes = page.getByRole("tab", { name: "Изменения", exact: false });

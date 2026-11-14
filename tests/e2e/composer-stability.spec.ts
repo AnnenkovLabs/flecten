@@ -46,7 +46,7 @@ test("dictation, queue and run updates preserve composer geometry", async () => 
       await expect(page.locator(".voice")).toHaveAttribute("title", /Запись/);
       await page.screenshot({ path: test.info().outputPath(`recording-${size.width}.png`) });
       await page.getByRole("button", { name: "Остановить голосовой ввод" }).click();
-      await expect(page.locator(".voice-status")).toHaveText("Распознаю речь…");
+      await expect(page.locator(".voice-status")).toHaveText("Распознавание речи…");
       expect(await geometry(page)).toEqual(idle);
       await page.screenshot({ path: test.info().outputPath(`processing-${size.width}.png`) });
       await expect(prompt).toHaveText("Задача: Добавь голосовой ввод.");
@@ -60,12 +60,12 @@ test("dictation, queue and run updates preserve composer geometry", async () => 
 
     await prompt.fill("Прочитай README.md");
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
-    await expect(page.getByRole("status", { name: "Сводка собирается" })).toBeVisible();
+    await expect(page.getByRole("status", { name: "Готовим сводку" })).toBeVisible();
     const running = await geometry(page);
     const editor = await prompt.elementHandle();
     const terminal = await page.getByRole("tab", { name: "Терминал", exact: true }).boundingBox();
     await prompt.fill("Следующее сообщение");
-    await page.getByRole("button", { name: "В очередь", exact: true }).click();
+    await page.getByRole("button", { name: "Добавить в очередь", exact: true }).click();
     const queue = page.getByRole("region", { name: "Очередь сообщений" });
     await expect(queue).toBeVisible();
     expect(await queue.evaluate((element) => element.closest("form"))).toBeNull();
@@ -85,7 +85,7 @@ test("dictation, queue and run updates preserve composer geometry", async () => 
     expect(await geometry(page)).toEqual(running);
 
     await h.releaseSummary();
-    await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden();
     expect(await geometry(page)).toEqual(running);
     expect(await page.getByRole("tab", { name: "Терминал", exact: true }).boundingBox()).toEqual(
       terminal,

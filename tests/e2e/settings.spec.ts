@@ -9,7 +9,7 @@ test("settings save practical preferences and apply them to the composer", async
   const h = await launchApp({
     delayMs: 1500,
     models: {
-      "e2e-model": { name: "E2E Mock", context: 32768, output: 4096, tools: true },
+      "e2e-model": { name: "E2E Mock", context: 131072, output: 4096, tools: true },
       "equal-limits": { name: "Equal limits", context: 32768, output: 32768, disabled: true },
     },
   });
@@ -76,7 +76,7 @@ test("settings save practical preferences and apply them to the composer", async
     await expect(prompt).toHaveText("Read README.md\nx");
     await prompt.press("Control+Enter");
     await expect(prompt).toHaveText("");
-    await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeVisible();
     await expect(page.locator("iframe.summary")).toBeVisible();
     expect(h.consoleErrors).toEqual([]);
   } finally {

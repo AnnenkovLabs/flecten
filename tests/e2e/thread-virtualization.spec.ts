@@ -79,7 +79,10 @@ async function anchor(page: Page): Promise<{ id: string; top: number }> {
 test("long threads mount a bounded window while search, task restoration and follow remain usable", async () => {
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
-  const h = await launchApp({ reply: "Live appended answer", delayMs: 100 });
+  const h = await launchApp({
+    reply: "Live appended answer\n<summary><p>Готово.</p></summary>",
+    delayMs: 100,
+  });
   try {
     await h.page.emulateMedia({ reducedMotion: "reduce" });
     await expect(h.page.locator("#prompt")).toBeVisible();
@@ -97,7 +100,7 @@ test("long threads mount a bounded window while search, task restoration and fol
 
     await h.page.keyboard.press("Control+f");
     await h.page
-      .getByRole("textbox", { name: "Поиск по треду", exact: true })
+      .getByRole("textbox", { name: "Поиск по переписке", exact: true })
       .fill("UNIQUE_ARCHIVE_0005");
     await expect(h.page.locator(".is-search-active")).toContainText("UNIQUE_ARCHIVE_0005");
     await expect(h.page.locator(".is-search-active")).toBeInViewport();
@@ -128,6 +131,13 @@ test("long threads mount a bounded window while search, task restoration and fol
     }
 
     await h.page.getByRole("button", { name: "Вниз, к последнему сообщению", exact: true }).click();
+    await expect
+      .poll(() =>
+        h.page
+          .locator(".thread")
+          .evaluate((node) => node.scrollHeight - node.scrollTop - node.clientHeight),
+      )
+      .toBeLessThanOrEqual(2);
     await h.page.locator("#prompt").fill("One more step");
     await h.page.locator("#prompt").press("Enter");
     await expect(h.page.locator(".answer").last()).toContainText("Live appended answer");
@@ -138,8 +148,7 @@ test("long threads mount a bounded window while search, task restoration and fol
           .evaluate((node) => node.scrollHeight - node.scrollTop - node.clientHeight),
       )
       .toBeLessThanOrEqual(2);
-    const stop = h.page.getByRole("button", { name: "Остановить", exact: true });
-    if (await stop.isVisible()) await stop.click();
+    const stop = h.page.getByRole("button", { name: "Остановка", exact: true });
     await expect(stop).toBeHidden({ timeout: 3000 });
     await expect.poll(() => h.page.locator(".thread-item").count()).toBeLessThanOrEqual(80);
     expect(h.consoleErrors).toEqual([]);

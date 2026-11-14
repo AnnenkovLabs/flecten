@@ -20,6 +20,7 @@ test("killing Electron leaves no agent-owned background process", async () => {
     const prompt = harness.page.locator("#prompt");
     await prompt.fill("Запусти фоновую задачу");
     await prompt.press("Enter");
+    await harness.page.getByRole("button", { name: "Разрешить один раз", exact: true }).click();
     await expect
       .poll(async () => {
         try {

@@ -115,11 +115,11 @@ test("main thread with a tool call and HTML summary", async () => {
     if ((await runSummary.getAttribute("aria-expanded")) !== "true") await runSummary.click();
     await expect(runSummary).toHaveAttribute("aria-expanded", "true");
 
-    const toolRow = page.locator("button.action").filter({ hasText: "Прочитал README.md" });
+    const toolRow = page.locator("button.action").filter({ hasText: "Чтение файла README.md" });
     await expect(toolRow).toBeVisible();
     if ((await toolRow.getAttribute("aria-expanded")) !== "true") await toolRow.click();
     await expect(
-      page.locator(".detail-section").filter({ hasText: "Вывод" }).locator("pre.code").first(),
+      page.locator(".detail-section").filter({ hasText: "Выход" }).locator("pre.code").first(),
     ).toContainText(README_MARKER);
 
     for (const [width, height] of SIZES) {
@@ -196,6 +196,7 @@ test("reduced motion keeps the live run static", async () => {
   skipIfUnavailable();
   const harness = await launchApp({
     delayMs: 3000,
+    holdSummary: true,
     directory: "liquid-e2e-visual-motion",
     user: "e2e",
   });
@@ -208,9 +209,9 @@ test("reduced motion keeps the live run static", async () => {
     await sendPrompt(page);
 
     await expect(page.locator(".live-run")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("button", { name: "Остановить" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Остановка" })).toBeVisible();
     await expect(
-      page.locator(".run-preview button.action").filter({ hasText: "Прочитал README.md" }),
+      page.locator(".run-preview button.action").filter({ hasText: "Чтение файла README.md" }),
     ).toBeVisible({ timeout: 30_000 });
 
     await scrollThreadToEnd(page);

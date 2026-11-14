@@ -10,6 +10,7 @@ import {
   detectSandbox,
   runSandboxed,
 } from "../../src/security/os-sandbox";
+import { permissionPath } from "../../src/security/permission-request-key";
 import { PermissionEngine } from "../../src/security/permissions";
 import { SandboxPolicy } from "../../src/security/sandbox";
 import { runGlob } from "../../src/tools/glob/run";
@@ -71,13 +72,19 @@ describe("resource boundaries", () => {
     };
     const argv = buildBubblewrapArgs(options);
     expect(argv.join("\n")).toContain(
-      ["--ro-bind", join(cwd, "AGENTS.md"), join(cwd, "AGENTS.md")].join("\n"),
+      ["--ro-bind", permissionPath("AGENTS.md", cwd), permissionPath("AGENTS.md", cwd)].join("\n"),
     );
-    expect(argv.join("\n")).toContain(["--ro-bind", "/dev/null", join(cwd, ".env")].join("\n"));
-    expect(argv.join("\n")).toContain(["--tmpfs", secret, "--remount-ro", secret].join("\n"));
+    expect(argv.join("\n")).toContain(
+      ["--ro-bind", "/dev/null", permissionPath(".env", cwd)].join("\n"),
+    );
+    expect(argv.join("\n")).toContain(
+      ["--tmpfs", permissionPath(secret, cwd), "--remount-ro", permissionPath(secret, cwd)].join(
+        "\n",
+      ),
+    );
     const profile = buildSeatbeltProfile(options);
     expect(profile).toContain("(deny file-read*");
-    expect(profile).toContain(`(subpath ${JSON.stringify(join(cwd, ".env"))})`);
+    expect(profile).toContain(`(subpath ${JSON.stringify(permissionPath(".env", cwd))})`);
     expect(await readFile(join(cwd, ".env"), "utf8")).toBe("private");
   });
   test("protected symlinks protect both their logical name and resolved target", async () => {

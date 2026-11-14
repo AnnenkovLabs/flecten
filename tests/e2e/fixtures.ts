@@ -166,7 +166,7 @@ function configFor(
         models: models ?? {
           "e2e-model": {
             name: "E2E Mock",
-            context: 32768,
+            context: 131072,
             output: 4096,
             tools: true,
             reasoning: false,

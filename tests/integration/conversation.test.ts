@@ -11,6 +11,7 @@ import type { Event, SessionEvent } from "../../src/core/types";
 import { builtinTools } from "../../src/tools/builtin";
 import { ToolRegistry } from "../../src/tools/registry";
 import { scriptedProvider } from "../helpers/fake-provider";
+import { bunCommand } from "../helpers/terminal-fixtures";
 
 const fixtures: Array<{ cwd: string; session: { dispose(): Promise<void> } }> = [];
 afterEach(async () => {
@@ -36,10 +37,14 @@ async function until(predicate: () => boolean) {
 }
 
 async function harness(
-  command = "printf 'stream-begin\\n'; sleep 30",
+  command: string | undefined = undefined,
   beforePersist?: (event: Event) => Promise<void>,
 ) {
   const cwd = await mkdtemp(join(tmpdir(), "flecten-conversation-"));
+  command ??= await bunCommand(
+    cwd,
+    'process.stdout.write("stream-begin\\n"); setTimeout(() => {}, 30_000);',
+  );
   const config = HarnessConfigSchema.parse({ useDefaults: false, catalog: { autoRefresh: false } });
   const talker = scriptedProvider([
     [

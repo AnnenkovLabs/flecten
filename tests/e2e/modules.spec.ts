@@ -63,6 +63,7 @@ test("install a module, let the agent activate it, and use its custom UI with th
     ).toBeVisible();
     await frame.getByLabel("Duration, seconds").fill("15");
     await frame.getByRole("button", { name: "Calculate timeline", exact: true }).click();
+    await page.getByRole("button", { name: "Allow once", exact: true }).click();
     await expect(frame.locator("output")).toHaveText("360 frames · 15 seconds");
     // Polling unchanged state must preserve the document and the user's form values.
     expect(

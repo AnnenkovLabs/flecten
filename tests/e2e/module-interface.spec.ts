@@ -102,8 +102,7 @@ test("a module supplies the entire harness, persists its feature, hot reloads an
       .fill("A short trailer for a local game.");
     await frame.getByRole("button", { name: "Save brief", exact: true }).click();
     const permission = frame.getByRole("button", { name: "Allow once", exact: true });
-    await expect(permission.or(frame.getByText("Brief saved", { exact: true }))).toBeVisible();
-    if (await permission.isVisible()) await permission.click();
+    await permission.click();
     await expect(frame.getByText("Brief saved", { exact: true })).toBeVisible();
     await frame.getByLabel("Task", { exact: true }).fill("Unsaved draft stays here");
     // A real polling response must not remount the custom shell.
@@ -150,6 +149,7 @@ test("a module supplies the entire harness, persists its feature, hot reloads an
       ),
     ).toBe("#17191b");
     await frame.getByRole("button", { name: "Load saved brief", exact: true }).click();
+    await permission.click();
     await expect(frame.getByLabel("Working brief", { exact: true })).toHaveValue(
       "A short trailer for a local game.",
     );

@@ -152,7 +152,7 @@ test("pasted media, focused read, accounting, queue, reopen and native vision us
     expect(ref).toBeDefined();
     if (!ref) throw new Error("No durable image reference");
     const durablePath = join(sessionPaths(cwd, first.sessionId).attachments, `${ref.id}.bin`);
-    expect(JSON.stringify(workers[0])).toContain(durablePath);
+    expect(JSON.stringify(workers[0])).toContain(JSON.stringify(durablePath).slice(1, -1));
     nativePath = durablePath;
     expect(await readFile(durablePath)).toEqual(Buffer.from(PNG, "base64"));
     expect(JSON.stringify(saved)).not.toContain(PNG);

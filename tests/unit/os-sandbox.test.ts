@@ -9,6 +9,7 @@ import {
   runSandboxed,
   type SandboxCommandOptions,
 } from "../../src/security/os-sandbox";
+import { permissionPath } from "../../src/security/permission-request-key";
 
 const dirs: string[] = [];
 
@@ -154,7 +155,9 @@ describe("buildSeatbeltProfile", () => {
     expect(profile).toContain('(subpath "/tmp")');
     expect(profile).toContain('(subpath "/work/project")');
     expect(profile).toContain('(subpath "/work/cache")');
-    expect(profile).toContain(`(subpath ${JSON.stringify(resolve("/work/shared"))})`);
+    expect(profile).toContain(
+      `(subpath ${JSON.stringify(permissionPath("/work/shared", POLICY.workspaceRoot))})`,
+    );
   });
 
   test("allows network when it is enabled", () => {
@@ -170,7 +173,7 @@ describe("buildSeatbeltProfile", () => {
 
     expect(denyStart).toBeGreaterThan(-1);
     expect(profile.slice(denyStart)).toContain(
-      `(subpath ${JSON.stringify(resolve("/work/shared"))})`,
+      `(subpath ${JSON.stringify(permissionPath("/work/shared", POLICY.workspaceRoot))})`,
     );
     expect(profile.indexOf("(deny file-write*")).toBeGreaterThan(
       profile.indexOf("(allow file-write*"),

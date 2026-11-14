@@ -24,7 +24,7 @@ test("native shells receive their own completion protocol and preserve the raw c
   const raw = 'echo "hello"';
   const marker = "__FLECTEN_DONE_nonce__";
   expect(commandWithCompletion(raw, "C:\\Windows\\System32\\CMD.EXE", marker)).toBe(
-    `${raw}\r\necho ${marker}%errorlevel%\r\n`,
+    `${raw}\r\necho ${marker}%errorlevel%${marker}\r\n`,
   );
   const powershell = commandWithCompletion(raw, "powershell.exe", marker);
   expect(powershell.startsWith(`${raw}\r\n`)).toBe(true);
@@ -33,4 +33,17 @@ test("native shells receive their own completion protocol and preserve the raw c
   expect(commandWithCompletion(raw, "/bin/bash", marker)).toBe(
     `${raw}\nprintf '\\n${marker}%s\\n' "$?"\n`,
   );
+});
+
+test("ConPTY frames terminate with their nonce when cursor controls replace line endings", () => {
+  const marker = "__FLECTEN_DONE_nonce__";
+  const prefix = `echo ${marker}%errorlevel%${marker}C:\\project>`;
+  const frame = `${marker}23${marker}`;
+  for (let end = 1; end < frame.length; end++)
+    expect(commandCompletion(prefix + frame.slice(0, end), marker)).toBeNull();
+  expect(commandCompletion(`${prefix}${frame}C:\\project>`, marker)).toEqual({
+    start: prefix.length,
+    end: prefix.length + frame.length,
+    exitCode: 23,
+  });
 });

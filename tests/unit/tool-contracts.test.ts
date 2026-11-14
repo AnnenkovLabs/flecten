@@ -15,6 +15,7 @@ import { ToolRegistry } from "../../src/tools/registry";
 import type { TaskToolContext } from "../../src/tools/task/run";
 import type { ToolContext } from "../../src/tools/types";
 import { ReadTracker } from "../../src/tools/util/read-tracker";
+import { bunCommand } from "../helpers/terminal-fixtures";
 
 const dirs: string[] = [];
 const managers: TerminalManager[] = [];
@@ -146,7 +147,11 @@ describe("execution contracts", () => {
     managers.push(manager);
     ctx.terminals = manager;
     const result = await registry().run(
-      { id: "exit", name: "terminal", args: { op: "run", command: "false", timeoutMs: 2000 } },
+      {
+        id: "exit",
+        name: "terminal",
+        args: { op: "run", command: await bunCommand(ctx.cwd, "process.exit(1)"), timeoutMs: 2000 },
+      },
       ctx,
     );
     expect(result.ok).toBe(false);

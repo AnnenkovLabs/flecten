@@ -11,6 +11,7 @@
 
   let { text }: Props = $props();
 
+  const uid = $props.id();
   const html = $derived(renderMarkdown(text));
   const timers = new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>();
   let root = $state<HTMLDivElement | null>(null);
@@ -72,7 +73,7 @@
       const canvas = node.querySelector<HTMLElement>(".mermaid-canvas");
       if (!source || !canvas) continue;
       try {
-        const svg = await renderMermaid(source, `liquid-mermaid-${pass}-${index}`);
+        const svg = await renderMermaid(source, `liquid-mermaid-${uid}-${pass}-${index}`);
         if (pass !== renderPass || !node.isConnected) return;
         if (!svg) throw new Error("unsafe svg");
         canvas.innerHTML = svg;

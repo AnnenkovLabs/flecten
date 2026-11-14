@@ -9,6 +9,7 @@ import type { ModelEvent } from "../../src/providers/types";
 import { builtinTools } from "../../src/tools/builtin";
 import { ToolRegistry } from "../../src/tools/registry";
 import { type ScriptedProvider, scriptedProvider } from "../helpers/fake-provider";
+import { bunCommand } from "../helpers/terminal-fixtures";
 
 const limits = {
   maxOutputBytes: 50_000,
@@ -33,6 +34,12 @@ const end = (text: string): ModelEvent[] => [
 
 async function jobSession(scripts: ModelEvent[][], hooks?: HooksConfig) {
   const cwd = await mkdtemp(join(tmpdir(), "liquid-job-notices-"));
+  for (const script of scripts)
+    for (const event of script) {
+      if (event.type !== "tool_call" || event.name !== "bash") continue;
+      const args = event.args as { command: string };
+      args.command = await bunCommand(cwd, args.command);
+    }
   const provider = scriptedProvider(scripts);
   const session = createSession({
     cwd,
@@ -90,7 +97,10 @@ describe("background job notices", () => {
       server.stop(true);
     });
     const { session, events } = await jobSession(
-      [bash("bg", { command: "sleep 0.1; echo built", background: true }), end("started")],
+      [
+        bash("bg", { command: 'await Bun.sleep(100); console.log("built")', background: true }),
+        end("started"),
+      ],
       { notification: [{ type: "http", url: server.url.href, timeoutMs: 1000, enabled: true }] },
     );
     await session.send({ type: "run", prompt: "start" });
@@ -107,7 +117,7 @@ describe("background job notices", () => {
 
   test("a job that ends between runs reaches the model at the start of the next run", async () => {
     const { session, provider, events } = await jobSession([
-      bash("bg", { command: "sleep 0.2; echo build-ok", background: true }),
+      bash("bg", { command: 'await Bun.sleep(200); console.log("build-ok")', background: true }),
       end("started"),
       end("seen"),
     ]);
@@ -132,7 +142,7 @@ describe("background job notices", () => {
 
   test("a new task on the same handle does not get another task's notice", async () => {
     const { session, provider, events } = await jobSession([
-      bash("bg", { command: "sleep 0.2; echo build-ok", background: true }),
+      bash("bg", { command: 'await Bun.sleep(200); console.log("build-ok")', background: true }),
       end("started"),
     ]);
     await session.send({ type: "run", prompt: "start the build" });
@@ -151,8 +161,8 @@ describe("background job notices", () => {
 
   test("a job that ends during a run arrives at the next turn boundary, once", async () => {
     const { session, provider } = await jobSession([
-      bash("bg", { command: "sleep 0.1; echo early", background: true }),
-      bash("fg", { command: "sleep 0.6" }),
+      bash("bg", { command: 'await Bun.sleep(100); console.log("early")', background: true }),
+      bash("fg", { command: "await Bun.sleep(600)" }),
       end("done"),
     ]);
     await session.send({ type: "run", prompt: "build and wait" });

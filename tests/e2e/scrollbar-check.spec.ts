@@ -39,7 +39,7 @@ test("the document never scrolls at either window size, before and after a run",
     await page.locator("#prompt").fill("Прочитай README.md и покажи итог");
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
     await expect(page.locator("button.run-summary").first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("button", { name: "Остановить" })).toBeHidden({ timeout: 45_000 });
+    await expect(page.getByRole("button", { name: "Остановка" })).toBeHidden({ timeout: 45_000 });
     await measure("finished run");
     expect(harness.consoleErrors, harness.consoleErrors.join("\n")).toEqual([]);
   } finally {

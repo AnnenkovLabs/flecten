@@ -17,7 +17,7 @@ test("task navigation keeps attachments, reading position and follow-at-end inte
     await prompt.fill("Первая задача");
     await prompt.press("Enter");
     await expect(page.locator(".answer").last()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden();
     const task = page.locator("button.task-row").first();
     await app.evaluate(
       ({ dialog }, file) => {

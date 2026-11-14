@@ -131,7 +131,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
     await expect(prompt).toBeFocused();
     await expect(prompt).toHaveText("");
-    await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeHidden({
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden({
       timeout: 45000,
     });
     const user = page.locator(".msg.user").first();
@@ -177,7 +177,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
     await expect(prompt.locator("img")).toHaveCount(0);
     await prompt.fill("Повторная отправка");
     await prompt.press("Enter");
-    await expect(page.getByRole("button", { name: "Остановить", exact: true })).toBeHidden({
+    await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden({
       timeout: 45000,
     });
     await prompt.press("ControlOrMeta+z");
