@@ -34,6 +34,27 @@ export function assertReleaseTag(output, tag, sha) {
     throw new Error("Remote release tag changed after preparation.");
 }
 
+export function releaseIdByTag(releases, tag) {
+  const matches = z
+    .array(z.object({ id: z.number().int().positive(), tag_name: z.string() }))
+    .parse(releases)
+    .filter((release) => release.tag_name === tag);
+  if (matches.length > 1) throw new Error(`Multiple releases exist for ${tag}.`);
+  return matches[0]?.id;
+}
+
+function lookupRelease(tag) {
+  // GitHub's releases/tags endpoint does not return drafts. The authenticated
+  // collection includes them, so interrupted publications can resume by ID.
+  const pages = z
+    .array(z.array(z.unknown()))
+    .parse(
+      JSON.parse(gh(["api", "--paginate", "--slurp", `repos/${REPOSITORY}/releases?per_page=100`])),
+    );
+  const id = releaseIdByTag(pages.flat(), tag);
+  return id === undefined ? undefined : api(`releases/${id}`);
+}
+
 export function validateExistingAssets(release, files, notes) {
   const current = releaseSchema.parse(release);
   for (const asset of current.assets) {
@@ -98,15 +119,8 @@ export async function promoteRelease(directory) {
     assertReleaseTag(output, tag, sha);
   };
   assertTag();
-  const response = await fetch(`https://api.github.com/repos/${REPOSITORY}/releases/tags/${tag}`, {
-    headers: {
-      Authorization: `Bearer ${process.env.GH_TOKEN}`,
-      Accept: "application/vnd.github+json",
-    },
-  });
-  if (response.status !== 404 && !response.ok)
-    throw new Error(`GitHub release lookup failed: ${response.status}.`);
-  if (response.status === 404) {
+  let existing = lookupRelease(tag);
+  if (!existing) {
     gh([
       "release",
       "create",
@@ -121,8 +135,10 @@ export async function promoteRelease(directory) {
       "--notes-file",
       notesFile,
     ]);
+    existing = lookupRelease(tag);
   }
-  let release = validateExistingAssets(api(`releases/tags/${tag}`), files, notes);
+  if (!existing) throw new Error("Created release could not be found.");
+  let release = validateExistingAssets(existing, files, notes);
   if (release.draft) {
     const missing = files.filter(
       (file) => !release.assets.some((asset) => asset.name === file.name),
@@ -136,7 +152,7 @@ export async function promoteRelease(directory) {
         REPOSITORY,
         ...missing.map((file) => resolve(directory, file.name)),
       ]);
-    release = validateExistingAssets(api(`releases/tags/${tag}`), files, notes);
+    release = validateExistingAssets(lookupRelease(tag), files, notes);
     if (release.assets.length !== files.length) throw new Error("Release upload is incomplete.");
     assertTag();
     gh([
@@ -152,7 +168,7 @@ export async function promoteRelease(directory) {
       "--notes-file",
       notesFile,
     ]);
-    release = validateExistingAssets(api(`releases/tags/${tag}`), files, notes);
+    release = validateExistingAssets(lookupRelease(tag), files, notes);
     if (release.draft) throw new Error("GitHub Release is still a draft.");
   }
   console.log(release.html_url);
