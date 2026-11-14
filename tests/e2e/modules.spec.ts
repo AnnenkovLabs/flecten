@@ -142,9 +142,16 @@ test("install a module, let the agent activate it, and use its custom UI with th
       await page.screenshot({ path: test.info().outputPath(`module-platform-${width}.png`) });
     }
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
-    await tab.focus();
-    await page.keyboard.press("Home");
-    await expect(page.getByRole("tab", { name: "Conversation", exact: true })).toBeFocused();
+    const settings = page.getByRole("button", { name: "Settings", exact: true });
+    await expect
+      .poll(() => settings.evaluate((element) => element === document.activeElement))
+      .toBe(true);
+    await tab.press("Home");
+    const conversation = page.getByRole("tab", { name: "Conversation", exact: true });
+    await expect(conversation).toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(() => conversation.evaluate((element) => element === document.activeElement))
+      .toBe(true);
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();

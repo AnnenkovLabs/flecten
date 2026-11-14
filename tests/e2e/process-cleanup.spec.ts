@@ -32,7 +32,9 @@ test("killing Electron leaves no agent-owned background process", async () => {
       })
       .toBe(true);
     await expect(harness.page.locator(".answer").last()).toBeVisible();
-    expect(harness.app.process().kill("SIGKILL")).toBe(true);
+    // Playwright may own xvfb-run; kill the actual Electron main process.
+    const electronPid = await harness.app.evaluate(() => process.pid);
+    process.kill(electronPid, "SIGKILL");
     await expect.poll(() => processAlive(childPid), { timeout: 5000 }).toBe(false);
   } finally {
     if (childPid && processAlive(childPid)) process.kill(childPid, "SIGKILL");

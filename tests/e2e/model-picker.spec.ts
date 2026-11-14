@@ -51,6 +51,7 @@ test("provider disclosure persists across restarts, search reveals matches and m
   try {
     harness = await launchApp({ cwd, userData });
     const { app, page } = harness;
+    await page.emulateMedia({ reducedMotion: "reduce" });
     expect(await app.evaluate(({ app: electronApp }) => electronApp.getPath("userData"))).toBe(
       userData,
     );

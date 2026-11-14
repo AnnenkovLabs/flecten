@@ -15,6 +15,7 @@ export function watchAgentOutput(child, { current, message, stderr, invalid, exi
   });
   errorOutput.on("line", (line) => { if (current()) stderr(line); });
   child.on("error", (error) => { close(); if (current()) failed(error); });
-  child.on("exit", (code, signal) => { close(); if (current()) exited(code, signal); });
+  // close follows stdout/stderr draining; exit can precede the last startup error.
+  child.on("close", (code, signal) => { close(); if (current()) exited(code, signal); });
   return close;
 }
