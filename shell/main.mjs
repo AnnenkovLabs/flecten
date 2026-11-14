@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import electron from "electron";
 import { registerAttachmentIpc } from "./attachments.mjs";
 import { watchAgentOutput } from "./agent-output.mjs";
+import { AgentStartup } from "./agent-startup.mjs";
 import { bundledAgent, smokeRenderer } from "./packaged-smoke.mjs";
 import { MODULE_FRAME_DOCUMENT } from "./module-frame.mjs";
 import { captureWhenLoaded } from "./screenshot.mjs";
@@ -139,6 +140,7 @@ async function handleProtocol(request) {
 let interfaceLocale = "en";
 let mainWindow = null;
 let agent = null;
+const agentStartup = new AgentStartup();
 let closeAgentOutput = null;
 let smokeAgent = null;
 let updateRuntime = null;
@@ -206,6 +208,7 @@ function startAgent() {
   closeAgentOutput = watchAgentOutput(child, {
     current: () => agent === child,
     message: (message) => {
+      agentStartup.note(message);
       sendToRenderer(message);
       if (message.type === "status") {
         updateRuntime?.applyStatus(message);
@@ -224,6 +227,8 @@ function startAgent() {
 }
 
 function stopAgent() {
+  agentStartup.reset();
+  queued.length = 0;
   closeAgentOutput?.();
   closeAgentOutput = null;
   const child = agent;
@@ -232,6 +237,12 @@ function stopAgent() {
 }
 
 function sendToAgent(command) {
+  const route = agentStartup.route(command);
+  if (route.action === "blocked") {
+    if (route.response) sendToRenderer(route.response);
+    return;
+  }
+  if (route.action === "restart") stopAgent();
   const line = `${JSON.stringify(command)}\n`;
   if (agent?.stdin.writable) {
     agent.stdin.write(line);

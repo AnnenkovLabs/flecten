@@ -270,7 +270,14 @@ function prepareDirectory(options: LaunchOptions): string {
 export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness> {
   const cwd = prepareDirectory(options);
   const owned = options.cwd === undefined;
+  const ownsProfile = !options.userData && !options.appProfile;
+  const userData =
+    options.userData ??
+    (options.appProfile
+      ? join(cwd, "app-profile")
+      : mkdtempSync(join(tmpdir(), "flecten-e2e-profile-")));
   const removeOwned = (): void => {
+    if (ownsProfile) rmSync(userData, { recursive: true, force: true });
     if (owned) rmSync(cwd, { recursive: true, force: true });
   };
   const consoleErrors: string[] = [];
@@ -310,8 +317,6 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
     }
 
     let entryPoint = shellMain;
-    const userData =
-      options.userData ?? (options.appProfile ? join(cwd, "app-profile") : undefined);
     if (userData) {
       mkdirSync(userData, { recursive: true });
       entryPoint = join(cwd, "e2e-profile.cjs");
@@ -335,6 +340,10 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
       executablePath,
       args: [
         entryPoint,
+        // CI has no GPU. Exercise WebGL2 through Chromium's software renderer.
+        ...(process.platform === "linux"
+          ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
+          : []),
         ...(options.fakeMicrophone
           ? ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]
           : []),

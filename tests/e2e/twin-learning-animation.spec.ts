@@ -19,6 +19,7 @@ async function stopped(scene: Locator, canvas: Locator) {
 }
 
 test("Twin learns through the real bridge with trailer cards, synchronized pause and reduced motion", async () => {
+  test.setTimeout(120_000);
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
   const h = await launchApp({ locale: "en", twinLearning: true });
@@ -61,7 +62,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
     const cards = scene.getByTestId("twin-learning-card");
     const canvas = scene.locator("canvas");
     await expect(scene).toBeVisible();
-    // Inspect the dive at 10% speed, including a preference change while already paused.
+    // Keep the brief entrance observable on software renderers, then pause it through the UI.
     await expect
       .poll(() =>
         scene.evaluate(
@@ -76,7 +77,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
       for (const animation of element.getAnimations({ subtree: true })) {
         if (animation instanceof CSSAnimation) continue;
         animation.currentTime = 50;
-        animation.updatePlaybackRate(0.1);
+        animation.playbackRate = 0.01;
       }
     });
     await scene.getByRole("button", { name: "Pause motion", exact: true }).click();
@@ -147,10 +148,11 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
     const resumeFrame = await scene.getAttribute("data-frame");
     await expect.poll(() => scene.getAttribute("data-frame")).not.toBe(resumeFrame);
     await expect(canvas).toHaveAttribute("data-active", "true");
-    // Observe longer than three old film loops: ongoing inference must never rewind or empty the stage.
+    // Advance beyond three old film loops, including on slow software WebGL renderers.
     const continuity = await scene.evaluate(async (element) => {
       const samples: Array<{ frame: number; visible: number[] }> = [];
-      const until = performance.now() + 12_200;
+      const firstFrame = Number((element as HTMLElement).dataset.frame);
+      const until = performance.now() + 60_000;
       while (performance.now() < until) {
         const stage = element.getBoundingClientRect();
         const visible = [
@@ -170,6 +172,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
           })
           .map((card) => Number(card.dataset.cardId));
         samples.push({ frame: Number((element as HTMLElement).dataset.frame), visible });
+        if (Number((element as HTMLElement).dataset.frame) - firstFrame >= 732) break;
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
       return samples;
@@ -178,7 +181,10 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
       test.info().outputPath("twin-learning-continuity.json"),
       JSON.stringify(continuity, null, 2),
     );
-    expect(continuity.length).toBeGreaterThan(80);
+    expect(continuity.length).toBeGreaterThan(0);
+    expect((continuity.at(-1)?.frame ?? 0) - (continuity[0]?.frame ?? 0)).toBeGreaterThanOrEqual(
+      732,
+    );
     expect(
       continuity.every((sample, index) => sample.frame >= (continuity[index - 1]?.frame ?? 0)),
     ).toBe(true);

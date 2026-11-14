@@ -76,7 +76,8 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
     await expect(dialog.getByText("Saved", { exact: true })).toBeVisible();
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
     await expect(frame.getByRole("button", { name: "Start desktop", exact: true })).toBeVisible();
-    await frame.getByRole("button", { name: "Start desktop", exact: true }).click();
+    // CDP can lose the first pointer click in a minimized opaque-origin frame after a modal closes.
+    await frame.getByRole("button", { name: "Start desktop", exact: true }).press("Enter");
     await expect(frame.getByText("Agent has control", { exact: true }).first()).toBeVisible();
     await expect(frame.locator("#image")).toBeVisible();
     await frame.getByRole("button", { name: "Take control", exact: true }).click();
