@@ -15,7 +15,7 @@
       <span class="activity">{approvals ? t("Waiting for permission: {0}", [approvals]) : run.busy ? run.view.liveLabel || t("Working…") : expanded ? t("Conversation on the right") : t("Message the agent…")}</span>
       <span class="model">{formatModelName(run.model)}</span><Icon name={expanded ? "chevron-right" : "arrow-up"} size={14} />
     </button>
-    {#if run.busy}<button class="island-action" class:is-stopping={run.view.stopping} type="button" aria-label={run.view.stopping ? t("Force stop agent") : t("Stop agent")} title={run.view.stopping ? t("Stop immediately") : t("Stop after the current step")} onclick={() => run.stop()}><Icon name="stop" size={15} /></button>{/if}
+    {#if run.busy}<button class="island-action" class:is-stopping={run.view.stopping} type="button" aria-label={run.view.stopping ? t("Force stop agent") : t("Stop agent")} title={run.view.stopping ? t("Stop immediately") : t("Stop after the current step")} disabled={run.controls.coolingDown} onclick={() => run.stop()}><Icon name="stop" size={15} /></button>{/if}
   </section>
 </div>
 <style>
@@ -27,5 +27,6 @@
   strong { font-size: 12px; font-weight: 600; } .activity { overflow: hidden; flex: 1; color: var(--muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; } .model { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 11px; }
   .island-action { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 4px; color: var(--muted); } .island-action:hover { background: var(--raised); color: var(--text); }
   .island-action.is-stopping, .island-action.is-stopping:hover { background: var(--error); color: var(--bg); }
+  .island-action:disabled { opacity: 0.35; cursor: default; }
   @media(max-width: 1220px) { .model { display: none; } }
 </style>

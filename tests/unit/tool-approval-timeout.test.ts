@@ -3,7 +3,6 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
-import { requestProjectTrust } from "../../src/app/project-trust";
 import { executeCalls } from "../../src/core/loop/tools";
 import { ApprovalWaiters } from "../../src/core/session/approvals";
 import type { Event, ToolResult } from "../../src/core/types";
@@ -173,24 +172,4 @@ test("genuine execution hang after approval still times out and aborts the neste
   });
   expect(await f.running).toMatchObject({ ok: false, data: { errorKind: "timeout" } });
   expect(signal?.aborted).toBe(true);
-});
-
-test("module activation project trust keeps its permission timeout instead of a tool timeout", async () => {
-  let accepted = false;
-  const entry = tool("module", async (_args, context) => {
-    await requestProjectTrust(
-      context,
-      () => accepted,
-      async () => {
-        accepted = true;
-      },
-    );
-    return { ok: true, output: "active" };
-  });
-  const f = await fixture(entry);
-  expect(await f.running).toMatchObject({ ok: false, data: { errorKind: "permission" } });
-  expect(accepted).toBe(false);
-  expect(f.events).toContainEqual(
-    expect.objectContaining({ type: "approval.resolved", by: "timeout" }),
-  );
 });

@@ -240,17 +240,17 @@ async function run() {
   const sandboxDefaults = configModule.SandboxConfigSchema.parse({});
   expect(
     "sandbox defaults",
-    sandboxDefaults.enabled === true && sandboxDefaults.allowNetwork === false,
-    `${SECURITY_DOC}: sandbox must be enabled and deny network by default`,
+    sandboxDefaults.enabled === true && sandboxDefaults.allowNetwork === true,
+    `${SECURITY_DOC}: Agent mode must isolate processes and allow network by default`,
   );
 
   const permissions = configModule.PermissionsConfigSchema.parse({});
   expect(
     "permission defaults",
-    permissions.network === "ask" &&
-      permissions.mcp === "ask" &&
-      permissions.externalPath === "deny",
-    `${SECURITY_DOC}: default permissions must ask for network and MCP and deny external paths`,
+    permissions.network === "allow" &&
+      permissions.mcp === "allow" &&
+      permissions.externalPath === "ask",
+    `${SECURITY_DOC}: Agent mode must allow routine tools and ask for external folders`,
   );
 
   const protectedWrites = new Set(sandboxModule.DEFAULT_PROTECTED_WRITE_PREFIXES);

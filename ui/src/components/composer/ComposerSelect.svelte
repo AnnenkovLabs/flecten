@@ -88,7 +88,7 @@
   {/if}
 </button>
 {#if open}
-  <FloatingMenu anchor={trigger} {label} width={descriptive ? 280 : 184} maxHeight={280} onClose={() => close()} onkeydown={keydown}>
+  <FloatingMenu anchor={trigger} {label} width={descriptive ? 320 : 184} maxHeight={descriptive ? 420 : 280} onClose={() => close()} onkeydown={keydown}>
     <div class="select-list" class:is-descriptive={descriptive} {id} bind:this={list} role="listbox" aria-label={label}>
       {#each options as option (option.value)}
         <button type="button" role="option" tabindex="-1" aria-selected={option.value === value} onclick={() => choose(option.value)}>

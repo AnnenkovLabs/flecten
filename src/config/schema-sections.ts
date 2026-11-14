@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ACCESS_MODES } from "../../shared/access-mode";
 import {
   HookDefinitionSchema,
   HooksConfigSchema as SharedHooksConfigSchema,
@@ -40,13 +41,13 @@ export const PermissionRuleConfigSchema = z.object({
 
 export const PermissionsConfigSchema = z
   .object({
-    read: PermissionPolicySchema.default("auto"),
-    write: PermissionPolicySchema.default("auto"),
-    shell: PermissionPolicySchema.default("auto"),
-    network: PermissionPolicySchema.default("ask"),
-    mcp: PermissionPolicySchema.default("ask"),
+    read: PermissionPolicySchema.default(ACCESS_MODES.agent.permissions.read),
+    write: PermissionPolicySchema.default(ACCESS_MODES.agent.permissions.write),
+    shell: PermissionPolicySchema.default(ACCESS_MODES.agent.permissions.shell),
+    network: PermissionPolicySchema.default(ACCESS_MODES.agent.permissions.network),
+    mcp: PermissionPolicySchema.default(ACCESS_MODES.agent.permissions.mcp),
     skill: PermissionPolicySchema.default("allow"),
-    externalPath: PermissionPolicySchema.default("deny"),
+    externalPath: PermissionPolicySchema.default(ACCESS_MODES.agent.permissions.externalPath),
     /** Destructive shell operations no checkpoint can undo: push --force, rm outside, disks. */
     destructive: PermissionPolicySchema.default("ask"),
     /** How long a tool call waits for an answer before it is denied and the run goes on. */
@@ -54,22 +55,15 @@ export const PermissionsConfigSchema = z
     rules: z.array(PermissionRuleConfigSchema).default([]),
   })
   .default({
-    read: "auto",
-    write: "auto",
-    shell: "auto",
-    network: "ask",
-    mcp: "ask",
-    skill: "allow",
-    externalPath: "deny",
-    destructive: "ask",
+    ...ACCESS_MODES.agent.permissions,
     approvalTimeoutMs: 300_000,
     rules: [],
   });
 
 export const SandboxConfigSchema = z
   .object({
-    enabled: z.boolean().default(true),
-    allowNetwork: z.boolean().default(false),
+    enabled: z.boolean().default(ACCESS_MODES.agent.sandbox.enabled),
+    allowNetwork: z.boolean().default(ACCESS_MODES.agent.sandbox.allowNetwork),
     readDenyPrefixes: z.array(z.string()).default([]),
     writeDenyPrefixes: z.array(z.string()).default([]),
     envAllowlist: z
@@ -77,8 +71,7 @@ export const SandboxConfigSchema = z
       .default(["PATH", "HOME", "USER", "SHELL", "TERM", "LANG", "LC_ALL", "TMPDIR", "PWD"]),
   })
   .default({
-    enabled: true,
-    allowNetwork: false,
+    ...ACCESS_MODES.agent.sandbox,
     readDenyPrefixes: [],
     writeDenyPrefixes: [],
     envAllowlist: ["PATH", "HOME", "USER", "SHELL", "TERM", "LANG", "LC_ALL", "TMPDIR", "PWD"],
@@ -175,7 +168,7 @@ export const BudgetsConfigSchema = z
 
 export const UpdateConfigSchema = z
   .object({
-    channel: z.enum(UPDATE_CHANNELS).default("stable"),
+    channel: z.enum(UPDATE_CHANNELS).default("beta"),
     feedUrl: z.string().min(1).optional(),
     github: z
       .object({
@@ -187,7 +180,7 @@ export const UpdateConfigSchema = z
     autoDownload: z.boolean().default(true),
     installOnQuit: z.boolean().default(true),
   })
-  .default({ channel: "stable", autoCheck: true, autoDownload: true, installOnQuit: true })
+  .default({ channel: "beta", autoCheck: true, autoDownload: true, installOnQuit: true })
   .optional();
 
 export const TelemetryConfigSchema = z

@@ -4,6 +4,7 @@ import { DEFAULT_PROTECTED_READ_PREFIXES, DEFAULT_PROTECTED_WRITE_PREFIXES } fro
 
 export interface SandboxProtection {
   workspaceRoot: string;
+  writablePaths?: readonly string[];
   readOnlyPaths?: string[];
   readDeniedPaths?: string[];
 }
@@ -23,15 +24,20 @@ export function sandboxProtection(policy: SandboxProtection): {
   readOnly: string[];
   readDenied: string[];
 } {
+  const roots = [policy.workspaceRoot, ...(policy.writablePaths ?? [])];
   return {
-    readOnly: resources(
-      [...DEFAULT_PROTECTED_WRITE_PREFIXES, ...(policy.readOnlyPaths ?? [])],
-      policy.workspaceRoot,
-    ),
-    readDenied: resources(
-      [...DEFAULT_PROTECTED_READ_PREFIXES, ...(policy.readDeniedPaths ?? [])],
-      policy.workspaceRoot,
-    ),
+    readOnly: [
+      ...new Set([
+        ...roots.flatMap((root) => resources(DEFAULT_PROTECTED_WRITE_PREFIXES, root)),
+        ...resources(policy.readOnlyPaths ?? [], policy.workspaceRoot),
+      ]),
+    ],
+    readDenied: [
+      ...new Set([
+        ...roots.flatMap((root) => resources(DEFAULT_PROTECTED_READ_PREFIXES, root)),
+        ...resources(policy.readDeniedPaths ?? [], policy.workspaceRoot),
+      ]),
+    ],
   };
 }
 

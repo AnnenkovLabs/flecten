@@ -134,6 +134,8 @@ export function createUpdater({ source, emit, settings, automated = false }, dep
     autoUpdater.disableDifferentialDownload = true;
     autoUpdater.disableWebInstaller = true;
     autoUpdater.channel = updateChannel(current.channel);
+    // electron-updater enables downgrades in its channel setter.
+    autoUpdater.allowDowngrade = false;
     if (target.kind === "feed") {
       autoUpdater.setFeedURL({ provider: "custom", updateProvider: signedUpdateProvider(key, dependencies.fetch), url: target.url });
     } else {
@@ -236,6 +238,8 @@ export function createUpdater({ source, emit, settings, automated = false }, dep
     const feedChanged =
       JSON.stringify(target) !== JSON.stringify(activeSource) ||
       updateChannel(next.channel) !== updateChannel(current.channel);
+    const armDownloadedUpdate =
+      !feedChanged && status.state === "downloaded" && !current.installOnQuit && next.installOnQuit;
     current = next;
     autoUpdater.autoInstallOnAppQuit = current.installOnQuit;
     if (feedChanged) {
@@ -248,6 +252,9 @@ export function createUpdater({ source, emit, settings, automated = false }, dep
         publishAndPlan(failedStatus(error));
       }
     }
+    // Native quit hooks are armed when downloadUpdate completes, including a cache hit.
+    if (armDownloadedUpdate)
+      void autoUpdater.downloadUpdate().catch((error) => publishAndPlan(failedStatus(error)));
     schedule(SETTINGS_CHECK_DELAY_MS);
     return status;
   };

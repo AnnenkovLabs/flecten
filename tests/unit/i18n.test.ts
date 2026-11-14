@@ -5,7 +5,7 @@ import { catalogs, english } from "../../ui/src/lib/i18n/catalogs";
 import { DEFAULT_LOCALE, isLocale, locales, savedLocale } from "../../ui/src/lib/i18n/locales";
 import { i18n, setLocale, t } from "../../ui/src/lib/i18n.svelte";
 import { renderMarkdown } from "../../ui/src/lib/markdown/render";
-import { presetDescription } from "../../ui/src/lib/permissions";
+import { accessModeDescription } from "../../ui/src/lib/permissions";
 import { TaskView } from "../../ui/src/lib/run/view.svelte";
 import { searchSettingsSections } from "../../ui/src/lib/settings/sections";
 
@@ -82,13 +82,13 @@ describe("interface languages", () => {
     expect(action.subject).toBe(rawPath);
     expect(view.liveLabel).toBe("Thinking");
     const original = view.lastPrompt;
-    const description = presetDescription("custom");
+    const description = accessModeDescription("custom");
     setLocale("uk");
     expect(action.subject).toBe(rawPath);
     expect(action.label).not.toBe("Read file");
     expect(view.liveLabel).not.toBe("Thinking");
     expect(view.lastPrompt).toBe(original);
-    expect(presetDescription("custom")).not.toBe(description);
+    expect(accessModeDescription("custom")).not.toBe(description);
     expect(searchSettingsSections("Українська").some((section) => section.id === "general")).toBe(
       true,
     );

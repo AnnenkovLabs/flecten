@@ -53,7 +53,7 @@ export OPENAI_API_KEY=...
 bun run app:dev
 ```
 
-`bun run app:dev` inicia Vite, lanza el núcleo en Bun y abre una ventana de Electron con hot reload. El directorio actual es la raíz del proyecto; define `FLECTEN_CWD` para trabajar en otro lugar.
+`bun run app:dev` inicia Vite, lanza el núcleo en Bun y abre una ventana de Electron con hot reload. Un perfil nuevo se abre sin proyecto. Añade una carpeta en la aplicación o define `FLECTEN_CWD` para seleccionarla explícitamente; los siguientes inicios restauran tu selección.
 
 ```bash
 # u otro proveedor

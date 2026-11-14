@@ -28,6 +28,8 @@ export interface DesktopBridge {
   setLocale?: (locale: string) => void;
   control(action: "minimize" | "maximize" | "close"): void;
   chooseProject?: () => Promise<string | null>;
+  selectProject?: (path: string | null, sessionId?: string) => Promise<string>;
+  removeProject?: (path: string) => Promise<void>;
   pickAttachments?: () => Promise<PickedFile[]>;
   pasteImage?: () => Promise<PickedFile | null>;
   describePaths?: (paths: string[]) => Promise<PickedFile[]>;

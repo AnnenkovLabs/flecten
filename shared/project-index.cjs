@@ -1,0 +1,95 @@
+const {
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} = require("node:fs");
+const { basename, isAbsolute, join, resolve } = require("node:path");
+const { randomUUID } = require("node:crypto");
+const { z } = require("zod");
+
+const projectSchema = z.object({
+  path: z.string().min(1).refine(isAbsolute),
+  name: z.string().min(1),
+  trust: z.enum(["unknown", "trusted", "untrusted"]),
+});
+const indexSchema = z.object({
+  version: z.literal(1),
+  selected: z.string().nullable(),
+  projects: z.array(projectSchema),
+});
+
+function canonicalProjectPath(path) {
+  if (typeof path !== "string" || !isAbsolute(path))
+    throw new Error("Project path must be absolute");
+  const canonical = realpathSync(resolve(path));
+  if (!statSync(canonical).isDirectory()) throw new Error("Project path must be a directory");
+  return canonical;
+}
+
+function readProjectIndex(profile) {
+  try {
+    return indexSchema.parse(JSON.parse(readFileSync(join(profile, "projects.json"), "utf8")));
+  } catch (error) {
+    if (error.code === "ENOENT") return { version: 1, selected: null, projects: [] };
+    throw new Error("Cannot read the project index. Restore projects.json from a backup.", {
+      cause: error,
+    });
+  }
+}
+
+function saveProjectIndex(profile, index) {
+  const parsed = indexSchema.parse(index);
+  mkdirSync(profile, { recursive: true, mode: 0o700 });
+  const path = join(profile, "projects.json");
+  const temp = `${path}.${randomUUID()}.tmp`;
+  writeFileSync(temp, `${JSON.stringify(parsed, null, 2)}\n`, { mode: 0o600 });
+  renameSync(temp, path);
+  return parsed;
+}
+
+function selectProject(profile, path) {
+  const index = readProjectIndex(profile);
+  const canonical = path === null ? null : canonicalProjectPath(path);
+  if (canonical && !index.projects.some((project) => project.path === canonical)) {
+    index.projects.push({
+      path: canonical,
+      name: basename(canonical) || canonical,
+      trust: "unknown",
+    });
+  }
+  index.selected = canonical;
+  return saveProjectIndex(profile, index);
+}
+
+function removeProject(profile, path) {
+  const index = readProjectIndex(profile);
+  index.projects = index.projects.filter((project) => project.path !== path);
+  if (index.selected === path) index.selected = null;
+  return saveProjectIndex(profile, index);
+}
+
+function setProjectTrust(profile, path, trust) {
+  const decision = projectSchema.shape.trust.parse(trust);
+  const canonical = canonicalProjectPath(path);
+  const index = readProjectIndex(profile);
+  const project = index.projects.find((item) => item.path === canonical);
+  if (project) project.trust = decision;
+  else
+    index.projects.push({
+      path: canonical,
+      name: basename(canonical) || canonical,
+      trust: decision,
+    });
+  return saveProjectIndex(profile, index);
+}
+
+module.exports = {
+  canonicalProjectPath,
+  readProjectIndex,
+  selectProject,
+  removeProject,
+  setProjectTrust,
+};

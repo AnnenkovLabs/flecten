@@ -10,7 +10,6 @@ import { installModule, publishModule, readModule } from "../modules/package";
 import { ModuleRuntime } from "../modules/runtime";
 import { Mutex } from "../util/mutex";
 import type { ExtensionRuntime } from "./extension-runtime";
-import { requestProjectTrust } from "./project-trust";
 
 export function moduleService(
   cwd: string,
@@ -18,7 +17,6 @@ export function moduleService(
   trusted: () => boolean,
   commit: (next: HarnessConfig) => Promise<unknown>,
   extensions: Pick<ExtensionRuntime, "options" | "registerRuntime">,
-  acceptTrust: () => Promise<unknown>,
 ) {
   const catalog = new ModuleCatalog(cwd, () => config().modules);
   const marketplace = new ModuleMarketplace();
@@ -26,7 +24,6 @@ export function moduleService(
   const runtime = new ModuleRuntime(catalog, trusted, {
     ...extensions.options,
     registerRuntime: extensions.registerRuntime,
-    requestTrust: (context) => requestProjectTrust(context, trusted, acceptTrust),
   });
   return {
     runtime,

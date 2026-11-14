@@ -1,3 +1,5 @@
+import type { AccessMode, ActiveAccessMode } from "../../shared/access-mode";
+import type { ProjectTrust } from "../../shared/project-index.cjs";
 import type { UpdateSettings } from "../../shared/update-settings.cjs";
 import type { SlashEntry } from "../commands/custom";
 import type { HarnessConfig, ProviderConfig } from "../config/schema";
@@ -16,11 +18,13 @@ import type { SessionPool } from "./session-pool";
 export interface AppInfo {
   configPath?: string;
   cwd: string;
+  projectRoot?: string | null;
   project: string;
   branch: string;
   user: string;
   provider: string;
   model: string;
+  accessMode: ActiveAccessMode;
   contextWindow: number;
   maxOutputTokens: number;
   ui?: HarnessConfig["ui"];
@@ -34,6 +38,7 @@ export interface AppInfo {
   configError?: string;
   trustRequired: boolean;
   trustAccepted: boolean;
+  trustState: ProjectTrust;
   skills: {
     count: number;
     names: string[];
@@ -106,6 +111,7 @@ export interface AppService {
   listCommands(): Promise<SlashEntry[]>;
   settings(): SettingsPayload;
   saveSettings(input: SaveSettingsInput): Promise<AppInfo>;
+  setAccessMode(mode: AccessMode): Promise<AppInfo>;
   setModel(input: ModelChoiceInput): Promise<AppInfo>;
   listSessions(options?: SessionListOptions): Promise<SessionSummary[]>;
   searchSessions(
@@ -132,6 +138,7 @@ export interface AppService {
   }>;
   registerDraft(input: { provider: unknown; providerId?: string }): { draftToken: string };
   acceptTrust(): Promise<AppInfo>;
+  rejectTrust(): Promise<AppInfo>;
   catalogList(): Promise<CatalogSummary[]>;
   catalogProvider(id: string): Promise<CatalogProvider | undefined>;
   catalogStatus(): Promise<CatalogStatus>;

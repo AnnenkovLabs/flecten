@@ -1,4 +1,6 @@
-.composer-bar, .composer-left, .composer-right {
+.composer-bar, .composer-left, .composer-access { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.composer-access > span { color: var(--muted); font-size: 12px; white-space: nowrap; padding-inline-start: 6px; }
+.composer-right {
   display: flex;
   align-items: center;
 }
@@ -26,7 +28,7 @@
 }
 .composer-bar .voice:disabled { opacity: 0.35; }
 .composer-bar .stop { color: var(--text-2); }
-.composer-bar .stop:hover { background: var(--raised-hover); }
+.composer-bar .stop:hover:not(:disabled) { background: var(--raised-hover); }
 .composer-actions {
   display: flex;
   flex: none;
@@ -46,7 +48,7 @@
   background: var(--error);
   color: var(--bg);
 }
-.composer-actions .stop.is-stopping:hover { background: var(--error); color: var(--bg); filter: brightness(1.08); }
+.composer-actions .stop.is-stopping:hover:not(:disabled) { background: var(--error); color: var(--bg); filter: brightness(1.08); }
 .composer-bar .send-face {
   display: grid;
   place-items: center;

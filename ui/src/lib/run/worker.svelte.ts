@@ -8,7 +8,8 @@ import { emptyTokenUsage, tokenUsageEvent } from "./token-usage";
 
 /** Canonical live card state. References and the activity list read the same objects. */
 export class WorkerView {
-  #current: WorkerItem | undefined;
+  #current = $state<WorkerItem | undefined>();
+  #continuationSettled = $state(false);
   usage = $state(emptyTokenUsage());
   jobs = $state<AgentJob[]>([]);
   stopping = $state(false);
@@ -19,8 +20,20 @@ export class WorkerView {
   get running(): boolean {
     return this.#current?.status === "running";
   }
+  get resumable(): boolean {
+    return (
+      !this.#continuationSettled &&
+      (this.#current?.status === "stopped" ||
+        this.#current?.status === "interrupted" ||
+        this.#current?.status === "error")
+    );
+  }
+  settleContinuation(): void {
+    this.#continuationSettled = !this.running;
+  }
   reset(): void {
     this.#current = undefined;
+    this.#continuationSettled = false;
     this.stopping = false;
     this.usage = emptyTokenUsage();
     this.jobs = [];
@@ -35,6 +48,7 @@ export class WorkerView {
     this.usage = tokenUsageEvent(this.usage, event);
     if (event.type === "session.started" || !this.#current) {
       this.stopping = false;
+      this.#continuationSettled = false;
       const item: WorkerItem = {
         kind: "worker",
         id: nextId("worker"),

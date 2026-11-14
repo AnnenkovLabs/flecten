@@ -1,58 +1,31 @@
-import { PermissionEngine } from "../security/permissions";
-import type { PermissionRequest } from "../security/types";
-import { type ToolContext, ToolFailure } from "../tools/types";
+import { dirname } from "node:path";
+import { productEnv } from "../../shared/environment.cjs";
+import {
+  canonicalProjectPath,
+  type ProjectTrust,
+  readProjectIndex,
+  setProjectTrust,
+} from "../../shared/project-index.cjs";
+import { configPath } from "../config/load";
 
-/** Use the normal cancellable approval channel, so project trust is visible in the current chat. */
-export async function requestProjectTrust(
-  context: ToolContext,
-  trusted: () => boolean,
-  accept: () => Promise<unknown>,
-): Promise<void> {
-  if (trusted()) return;
-  if (!context.approvals)
-    throw new ToolFailure("permission", "Project trust requires an interactive approval.");
-  const request: PermissionRequest = {
-    action: "skill",
-    tool: "module",
-    target: context.cwd,
-    cwd: context.cwd,
-    sessionId: context.approvalSessionId ?? context.sessionId,
-    ...(context.permissionActor ? { actor: context.permissionActor } : {}),
-    args: { operation: "trust_project" },
-    risks: [
-      {
-        id: "project-trust",
-        label: "Trust this project",
-        detail:
-          "Configured modules, MCP servers and hooks can run code with your account's permissions. Approval lasts until the project is reopened.",
-      },
-    ],
-  };
-  const authority = new PermissionEngine(
-    { rules: [{ action: "skill", tool: "module", policy: "ask", checkpoint: true }] },
-    context.permissions,
+function profileDirectory(cwd: string): string {
+  return productEnv("PROFILE")?.trim() || dirname(configPath(cwd));
+}
+
+/** Trust belongs to the canonical directory and survives reopening the application. */
+export function projectTrust(cwd: string, projectRoot: string | null): ProjectTrust {
+  if (projectRoot === null) return "trusted";
+  const path = canonicalProjectPath(projectRoot);
+  return (
+    readProjectIndex(profileDirectory(cwd)).projects.find((project) => project.path === path)
+      ?.trust ?? "unknown"
   );
-  const decision = authority.decide(request);
-  if (!decision.approvalId || decision.policy === "deny")
-    throw new ToolFailure("permission", decision.reason);
-  const outcome = await context.approvals.wait(
-    {
-      id: decision.approvalId,
-      request,
-      reason: decision.reason,
-      humanOnly: true,
-      ...(context.callId ? { callId: context.callId } : {}),
-    },
-    context.signal,
-    authority,
-  );
-  context.signal.throwIfAborted();
-  if (outcome.choice === "deny" || outcome.by !== "user")
-    throw new ToolFailure("permission", `Project trust was not accepted (${outcome.by}).`);
-  if (authority.check(request).policy === "deny")
-    throw new ToolFailure(
-      "permission",
-      "Permission changed while project trust was awaiting approval.",
-    );
-  if (!trusted()) await accept();
+}
+
+export function saveProjectTrust(
+  cwd: string,
+  projectRoot: string,
+  trust: Exclude<ProjectTrust, "unknown">,
+): void {
+  setProjectTrust(profileDirectory(cwd), projectRoot, trust);
 }

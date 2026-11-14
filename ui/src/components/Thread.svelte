@@ -48,7 +48,7 @@
   let threadInner: HTMLDivElement;
   let focusToken = $state(0);
   const toolMirrors = $derived(workerMirrors(entries));
-  const items = $derived(conversationItems(entries, toolMirrors));
+  const items = $derived(conversationItems(entries, toolMirrors).filter(item => item.kind !== "approval" || item.state !== "pending"));
   let now = $state(Date.now());
   let atBottom = $state(true);
   let unread = $state(0);

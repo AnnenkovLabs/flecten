@@ -47,6 +47,7 @@ export function parseSummaryDestination(value: string): SummaryDestination | nul
     }
     if (parameters.length > 0) return null;
     if (url.hostname === "settings") {
+      if (url.pathname === "/sandbox") return { kind: "settings", section: "permissions" };
       const section = SETTINGS_SECTIONS.find((entry) => url.pathname === `/${entry.id}`);
       return section ? { kind: "settings", section: section.id } : null;
     }

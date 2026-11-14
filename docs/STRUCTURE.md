@@ -13,15 +13,17 @@
 | `src/app/server.ts`, `server-handlers.ts` | sidecar JSONL protocol, проверка команд и ответы |
 | `shared/twin*.ts`, `src/twin/`, `src/app/twin.ts`, `twin-handlers.ts`, `conversation-twin.ts`, `twin-question.ts` | отдельная персона, источники, обучение, направление Worker, приёмка, ответы от лица пользователя и typed dialogue; [TWIN.md](TWIN.md) |
 | `src/app/service.ts`, `service-types.ts` | сборка зависимостей и публичный API приложения |
+| `shared/access-mode.ts`, `src/app/access.ts` | общий каталог режимов доступа, определение custom и проверенное изменение security-полей конфига |
 | `src/app/conversation.ts`, `conversation-options.ts`, `worker-tool.ts`, `worker-references.ts` | независимые Talker/Worker, управление, роли, scoped ссылки и события Worker |
 | `src/app/session-pool.ts`, `recovery.ts`, `session-replay.ts` | параллельные задачи, восстановление и история модели |
 | `src/app/event-journal.ts`, `session-logs.ts` | live replay с курсором и durable запись |
 | `src/app/session-history.ts`, `session-export.ts` | retention, корзина и экспорт |
 | `src/app/extensions.ts`, `extension-runtime.ts`, `extension-handlers.ts` | жизненный цикл MCP/skills и запросы окна |
 | `src/app/provider-state.ts`, `provider-ops.ts`, `provider-secrets.ts` | представление провайдеров, проверки, actualize и скрытие секретов |
-| `src/config/` | версии, миграции, Zod-схемы, defaults, общий desktop profile, отдельные настройки проекта, scoped secrets, destination binding и атомарная запись |
+| `src/config/` | версии, миграции, Zod-схемы, defaults, единый глобальный desktop profile, scoped secrets, destination binding и атомарная запись |
 | `src/core/session/` | канонический lifecycle, бюджет, approvals, запуск, остановка и события |
 | `src/core/loop/` | stream, tool batches, continuation, retry и compaction |
+| `src/core/loop/external-access.ts`, `tool-authorization.ts` | канонические области внешних папок, общие grants чата, разрешение вызова и обновление logical/OS sandbox |
 | `src/core/pages/`, `src/context/` | typed lifecycle страниц Worker, архивный порт, summary, tokenizer, бюджет и pruning |
 | `src/tools/context/run.ts`, `src/store/pages.ts` | инструмент begin/complete/list/read/search и durable архив сегментов с восстановлением и копированием |
 | `src/core/queue/`, `goal/`, `subagents/` | соответствующие работающие механизмы сессии |
@@ -50,6 +52,7 @@
 | `src/terminal/command-completion.ts` | явный статус команды выбранной оболочки, frame с nonce/exit code и целым окончанием строки |
 | `src/terminal/process-scope.ts`, `native-processes.ts`, `windows-processes.ts` | наследуемая идентичность Linux-процессов, POSIX process/socket metrics и schema-validated Windows CIM snapshots |
 | `src/security/` | permissions, trust, sandbox, protected paths, secret backends |
+| `src/security/shell-paths.ts`, `src/tools/util/mutation-path.ts` | ресурсы shell через существующий lexer и повторная проверка путей файловых изменений |
 | `src/store/` | durable events, queue, pages, память и checkpoints |
 | `src/util/abort.ts`, `mutex.ts`, `atomic.ts` | отменяемое ожидание IO, сериализация и атомарная публикация с deadline |
 | `src/observability/` | bounded structured logs, counters, trace, crash report, diagnostics и opt-in telemetry |
@@ -60,6 +63,7 @@
 | Путь | Ответственность |
 |---|---|
 | `shell/main.mjs` | Electron lifecycle, окно и запуск sidecar |
+| `shared/project-index.cjs`, `shell/projects.mjs`, `src/app/project-list.ts`, `project-trust.ts` | сохранённые папки, каноническое доверие, выбор рабочей папки и общий список сессий |
 | `shell/preload.cjs`, `agent-commands.json` | проверенный IPC bridge и allowlist команд |
 | `shell/deep-links.mjs`, `window-state.mjs` | выбор существующей задачи по URL и restore bounds |
 | `shell/updater.mjs` | signed update loop: фоновые проверки, автозагрузка, установка по кнопке или при выходе |
@@ -67,6 +71,7 @@
 | `shell/update-runtime.mjs` | экземпляр updater в оболочке: feed, настройки из status, IPC |
 | `shell/update-policy.mjs`, `shared/update-settings.cjs` | политика фида, канала и расписания; общая нормализация настроек обновления для sidecar и оболочки |
 | `ui/src/App.svelte` | композиция экрана и горячие клавиши |
+| `ui/src/components/ProjectNavigation.svelte`, `ProjectTrust.svelte`, `ProjectGroup.svelte`, `ui/src/lib/run/projects.svelte.ts` | проекты и сессии, контекстное меню папки и запрос доверия при входе |
 | `ui/src/app.css` | единственные токены, шрифт и базовые стили |
 | `ui/src/controls.css` | общие кнопки, поля и переключатели всех поверхностей |
 | `ui/src/lib/modal.ts`, `clipboard.svelte.ts` | единый lifecycle модальных окон и подтверждённое копирование |
@@ -81,6 +86,8 @@
 | `ui/src/lib/thread-*` | окно сообщений, измерение высот и позиция чтения |
 | `ui/src/components/` | Svelte 5 компоненты с props и состоянием из lib |
 | `ui/src/components/settings/` | формы, trust, MCP, hooks, skills, modules и diagnostics |
+| `ui/src/components/permissions/`, `settings/PermissionsSettings.svelte`, `settings/SandboxSettings.svelte` | единый Access: режимы, запросы доступа, сохранённые правила, human checkpoints и раскрываемая изоляция |
+| `ui/src/components/ApprovalDock.svelte`, `ApprovalCard.svelte` | ожидающие решения над композером в чате и IDE, видимые кнопки ответа и receipts в истории |
 | `ui/src/components/ide/` | файлы, CodeMirror и diff |
 
 `shared/session-state.ts` задаёт единую проверяемую схему lifecycle snapshots для backend и renderer.
@@ -94,13 +101,13 @@
 - `tests/e2e/`: скрытый Electron с mock provider, сценарии и visual regression на 1480x940 и 1180x640.
 - `src/marketplace/modules/computer-use/`: bundled Linux Computer Use, управление сессией, private display backend, bounded AT-SPI, инструкции и Computer surface. Продуктовый путь проверяет `tests/integration/computer-use.test.ts`.
 - `.github/workflows/`: reusable quality, coverage text/LCOV, Electron visual regression, platform packaged smoke, packaging/signing и диагностика.
-- `docs/`: архитектура, решения, протокол, безопасность и приёмка.
+- `docs/`: архитектура, решения, протокол, безопасность и приёмка; `docs/research/access-ux-2026-11-14.md` фиксирует версии и исходники сравнения permissions UX.
 
 `docs/MEMORY.md` описывает действующий memory runtime и бюджеты. Внутренние материалы связывают решение с чужими исходниками и эксплуатационными отказами. `src/tools/memory/run.ts` предоставляет инструмент, а checkpoint использует существующий `src/core/pages/writer.ts` без отдельного запроса модели.
 
 ## Поток данных
 
-1. Electron запускает agent в выбранном проекте. Sidecar получает project lock.
+1. Electron запускает agent в выбранном проекте или в служебной папке профиля без проекта. Sidecar получает lock рабочего хранилища.
 2. `app` загружает конфиг, секреты, инструкции и расширения; строит registry и session pool.
 3. Renderer отправляет проверенную команду через preload. Он не читает файлы и не вызывает модель.
 4. Core session управляет прогоном, queue, approvals и tools; выводит типизированные события.

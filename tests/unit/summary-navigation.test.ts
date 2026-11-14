@@ -10,6 +10,10 @@ test("HTML navigation resolves actual settings, panels, the model menu and encod
       section: section.id,
     });
   }
+  expect(parseSummaryDestination("flecten://settings/sandbox")).toEqual({
+    kind: "settings",
+    section: "permissions",
+  });
   expect(parseSummaryDestination("flecten://panel/changes")).toEqual({
     kind: "panel",
     panel: "changes",

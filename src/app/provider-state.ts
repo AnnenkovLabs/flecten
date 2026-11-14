@@ -1,11 +1,8 @@
-import { existsSync } from "node:fs";
-import { join, resolve, sep } from "node:path";
 import type { HarnessConfig, ModelConfig, ProviderConfig } from "../config/schema";
 import type { Usage } from "../core/types";
 import { MissingKeyError } from "../errors";
 import { findCatalogModel, formatModelName } from "../providers/catalog";
 import type { ModelProvider } from "../providers/types";
-import type { Skill } from "../skills/schema";
 import { redactProviderError } from "./provider-secrets";
 
 export type ProviderKeySource = "command" | "stored" | "env" | "none";
@@ -168,30 +165,6 @@ export function parseProviderTestCommand(command: Record<string, unknown>): Prov
     ...(providerId ? { providerId } : {}),
     ...(draftToken ? { draftToken } : {}),
   };
-}
-
-function isInside(root: string, path: string): boolean {
-  const base = resolve(root);
-  const target = resolve(path);
-  return target === base || target.startsWith(`${base}${sep}`);
-}
-
-export function hasExecutableExtensions(
-  config: HarnessConfig,
-  skills: readonly Skill[],
-  cwd: string,
-): boolean {
-  const hooks = Object.values(config.hooks).some((list) => list.some((hook) => hook.enabled));
-  const mcp = Object.values(config.mcp.servers).some((server) => server.enabled);
-  const projectSkill = skills.some((skill) => isInside(cwd, skill.location));
-  return (
-    hooks ||
-    mcp ||
-    projectSkill ||
-    (config.modules?.dirs.length ?? 0) > 0 ||
-    existsSync(join(cwd, ".agents", "modules")) ||
-    existsSync(join(cwd, ".liquid", "agents"))
-  );
 }
 
 export function costOf(

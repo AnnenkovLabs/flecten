@@ -69,6 +69,7 @@ export function matchesPermissionRule(
   const actual = permissionPath(path, request.cwd);
   const matches = (root: string, target: string) =>
     target === root || target.startsWith(root.endsWith("/") ? root : `${root}/`);
+  if (rule.action === "external_path") return matches(prefix, actual);
   return (
     matches(prefix, actual) ||
     matches(

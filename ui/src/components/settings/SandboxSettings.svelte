@@ -8,15 +8,19 @@
 </script>
 
 {#if config}
-  <section class="settings-section" aria-labelledby="settings-sandbox">
-    <h2 id="settings-sandbox">{t("Sandbox")}</h2>
+  <section class="perm-section" aria-labelledby="settings-sandbox">
+    <h3 id="settings-sandbox" class="perm-section-title">{t("Process isolation")}</h3>
+    <p class="perm-preset-note">{t("Commands stay inside the project and folders approved for this chat while isolation is enabled.")}</p>
+    {#if settings.info?.sandbox?.enabled}
+      <p class="perm-preset-note" role="status">{settings.info.sandbox.available ? t("OS sandbox available") : t("OS sandbox unavailable")}: {settings.info.sandbox.kind}. {settings.info.sandbox.reason}</p>
+    {/if}
 
     {#if config.sandbox}
       <div class="st-card">
         <label class="st-switch st-row">
           <span class="st-switch-copy">
-            <strong>{t("Enabled")}</strong>
-            <span>{t("Check paths, secrets, and network access before execution.")}</span>
+            <strong>{t("Isolate processes")}</strong>
+            <span>{t("Limit commands to the project and approved folders.")}</span>
           </span>
           <input
             type="checkbox"

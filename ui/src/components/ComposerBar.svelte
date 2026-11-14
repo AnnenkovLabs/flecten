@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { ACCESS_MODES, type AccessMode, type ActiveAccessMode } from "../../../shared/access-mode";
+  import { accessModeDescription, accessModeLabel } from "../lib/permissions";
   import { t } from "../lib/i18n.svelte";
   import type { SendMode } from "../lib/composer/types";
   import type { ContextView } from "../lib/context-meter.svelte";
@@ -13,6 +15,9 @@
   interface Props {
     running: boolean;
     stopping: boolean;
+    canContinue: boolean;
+    controlCooldown: boolean;
+    onContinue: () => void;
     hasDraft: boolean;
     canSend: boolean;
     voiceSupported: boolean;
@@ -28,6 +33,9 @@
     model: string;
     reasoning: ReasoningChoice;
     variant?: string | undefined;
+    accessMode: ActiveAccessMode;
+    accessChanging: boolean;
+    onAccessModeChange: (mode: AccessMode) => void;
     onSend: (mode: SendMode) => void;
     onAttach: () => void;
     onVoiceStart: () => void;
@@ -42,6 +50,9 @@
   let {
     running,
     stopping,
+    canContinue,
+    controlCooldown,
+    onContinue,
     hasDraft,
     canSend,
     voiceSupported,
@@ -57,6 +68,9 @@
     model,
     reasoning,
     variant,
+    accessMode,
+    accessChanging,
+    onAccessModeChange,
     onSend,
     onAttach,
     onVoiceStart,
@@ -95,6 +109,11 @@
     ...variants.map(([id, entry]) => ({ value: id, label: entry.name ?? id })),
   ]);
 
+  const accessOptions = $derived([
+    ...(accessMode === "custom" ? [{ value: "custom" as const, label: accessModeLabel("custom"), description: accessModeDescription("custom") }] : []),
+    ...(Object.keys(ACCESS_MODES) as AccessMode[]).map((value) => ({ value, label: accessModeLabel(value), description: accessModeDescription(value) })),
+  ]);
+
   const stopLabel = $derived(stopping ? t("Force stop") : t("Stop"));
   const voiceTitle = $derived(
     !voiceSupported
@@ -126,6 +145,12 @@
       listenOpenRequests
       onSelect={onModelSelect}
     />
+    <div class="composer-access">
+      <span>{t("Access")}</span>
+      <ComposerSelect label={t("Access mode")} value={accessMode} options={accessOptions} disabled={accessChanging}
+        onChange={(value) => { if (value !== "custom") onAccessModeChange(value); }} />
+      <span class="sr-only" role="status">{accessChanging ? t("Applying decision…") : ""}</span>
+    </div>
     {#if variants.length > 0}
       <ComposerSelect label={t("Model variant")} value={variant ?? ""} options={variantOptions}
         disabled={running} onChange={(value) => onVariantChange(value || undefined)} />
@@ -159,7 +184,7 @@
       <div class="composer-actions" class:is-split={hasDraft} role="group" aria-label={t("Agent actions")}>
         <button class="stop" class:is-stopping={stopping} type="button" aria-label={stopLabel}
           title={stopping ? t("Waiting for the current step to finish. Click again to stop immediately") : t("Stop after the current response or command")}
-          onclick={onStop}>
+          disabled={controlCooldown} onclick={onStop}>
           <Icon name="stop" size={16} stroke={2} />
         </button>
         {#if hasDraft}
@@ -170,6 +195,12 @@
         {/if}
       </div>
       <span class="sr-only" role="status">{stopping ? t("Stopping after the current step. Click again to stop it immediately.") : ""}</span>
+    {:else if canContinue && !hasDraft}
+      <button class="send continue" type="button" aria-label={t("Continue")}
+        title={t("Continue the task where it stopped without starting over")}
+        disabled={controlCooldown || voiceActive} onclick={onContinue}>
+        <span class="send-face"><Icon name="continue" size={17} stroke={2} /></span>
+      </button>
     {:else}
       <button class="send" type="submit" aria-label={t("Send")} title={t("Send")} disabled={!canSend}>
         <span class="send-face"><Icon name="arrow-up" size={16} stroke={2} /></span>

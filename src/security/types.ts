@@ -85,6 +85,7 @@ export type PendingApproval = {
 /** How an approval ended for the waiting tool call. */
 export type ApprovalOutcome =
   | { choice: ApprovalChoice; by: "user"; feedback?: string }
+  | { choice: "allow_once"; by: "policy" }
   | { choice: "deny"; by: "timeout" | "aborted" | "policy" | "persistence" };
 
 export type ApprovalPrompt = {
@@ -122,6 +123,7 @@ export type SandboxDecision = {
 
 export type SandboxOptions = {
   workspaceRoot: string;
+  externalPaths?: readonly string[];
   allowNetwork?: boolean;
   readDenyPrefixes?: string[];
   writeDenyPrefixes?: string[];

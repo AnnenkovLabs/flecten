@@ -224,6 +224,7 @@ type AgentLeafEvent =
       checkpoints?: AgentCheckpoint[];
       info?: AgentInfo;
       sessions?: AgentSessionSummary[];
+      projects?: import("./run/projects.svelte").ProjectSessions[];
       session?: AgentSessionSummary;
       events?: AgentEvent[];
       replay?: AgentReplay;
@@ -237,6 +238,7 @@ type AgentLeafEvent =
   | ({ type: "status" } & AgentInfo)
   | { type: "agent.exit"; code: number | null; signal?: string; message?: string }
   | { type: "project.changed"; cwd: string }
+  | { type: "projects.changed" }
   | { type: "session.open"; id: string };
 
 export type AgentCommand =
@@ -445,6 +447,13 @@ export type AgentCommand =
       turn?: number;
     }
   | { type: "settings.get"; requestId: string }
+  | { type: "projects.list"; requestId: string }
+  | { type: "trust.accept" | "trust.reject"; requestId: string }
+  | {
+      type: "access.set";
+      requestId: string;
+      mode: import("../../../shared/access-mode").AccessMode;
+    }
   | {
       type: "settings.save";
       requestId: string;

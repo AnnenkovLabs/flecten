@@ -1,3 +1,4 @@
+import { AccessModeSchema } from "../../shared/access-mode";
 import { configPath } from "../config/load";
 import { isReasoningEffort } from "../core/types";
 import { DiagnosticsRuntime } from "../observability/runtime";
@@ -16,6 +17,7 @@ import {
 import { saveProjectFile } from "./file-edit";
 import { previewFile } from "./file-preview";
 import { MODULE_COMMANDS, type ModuleCommandType, moduleHandlers } from "./module-handlers";
+import { projectList } from "./project-list";
 import { parseProviderTestCommand } from "./provider-state";
 import { pullRequestContext } from "./pull-request-context";
 import { count, headers, optionalId, page, required, strings } from "./server-input";
@@ -41,6 +43,7 @@ export type { Reply } from "./server-session-handlers";
 const PROTOCOLS = ["openai-chat", "openai-responses", "anthropic-messages", "gemini"] as const;
 
 const APP_COMMANDS = [
+  "access.set",
   "context.pull-request",
   "hooks.test",
   "diagnostics.export",
@@ -66,6 +69,7 @@ const APP_COMMANDS = [
   "provider.draft",
   "provider.test",
   "provider.reauthorize",
+  "projects.list",
   "sessions.delete",
   "sessions.export",
   "sessions.fork",
@@ -77,6 +81,7 @@ const APP_COMMANDS = [
   "settings.save",
   "status",
   "trust.accept",
+  "trust.reject",
   "voice.status",
   "voice.transcribe",
   "voice.cancel",
@@ -106,8 +111,10 @@ export const REFRESH_AFTER: ReadonlySet<string> = new Set([
   "hello",
   "status",
   "trust.accept",
+  "trust.reject",
   "settings.save",
   "model.set",
+  "access.set",
 ]);
 
 export function isCommandType(type: string): type is CommandType {
@@ -138,6 +145,7 @@ function appHandlers(
   diagnostics?: DiagnosticsRuntime,
 ): Record<(typeof APP_COMMANDS)[number], Handler> {
   return {
+    "projects.list": async () => ({ projects: await projectList(app) }),
     "hooks.test": async (command) => ({ hookTest: await app.testHook(command) }),
     "diagnostics.export": async () => ({
       diagnostics: await (diagnostics ?? new DiagnosticsRuntime(app.info().cwd)).bundle(
@@ -161,6 +169,7 @@ function appHandlers(
       return { state: await app.session.send({ type: "status", sessionId }) };
     },
     "trust.accept": async () => ({ info: await app.acceptTrust() }),
+    "trust.reject": async () => ({ info: await app.rejectTrust() }),
     "sessions.list": async (command) => {
       const query = typeof command.query === "string" ? command.query : undefined;
       const options = { ...page(command), ...(query === undefined ? {} : { query }) };
@@ -194,6 +203,9 @@ function appHandlers(
       return { session: await app.forkSession(id, options) };
     },
     "settings.get": () => ({ settings: app.settings() }),
+    "access.set": async (command) => ({
+      info: await app.setAccessMode(AccessModeSchema.parse(command.mode)),
+    }),
     "settings.save": async (command) => {
       if (!isObject(command.config)) throw new Error("config is required");
       const clearApiKeys = strings(command.clearApiKeys);

@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { type ElectronApplication, _electron as electron, type Page } from "@playwright/test";
+import { selectProject, setProjectTrust } from "../../shared/project-index.cjs";
 import type { ModulesConfig } from "../../src/config/modules";
 import type { ModelInfo } from "../../ui/src/lib/types";
 
@@ -226,6 +227,8 @@ function launchEnvironment(cwd: string, configPath: string, user?: string): Reco
 }
 
 export interface LaunchOptions {
+  projectless?: boolean;
+  projectTrust?: "unknown" | "trusted" | "untrusted";
   /** Exercise the normal desktop profile instead of an explicitly selected config file. */
   appProfile?: boolean;
   /** null leaves the product default; other E2E paths explicitly exercise a single agent. */
@@ -303,6 +306,15 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
         `${JSON.stringify(configFor(mock.url, options.models, options.modules, options.conversation), null, 2)}\n`,
       );
     }
+    if (!options.projectless) setProjectTrust(userData, cwd, options.projectTrust ?? "trusted");
+    else selectProject(userData, null);
+    if (options.projectless && options.appProfile) {
+      mkdirSync(userData, { recursive: true });
+      writeFileSync(
+        join(userData, "flecten.config.json"),
+        `${JSON.stringify(configFor(mock.url, options.models, options.modules, options.conversation))}\n`,
+      );
+    }
 
     const executable = electronExecutable();
     if (!executable) throw new Error('Electron is not installed. Run "bun install" first.');
@@ -310,9 +322,11 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
     let executablePath = executable;
     if (process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
       const wrapper = join(cwd, owned ? "xvfb-electron.sh" : "xvfb-electron-2.sh");
-      writeFileSync(wrapper, `#!/bin/sh\nexec xvfb-run -a ${shellQuote(executable)} "$@"\n`, {
-        mode: 0o755,
-      });
+      writeFileSync(
+        wrapper,
+        `#!/bin/sh\nexec xvfb-run -a ${shellQuote(executable)} --ozone-platform=x11 "$@"\n`,
+        { mode: 0o755 },
+      );
       executablePath = wrapper;
     }
 
@@ -332,6 +346,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
     }
 
     const env = launchEnvironment(cwd, configPath, options.user);
+    if (options.projectless) delete env.FLECTEN_CWD;
     if (options.appProfile) {
       delete env.FLECTEN_CONFIG;
       env.FLECTEN_SECRET_BACKEND = "file";

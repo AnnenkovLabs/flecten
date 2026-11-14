@@ -1,5 +1,6 @@
 import { realpath } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { shellPaths } from "../../security/shell-paths";
 import type { PermissionAction, PermissionRequest } from "../../security/types";
 import { parseApplyPatch } from "../../tools/apply-patch/run";
 import type { Tool, ToolContext } from "../../tools/types";
@@ -86,11 +87,24 @@ export async function permissionRequest(
   const action = actionFor(tool, args);
   if (!action) return undefined;
   const native = tool.source === undefined || tool.source === "builtin";
-  const paths = native
-    ? tool.name === "context"
-      ? [resolve(context.logDir, "..", "pages")]
-      : pathsFor(tool.name, args)
-    : [];
+  const command = shellText({ action, tool: tool.name, cwd: context.cwd, args });
+  const executionCwd =
+    native && action === "shell"
+      ? typeof args.cwd === "string"
+        ? resolve(context.cwd, args.cwd)
+        : tool.name === "terminal"
+          ? (context.terminals?.get(typeof args.id === "string" ? args.id : "default")?.snapshot()
+              .cwd ?? context.cwd)
+          : context.cwd
+      : context.cwd;
+  const paths =
+    native && action === "shell"
+      ? [executionCwd, ...(command === undefined ? [] : shellPaths(command, executionCwd))]
+      : native
+        ? tool.name === "context"
+          ? [resolve(context.logDir, "..", "pages")]
+          : pathsFor(tool.name, args)
+        : [];
   const resources = new Set<string>();
   for (const path of paths) {
     const absolute = resolve(context.cwd, path);
@@ -102,14 +116,11 @@ export async function permissionRequest(
     ["memory", "todo", "terminal", "jobs", "worker", "context"].includes(tool.name);
   const bounded =
     ((native && known && (action === "read" || action === "write")) || tool.source === "skill") &&
-    [...resources].every((path) => isInside(context.cwd, path));
+    [...resources].every((path) => isInside(context.cwd, path, context.authorizedExternalPaths));
   const request: PermissionRequest = {
     action,
     tool: tool.name,
-    cwd:
-      native && action === "shell" && typeof args.cwd === "string"
-        ? resolve(context.cwd, args.cwd)
-        : context.cwd,
+    cwd: executionCwd,
     sessionId: context.approvalSessionId ?? context.sessionId,
     ...(context.permissionActor ? { actor: context.permissionActor } : {}),
     args,
@@ -118,10 +129,12 @@ export async function permissionRequest(
     ...(resources.size ? { paths: [...resources] } : {}),
     ...(typeof args.why === "string" && args.why ? { reason: args.why } : {}),
   };
-  const command = shellText(request);
-  const target = paths.length
-    ? paths.join(" → ")
-    : (command ?? args.url ?? args.query ?? args.name ?? args.id ?? args.operation ?? args.op);
+  const target =
+    action === "shell"
+      ? (command ?? args.op)
+      : paths.length
+        ? paths.join(" → ")
+        : (args.url ?? args.query ?? args.name ?? args.id ?? args.operation ?? args.op);
   if (typeof target === "string") request.target = target;
   if (action === "shell" && command !== undefined) {
     const risks = await shellRisks(

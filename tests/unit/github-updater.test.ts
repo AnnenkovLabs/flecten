@@ -13,7 +13,12 @@ const { ElectronHttpExecutor } = require("electron-updater/out/electronHttpExecu
 const { NodeHttpExecutor } = require("builder-util/out/nodeHttpExecutor.js");
 const { signUpdateManifests } = require("../../scripts/sign-update-manifests.mjs");
 
-const MANUAL_SETTINGS = { autoCheck: false, autoDownload: false, installOnQuit: false };
+const MANUAL_SETTINGS = {
+  channel: "stable",
+  autoCheck: false,
+  autoDownload: false,
+  installOnQuit: false,
+};
 const OWNER = "testowner";
 const REPO = "testrepo";
 
@@ -69,7 +74,7 @@ async function signedChannel(
   return { info, signed, artifact, bytes };
 }
 
-async function fixture() {
+async function fixture(currentVersion = "1.0.0") {
   const cwd = await mkdtemp(join(tmpdir(), "liquid-github-update-"));
   cleanups.push(() => rm(cwd, { recursive: true, force: true }));
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
@@ -178,7 +183,7 @@ async function fixture() {
     else process.env.APPIMAGE = oldAppImage;
   });
   const updater = new AppImageUpdater(null, {
-    version: "1.0.0",
+    version: currentVersion,
     name: "Flecten test",
     isPackaged: true,
     userDataPath: cwd,
@@ -194,7 +199,10 @@ async function fixture() {
   updater.logger = { info() {}, warn() {}, error() {}, debug() {} };
   updater.quitAndInstall = () => undefined;
   updater.install = () => true;
-  const controller = (settings = MANUAL_SETTINGS, key = publicPem) =>
+  const controller = (
+    settings: Partial<typeof MANUAL_SETTINGS> = MANUAL_SETTINGS,
+    key = publicPem,
+  ) =>
     createUpdater(
       {
         source: { kind: "github", owner: OWNER, repo: REPO },
@@ -247,7 +255,12 @@ describe("latestRelease selection", () => {
 describe("GitHub releases update source", () => {
   test("stable picks the newest published release, skips drafts and prereleases, and verifies bytes", async () => {
     const f = await fixture();
-    const app = f.controller({ autoCheck: false, autoDownload: true, installOnQuit: false });
+    const app = f.controller({
+      channel: "stable",
+      autoCheck: false,
+      autoDownload: true,
+      installOnQuit: false,
+    });
     await app.check();
     const result = await waitForState(app, "downloaded");
     expect(result.state).toBe("downloaded");
@@ -274,6 +287,37 @@ describe("GitHub releases update source", () => {
     expect(result.state).toBe("available");
     expect(result.version).toBe("2.1.0-beta.1");
     expect(f.paths).toContain(`/download/v2.1.0-beta.1/${f.betaChannel}.signed.json`);
+  });
+
+  test("the default Alpha channel downloads a verified prerelease in the background", async () => {
+    const f = await fixture();
+    const app = f.controller({
+      autoCheck: false,
+      autoDownload: true,
+      installOnQuit: true,
+    });
+    await app.check();
+    expect((await waitForState(app, "downloaded")).state).toBe("downloaded");
+    expect(f.updater.channel).toBe("beta");
+    expect(f.paths).toContain(`/download/v2.1.0-beta.1/${f.betaChannel}.signed.json`);
+    expect(await readFile(f.updater.installerPath)).toEqual(f.beta.bytes);
+    expect(f.updater.autoInstallOnAppQuit).toBe(true);
+    app.dispose();
+  });
+
+  test("channel selection never downloads a signed release older than the installed app", async () => {
+    const f = await fixture("3.0.0");
+    const app = f.controller();
+    for (const channel of ["stable", "beta", "stable"]) {
+      app.apply({
+        source: { kind: "github", owner: OWNER, repo: REPO },
+        settings: { ...MANUAL_SETTINGS, channel, autoDownload: true },
+      });
+      expect((await app.check()).state).toBe("idle");
+      expect(f.updater.allowDowngrade).toBe(false);
+    }
+    expect(f.paths.some((path) => path.endsWith(".AppImage"))).toBe(false);
+    app.dispose();
   });
 
   test("a tampered signed manifest blocks the release before any artifact download", async () => {

@@ -18,6 +18,7 @@ export async function conversationOptions(
   sections: readonly PromptSection[],
   execute: (request: WorkerRequest, context: ToolContext) => Promise<unknown>,
   answer?: (question: string, signal: AbortSignal) => Promise<string | undefined>,
+  projectRoot?: string | null,
 ) {
   const source = options.tools;
   const control = workerTool(execute);
@@ -56,13 +57,14 @@ export async function conversationOptions(
     },
   );
   const [talker, worker] = await Promise.all([
-    systemPrompt(options.cwd, config, sections, talkerTools, "talker"),
+    systemPrompt(options.cwd, config, sections, talkerTools, "talker", projectRoot),
     systemPrompt(
       options.cwd,
       config,
       sections.filter((section) => section.id !== "skills"),
       workerTools,
       "worker",
+      projectRoot,
     ),
   ]);
   return {

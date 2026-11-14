@@ -82,6 +82,8 @@ export interface ToolContext {
   reads: ReadTracker;
   permissions?: PermissionEngine;
   sandbox?: SandboxPolicy | undefined;
+  /** External roots authorized for this prepared call; never supplied by model arguments. */
+  authorizedExternalPaths?: string[];
   osSandbox?: OsSandboxContext | undefined;
   /** Current execution boundary, refreshed for each call and again after approval. */
   security?(): { sandbox: SandboxPolicy | undefined; osSandbox: OsSandboxContext | undefined };

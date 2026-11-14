@@ -4,6 +4,7 @@
   import { pasteImage, pickAttachments } from "../../lib/desktop";
   import Thread from "../Thread.svelte";
   import Composer from "../Composer.svelte";
+  import ApprovalDock from "../ApprovalDock.svelte";
   import Icon from "../Icon.svelte";
   import RunStrip from "../RunStrip.svelte";
 
@@ -24,8 +25,11 @@
   {/if}
   <div class="agent-composer">
     <RunStrip jobs={run.view.jobs} budget={run.view.budget} />
+    <ApprovalDock items={run.view.thread.items} />
     <Composer running={run.busy} stopping={run.view.stopping} {focusToken} placeholder={t("Message the agent…")} context={run.contextView}
+      canContinue={run.controls.canContinue} controlCooldown={run.controls.coolingDown} onContinue={() => run.controls.continue()}
       commands={run.commands} providers={run.info?.providers ?? []} provider={run.provider} model={run.model}
+      accessMode={run.info?.accessMode ?? "custom"} accessChanging={run.accessChanging || run.connection !== "ready"} onAccessModeChange={(mode) => void run.setAccessMode(mode)}
       reasoning={run.reasoning} variant={run.variant} queued={run.view.queued} sendMode={run.sendMode}
       contexts={run.contextMentions} files={run.files} onRequestFiles={() => void run.loadFiles()} onPickAttachments={pickAttachments} onPasteImage={pasteImage}
       {onCommand} onCompact={(focus) => void run.task.compact(focus)} onModelSelect={(provider, model) => run.setModel(provider, model)}
@@ -45,6 +49,7 @@
   h3 { font-size: 17px; color: var(--text-2); font-weight: 500; letter-spacing: -.02em; }
   .agent-empty p { max-width: 32ch; color: var(--muted); font-size: 13px; line-height: 1.7; }
   .agent-composer { flex: none; min-width: 0; }
+  .agent-sidebar :global(.approval-dock) { padding-inline: 12px; }
   .agent-sidebar :global(.thread-inner) { padding: 22px 20px 32px; }
   .agent-sidebar :global(.thread-item), .agent-sidebar :global(.thread-item *) { animation: none !important; }
   .agent-sidebar :global(.answer), .agent-sidebar :global(.user-message) { font-size: 14px; line-height: 1.65; }

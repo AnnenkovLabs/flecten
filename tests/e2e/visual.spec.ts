@@ -183,7 +183,9 @@ test("new session screen and empty state", async () => {
     await expect(page.locator(".ns-recent-empty")).toHaveText(
       "Здесь появятся задачи этого проекта.",
     );
-    await expect(page.locator(".project-row")).toContainText("liquid-e2e-visual-new-session");
+    await expect(page.locator(".project-row.is-current")).toContainText(
+      "liquid-e2e-visual-new-session",
+    );
 
     for (const [width, height] of SIZES) {
       await setSize(harness, width, height);

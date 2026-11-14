@@ -15,6 +15,7 @@ import { bundledAgent, smokeRenderer } from "./packaged-smoke.mjs";
 import { MODULE_FRAME_DOCUMENT } from "./module-frame.mjs";
 import { captureWhenLoaded } from "./screenshot.mjs";
 import { installSessionLinks } from "./deep-links.mjs";
+import { projectSelection, registerProjectIpc } from "./projects.mjs";
 import { installUpdateRuntime } from "./update-runtime.mjs";
 import {
   claimSingleInstance,
@@ -36,7 +37,7 @@ const repoRoot = normalize(join(shellDir, ".."));
 const uiRoot = normalize(join(repoRoot, "ui/dist"));
 const devUrl = productEnv("DEV_URL");
 const devOrigin = devUrl ? new URL(devUrl).origin : null;
-let agentCwd = productEnv("CWD") || process.cwd();
+let agentCwd;
 const screenshotPath = process.argv.includes("--shot") ? join(tmpdir(), "liquid-ui.png") : null;
 const headless = productEnv("HEADLESS") === "1";
 const smoke = productEnv("SMOKE") === "1";
@@ -46,6 +47,11 @@ const commandTypes = new Set(require("./agent-commands.json"));
 const automated = headless || smoke || screenshotPath !== null;
 preserveUserData(app);
 if (smoke && smokeOut) app.setPath("userData", join(dirname(smokeOut), "profile"));
+let mainWindow = null;
+const primary = claimSingleInstance(app, () => focusWindow(mainWindow), automated);
+if (!primary) app.exit(0);
+const selection = projectSelection(app.getPath("userData"), productEnv("CWD"), process.cwd());
+agentCwd = selection.cwd;
 function isTrustedIpcSender(event) {
   if (!mainWindow || mainWindow.isDestroyed()) return false;
   if (!event.sender || event.sender.id !== mainWindow.webContents.id) return false;
@@ -138,7 +144,6 @@ async function handleProtocol(request) {
 }
 
 let interfaceLocale = "en";
-let mainWindow = null;
 let agent = null;
 const agentStartup = new AgentStartup();
 let closeAgentOutput = null;
@@ -146,13 +151,22 @@ let smokeAgent = null;
 let updateRuntime = null;
 let smokeDone = false;
 const queued = [];
+let pendingSession = null;
 const sessionLinks = installSessionLinks({ app, automated, emit: sendToRenderer, focus: () => focusWindow(mainWindow), openProject: (path) => {
   if (agentCwd === path) return false;
-  agentCwd = path;
-  stopAgent();
-  if (mainWindow) { sendToRenderer({ type: "project.changed", cwd: path }); startAgent(); }
+  switchProject(path);
   return true;
 } });
+function switchProject(path, sessionId) {
+  agentCwd = selection.select(path);
+  pendingSession = sessionId ?? null;
+  stopAgent();
+  if (mainWindow) {
+    sendToRenderer({ type: "project.changed", cwd: agentCwd });
+    startAgent();
+  }
+  return agentCwd;
+}
 
 function finishSmoke(result) {
   if (!smoke || smokeDone) return;
@@ -200,7 +214,7 @@ function startAgent() {
   if (smoke) smokeAgent = bundledAgent(command, process.resourcesPath, app.isPackaged);
   const child = spawn(command, args, {
     cwd: agentCwd,
-    env: { ...process.env, FLECTEN_CWD: agentCwd, FLECTEN_PROFILE: app.getPath("userData"), BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
+    env: { ...process.env, FLECTEN_CWD: agentCwd, FLECTEN_PROFILE: app.getPath("userData"), FLECTEN_PROJECTLESS: selection.projectless ? "1" : "0", BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
     stdio: ["pipe", "pipe", "pipe"],
   });
   agent = child;
@@ -213,6 +227,7 @@ function startAgent() {
       if (message.type === "status") {
         updateRuntime?.applyStatus(message);
         sessionLinks.status();
+        if (pendingSession) { const id = pendingSession; pendingSession = null; sendToRenderer({ type: "session.open", id }); }
       }
     },
     invalid: () => sendToRenderer({ type: "error", code: "protocol", message: "agent sent invalid JSON" }),
@@ -393,18 +408,8 @@ ipcMain.handle("liquid:find-in-page", (event, text) => {
   });
 });
 
-ipcMain.handle("liquid:choose-project", async (event) => {
-  if (!isTrustedIpcSender(event)) return null;
-  const win = BrowserWindow.fromWebContents(event.sender);
-  const result = await dialog.showOpenDialog(win, { properties: ["openDirectory"] });
-  const selected = result.canceled ? undefined : result.filePaths[0];
-  if (!selected) return null;
-  agentCwd = selected;
-  stopAgent();
-  startAgent();
-  sendToRenderer({ type: "project.changed", cwd: selected });
-  return selected;
-});
+registerProjectIpc({ ipcMain, dialog, BrowserWindow, isTrusted: isTrustedIpcSender, selection, switchProject,
+  refresh: () => sendToRenderer({ type: "projects.changed" }) });
 
 registerLocaleIpc(ipcMain, isTrustedIpcSender, (locale) => { interfaceLocale = locale; });
 ipcMain.on("window:control", (event, action) => {
@@ -435,9 +440,6 @@ ipcMain.on("agent:command", (event, command) => {
   sendToAgent(command);
   if (command.type === "hello") sessionLinks.listening();
 });
-
-const primary = claimSingleInstance(app, () => focusWindow(mainWindow), automated);
-if (!primary) app.quit();
 
 app.whenReady().then(() => {
   if (!primary) return;

@@ -53,7 +53,7 @@ export OPENAI_API_KEY=...
 bun run app:dev
 ```
 
-`bun run app:dev` 会启动 Vite、在 Bun 上运行核心，并打开带热重载的 Electron 窗口。当前目录即项目根目录；设置 `FLECTEN_CWD` 可在其他位置工作。
+`bun run app:dev` 会启动 Vite、在 Bun 上运行核心，并打开带热重载的 Electron 窗口。新配置首次打开时不选择项目。请在应用中添加文件夹，或通过 `FLECTEN_CWD` 明确指定；后续启动会恢复你的选择。
 
 ```bash
 # 或另一个提供商

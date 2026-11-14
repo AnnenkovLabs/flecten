@@ -31,6 +31,7 @@ export interface ChildRuntime {
   modules?: SessionOptions["modules"];
   memory?: MemoryPort;
   cwd: string;
+  projectRoot?: string | null;
   config(): HarnessConfig;
   provider(): ModelProvider;
   tools(): ToolRegistry;
@@ -77,6 +78,7 @@ export function subagentChildRunner(runtime: ChildRuntime) {
       { limits: config.tools, authorize: (tool) => request.parentAuthorize?.(tool.name) },
     );
     const built = await buildPrompt(runtime.cwd, {
+      ...(runtime.projectRoot === undefined ? {} : { projectRoot: runtime.projectRoot }),
       tools: childTools.specs(),
       ...(config.context.promptBudget === undefined
         ? {}

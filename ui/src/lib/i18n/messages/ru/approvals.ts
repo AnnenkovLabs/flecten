@@ -37,8 +37,8 @@ export default {
   "Applying decision…": "Применяем решение…",
   "Expired: waiting for confirmation": "Срок истёк: ждём подтверждения",
   "Save this exact action for this project?": "Сохранить это точное действие для проекта?",
-  "Only identical arguments, paths and working directory will match. You can revoke this rule in Permissions.":
-    "Совпасть должны все аргументы, пути и рабочая папка. Отозвать правило можно в разделе разрешений.",
+  "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
+    "Совпасть должны все аргументы, пути и рабочая папка. Отозвать правило можно в разделе «Доступ».",
   "For this chat": "Для этого чата",
   "Save exact rule": "Сохранить точное правило",
   "Remember…": "Запомнить…",
@@ -47,8 +47,8 @@ export default {
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "Разрешает обычные действия. Правила опасных операций и ограничения песочницы продолжают действовать.",
   "Saved rules": "Сохранённые правила",
-  "Rules belong to this project. Removing a rule takes effect when you save, including during an active run.":
-    "Правила принадлежат этому проекту. Удаление применяется после сохранения, в том числе во время работы агента.",
+  "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
+    "Правила сохраняются глобально. Удаление правила вступает в силу после сохранения, в том числе во время работы агента.",
   "No saved rules.": "Нет сохранённых правил.",
   "All matching actions": "Все подходящие действия",
   "Exact arguments and resources": "Точные аргументы и ресурсы",
@@ -69,4 +69,37 @@ export default {
   "Feedback for the agent": "Комментарий для агента",
   "OS sandbox available": "Песочница ОС доступна",
   "OS sandbox unavailable": "Песочница ОС недоступна",
+  Access: "Доступ",
+  "Access mode": "Режим доступа",
+  Agent: "Агент",
+  "Confirm changes": "Подтверждать изменения",
+  "Custom access": "Свой режим доступа",
+  "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.":
+    "Читает, изменяет файлы и выполняет команды в проекте. Спрашивает перед доступом к другой папке или необратимыми действиями.",
+  "Reads freely. Asks before changes, commands and connected tools.":
+    "Читает без вопросов. Спрашивает перед изменениями, командами и вызовами подключённых инструментов.",
+  "Works across your computer without routine approvals. Process isolation is off.":
+    "Работает на всём компьютере без обычных запросов разрешений. Изоляция процессов выключена.",
+  "Advanced settings differ from these modes.": "Расширенные настройки отличаются от этих режимов.",
+  "Saved rules and human checkpoints still apply in every mode.":
+    "Сохранённые правила и обязательные подтверждения действуют во всех режимах.",
+  "Advanced access settings": "Расширенные настройки доступа",
+  "Action permissions": "Разрешения по действиям",
+  "Process isolation": "Изоляция процессов",
+  "Isolate processes": "Изолировать процессы",
+  "Limit commands to the project and approved folders.":
+    "Ограничивать команды проектом и разрешёнными папками.",
+  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
+    "При включённой изоляции команды работают внутри проекта и папок, разрешённых для этого чата.",
+  "Allow folder access?": "Разрешить доступ к папке?",
+  "Folder access covers the displayed paths and their subfolders.":
+    "Доступ распространяется на указанные папки и все вложенные папки.",
+  "Access is shared with agents in this chat.": "Доступ общий для агентов этого чата.",
+  "Repeat this action in this chat": "Повторять это действие в этом чате",
+  "Remember folder access": "Запомнить доступ к папке",
+  "Access mode: {0}": ["Режим доступа: ", 0],
+  "Could not change access. Try again. {0}": [
+    "Не удалось изменить доступ. Попробуйте ещё раз. ",
+    0,
+  ],
 } as const;

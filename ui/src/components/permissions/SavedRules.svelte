@@ -6,7 +6,7 @@
 
 <section class="perm-section" aria-label={t("Saved rules")}>
   <h3 class="perm-section-title">{t("Saved rules")}</h3>
-  <p class="perm-preset-note">{t("Rules belong to this project. Removing a rule takes effect when you save, including during an active run.")}</p>
+  <p class="perm-preset-note">{t("Rules are saved globally. Removing a rule takes effect when you save, including during an active run.")}</p>
   {#if rules.length === 0}<p class="perm-empty">{t("No saved rules.")}</p>{/if}
   {#each rules as rule, index}
     <div class="saved-rule">

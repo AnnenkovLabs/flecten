@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { AccessMode, ActiveAccessMode } from "../../../shared/access-mode";
   import { t } from "../lib/i18n.svelte";
   import type { PickedFile } from "../lib/composer/attachments";
   import type { MentionItem, QueuedMessage, SendMode, SkillCommand } from "../lib/composer/types";
@@ -15,6 +16,7 @@
     ThreadItem,
   } from "../lib/types";
   import Composer from "./Composer.svelte";
+  import ApprovalDock from "./ApprovalDock.svelte";
   import NewSession from "./new-session/NewSession.svelte";
   import RunStrip from "./RunStrip.svelte";
   import Toast from "./Toast.svelte";
@@ -28,6 +30,8 @@
     model: string;
     reasoning: ReasoningChoice;
     variant?: string | undefined;
+    accessMode: ActiveAccessMode;
+    accessChanging: boolean;
   }
 
   interface Props {
@@ -35,6 +39,9 @@
     project: string;
     cwd: string;
     stopping: boolean;
+    canContinue: boolean;
+    controlCooldown: boolean;
+    onContinue: () => void;
     items: ThreadItem[];
     live: boolean;
     liveLabel: string;
@@ -48,6 +55,7 @@
     onModelSelect: (provider: string, model: string) => void;
     onReasoningChange: (value: ReasoningChoice) => void;
     onVariantChange: (value: string | undefined) => void;
+    onAccessModeChange: (mode: AccessMode) => void;
     queued: QueuedMessage[];
     sendMode: SendMode;
     files: string[];
@@ -74,6 +82,9 @@
     project,
     cwd,
     stopping,
+    canContinue,
+    controlCooldown,
+    onContinue,
     items,
     live,
     liveLabel,
@@ -87,6 +98,7 @@
     onModelSelect,
     onReasoningChange,
     onVariantChange,
+    onAccessModeChange,
     queued,
     sendMode,
     files,
@@ -117,6 +129,9 @@
   <Composer
     running={busy}
     {stopping}
+    {canContinue}
+    {controlCooldown}
+    {onContinue}
     {focusToken}
     {layout}
     placeholder={layout === "hero" ? t("Describe the task…") : t("Message the agent…")}
@@ -127,6 +142,9 @@
     model={composer.model}
     reasoning={composer.reasoning}
     variant={composer.variant}
+    accessMode={composer.accessMode}
+    accessChanging={composer.accessChanging}
+    {onAccessModeChange}
     {sendMode}
     {queued}
     {files}
@@ -151,8 +169,8 @@
   aria-labelledby={items.length > 0 || live ? "tab-thread" : undefined}>
   {#if items.length === 0 && !live}
     <NewSession
-      project={{ id: "current", name: project, path: cwd }}
-      recentProjects={[{ id: "current", name: project, path: cwd }]}
+      project={project ? { id: "current", name: project, path: cwd } : null}
+      recentProjects={project ? [{ id: "current", name: project, path: cwd }] : []}
       {tasks}
       {busy}
       composer={heroComposer}
@@ -177,6 +195,7 @@
     <div class="dock">
       <Toast />
       <RunStrip {jobs} {budget} />
+      <ApprovalDock {items} />
       {@render composerView("dock")}
     </div>
   {/if}

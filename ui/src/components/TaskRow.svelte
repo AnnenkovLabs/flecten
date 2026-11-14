@@ -14,11 +14,12 @@
     onSelect: (id: string) => void;
     onRename: (id: string, title: string) => void;
     onDelete: (id: string) => void;
+    actions?: boolean;
   }
 
   const TASK_FORK_EVENT = "liquid:task-fork";
 
-  let { task, active, onSelect, onRename, onDelete }: Props = $props();
+  let { task, active, onSelect, onRename, onDelete, actions = true }: Props = $props();
 
   const STATUS: Record<TaskStatusKind, { icon: IconName; label: string }> = $derived({
     working: { icon: "spark", label: t("running") },
@@ -159,7 +160,7 @@
       </span>
       <span class="task-title">{task.title}</span>
     </button>
-    <button
+    {#if actions}<button
       class="task-more"
       type="button"
       aria-label={t("Actions: {0}", [task.title])}
@@ -169,7 +170,7 @@
       onclick={() => (menuOpen = !menuOpen)}
     >
       <Icon name="more" size={15} />
-    </button>
+    </button>{/if}
   {/if}
 
   {#if menuOpen}

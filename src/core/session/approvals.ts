@@ -114,7 +114,9 @@ export class ApprovalWaiters {
     const timeoutMs = this.#timeoutMs();
     const createdAt = Date.now();
     return new Promise<ApprovalOutcome>((resolve) => {
+      let unsubscribe = (): void => {};
       const finish = (outcome: ApprovalOutcome): void => {
+        unsubscribe();
         clearTimeout(timer);
         signal.removeEventListener("abort", abort);
         this.#resolved.push({ id: prompt.id, choice: outcome.choice, by: outcome.by });
@@ -167,6 +169,26 @@ export class ApprovalWaiters {
         ...(prompt.request.actor ? { actor: prompt.request.actor } : {}),
       };
       this.#waiting.set(prompt.id, { finish, approval, authority });
+      // A mode or covering folder grant can release a waiter without another user click.
+      unsubscribe =
+        authority?.subscribe(() => {
+          if (Date.now() >= approval.expiresAt) {
+            expire("timeout");
+            return;
+          }
+          if (
+            !this.#waiting.has(prompt.id) ||
+            !authority.pending().some((item) => item.id === prompt.id)
+          )
+            return;
+          const current = authority.check(prompt.request);
+          if (current.policy === "ask" || current.humanOnly) return;
+          authority.cancel(prompt.id);
+          this.#settle(prompt.id, {
+            choice: current.policy === "deny" ? "deny" : "allow_once",
+            by: "policy",
+          });
+        }) ?? unsubscribe;
       this.#emit({ type: "approval.requested", sessionId, approval });
       if (signal.aborted) abort();
     });

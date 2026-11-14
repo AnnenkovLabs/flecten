@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from "../../lib/i18n.svelte";
-  import { approvalActionTitle, isApprovalExpired, reviewedApprovalIds, sortApprovals, type ApprovalDecision, type ApprovalView } from "../../lib/permissions";
+  import { approvalActionTitle, approvalScopePaths, approvalSessionLabel, isApprovalExpired, reviewedApprovalIds, sortApprovals, type ApprovalDecision, type ApprovalView } from "../../lib/permissions";
   let { approvals, onApproval, onAllowAll, onDenyAll }: {
     approvals: ApprovalView[];
     onApproval: (id: string, decision: ApprovalDecision, feedback?: string) => void | Promise<void>;
@@ -64,7 +64,11 @@
     {#each pending as item (item.id)}
       <li class="perm-approval" aria-busy={busy.includes(item.id)}>
         <div class="perm-approval-top"><strong class="perm-tool">{approvalActionTitle(item.action)}</strong></div>
-        <code class="perm-approval-target">{item.target || item.tool}</code>
+        {#if item.action === "external_path"}
+          <p class="perm-preset-note">{t("Folder access covers the displayed paths and their subfolders.")}</p>
+          {#each approvalScopePaths(item) as path}<code class="perm-approval-target">{path}</code>{/each}
+          <p class="perm-preset-note">{t("Access is shared with agents in this chat.")}</p>
+        {:else}<code class="perm-approval-target">{item.target || item.tool}</code>{/if}
         {#if item.risks?.length}<p class="perm-preset-note">{item.risks.map(risk => risk.label).join(" · ")}</p>{/if}
         <details class="perm-preset-note">
           <summary>{t("Details")}</summary>
@@ -76,18 +80,22 @@
           {#if item.humanOnly}<p>{t("Human approval required every time")}</p>{/if}
         </details>
         <div class="perm-approval-actions">
-          <button class="st-btn st-btn--primary" type="button" disabled={disabled(item)} onclick={() => decide(item, "allow_once")}>{t("Allow once")}</button>
+          <button class="st-btn st-btn--primary" type="button" disabled={disabled(item)} onclick={() => decide(item, item.action === "external_path" && !item.humanOnly ? "allow_session" : "allow_once")}>{item.action === "external_path" && !item.humanOnly ? t("For this chat") : t("Allow once")}</button>
+          {#if item.action === "external_path" && !item.humanOnly}
+            <button class="st-btn" type="button" disabled={disabled(item)} onclick={() => decide(item, "allow_once")}>{t("Allow once")}</button>
+            <button class="st-btn" type="button" disabled={disabled(item)} onclick={() => decide(item, "allow_always")}>{t("Remember folder access")}</button>
+          {/if}
           <button class="st-btn st-btn--danger" type="button" disabled={disabled(item)} onclick={() => decide(item, "deny")}>{t("Deny")}</button>
         </div>
         <details class="perm-preset-note">
           <summary>{t("More options")}</summary>
-          {#if !item.humanOnly}
+          {#if !item.humanOnly && item.action !== "external_path"}
             <div class="perm-approval-actions">
-              <button class="st-btn" type="button" disabled={disabled(item)} onclick={() => decide(item, "allow_session")}>{t("For this chat")}</button>
-              <button class="st-btn" type="button" disabled={disabled(item)} onclick={() => remember = remember === item.id ? null : item.id}>{t("Remember…")}</button>
+                <button class="st-btn" type="button" disabled={disabled(item)} onclick={() => decide(item, "allow_session")}>{approvalSessionLabel(item.action)}</button>
+                <button class="st-btn" type="button" disabled={disabled(item)} onclick={() => remember = remember === item.id ? null : item.id}>{t("Remember…")}</button>
             </div>
             {#if remember === item.id}
-              <p>{t("Only this action in this folder.")}</p><code class="perm-approval-target">{item.cwd}</code>
+              <p>{t("Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.")}</p><code class="perm-approval-target">{item.cwd}</code>
               <button class="st-btn" type="button" disabled={disabled(item)} onclick={() => decide(item, "allow_always")}>{t("Save exact rule")}</button>
             {/if}
           {/if}

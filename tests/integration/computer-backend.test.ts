@@ -31,7 +31,16 @@ test.skipIf(!supported)(
     try {
       await backend.start({ width: 1280, height: 800 }, AbortSignal.timeout(15000));
       await backend.launch({ url: server.url.href }, AbortSignal.timeout(20000));
-      const observed = await backend.observe(AbortSignal.timeout(7000));
+      // A visible Firefox window precedes the document's accessibility tree.
+      const documentReady = AbortSignal.timeout(10000);
+      let observed = await backend.observe(documentReady);
+      while (
+        !observed.accessibility.nodes.some(
+          (node: Node) => node.role === "entry" && node.name === "Name" && node.bounds,
+        )
+      ) {
+        observed = await backend.observe(documentReady);
+      }
       expect(observed.width).toBe(1280);
       expect(observed.height).toBe(800);
       expect(observed.accessibility.available).toBe(true);

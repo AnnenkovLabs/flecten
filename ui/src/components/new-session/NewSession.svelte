@@ -56,6 +56,10 @@
     <section class="ns-launch" aria-labelledby="new-session-heading">
       <header class="ns-intro">
         <h1 class="ns-greeting" id="new-session-heading">{t("What needs to be done?")}</h1>
+        {#if !project}
+          <p class="ns-project-empty">{t("Add a folder to work on a project. You can also start a task without one.")}</p>
+          <button class="ns-add-folder" type="button" onclick={onChooseFolder}>{t("Add folder")}</button>
+        {/if}
       </header>
 
       {@render composer()}
@@ -79,3 +83,9 @@
     </section>
   </div>
 </section>
+
+<style>
+  .ns-project-empty { max-width: 480px; margin: 14px 0; color: var(--text-2); font-size: 14px; line-height: 1.6; text-wrap: pretty; }
+  .ns-add-folder { min-height: 32px; padding: 6px 12px; margin-bottom: 16px; border: 0; border-radius: 7px; background: var(--raised); color: var(--text); font: inherit; font-size: 13px; }
+  .ns-add-folder:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+</style>

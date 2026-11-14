@@ -9,7 +9,7 @@
   import RestoreDialog from "./components/RestoreDialog.svelte";
   import SettingsModal from "./components/SettingsModal.svelte";
   import ExtensionRequests from "./components/settings/ExtensionRequests.svelte";
-  import Sidebar from "./components/Sidebar.svelte";
+  import ProjectNavigation from "./components/ProjectNavigation.svelte";
   import TitleBar from "./components/TitleBar.svelte";
   import IdePane from "./components/ide/IdePane.svelte";
   import SubagentPane from "./components/SubagentPane.svelte";
@@ -24,7 +24,6 @@
   import { windowTitle } from "./lib/format";
   import { isModifier } from "./lib/platform";
   import { RunStore } from "./lib/run.svelte";
-  import { deleteTask, renameTask } from "./lib/run-tasks";
   import { settings } from "./lib/settings.svelte";
   import { toast } from "./lib/toast.svelte";
   import { canSplitWorkspace, Workspace, WORKSPACE_LAYOUT_KEY } from "./lib/workspace.svelte";
@@ -43,8 +42,9 @@
     model: run.model,
     reasoning: run.reasoning,
     variant: run.variant,
+    accessMode: run.info?.accessMode ?? "custom",
+    accessChanging: run.accessChanging || run.connection !== "ready",
   });
-  const projects = $derived(run.projects);
   const startScreen = $derived(run.view.thread.items.length === 0 && !run.view.live);
   const tasks = $derived(
     run.sessions.map((session) => ({
@@ -69,11 +69,6 @@
     }
     await chooseProject();
   }
-  const activeTask = $derived(run.activeTask);
-  const user = $derived({
-    name: run.userName,
-    initial: run.userName.slice(0, 1).toUpperCase(),
-  });
 
   let sidebarHidden = $state(false);
   let twinOpen = $state(false);
@@ -246,7 +241,7 @@
       }
       if (!settings.open && run.busy) {
         event.preventDefault();
-        run.stop();
+        if (!event.repeat) run.stop();
       }
       return;
     }
@@ -312,17 +307,11 @@
     onOpenSettings={() => settings.openPanel()}
   />
   <div class="body" class:sidebar-hidden={sidebarHidden || mode === "ide"}>
-    <div class="project-sidebar" data-harness-region="sidebar" hidden={mode === "ide"}>
-    <Sidebar
-      hidden={sidebarHidden}
-      {projects}
-      {activeTask}
-      {user}
-      onSelectTask={selectTask}
-      onNewTask={newTask}
-      onRenameTask={(id, title) => void renameTask(run, { id, title })}
-      onDeleteTask={(id) => void deleteTask(run, { id })}
-      onSearch={(query) => void run.searchSessions(query)}
+    <div class="project-sidebar" data-harness-region="sidebar">
+    <ProjectNavigation
+      {run} hidden={sidebarHidden || mode === "ide"}
+      onSelectTask={selectTask} onNewTask={newTask}
+      onChooseFolder={() => void chooseFolder()}
       twinActive={twinOpen}
       onOpenTwin={() => { setMode("agent"); twinOpen = true; }}
       onOpenDictionary={() => settings.openPanel("dictionary")}
@@ -363,6 +352,9 @@
       project={run.project}
       cwd={run.info?.cwd ?? ""}
       stopping={run.view.stopping}
+      canContinue={run.controls.canContinue}
+      controlCooldown={run.controls.coolingDown}
+      onContinue={() => run.controls.continue()}
       items={run.view.thread.items}
       live={run.view.live}
       liveLabel={run.view.liveLabel}
@@ -376,6 +368,7 @@
       onModelSelect={(provider, model) => run.setModel(provider, model)}
       onReasoningChange={(value) => run.setReasoning(value)}
       onVariantChange={(value) => run.setVariant(value)}
+      onAccessModeChange={(mode) => void run.setAccessMode(mode)}
       queued={run.view.queued}
       sendMode={run.sendMode}
       contexts={run.contextMentions}

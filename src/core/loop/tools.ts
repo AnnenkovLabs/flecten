@@ -2,12 +2,14 @@ import { permissionRequestKey } from "../../security/permission-request-key";
 import type { PermissionRequest } from "../../security/types";
 import { ToolRegistry } from "../../tools/registry";
 import type { ToolContext } from "../../tools/types";
+import { isInside } from "../../tools/util/paths";
 import { isObject } from "../../util/json";
 import { markdownData } from "../../util/markdown";
 import { Mutex } from "../../util/mutex";
 import type { HookOutcome } from "../hooks/types";
 import type { ToolCall, ToolResult } from "../types";
 import type { CallScope } from "./calls";
+import { externalDirectories, externalRequest, withExternalAccess } from "./external-access";
 import { permissionRequest } from "./permission-request";
 import { type PermissionReview, withPermissionReview } from "./permission-review";
 import { authorizeCall, denied, recheckPermission } from "./tool-authorization";
@@ -246,12 +248,25 @@ export async function executeCalls(
     }
     const task = async (): Promise<ToolResult> => {
       if (options.stopSignal?.aborted || prepared.context.signal.aborted) return stopped();
-      const latest = { ...prepared.context, ...prepared.context.security?.() };
+      const latest = withExternalAccess({ ...prepared.context, ...prepared.context.security?.() });
       const tool = options.tools.get(prepared.call.name);
       // Resolve paths again after waiting: a symlink may have changed while approval was open.
       const request = tool
         ? await permissionRequest(prepared.call, tool, latest)
         : prepared.request;
+      if (request) {
+        const roots = await externalDirectories(request, latest);
+        for (const root of roots) {
+          const decision = latest.permissions?.check(externalRequest(request, root));
+          if (
+            decision?.policy === "deny" ||
+            (decision?.policy === "ask" && prepared.revision !== latest.permissions?.revision)
+          )
+            return denied(decision.reason);
+          if (!isInside(latest.cwd, root, latest.authorizedExternalPaths))
+            return denied("Directory access changed before execution. Request access again.");
+        }
+      }
       const blocked = await recheckPermission(request, latest);
       if (
         request &&

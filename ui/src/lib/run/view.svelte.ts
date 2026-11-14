@@ -70,15 +70,12 @@ export class TaskView {
   get generation(): number {
     return this.#generation;
   }
-
   constructor(hooks: ViewHooks) {
     this.#hooks = hooks;
   }
-
   get phase(): Phase {
     return this.state?.phase ?? "idle";
   }
-
   get busy(): boolean {
     return (
       !this.#disconnected &&
@@ -89,7 +86,15 @@ export class TaskView {
   get stopping(): boolean {
     return this.busy && (this.worker.stopping || (this.state?.stopRequested ?? false));
   }
-
+  get resumable(): boolean {
+    return (
+      !this.busy &&
+      (this.phase === "stopped" ||
+        this.phase === "failed" ||
+        this.state?.interrupted === true ||
+        this.worker.resumable)
+    );
+  }
   get liveLabel(): string {
     return this.stopping
       ? t("Waiting for the step to finish")
@@ -97,12 +102,10 @@ export class TaskView {
         ? retryLabel(this.#retryKind)
         : t(this.#liveLabel);
   }
-
   set liveLabel(label: MessageKey) {
     this.#retryKind = null;
     this.#liveLabel = label;
   }
-
   reset(title = ""): void {
     this.#generation += 1;
     this.thread.clear();
@@ -125,7 +128,6 @@ export class TaskView {
     this.lastPrompt = "";
     this.#localStart = false;
   }
-
   begin(prompt: string): void {
     this.thread.beginRun(prompt, nowIso());
     this.lastPrompt = prompt;
@@ -135,7 +137,6 @@ export class TaskView {
     this.liveLabel = "Thinking";
     this.title ||= prompt.split("\n")[0]?.slice(0, 72) ?? "";
   }
-
   /** A run that never reached the core, or a core that refused to start it. */
   failed(text: string, code: string): void {
     this.#localStart = false;
@@ -145,12 +146,10 @@ export class TaskView {
     this.thread.pendingCalls = [];
     this.thread.push({ kind: "error", id: nextId("err"), text, code, at: nowIso() });
   }
-
   upsertJob(job: AgentJob): void {
     const others = this.#jobs.filter((entry) => entry.id !== job.id);
     this.#jobs = [job, ...others].sort((left, right) => right.startedAt - left.startedAt);
   }
-
   /** Rebuilds the thread from stored and replayed events without toasts. */
   restore(events: readonly AgentEvent[]): void {
     this.thread.restoring = true;
@@ -448,6 +447,7 @@ export class TaskView {
     const prompt = event.prompt ?? "";
     const local = this.#localStart && !event.queueId && !this.thread.restoring;
     this.#localStart = false;
+    if (!event.internal) this.worker.settleContinuation();
     this.thread.settleNotices();
     if (local) this.thread.startClock(event.timestamp);
     else if (event.resumed || event.internal) {

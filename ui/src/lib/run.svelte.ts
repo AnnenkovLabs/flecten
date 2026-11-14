@@ -1,3 +1,4 @@
+import type { AccessMode } from "../../../shared/access-mode";
 import type { CustomCommandInfo } from "./agent-protocol";
 import { contextMentions } from "./composer/context-mentions";
 import type { ContextReference } from "./composer/context-types";
@@ -10,13 +11,16 @@ import { t } from "./i18n.svelte";
 import { IdeWorkspace } from "./ide.svelte";
 import { ModuleStore } from "./modules/store.svelte";
 import { applyPreferences, preferences } from "./preferences.svelte";
+import { chooseAccessMode } from "./run/access";
 import { TaskActivity } from "./run/activity.svelte";
 import { afterReplay, attachedEvents, isSessionEvent } from "./run/attach";
 import { Checkpoints } from "./run/checkpoints.svelte";
+import { RunControls } from "./run/controls.svelte";
 import { listenIntents } from "./run/intents";
 import { chooseModel, chooseVariant, type ModelHost } from "./run/model";
+import { Projects } from "./run/projects.svelte";
 import { Reconnect } from "./run/reconnect";
-import { finishedLabel, finishedSessions, projectTasks, startedSessions } from "./run/sessions";
+import { finishedLabel, finishedSessions, startedSessions } from "./run/sessions";
 import { TaskCommands } from "./run/task-commands";
 import { hasCheckpoint } from "./run/thread.svelte";
 import { type SessionEvent, TaskView } from "./run/view.svelte";
@@ -29,7 +33,7 @@ import {
   storeReasoning,
   uniqueId,
 } from "./run-helpers";
-import { listenTaskEvents, refreshTasks, searchTasks, type TaskHost } from "./run-tasks";
+import { listenTaskEvents, refreshTasks, type TaskHost } from "./run-tasks";
 import { extensions } from "./settings/extensions.svelte";
 import { toast } from "./toast.svelte";
 import { TwinStore } from "./twin.svelte";
@@ -46,10 +50,12 @@ import { focusComposer, taskStatus } from "./ui-polish";
 type StatusEvent = Extract<AgentEvent, { type: "status" }>;
 export class RunStore implements TaskHost, ModelHost {
   readonly dictionary = new DictionaryStore();
+  readonly directories = new Projects();
   readonly twin = new TwinStore();
   readonly modules = new ModuleStore(() => this.#sessionId);
   readonly ide = new IdeWorkspace();
   info = $state<AgentInfo | null>(null);
+  accessChanging = $state(false);
   connection = $state<"connecting" | "ready" | "offline">("connecting");
   commands = $state<CustomCommandInfo[]>([]);
   reasoning = $state<ReasoningChoice>(storedReasoning());
@@ -66,6 +72,12 @@ export class RunStore implements TaskHost, ModelHost {
   files = $state<string[]>([]);
   readonly activity = new TaskActivity();
   readonly view = new TaskView({ checkpointSaved: () => void this.checkpoints.refresh() });
+  readonly controls = new RunControls(
+    this.view,
+    () => this.#sessionId,
+    () => this.connection === "ready",
+    (prompt) => this.start(prompt),
+  );
   readonly task = new TaskCommands(this.view, () => this.#sessionId);
   readonly checkpoints = new Checkpoints({
     sessionId: () => this.#sessionId,
@@ -90,7 +102,7 @@ export class RunStore implements TaskHost, ModelHost {
     return this.view.busy;
   }
   get project(): string {
-    return this.info?.project || t("project");
+    return this.info?.projectRoot === null ? "" : this.info?.project || t("project");
   }
   get branch(): string {
     return this.info?.branch ?? "";
@@ -108,7 +120,7 @@ export class RunStore implements TaskHost, ModelHost {
     return { ...this.view.context.view(this.info?.contextWindow ?? 0), usage: this.view.usage };
   }
   get projects(): Project[] {
-    return projectTasks(this.sessions, this.project, (session) => this.statusOf(session));
+    return this.directories.groups(this.info, this.sessions, (session) => this.statusOf(session));
   }
   statusOf(session: AgentSessionSummary): TaskStatusKind {
     const state = this.activity.of(session.id);
@@ -124,7 +136,7 @@ export class RunStore implements TaskHost, ModelHost {
       approval: (sessionId, id, choice, feedback) =>
         void this.task.respondApproval(sessionId, id, choice, feedback),
       cancelTool: (callId) => void this.task.cancelTool(callId),
-      continueTask: () => this.submit("/continue", "queue"),
+      continueTask: () => this.controls.continue(),
       stopJob: (id) => void this.task.stopJob(id),
       stopWorker: () => void this.task.stopWorker(),
     });
@@ -140,6 +152,7 @@ export class RunStore implements TaskHost, ModelHost {
       stopIntents();
       unsubscribe();
       stopModules();
+      this.controls.dispose();
       this.#reconnect.dispose();
       this.twin.dispose();
     };
@@ -151,6 +164,9 @@ export class RunStore implements TaskHost, ModelHost {
       return;
     }
     switch (event.type) {
+      case "projects.changed":
+        void this.directories.refresh();
+        return;
       case "session.open":
         void this.selectTask(event.id).catch((error: unknown) =>
           toast.error(t("Could not open task: {0}", [message(error)])),
@@ -168,7 +184,7 @@ export class RunStore implements TaskHost, ModelHost {
         this.#exit(event.message);
         return;
       case "project.changed":
-        this.#projectChanged(event.cwd);
+        this.#projectChanged();
         return;
       case "sessions.interrupted":
         this.#interrupted(event.interrupted, event.resumed);
@@ -202,7 +218,6 @@ export class RunStore implements TaskHost, ModelHost {
       });
     return true;
   }
-
   start(text: string, attachments: string[] = [], contexts: ContextReference[] = []): boolean {
     if (this.view.busy) return false;
     const sessionId = this.ensureSession();
@@ -227,7 +242,6 @@ export class RunStore implements TaskHost, ModelHost {
     focusComposer();
     return true;
   }
-
   ensureSession(): string {
     const sessionId = this.#sessionId ?? uniqueId("s");
     if (this.#sessionId === null) {
@@ -240,24 +254,13 @@ export class RunStore implements TaskHost, ModelHost {
     }
     return sessionId;
   }
-
-  stop(): void {
-    if ((!this.view.busy && !this.view.worker.running) || !this.#sessionId) return;
-    const sessionId = this.#sessionId;
-    requestAgent({ type: "stop", sessionId, mode: this.view.stopping ? "force" : "graceful" })
-      .then((response) => {
-        if (this.#sessionId === sessionId) this.view.attach(response.state);
-      })
-      .catch((error: unknown) => toast.error(t("Could not stop: {0}", [message(error)])));
-  }
-
+  stop = (): void => this.controls.stop();
   repeat(prompt?: string): void {
     const next = prompt ?? this.view.lastPrompt;
     if (next && !this.view.busy) this.start(next);
     // A locked project with nothing to repeat: the core tries the project again.
     else if (this.#reconnect.held) sendAgent({ type: "hello" });
   }
-
   /** A clean screen for a new task; tasks already running go on behind it. */
   newTask(): void {
     this.#loadSequence += 1;
@@ -265,7 +268,6 @@ export class RunStore implements TaskHost, ModelHost {
     this.openingTask = null;
     this.#show(null);
   }
-
   async selectTask(id: string): Promise<void> {
     if (id === this.activeTask) {
       this.#loadSequence += 1;
@@ -275,15 +277,9 @@ export class RunStore implements TaskHost, ModelHost {
     }
     await this.#open(id);
   }
-
   refreshSessions(): Promise<void> {
-    return refreshTasks(this);
+    return Promise.all([refreshTasks(this), this.directories.refresh()]).then(() => undefined);
   }
-
-  searchSessions(query: string): Promise<void> {
-    return searchTasks(this, query);
-  }
-
   async loadCommands(): Promise<void> {
     try {
       const response = await requestAgent({ type: "commands.list" }, 15_000);
@@ -320,6 +316,10 @@ export class RunStore implements TaskHost, ModelHost {
 
   setModel(provider: string, model: string): Promise<void> {
     return chooseModel(this, provider, model);
+  }
+
+  setAccessMode(mode: AccessMode): Promise<void> {
+    return chooseAccessMode(this, mode);
   }
 
   setVariant(value: string | undefined): Promise<void> {
@@ -464,7 +464,7 @@ export class RunStore implements TaskHost, ModelHost {
       toast.show(wasBusy ? t("The core stopped during the run. Restarting") : t("Restarting core"));
     }
   }
-  #projectChanged(cwd: string): void {
+  #projectChanged(): void {
     this.dictionary.reset();
     this.twin.reset();
     this.ide.reset();
@@ -477,7 +477,7 @@ export class RunStore implements TaskHost, ModelHost {
     this.activity.clear();
     this.checkpoints.reset();
     this.#show(null);
-    this.info = this.info ? { ...this.info, cwd } : null;
+    this.info = null;
     void this.refreshSessions();
     void this.checkpoints.refresh();
   }

@@ -37,8 +37,8 @@ export default {
   "Applying decision…": "Applying decision…",
   "Expired: waiting for confirmation": "Expired: waiting for confirmation",
   "Save this exact action for this project?": "Save this exact action for this project?",
-  "Only identical arguments, paths and working directory will match. You can revoke this rule in Permissions.":
-    "Only identical arguments, paths and working directory will match. You can revoke this rule in Permissions.",
+  "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
+    "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.",
   "For this chat": "For this chat",
   "Save exact rule": "Save exact rule",
   "Remember…": "Remember…",
@@ -47,8 +47,8 @@ export default {
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "Allows ordinary actions. Destructive rules and sandbox limits still apply.",
   "Saved rules": "Saved rules",
-  "Rules belong to this project. Removing a rule takes effect when you save, including during an active run.":
-    "Rules belong to this project. Removing a rule takes effect when you save, including during an active run.",
+  "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
+    "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.",
   "No saved rules.": "No saved rules.",
   "All matching actions": "All matching actions",
   "Exact arguments and resources": "Exact arguments and resources",
@@ -68,4 +68,34 @@ export default {
   "Feedback for the agent": "Feedback for the agent",
   "OS sandbox available": "OS sandbox available",
   "OS sandbox unavailable": "OS sandbox unavailable",
+  Access: "Access",
+  "Access mode": "Access mode",
+  Agent: "Agent",
+  "Confirm changes": "Confirm changes",
+  "Custom access": "Custom access",
+  "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.":
+    "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.",
+  "Reads freely. Asks before changes, commands and connected tools.":
+    "Reads freely. Asks before changes, commands and connected tools.",
+  "Works across your computer without routine approvals. Process isolation is off.":
+    "Works across your computer without routine approvals. Process isolation is off.",
+  "Advanced settings differ from these modes.": "Advanced settings differ from these modes.",
+  "Saved rules and human checkpoints still apply in every mode.":
+    "Saved rules and human checkpoints still apply in every mode.",
+  "Advanced access settings": "Advanced access settings",
+  "Action permissions": "Action permissions",
+  "Process isolation": "Process isolation",
+  "Isolate processes": "Isolate processes",
+  "Limit commands to the project and approved folders.":
+    "Limit commands to the project and approved folders.",
+  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
+    "Commands stay inside the project and folders approved for this chat while isolation is enabled.",
+  "Allow folder access?": "Allow folder access?",
+  "Folder access covers the displayed paths and their subfolders.":
+    "Folder access covers the displayed paths and their subfolders.",
+  "Access is shared with agents in this chat.": "Access is shared with agents in this chat.",
+  "Repeat this action in this chat": "Repeat this action in this chat",
+  "Remember folder access": "Remember folder access",
+  "Access mode: {0}": ["Access mode: ", 0],
+  "Could not change access. Try again. {0}": ["Could not change access. Try again. ", 0],
 } as const;

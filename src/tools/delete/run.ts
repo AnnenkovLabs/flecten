@@ -1,9 +1,10 @@
-import { lstat, readdir, readFile, realpath, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { lstat, readdir, readFile, rm } from "node:fs/promises";
+import { join } from "node:path";
 import type { ToolResult } from "../../core/types";
 import type { ToolContext } from "../types";
 import { defineTool } from "../types";
-import { displayPath, ensureInside, isInside, resolveToolPath } from "../util/paths";
+import { mutationPath } from "../util/mutation-path";
+import { displayPath } from "../util/paths";
 import { type DeleteArgs, deleteSpec } from "./schema";
 
 function message(error: unknown): string {
@@ -12,34 +13,6 @@ function message(error: unknown): string {
 
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === "ENOENT";
-}
-
-async function assertRealPathInside(cwd: string, input: string, start: string): Promise<void> {
-  let current = start;
-  while (true) {
-    if (!isInside(cwd, current)) {
-      throw new Error(`Refusing to follow a symbolic link outside the workspace: ${input}`);
-    }
-    try {
-      const real = await realpath(current);
-      if (!isInside(cwd, real)) {
-        throw new Error(`Refusing to follow a symbolic link outside the workspace: ${input}`);
-      }
-      return;
-    } catch (error) {
-      if (!isMissing(error)) throw error;
-      const parent = dirname(current);
-      if (parent === current) return;
-      current = parent;
-    }
-  }
-}
-
-async function mutationPath(cwd: string, input: string, why: string | undefined): Promise<string> {
-  const path = resolveToolPath(cwd, input);
-  ensureInside(cwd, path, why);
-  await assertRealPathInside(cwd, input, dirname(path));
-  return path;
 }
 
 async function checkSandbox(context: ToolContext, path: string): Promise<void> {
@@ -66,7 +39,7 @@ export async function runDelete(args: DeleteArgs, context: ToolContext): Promise
   const recursive = args.recursive === true;
   let path: string;
   try {
-    path = await mutationPath(context.cwd, args.path, args.why);
+    path = await mutationPath(context.cwd, args.path, args.why, context.authorizedExternalPaths);
     await checkSandbox(context, path);
   } catch (error) {
     return { ok: false, output: "", error: message(error) };

@@ -1,7 +1,7 @@
 const UPDATE_CHANNELS = Object.freeze(["stable", "beta"]);
 
 const UPDATE_DEFAULTS = Object.freeze({
-  channel: "stable",
+  channel: "beta",
   autoCheck: true,
   autoDownload: true,
   installOnQuit: true,

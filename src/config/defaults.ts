@@ -1,3 +1,4 @@
+import { ACCESS_MODES } from "../../shared/access-mode";
 import { HooksConfigSchema } from "../../shared/hooks";
 import {
   CONFIG_SCHEMA_VERSION,
@@ -133,7 +134,7 @@ export function defaultConfig(): HarnessConfig {
       autoResume: true,
     },
     budgets: {},
-    update: { channel: "stable", autoCheck: true, autoDownload: true, installOnQuit: true },
+    update: { channel: "beta", autoCheck: true, autoDownload: true, installOnQuit: true },
     telemetry: { enabled: false },
     commands: { dirs: [] },
     modes: { dirs: [] },
@@ -141,20 +142,12 @@ export function defaultConfig(): HarnessConfig {
     hooks: HooksConfigSchema.parse({}),
     catalog: { autoRefresh: true, ttlMs: 43_200_000 },
     permissions: {
-      read: "auto",
-      write: "auto",
-      shell: "auto",
-      network: "ask",
-      mcp: "ask",
-      skill: "allow",
-      externalPath: "deny",
-      destructive: "ask",
+      ...ACCESS_MODES.agent.permissions,
       approvalTimeoutMs: 300_000,
       rules: [],
     },
     sandbox: {
-      enabled: true,
-      allowNetwork: false,
+      ...ACCESS_MODES.agent.sandbox,
       readDenyPrefixes: [],
       writeDenyPrefixes: [],
       envAllowlist: ["PATH", "HOME", "USER", "SHELL", "TERM", "LANG", "LC_ALL", "TMPDIR", "PWD"],

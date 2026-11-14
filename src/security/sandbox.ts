@@ -1,8 +1,9 @@
 import { lstat, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { canonicalPath } from "../util/canonical-path";
 import { parseShell, programName } from "./shell-lexer";
+import { shellPaths } from "./shell-paths";
 import type { SandboxDecision, SandboxOptions } from "./types";
 
 export const DEFAULT_PROTECTED_WRITE_PREFIXES = [
@@ -51,7 +52,6 @@ const NETWORK_COMMANDS = new Set([
 ]);
 
 const PRIVILEGED_COMMANDS = new Set(["doas", "su", "sudo"]);
-const SAFE_DEVICE_PATHS = new Set(["/dev/null", "/dev/stdout", "/dev/stderr", "/dev/zero"]);
 
 type CanonicalPath = {
   path: string;
@@ -69,11 +69,17 @@ export class SandboxPolicy {
   readonly writeDenyPrefixes: readonly string[];
   readonly envAllowlist: readonly string[];
   private readonly rootPath: string;
+  readonly externalPaths: readonly string[];
+  private readonly customReadDenyPrefixes: readonly string[];
   private readonly customWriteDenyPrefixes: readonly string[];
 
   constructor(options: SandboxOptions) {
     this.workspaceRoot = resolve(options.workspaceRoot);
     this.rootPath = normalizePath(canonicalPath(this.workspaceRoot));
+    this.externalPaths = [
+      ...new Set((options.externalPaths ?? []).map((path) => normalizePath(canonicalPath(path)))),
+    ];
+    this.customReadDenyPrefixes = options.readDenyPrefixes ?? [];
     this.allowNetwork = options.allowNetwork ?? false;
     this.readDenyPrefixes = [
       ...DEFAULT_PROTECTED_READ_PREFIXES,
@@ -85,6 +91,17 @@ export class SandboxPolicy {
       ...(options.writeDenyPrefixes ?? []),
     ];
     this.envAllowlist = options.envAllowlist ?? [];
+  }
+
+  withExternalPaths(paths: readonly string[]): SandboxPolicy {
+    return new SandboxPolicy({
+      workspaceRoot: this.workspaceRoot,
+      externalPaths: paths,
+      allowNetwork: this.allowNetwork,
+      readDenyPrefixes: [...this.customReadDenyPrefixes],
+      writeDenyPrefixes: [...this.customWriteDenyPrefixes],
+      envAllowlist: [...this.envAllowlist],
+    });
   }
 
   checkRead(path: string): Promise<SandboxDecision> {
@@ -107,7 +124,7 @@ export class SandboxPolicy {
   }
 
   // ponytail: shell paths are checked lexically; enforce subprocesses and relative escapes in the OS sandbox at spawn.
-  checkShell(command: string): SandboxDecision {
+  checkShell(command: string, cwd = this.workspaceRoot): SandboxDecision {
     if (command.trim().length === 0) return deny("Shell: команда не указана.");
     for (const simple of parseShell(command).commands) {
       const name = programName(simple.argv[0]?.value ?? "");
@@ -117,22 +134,10 @@ export class SandboxPolicy {
       if (!this.allowNetwork && NETWORK_COMMANDS.has(name)) {
         return deny(`Shell: команда "${name}" использует сеть, а сеть запрещена.`);
       }
-      const words = [
-        ...simple.argv.map((word) => word.value),
-        ...simple.assignments,
-        ...simple.redirects.map((redirect) => redirect.target),
-      ];
-      for (const token of words) {
-        const argument = absoluteArgument(token);
-        if (argument === undefined || SAFE_DEVICE_PATHS.has(argument)) continue;
-        if (
-          !containsPath(normalizePath(this.workspaceRoot), normalizePath(argument)) &&
-          !this.insideWorkspace(normalizePath(argument))
-        ) {
-          return deny(`Shell: путь "${argument}" вне рабочей папки "${this.workspaceRoot}".`);
-        }
-      }
     }
+    for (const path of shellPaths(command, cwd))
+      if (!this.insideWorkspace(normalizePath(path)))
+        return deny(`Shell: путь "${path}" вне разрешённых рабочих папок.`);
     return allow("Shell: команда не нарушает политику песочницы.");
   }
 
@@ -160,8 +165,19 @@ export class SandboxPolicy {
       allowedPrefixes ?? (mode === "read" ? this.readDenyPrefixes : this.writeDenyPrefixes);
     let blocked: string | undefined;
     const lexical = normalizePath(resolve(this.workspaceRoot, expandHome(path)));
-    for (const prefix of prefixes) {
-      const full = this.prefixPath(prefix);
+    const expanded = prefixes.flatMap((prefix) => {
+      const defaults =
+        mode === "read" ? DEFAULT_PROTECTED_READ_PREFIXES : DEFAULT_PROTECTED_WRITE_PREFIXES;
+      const roots =
+        defaults.includes(prefix as never) && !prefix.startsWith("~")
+          ? [this.workspaceRoot, ...this.externalPaths]
+          : [this.workspaceRoot];
+      return roots.map((root) => ({
+        prefix,
+        full: normalizePath(resolve(root, expandHome(prefix))),
+      }));
+    });
+    for (const { prefix, full } of expanded) {
       const resolved = await canonicalize(full, this.workspaceRoot);
       if (
         containsPath(full, lexical) ||
@@ -186,11 +202,10 @@ export class SandboxPolicy {
   }
 
   private insideWorkspace(path: string): boolean {
-    return containsPath(this.rootPath, path);
-  }
-
-  private prefixPath(prefix: string): string {
-    return normalizePath(resolve(this.workspaceRoot, expandHome(prefix)));
+    return (
+      containsPath(this.rootPath, path) ||
+      this.externalPaths.some((root) => containsPath(root, path))
+    );
   }
 }
 
@@ -217,12 +232,6 @@ async function canonicalize(
     missing.push(basename(current));
     current = parent;
   }
-}
-
-function absoluteArgument(value: string): string | undefined {
-  const equals = value.indexOf("=");
-  const candidate = equals >= 0 ? value.slice(equals + 1) : value;
-  return isAbsolute(candidate) ? candidate : undefined;
 }
 
 function normalizePath(value: string): string {

@@ -35,7 +35,11 @@ export class ShellSnapshots {
   #state: ShellCheckpointState = { state: "off" };
   readonly #warming = new Set<Promise<string | undefined>>();
 
-  constructor(cwd: string, store: CheckpointStore) {
+  constructor(
+    cwd: string,
+    store: CheckpointStore,
+    private readonly project = true,
+  ) {
     this.#cwd = cwd;
     this.#store = store;
   }
@@ -55,6 +59,11 @@ export class ShellSnapshots {
 
   /** Rebuilds snapshots only when their settings change: warming a big tree costs time. */
   configure(config: HarnessConfig): void {
+    if (!this.project) {
+      this.#service = undefined;
+      this.#state = { state: "off", reason: "Выберите проект для снимков рабочей папки" };
+      return;
+    }
     const key = JSON.stringify(checkpointSettings(config));
     if (key === this.#key) return;
     this.#key = key;

@@ -2,15 +2,15 @@ import { describe, expect, test } from "bun:test";
 import {
   ACTION_META,
   type ApprovalView,
+  accessModeDescription,
+  accessModeLabel,
   actionLabel,
-  applyPreset,
   approvalAgeLabel,
+  approvalScopePaths,
+  approvalSessionLabel,
   buildPolicy,
   isApprovalExpired,
-  isCustom,
   POLICY_ACTIONS,
-  PRESETS,
-  presetDescription,
   reviewedApprovalIds,
   sortApprovals,
   validatePolicy,
@@ -45,38 +45,34 @@ describe("policy maps", () => {
     expect(policy.write).toBe("auto");
     expect(policy.network).toBe("auto");
   });
+});
 
-  test("every preset applies a complete policy map", () => {
-    for (const preset of PRESETS) {
-      const policy = applyPreset(preset.id);
-      for (const action of POLICY_ACTIONS) {
-        expect(policy[action]).toBe(preset.policies[action]);
-      }
-      expect(validatePolicy(policy)).toEqual([]);
-      expect(isCustom(policy)).toBe(false);
-      expect(presetDescription(preset.id)).toBe(preset.description);
+describe("access presentation", () => {
+  test("describes the three modes and keeps custom settings visible", () => {
+    for (const mode of ["agent", "confirm", "full", "custom"] as const) {
+      expect(accessModeLabel(mode).length).toBeGreaterThan(0);
+      expect(accessModeDescription(mode).length).toBeGreaterThan(0);
     }
+    expect(
+      new Set(
+        ["agent", "confirm", "full"].map((mode) =>
+          accessModeLabel(mode as "agent" | "confirm" | "full"),
+        ),
+      ).size,
+    ).toBe(3);
   });
 
-  test("applying a preset returns a copy", () => {
-    const policy = applyPreset("read_only");
-    policy.write = "allow";
-    expect(PRESETS.find((preset) => preset.id === "read_only")?.policies.write).toBe("deny");
-    expect(isCustom(policy)).toBe(true);
+  test("folder consent shows the granted directory, keeping affected files in details", () => {
+    expect(approvalScopePaths({ target: "/work", paths: ["/work", "/work/file.txt"] })).toEqual([
+      "/work",
+    ]);
+    expect(approvalScopePaths({ target: "/work/one", paths: [] })).toEqual(["/work/one"]);
+    expect(approvalScopePaths({ target: "" })).toEqual([]);
   });
 
-  test("custom keeps the current rules", () => {
-    const current = buildPolicy({ read: "deny" }, "auto");
-    const kept = applyPreset("custom", current);
-    expect(kept).toEqual(current);
-    expect(kept).not.toBe(current);
-    expect(presetDescription("custom")).toContain("наборам");
-  });
-
-  test("detects a single changed rule", () => {
-    const workspace = applyPreset("workspace");
-    expect(isCustom(workspace)).toBe(false);
-    expect(isCustom({ ...workspace, network: "allow" })).toBe(true);
+  test("folder grants and repeated exact actions have distinct labels", () => {
+    expect(approvalSessionLabel("external_path")).not.toBe(approvalSessionLabel("shell"));
+    expect(approvalSessionLabel("shell")).toBe(approvalSessionLabel("mcp"));
   });
 });
 

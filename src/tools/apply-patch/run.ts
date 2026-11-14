@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import type { ToolResult } from "../../core/types";
 import { defineTool, type ToolContext } from "../types";
 import { type DiffHunk, diffText } from "../util/diff";
-import { displayPath, ensureInside, isInside, resolveToolPath } from "../util/paths";
+import { mutationPath } from "../util/mutation-path";
+import { displayPath } from "../util/paths";
 import { type ApplyPatchArgs, applyPatchSpec } from "./schema";
 
 type HunkLineKind = "context" | "add" | "delete";
@@ -244,44 +245,6 @@ function applyHunks(label: string, previous: string, hunks: Hunk[]): string {
   return ending === "\r\n" ? body.replaceAll("\n", "\r\n") : body;
 }
 
-async function assertRealPathInside(cwd: string, input: string, start: string): Promise<void> {
-  let current = start;
-  while (true) {
-    if (!isInside(cwd, current)) {
-      throw new Error(`Refusing to follow a symbolic link outside the workspace: ${input}`);
-    }
-    try {
-      const real = await realpath(current);
-      if (!isInside(cwd, real)) {
-        throw new Error(`Refusing to follow a symbolic link outside the workspace: ${input}`);
-      }
-      return;
-    } catch (error) {
-      if (!isMissing(error)) throw error;
-      const parent = dirname(current);
-      if (parent === current) return;
-      current = parent;
-    }
-  }
-}
-
-async function mutationPath(cwd: string, input: string, why: string | undefined): Promise<string> {
-  const path = resolveToolPath(cwd, input);
-  ensureInside(cwd, path, why);
-  await assertRealPathInside(cwd, input, dirname(path));
-  const info = await lstat(path).catch((error: unknown) => {
-    if (isMissing(error)) return undefined;
-    throw error;
-  });
-  if (info?.isSymbolicLink()) {
-    const target = await realpath(path);
-    if (!isInside(cwd, target)) {
-      throw new Error(`Refusing to follow a symbolic link outside the workspace: ${input}`);
-    }
-  }
-  return path;
-}
-
 async function checkSandbox(context: ToolContext, path: string): Promise<void> {
   if (context.sandbox === undefined) return;
   const decision = await context.sandbox.checkWrite(path);
@@ -369,7 +332,12 @@ export async function runApplyPatch(
     context.signal.throwIfAborted();
     const resolved = new Map<PatchFile, string>();
     for (const file of files) {
-      const path = await mutationPath(context.cwd, file.path, args.why);
+      const path = await mutationPath(
+        context.cwd,
+        file.path,
+        args.why,
+        context.authorizedExternalPaths,
+      );
       await checkSandbox(context, path);
       if (seen.has(path)) throw new Error(`Patch changes ${file.path} more than once`);
       seen.add(path);
@@ -407,7 +375,12 @@ export async function runApplyPatch(
         continue;
       }
 
-      const targetPath = await mutationPath(context.cwd, file.moveTo, args.why);
+      const targetPath = await mutationPath(
+        context.cwd,
+        file.moveTo,
+        args.why,
+        context.authorizedExternalPaths,
+      );
       await checkSandbox(context, targetPath);
       if (seen.has(targetPath)) throw new Error(`Patch moves to ${file.moveTo} more than once`);
       seen.add(targetPath);

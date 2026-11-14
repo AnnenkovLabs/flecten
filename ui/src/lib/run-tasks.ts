@@ -2,7 +2,7 @@ import type { AgentEvent } from "./agent-protocol";
 import { clearComposerDraft } from "./composer/drafts.svelte";
 import { requestAgent } from "./desktop";
 import { t } from "./i18n.svelte";
-import { mergedSessions, sortedSessions } from "./run/sessions";
+import { mergedSessions } from "./run/sessions";
 import { toast } from "./toast.svelte";
 import type { AgentSessionSummary } from "./types";
 import {
@@ -49,7 +49,7 @@ export function listenTaskEvents(host: TaskHost): () => void {
   };
 }
 
-/** Only the latest list or search answer lands; a slow older one is dropped. */
+/** Only the latest list answer lands; a slow older one is dropped. */
 let listSequence = 0;
 
 export async function refreshTasks(host: TaskHost): Promise<void> {
@@ -58,21 +58,6 @@ export async function refreshTasks(host: TaskHost): Promise<void> {
     const response = await requestAgent<Response>({ type: "sessions.list" });
     if (ticket === listSequence)
       host.sessions = mergedSessions(host.sessions, response.sessions ?? []);
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : String(error));
-  }
-}
-
-export async function searchTasks(host: TaskHost, query: string): Promise<void> {
-  const value = query.trim();
-  if (!value) {
-    await refreshTasks(host);
-    return;
-  }
-  const ticket = ++listSequence;
-  try {
-    const response = await requestAgent<Response>({ type: "sessions.search", query: value });
-    if (ticket === listSequence) host.sessions = sortedSessions(response.sessions ?? []);
   } catch (error) {
     toast.error(error instanceof Error ? error.message : String(error));
   }

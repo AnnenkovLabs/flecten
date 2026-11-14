@@ -1,6 +1,6 @@
 import { productEnv } from "../../shared/environment.cjs";
 import { loadConfig, saveConfig } from "../config/load";
-import { type HarnessConfig, HarnessConfigSchema, PermissionsConfigSchema } from "../config/schema";
+import type { HarnessConfig } from "../config/schema";
 import { createSession, type SessionOptions } from "../core/session/session";
 import { catalogStatus, providerFromCatalog, syncCatalog } from "../providers/catalog";
 import { discoverProvider } from "../providers/discovery";
@@ -14,7 +14,6 @@ import { loadSessionMedia, saveSessionMedia } from "../store/attachments";
 import { pageSink } from "../store/pages";
 import { sessionPaths } from "../store/paths";
 import { saveQueue } from "../store/queue";
-import { redactKnown } from "../util/redact";
 import { appInfo } from "./app-info";
 import { createConversation } from "./conversation";
 import { conversationOptions } from "./conversation-options";
@@ -31,11 +30,12 @@ import { testHook } from "./hook-test";
 import { IdeTerminal } from "./ide-terminal";
 import { projectMemory } from "./memory";
 import { moduleService } from "./modules";
+import { configWithRememberedRules } from "./permission-persistence";
+import { projectTrust, saveProjectTrust } from "./project-trust";
 import { providerOps } from "./provider-ops";
-import { configSecrets, mergeSecrets } from "./provider-secrets";
+import { configSecrets } from "./provider-secrets";
 import {
   describeProviderError,
-  hasExecutableExtensions,
   hydrateActiveModel,
   maxOutputTokens,
   modelContext,
@@ -44,14 +44,8 @@ import {
 import { autoResumable, markInterrupted } from "./recovery";
 import { RunSpend } from "./run-spend";
 import { RESUME_PROMPT, slashCommands } from "./service-commands";
-import {
-  inputModalities,
-  osSandboxFor,
-  permissionRules,
-  sameRule,
-  sandboxFor,
-  sanitizeConfig,
-} from "./service-policy";
+import { inputModalities, osSandboxFor, permissionRules, sandboxFor } from "./service-policy";
+import { settingsActions } from "./service-settings";
 import type { AppInfo, AppService } from "./service-types";
 import {
   approvalTimeout,
@@ -75,7 +69,10 @@ import { visionOptions } from "./vision";
 import { voiceService } from "./voice";
 
 export type * from "./service-types";
-export async function createAppService(cwd: string): Promise<AppService> {
+export async function createAppService(
+  cwd: string,
+  projectRoot: string | null = cwd,
+): Promise<AppService> {
   let config: HarnessConfig = await loadConfig(cwd, productEnv("CONFIG"));
   const voice = voiceService(() => config);
   const ideTerminal = new IdeTerminal(cwd, () => terminalSettings(config));
@@ -88,17 +85,25 @@ export async function createAppService(cwd: string): Promise<AppService> {
   const dictionary = await projectDictionary(cwd, memory.port, () => configSecrets(config));
 
   const skills = await discoverSkills(cwd, {
+    projectRoot,
     sources: config.skills?.sources,
     trust: config.skills?.trust,
   });
-  const trustRequired = hasExecutableExtensions(config, skills.skills, cwd);
-  let trusted = !trustRequired;
+  const trustRequired = projectRoot !== null;
+  let trustState = projectTrust(cwd, projectRoot);
+  let trusted = trustState === "trusted";
   const skillActivations: SkillActivations = new Map();
   let extensions: AppExtensions = { ...deferredExtensions(skills), skillActivations };
   let extensionRefresh: Promise<void> = Promise.resolve();
   const extensionControl = extensionRuntime(cwd, () => extensions, refreshExtensions);
   if (trusted)
-    extensions = await createExtensions(cwd, config, extensionControl.options, skillActivations);
+    extensions = await createExtensions(
+      cwd,
+      config,
+      extensionControl.options,
+      skillActivations,
+      projectRoot,
+    );
   let mcpConfiguration = trusted ? JSON.stringify(config.mcp) : undefined;
   const modules = moduleService(
     cwd,
@@ -106,7 +111,6 @@ export async function createAppService(cwd: string): Promise<AppService> {
     () => trusted,
     commit,
     extensionControl,
-    acceptTrust,
   );
   const logs = new SessionStorage(
     cwd,
@@ -116,28 +120,19 @@ export async function createAppService(cwd: string): Promise<AppService> {
   );
   await modules.runtime.project.prepare(new AbortController().signal);
   let tools = registryFor(() => extensions, config, modules.runtime.tool);
-  let prompt = await systemPrompt(cwd, config, extensions.sections, tools);
+  let prompt = await systemPrompt(cwd, config, extensions.sections, tools, undefined, projectRoot);
 
-  /** Config writes go one after another, so a remembered rule never races a settings save. */
   let writes: Promise<unknown> = Promise.resolve();
   function serialized<T>(task: () => Promise<T>): Promise<T> {
     const next = writes.then(task, task);
     writes = next.catch(() => undefined);
     return next;
   }
-
-  /** "Allow always" survives a restart: the rule goes into permissions.rules of the config. */
   function rememberRule(rules: readonly PermissionRule[], signal: AbortSignal): Promise<void> {
     return serialized(async () => {
       signal.throwIfAborted();
-      const next = structuredClone(config);
-      const section = next.permissions ?? PermissionsConfigSchema.parse({});
-      const additions = redactKnown([...rules], configSecrets(config)).filter(
-        (rule) => !section.rules.some((known) => sameRule(known, rule)),
-      );
-      if (!additions.length) return;
-      section.rules = [...section.rules, ...additions];
-      next.permissions = section;
+      const next = configWithRememberedRules(config, rules);
+      if (!next) return;
       await saveConfig(cwd, next, { signal });
       config = next;
     });
@@ -156,7 +151,7 @@ export async function createAppService(cwd: string): Promise<AppService> {
   const checkpoints = new CheckpointStore({ cwd });
   await checkpoints.init().catch(() => undefined);
   const pruning = pruneCheckpoints(checkpoints, config).catch(() => undefined);
-  const shell = new ShellSnapshots(cwd, checkpoints);
+  const shell = new ShellSnapshots(cwd, checkpoints, projectRoot !== null);
   shell.configure(config);
 
   let configError: string | undefined;
@@ -181,6 +176,7 @@ export async function createAppService(cwd: string): Promise<AppService> {
     memory: memory.port,
     dictionary: { list: async () => (await dictionary.list()).entries },
     cwd,
+    projectRoot,
     config: () => config,
     provider: () => provider,
     tools: () => tools,
@@ -191,14 +187,21 @@ export async function createAppService(cwd: string): Promise<AppService> {
     osSandbox: () => osSandbox,
   });
   const subagentsFor = () =>
-    appSubagents(cwd, trusted, tools, runChild, config.subagents?.dirs ?? []);
+    appSubagents(
+      cwd,
+      trusted && projectRoot !== null,
+      tools,
+      runChild,
+      config.subagents?.dirs ?? [],
+    );
   let subagents = subagentsFor();
   subagentToolCatalog(tools, subagents);
-  prompt = await systemPrompt(cwd, config, extensions.sections, tools);
+  prompt = await systemPrompt(cwd, config, extensions.sections, tools, undefined, projectRoot);
   const commands = slashCommands(
     cwd,
     () => extensions.skills.skills,
     () => config.commands?.dirs ?? [],
+    projectRoot !== null,
   );
 
   function refreshExtensions(): Promise<void> {
@@ -212,10 +215,17 @@ export async function createAppService(cwd: string): Promise<AppService> {
     const nextMcp = JSON.stringify(config.mcp);
     if (trusted && nextMcp !== mcpConfiguration) {
       await extensions.dispose();
-      extensions = await createExtensions(cwd, config, extensionControl.options, skillActivations);
+      extensions = await createExtensions(
+        cwd,
+        config,
+        extensionControl.options,
+        skillActivations,
+        projectRoot,
+      );
       mcpConfiguration = nextMcp;
     }
     const discovery = await discoverSkills(cwd, {
+      projectRoot,
       sources: config.skills?.sources,
       trust: config.skills?.trust,
     });
@@ -223,7 +233,7 @@ export async function createAppService(cwd: string): Promise<AppService> {
     tools = registryFor(() => extensions, config, modules.runtime.tool);
     subagents = subagentsFor();
     subagentToolCatalog(tools, subagents);
-    prompt = await systemPrompt(cwd, config, extensions.sections, tools);
+    prompt = await systemPrompt(cwd, config, extensions.sections, tools, undefined, projectRoot);
     pool.update({
       tools,
       system: prompt.system,
@@ -305,7 +315,7 @@ export async function createAppService(cwd: string): Promise<AppService> {
           events,
           twin,
           configure: (current, execute, answer) =>
-            conversationOptions(current, config, extensions.sections, execute, answer),
+            conversationOptions(current, config, extensions.sections, execute, answer, projectRoot),
         });
       }
       return createSession(options);
@@ -326,10 +336,12 @@ export async function createAppService(cwd: string): Promise<AppService> {
     const focused = pool.getSessionId();
     return appInfo({
       cwd,
+      projectRoot,
       config,
       cost: spend.get(focused)?.cost,
       trustRequired,
       trusted,
+      trustState,
       extensions,
       memoryRecords: memory.count,
       prompt: prompt.stamp,
@@ -338,7 +350,6 @@ export async function createAppService(cwd: string): Promise<AppService> {
     });
   };
 
-  /** Applies the config to every session; running ones take it after their current run. */
   async function apply(): Promise<void> {
     provider = buildProvider();
     permissions.replaceRules({
@@ -352,15 +363,14 @@ export async function createAppService(cwd: string): Promise<AppService> {
     await refreshExtensions();
     pool.update(liveOptions());
   }
-
-  function commit(next: HarnessConfig, clearSecrets: string[] = []) {
+  function commit(next: HarnessConfig | (() => HarnessConfig), clearSecrets: string[] = []) {
     return serialized(async () => {
+      if (typeof next === "function") next = next();
       await saveConfig(cwd, next, { clearSecrets });
       config = await loadConfig(cwd, productEnv("CONFIG"));
       await apply();
     });
   }
-
   const providers = providerOps({
     cwd,
     config: () => config,
@@ -380,14 +390,25 @@ export async function createAppService(cwd: string): Promise<AppService> {
   }
 
   async function acceptTrust() {
-    if (!trustRequired || trusted) return info();
+    if (projectRoot === null || trusted) return info();
+    saveProjectTrust(cwd, projectRoot, "trusted");
+    trustState = "trusted";
     trusted = true;
-    try {
-      await refreshExtensions();
-    } catch (error) {
-      trusted = false;
-      throw error;
-    }
+    await refreshExtensions();
+    return info();
+  }
+
+  async function rejectTrust() {
+    if (projectRoot === null) return info();
+    if (pool.activity().some((session) => session.running))
+      throw new Error("Stop running sessions before changing project trust.");
+    saveProjectTrust(cwd, projectRoot, "untrusted");
+    trustState = "untrusted";
+    trusted = false;
+    await extensions.dispose();
+    extensions = { ...deferredExtensions(extensions.skills), skillActivations };
+    mcpConfiguration = undefined;
+    await refreshExtensions();
     return info();
   }
 
@@ -412,31 +433,7 @@ export async function createAppService(cwd: string): Promise<AppService> {
       await refreshExtensions();
       return commands.list();
     },
-    settings: () => ({ config: sanitizeConfig(config), info: info() }),
-    async saveSettings(input) {
-      const parsed = HarnessConfigSchema.parse(input.config);
-      const clear = input.clearApiKeys ?? [];
-      const next = {
-        ...mergeSecrets(parsed, config, clear),
-        useDefaults: false,
-      };
-      await commit(next, clear);
-      return info();
-    },
-    async setModel(input) {
-      const definition = config.providers[input.provider];
-      if (!definition) throw new Error(`unknown provider: ${input.provider}`);
-      if (!definition.models[input.model] && Object.keys(definition.models).length > 0) {
-        throw new Error(`unknown model for ${input.provider}: ${input.model}`);
-      }
-      const next: HarnessConfig = { ...config, provider: input.provider, model: input.model };
-      if (input.reasoning) next.reasoning = input.reasoning;
-      else delete next.reasoning;
-      if (input.variant) next.variant = input.variant;
-      else delete next.variant;
-      await commit(next);
-      return info();
-    },
+    ...settingsActions(() => config, commit, info),
     discover: (input) => discoverProvider(cwd, input),
     listSessions: async (options) => {
       await retention.maintain();
@@ -461,6 +458,7 @@ export async function createAppService(cwd: string): Promise<AppService> {
     test: providers.test,
     registerDraft: providers.registerDraft,
     acceptTrust,
+    rejectTrust,
     catalogList: providers.catalogList,
     catalogProvider: providers.catalogProvider,
     catalogStatus: () => catalogStatus(cwd),

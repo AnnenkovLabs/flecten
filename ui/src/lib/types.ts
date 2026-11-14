@@ -24,6 +24,10 @@ export interface Project {
   age: string;
   current?: boolean;
   tasks?: Task[];
+  path?: string;
+  projectRoot?: string | null;
+  trust?: "unknown" | "trusted" | "untrusted";
+  error?: string;
 }
 
 export type FileKind = "ts" | "test" | "js" | "css" | "json" | "md" | "py" | "rs" | "other";

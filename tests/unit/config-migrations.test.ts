@@ -76,7 +76,7 @@ describe("config migrations", () => {
     });
     expect(config.budgets).toEqual({});
     expect(config.update).toEqual({
-      channel: "stable",
+      channel: "beta",
       autoCheck: true,
       autoDownload: true,
       installOnQuit: true,

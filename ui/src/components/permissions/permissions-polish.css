@@ -4,17 +4,9 @@
   gap: 18px;
 }
 
-.perm-preset-block,
 .perm-section,
 .perm-approvals {
   gap: 8px;
-}
-
-.perm-preset {
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 7px;
-  font-size: 12.5px;
 }
 
 .perm-preset-note {

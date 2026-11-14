@@ -37,8 +37,8 @@ export default {
   "Applying decision…": "Aplicando decisión…",
   "Expired: waiting for confirmation": "Caducó: esperando confirmación",
   "Save this exact action for this project?": "¿Guardar esta acción exacta para este proyecto?",
-  "Only identical arguments, paths and working directory will match. You can revoke this rule in Permissions.":
-    "Deben coincidir todos los argumentos, rutas y el directorio de trabajo. Puedes revocar la regla en Permisos.",
+  "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
+    "Deben coincidir todos los argumentos, rutas y el directorio de trabajo. Puedes revocar la regla en Acceso.",
   "For this chat": "Para este chat",
   "Save exact rule": "Guardar regla exacta",
   "Remember…": "Recordar…",
@@ -47,8 +47,8 @@ export default {
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "Permite acciones habituales. Siguen vigentes las reglas destructivas y los límites del entorno aislado.",
   "Saved rules": "Reglas guardadas",
-  "Rules belong to this project. Removing a rule takes effect when you save, including during an active run.":
-    "Las reglas pertenecen a este proyecto. Al guardar se aplica la eliminación, incluso durante una ejecución activa.",
+  "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
+    "Las reglas se guardan globalmente. Al guardar, las reglas eliminadas dejan de aplicarse, incluso durante una ejecución.",
   "No saved rules.": "No hay reglas guardadas.",
   "All matching actions": "Todas las acciones coincidentes",
   "Exact arguments and resources": "Argumentos y recursos exactos",
@@ -69,4 +69,38 @@ export default {
   "Feedback for the agent": "Comentario para el agente",
   "OS sandbox available": "Entorno aislado del SO disponible",
   "OS sandbox unavailable": "Entorno aislado del SO no disponible",
+  Access: "Acceso",
+  "Access mode": "Modo de acceso",
+  Agent: "Agente",
+  "Confirm changes": "Confirmar cambios",
+  "Custom access": "Acceso personalizado",
+  "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.":
+    "Lee, edita y ejecuta comandos en el proyecto. Pide permiso para acceder a otra carpeta o realizar acciones irreversibles.",
+  "Reads freely. Asks before changes, commands and connected tools.":
+    "Lee sin preguntar. Pide permiso para cambios, comandos y herramientas conectadas.",
+  "Works across your computer without routine approvals. Process isolation is off.":
+    "Trabaja en todo el equipo sin pedir permisos de rutina. El aislamiento de procesos está desactivado.",
+  "Advanced settings differ from these modes.": "La configuración avanzada difiere de estos modos.",
+  "Saved rules and human checkpoints still apply in every mode.":
+    "Las reglas guardadas y las confirmaciones humanas se siguen aplicando en todos los modos.",
+  "Advanced access settings": "Configuración avanzada de acceso",
+  "Action permissions": "Permisos por acción",
+  "Process isolation": "Aislamiento de procesos",
+  "Isolate processes": "Aislar procesos",
+  "Limit commands to the project and approved folders.":
+    "Limitar los comandos al proyecto y las carpetas autorizadas.",
+  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
+    "Con el aislamiento activado, los comandos se limitan al proyecto y las carpetas autorizadas para este chat.",
+  "Allow folder access?": "¿Permitir acceso a la carpeta?",
+  "Folder access covers the displayed paths and their subfolders.":
+    "El acceso abarca las rutas indicadas y sus subcarpetas.",
+  "Access is shared with agents in this chat.":
+    "El acceso se comparte con los agentes de este chat.",
+  "Repeat this action in this chat": "Repetir esta acción en este chat",
+  "Remember folder access": "Recordar acceso a la carpeta",
+  "Access mode: {0}": ["Modo de acceso: ", 0],
+  "Could not change access. Try again. {0}": [
+    "No se pudo cambiar el acceso. Vuelve a intentarlo. ",
+    0,
+  ],
 } as const;

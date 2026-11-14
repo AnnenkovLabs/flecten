@@ -199,8 +199,6 @@ export class ModuleRuntime implements ModuleSessionPort {
         errors: this.catalog.errors,
       });
     }
-    if (!this.trusted() && action.operation === "activate")
-      await this.options.requestTrust?.(context);
     if (!this.trusted()) throw new Error("Accept project trust before activating modules");
     const scope = this.#scope(context.sessionId);
     if (action.operation === "status") return result(await this.state(context.sessionId));

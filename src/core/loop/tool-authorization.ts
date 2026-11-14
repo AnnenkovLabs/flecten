@@ -1,6 +1,12 @@
 import type { ApprovalOutcome, PermissionRequest } from "../../security/types";
 import type { ToolContext } from "../../tools/types";
 import type { ToolCall, ToolResult } from "../types";
+import {
+  externalDirectories,
+  externalRequest,
+  serializeDirectoryAccess,
+  withExternalAccess,
+} from "./external-access";
 import { permissionRequest, shellText } from "./permission-request";
 import { type PermissionReview, reviewPermission } from "./permission-review";
 import type { ToolExecutionOptions } from "./tools";
@@ -35,7 +41,7 @@ async function sandbox(
     if (!check.allowed) return denied(check.reason, "sandbox");
     const command = shellText(request);
     if (command !== undefined) {
-      const shell = policy.checkShell(command);
+      const shell = policy.checkShell(command, request.cwd);
       if (!shell.allowed) return denied(shell.reason, "sandbox");
     }
   }
@@ -95,7 +101,53 @@ export async function authorizeCall(
     };
   }
   if (!request) return {};
-  const blocked = await recheckPermission(request, context);
+  let directories: string[];
+  try {
+    directories = await externalDirectories(request, context);
+  } catch (error) {
+    return {
+      request,
+      error: denied(
+        `Cannot verify external directory: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    };
+  }
+  // Check protected resources before asking for a directory that cannot authorize them.
+  const candidate = withExternalAccess({ ...context, authorizedExternalPaths: directories });
+  const protectedPath = await sandbox(request, candidate);
+  if (protectedPath) return { request, error: protectedPath };
+  for (const path of directories) {
+    const directory = externalRequest(request, path);
+    const permission = await serializeDirectoryAccess(context, path, () =>
+      authorizeRequest(directory, call.id, options, context, emit),
+    );
+    if (permission.error) return { request, error: permission.error };
+    context.authorizedExternalPaths = [
+      ...new Set([...(context.authorizedExternalPaths ?? []), path]),
+    ];
+  }
+  Object.assign(context, withExternalAccess(context));
+  request = await permissionRequest(call, tool, context);
+  if (!request) return {};
+  return authorizeRequest(request, call.id, options, context, emit);
+}
+
+async function authorizeRequest(
+  request: PermissionRequest,
+  callId: string,
+  options: ToolExecutionOptions,
+  context: ToolContext,
+  emit: (event: LoopEvent) => void,
+): Promise<{
+  request?: PermissionRequest;
+  error?: ToolResult;
+  feedback?: string;
+  review?: PermissionReview;
+}> {
+  if (context.signal.aborted || options.stopSignal?.aborted)
+    return { request, error: denied("Tool call cancelled while checking permission") };
+  const blocked =
+    request.action === "external_path" ? undefined : await recheckPermission(request, context);
   if (blocked) return { request, error: blocked };
   const engine = context.permissions;
   if (!engine) return { request };
@@ -105,12 +157,12 @@ export async function authorizeCall(
     {
       sessionId: context.sessionId,
       cwd: context.cwd,
-      toolName: call.name,
-      toolArgs: call.args,
+      toolName: request.tool,
+      toolArgs: request.args,
       permission: {
         action: request.action,
         policy: inspected.policy,
-        tool: call.name,
+        tool: request.tool,
         ...(request.target ? { target: request.target } : {}),
         reason: inspected.reason,
       },
@@ -170,7 +222,7 @@ export async function authorizeCall(
       id: decision.approvalId,
       request,
       reason: decision.reason,
-      callId: call.id,
+      callId,
       ...(decision.humanOnly ? { humanOnly: true } : {}),
     },
     options.stopSignal ? AbortSignal.any([context.signal, options.stopSignal]) : context.signal,

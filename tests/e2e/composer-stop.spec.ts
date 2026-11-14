@@ -11,6 +11,12 @@ const models = {
   },
 };
 
+async function ready(page: Page): Promise<void> {
+  await expect(page.locator(".composer-bar")).toContainText("E2E Mock");
+  const trust = page.getByRole("button", { name: "Доверять папке", exact: true });
+  if (await trust.isVisible()) await trust.click();
+}
+
 async function aligned(page: Page) {
   const boxes = await page.locator(".composer:visible").evaluate((composer) => {
     const rect = (selector: string) => {
@@ -41,6 +47,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
   const h = await launchApp({ holdSummary: true, models });
   const { page, app } = h;
   try {
+    await ready(page);
     const prompt = page.locator("#prompt");
     await prompt.fill("Проверь README.md");
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
@@ -90,6 +97,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
     );
     await actions.getByRole("button", { name: "Остановка", exact: true }).click();
     const force = actions.getByRole("button", { name: "Остановить принудительно", exact: true });
+    await expect(force).toBeDisabled();
     await expect(force).toBeEnabled();
     await expect(force).toHaveClass(/is-stopping/);
     await expect(page.getByRole("status", { name: "Готовим сводку" })).toBeVisible();
@@ -119,6 +127,40 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
     await expect(page.getByRole("button", { name: "Отправить", exact: true })).toBeEnabled();
     await expect(prompt).toHaveText("Черновик сохраняется при остановке");
     await page.screenshot({ path: ".liquid/composer-review/stopped-1180.png" });
+    await prompt.fill("");
+    const resume = page
+      .locator(".composer-bar")
+      .getByRole("button", { name: "Продолжить", exact: true });
+    await expect(resume).toBeEnabled();
+    await page.reload();
+    await page.locator(".task-row").filter({ hasText: "Проверь README.md" }).click();
+    await expect(resume).toBeEnabled();
+    for (const [width, height] of [
+      [1480, 940],
+      [1180, 640],
+    ] as const) {
+      await app.evaluate(
+        ({ BrowserWindow }, size) => {
+          BrowserWindow.getAllWindows()[0]?.setContentSize(size.width, size.height);
+        },
+        { width, height },
+      );
+      await page.setViewportSize({ width, height });
+      await expect(resume.locator("svg")).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
+        false,
+      );
+      await page.screenshot({ path: test.info().outputPath(`continue-${width}.png`) });
+    }
+    await page.getByRole("button", { name: "IDE", exact: true }).click();
+    await expect(resume).toBeEnabled();
+    await page.locator(".mode-switch").getByRole("button", { name: "Агент", exact: true }).click();
+    await expect(resume).toBeEnabled();
+    await resume.click();
+    const stop = actions.getByRole("button", { name: "Остановка", exact: true });
+    await expect(stop).toBeDisabled();
+    await expect(stop).toBeEnabled();
+    await expect(resume).toHaveCount(0);
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();
@@ -128,6 +170,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
 test("graceful stop completes the held model response without draining queue", async () => {
   const h = await launchApp({ holdSummary: true, models });
   try {
+    await ready(h.page);
     const prompt = h.page.locator("#prompt");
     await prompt.fill("Проверь README.md");
     await prompt.press("Enter");
@@ -154,6 +197,7 @@ test("three-part composer stays available with an idle Talker and a running Work
   const h = await launchApp({ conversation: true });
   try {
     const { page, app } = h;
+    await ready(page);
     const prompt = page.locator("#prompt:visible");
     await prompt.fill("Проверь проект, сохрани API");
     await prompt.press("Enter");
@@ -197,6 +241,10 @@ test("three-part composer stays available with an idle Talker and a running Work
     await expect(actions).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Отправить", exact: true })).toBeEnabled();
     await expect(prompt).toHaveText("Черновик для работающего агента");
+    await prompt.fill("");
+    await expect(
+      page.locator(".composer-bar").getByRole("button", { name: "Продолжить", exact: true }),
+    ).toBeEnabled();
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();

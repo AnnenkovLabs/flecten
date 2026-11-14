@@ -78,6 +78,8 @@ describe("searchSettingsSections", () => {
     expect(searchSettingsSections("maxCostUsd")).toEqual([]);
     expect(searchSettingsSections("bashTimeoutMs").map((entry) => entry.id)).toEqual(["tools"]);
     expect(searchSettingsSections("разрешения").map((entry) => entry.id)).toEqual(["permissions"]);
+    expect(searchSettingsSections("песочница").map((entry) => entry.id)).toEqual(["permissions"]);
+    expect(SETTINGS_SECTIONS.some((entry) => entry.id === ("sandbox" as string))).toBe(false);
   });
 
   it("returns every section for an empty query", () => {
@@ -145,9 +147,9 @@ describe("permission policies", () => {
   it("reads defaults and writes the config field used by the core", () => {
     const value = config();
     expect(permissionPolicies(value)).toMatchObject({
-      read: "auto",
-      network: "ask",
-      external_path: "deny",
+      read: "allow",
+      network: "allow",
+      external_path: "ask",
     });
     setPermissionPolicy(value, "external_path", "allow");
     expect(permissionPolicies(value).external_path).toBe("allow");

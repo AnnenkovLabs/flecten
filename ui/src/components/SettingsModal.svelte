@@ -24,7 +24,6 @@
   import GeneralSettings from "./settings/GeneralSettings.svelte";
   import HistorySettings from "./settings/HistorySettings.svelte";
   import PermissionsSettings from "./settings/PermissionsSettings.svelte";
-  import SandboxSettings from "./settings/SandboxSettings.svelte";
   import ServerSettings from "./settings/ServerSettings.svelte";
   import McpSettings from "./settings/McpSettings.svelte";
   import SkillsSettings from "./settings/SkillsSettings.svelte";
@@ -311,8 +310,6 @@
               <ProviderEditor />
             {:else if section === "permissions"}
               <PermissionsSettings />
-            {:else if section === "sandbox"}
-              <SandboxSettings />
             {:else if section === "history"}
               <HistorySettings />
             {:else if section === "dictionary"}

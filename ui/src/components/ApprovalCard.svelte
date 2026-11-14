@@ -1,15 +1,17 @@
 <script lang="ts">
   import { t } from "../lib/i18n.svelte";
-  import { approvalActionTitle } from "../lib/permissions";
+  import { approvalActionTitle, approvalScopePaths, approvalSessionLabel } from "../lib/permissions";
   import { answerApproval, type ApprovalChoice } from "../lib/run/intents";
   import type { ApprovalItem } from "../lib/types";
   import Icon from "./Icon.svelte";
 
-  let { item }: { item: ApprovalItem } = $props();
+  let { item, docked = false }: { item: ApprovalItem; docked?: boolean } = $props();
 
   const approval = $derived(item.approval);
   const projectTrust = $derived(approval.risks?.some((risk) => risk.id === "project-trust") === true);
   const pending = $derived(item.state === "pending");
+  const folderAccess = $derived(approval.action === "external_path");
+  const folderGrant = $derived(folderAccess && !approval.humanOnly);
   let now = $state(Date.now());
   let remember = $state(false);
   let feedback = $state("");
@@ -43,6 +45,7 @@
 
 <section
   class="approval"
+  class:is-docked={docked}
   class:is-settled={!pending}
   class:is-denied={item.state === "deny"}
   aria-label={t("Permission: {0}", [approval.tool])}
@@ -51,7 +54,12 @@
     <Icon name="key" size={15} />
     <span class="approval-title" role="status">{pending ? projectTrust ? t("Trust project?") : approvalActionTitle(approval.action) : outcome}</span>
   </header>
-  <code class="approval-target">{approval.target || approval.tool}</code>
+  <div class="approval-body">
+  {#if folderAccess}
+    <p class="approval-reason">{t("Folder access covers the displayed paths and their subfolders.")}</p>
+    {#each approvalScopePaths(approval) as path}<code class="approval-target">{path}</code>{/each}
+    <p class="approval-reason">{t("Access is shared with agents in this chat.")}</p>
+  {:else}<code class="approval-target">{approval.target || approval.tool}</code>{/if}
   {#if projectTrust}
     <p class="approval-reason">{t("Configured modules, MCP servers and hooks can run with your account permissions.")}</p>
   {:else if approval.risks && approval.risks.length > 0}
@@ -77,20 +85,25 @@
     {#if item.resolving}{t("Applying decision…")}{:else if pending && disabled}{t("Expired: waiting for confirmation")}{/if}
   </div>
   {#if item.error}<p class="approval-reason" role="alert">{item.error}</p>{/if}
+  </div>
   {#if pending}
     <div class="approval-actions">
-      <button class="st-btn st-btn--primary" type="button" {disabled} onclick={() => choose("allow_once")}>{projectTrust ? t("Trust and continue") : t("Allow once")}</button>
+      <button class="st-btn st-btn--primary" type="button" {disabled} onclick={() => choose(folderGrant ? "allow_session" : "allow_once")}>{projectTrust ? t("Trust and continue") : folderGrant ? t("For this chat") : t("Allow once")}</button>
+      {#if folderGrant}
+        <button class="st-btn" type="button" {disabled} onclick={() => choose("allow_once")}>{t("Allow once")}</button>
+        <button class="st-btn" type="button" {disabled} onclick={() => choose("allow_always")}>{t("Remember folder access")}</button>
+      {/if}
       <button class="st-btn st-btn--danger" type="button" {disabled} onclick={() => choose("deny")}>{t("Deny")}</button>
       <details class="approval-more">
         <summary class="st-btn st-btn--quiet">{t("More options")}</summary>
         <div class="approval-extra">
-          {#if !approval.humanOnly}
+          {#if !approval.humanOnly && !folderAccess}
             <div class="approval-actions">
-              <button class="st-btn" type="button" {disabled} onclick={() => choose("allow_session")}>{t("For this chat")}</button>
-              <button class="st-btn" type="button" {disabled} onclick={() => remember = !remember}>{t("Remember…")}</button>
+                <button class="st-btn" type="button" {disabled} onclick={() => choose("allow_session")}>{approvalSessionLabel(approval.action)}</button>
+                <button class="st-btn" type="button" {disabled} onclick={() => remember = !remember}>{t("Remember…")}</button>
             </div>
             {#if remember}
-              <p class="approval-reason">{t("Only this action in this folder.")}</p>
+              <p class="approval-reason">{t("Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.")}</p>
               <code class="approval-target">{approval.cwd}</code>
               <button class="st-btn" type="button" {disabled} onclick={() => choose("allow_always")}>{t("Save exact rule")}</button>
             {/if}
@@ -121,6 +134,17 @@
     background: rgba(240, 239, 237, 0.025);
     box-shadow: 0 0 0 1px var(--line);
   }
+
+  .approval.is-docked {
+    display: flex;
+    flex-direction: column;
+    max-width: none;
+    max-height: 42dvh;
+    margin-top: 0;
+  }
+  .is-docked .approval-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .is-docked .approval-head, .is-docked .approval-actions { flex: none; }
+  .is-docked .approval-extra { max-height: 22dvh; overflow-y: auto; }
 
   .approval-head {
     display: flex;

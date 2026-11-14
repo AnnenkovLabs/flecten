@@ -33,7 +33,7 @@ export default {
   "Applying decision…": "正在应用决定…",
   "Expired: waiting for confirmation": "已过期：等待确认",
   "Save this exact action for this project?": "为此项目保存这一确切操作？",
-  "Only identical arguments, paths and working directory will match. You can revoke this rule in Permissions.":
+  "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
     "仅当所有参数、路径和工作目录完全一致时才会匹配。可在权限设置中撤销规则。",
   "For this chat": "对此聊天允许",
   "Save exact rule": "保存精确规则",
@@ -43,8 +43,8 @@ export default {
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "允许普通操作。破坏性操作规则和沙盒限制仍然有效。",
   "Saved rules": "已保存的规则",
-  "Rules belong to this project. Removing a rule takes effect when you save, including during an active run.":
-    "规则属于此项目。删除将在保存后生效，正在运行的任务也会受到影响。",
+  "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
+    "规则全局保存。删除规则在保存后立即生效，包括正在运行的任务。",
   "No saved rules.": "没有已保存的规则。",
   "All matching actions": "所有匹配的操作",
   "Exact arguments and resources": "完全一致的参数和资源",
@@ -64,4 +64,33 @@ export default {
   "Feedback for the agent": "给代理的反馈",
   "OS sandbox available": "系统沙盒可用",
   "OS sandbox unavailable": "系统沙盒不可用",
+  Access: "访问权限",
+  "Access mode": "访问模式",
+  Agent: "智能体",
+  "Confirm changes": "确认更改",
+  "Custom access": "自定义访问",
+  "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.":
+    "在项目中读取、编辑并运行命令。访问其他文件夹或执行不可逆操作前会请求确认。",
+  "Reads freely. Asks before changes, commands and connected tools.":
+    "读取无需确认。更改、命令和已连接工具的调用需要确认。",
+  "Works across your computer without routine approvals. Process isolation is off.":
+    "可在整个计算机上工作，无需常规授权确认。进程隔离已关闭。",
+  "Advanced settings differ from these modes.": "高级设置与这些模式不同。",
+  "Saved rules and human checkpoints still apply in every mode.":
+    "已保存的规则和人工确认要求仍在所有模式中生效。",
+  "Advanced access settings": "高级访问设置",
+  "Action permissions": "各操作权限",
+  "Process isolation": "进程隔离",
+  "Isolate processes": "隔离进程",
+  "Limit commands to the project and approved folders.": "将命令限制在项目和已授权文件夹内。",
+  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
+    "启用隔离后，命令仅可在项目和为此聊天授权的文件夹内运行。",
+  "Allow folder access?": "允许访问文件夹？",
+  "Folder access covers the displayed paths and their subfolders.":
+    "访问权限涵盖显示的路径及其子文件夹。",
+  "Access is shared with agents in this chat.": "访问权限与此聊天中的智能体共享。",
+  "Repeat this action in this chat": "在此聊天中允许重复此操作",
+  "Remember folder access": "记住文件夹访问权限",
+  "Access mode: {0}": ["访问模式：", 0],
+  "Could not change access. Try again. {0}": ["无法更改访问权限。请重试。", 0],
 } as const;

@@ -37,8 +37,8 @@ export default {
   "Applying decision…": "Застосовуємо рішення…",
   "Expired: waiting for confirmation": "Строк минув: очікуємо підтвердження",
   "Save this exact action for this project?": "Зберегти цю точну дію для проєкту?",
-  "Only identical arguments, paths and working directory will match. You can revoke this rule in Permissions.":
-    "Мають збігатися всі аргументи, шляхи та робоча папка. Відкликати правило можна в розділі дозволів.",
+  "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
+    "Мають збігатися всі аргументи, шляхи та робоча папка. Відкликати правило можна в розділі «Доступ».",
   "For this chat": "Для цього чату",
   "Save exact rule": "Зберегти точне правило",
   "Remember…": "Запам’ятати…",
@@ -47,8 +47,8 @@ export default {
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "Дозволяє звичайні дії. Правила небезпечних операцій та обмеження пісочниці залишаються чинними.",
   "Saved rules": "Збережені правила",
-  "Rules belong to this project. Removing a rule takes effect when you save, including during an active run.":
-    "Правила належать цьому проєкту. Видалення діє після збереження, зокрема під час роботи агента.",
+  "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
+    "Правила зберігаються глобально. Видалення правила набирає чинності після збереження, зокрема під час роботи агента.",
   "No saved rules.": "Немає збережених правил.",
   "All matching actions": "Усі відповідні дії",
   "Exact arguments and resources": "Точні аргументи та ресурси",
@@ -68,4 +68,35 @@ export default {
   "Feedback for the agent": "Коментар для агента",
   "OS sandbox available": "Пісочниця ОС доступна",
   "OS sandbox unavailable": "Пісочниця ОС недоступна",
+  Access: "Доступ",
+  "Access mode": "Режим доступу",
+  Agent: "Агент",
+  "Confirm changes": "Підтверджувати зміни",
+  "Custom access": "Власний режим доступу",
+  "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.":
+    "Читає, змінює файли та виконує команди в проєкті. Запитує перед доступом до іншої папки або незворотними діями.",
+  "Reads freely. Asks before changes, commands and connected tools.":
+    "Читає без запитань. Запитує перед змінами, командами та викликами підключених інструментів.",
+  "Works across your computer without routine approvals. Process isolation is off.":
+    "Працює на всьому комп’ютері без звичайних запитів дозволів. Ізоляцію процесів вимкнено.",
+  "Advanced settings differ from these modes.":
+    "Розширені налаштування відрізняються від цих режимів.",
+  "Saved rules and human checkpoints still apply in every mode.":
+    "Збережені правила й обов’язкові підтвердження діють у всіх режимах.",
+  "Advanced access settings": "Розширені налаштування доступу",
+  "Action permissions": "Дозволи за діями",
+  "Process isolation": "Ізоляція процесів",
+  "Isolate processes": "Ізолювати процеси",
+  "Limit commands to the project and approved folders.":
+    "Обмежувати команди проєктом і дозволеними папками.",
+  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
+    "За ввімкненої ізоляції команди працюють у межах проєкту й папок, дозволених для цього чату.",
+  "Allow folder access?": "Дозволити доступ до папки?",
+  "Folder access covers the displayed paths and their subfolders.":
+    "Доступ поширюється на вказані папки й усі вкладені папки.",
+  "Access is shared with agents in this chat.": "Доступ спільний для агентів цього чату.",
+  "Repeat this action in this chat": "Повторювати цю дію в цьому чаті",
+  "Remember folder access": "Запам’ятати доступ до папки",
+  "Access mode: {0}": ["Режим доступу: ", 0],
+  "Could not change access. Try again. {0}": ["Не вдалося змінити доступ. Спробуйте ще раз. ", 0],
 } as const;

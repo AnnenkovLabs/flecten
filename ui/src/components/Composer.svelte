@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { AccessMode, ActiveAccessMode } from "../../../shared/access-mode";
   import { t } from "../lib/i18n.svelte";
   import { onMount, tick } from "svelte";
   import { isModifier } from "../lib/platform";
@@ -33,6 +34,9 @@
   interface Props {
     running: boolean;
     stopping?: boolean;
+    canContinue: boolean;
+    controlCooldown: boolean;
+    onContinue: () => void;
     focusToken: number;
     layout?: "dock" | "hero";
     placeholder?: string;
@@ -42,6 +46,9 @@
     model: string;
     reasoning: ReasoningChoice;
     variant?: string | undefined;
+    accessMode: ActiveAccessMode;
+    accessChanging: boolean;
+    onAccessModeChange: (mode: AccessMode) => void;
     queued: QueuedMessage[];
     sendMode: SendMode;
     files: string[];
@@ -65,6 +72,9 @@
   let {
     running,
     stopping = false,
+    canContinue,
+    controlCooldown,
+    onContinue,
     focusToken,
     layout = "dock",
     placeholder = t("Message the agent…"),
@@ -74,6 +84,9 @@
     model,
     reasoning,
     variant,
+    accessMode,
+    accessChanging,
+    onAccessModeChange,
     queued,
     sendMode,
     files,
@@ -247,6 +260,10 @@
 
   function submit(event: SubmitEvent): void {
     event.preventDefault();
+    if (!running && !voice.active && text.trim().length === 0 && attachments.length === 0) {
+      if (canContinue && !controlCooldown) onContinue();
+      return;
+    }
     sendDraft(running ? sendMode : "queue");
   }
 
@@ -413,6 +430,9 @@
     <ComposerBar
       {running}
       {stopping}
+      {canContinue}
+      {controlCooldown}
+      {onContinue}
       hasDraft={text.trim().length > 0 || attachments.length > 0}
       canSend={canSend && !voice.active}
       voiceSupported={voice.supported}
@@ -431,6 +451,9 @@
       {model}
       {reasoning}
       {variant}
+      {accessMode}
+      {accessChanging}
+      {onAccessModeChange}
       onSend={(mode) => sendDraft(mode)}
       onAttach={() => void pickFiles()}
       {onModelSelect}

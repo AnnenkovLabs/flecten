@@ -17,7 +17,12 @@ const { ElectronHttpExecutor } = require("electron-updater/out/electronHttpExecu
 const { NodeHttpExecutor } = require("builder-util/out/nodeHttpExecutor.js");
 const { pinUpdateKey, signUpdateManifests } = require("../../scripts/sign-update-manifests.mjs");
 
-const MANUAL_SETTINGS = { autoCheck: false, autoDownload: false, installOnQuit: false };
+const MANUAL_SETTINGS = {
+  channel: "stable",
+  autoCheck: false,
+  autoDownload: false,
+  installOnQuit: false,
+};
 
 interface FakeClock {
   timers: {
@@ -317,6 +322,7 @@ describe("signed update channel", () => {
   test("automatic settings download the verified update in the background and arm install on quit", async () => {
     const f = await fixture();
     const app = f.controller(f.publicPem, {
+      channel: "stable",
       autoCheck: false,
       autoDownload: true,
       installOnQuit: true,
@@ -338,7 +344,7 @@ describe("signed update channel", () => {
     const clock = fakeTimers();
     const app = f.controller(
       f.publicPem,
-      { autoCheck: true, autoDownload: false, installOnQuit: false },
+      { channel: "stable", autoCheck: true, autoDownload: false, installOnQuit: false },
       { timers: clock.timers },
     );
     expect(clock.delays()).toEqual([STARTUP_CHECK_DELAY_MS]);
@@ -356,7 +362,7 @@ describe("signed update channel", () => {
     const clock = fakeTimers();
     const app = f.controller(
       f.publicPem,
-      { autoCheck: true, autoDownload: false, installOnQuit: false },
+      { channel: "stable", autoCheck: true, autoDownload: false, installOnQuit: false },
       { timers: clock.timers },
     );
     await clock.fireNext();
@@ -375,7 +381,7 @@ describe("signed update channel", () => {
       {
         source: { kind: "feed", url: f.url },
         emit: () => undefined,
-        settings: { autoCheck: true, autoDownload: true, installOnQuit: true },
+        settings: { channel: "stable", autoCheck: true, autoDownload: true, installOnQuit: true },
         automated: true,
       },
       { updater: f.updater, publicKey: f.publicPem, timers: clock.timers },
@@ -399,12 +405,32 @@ describe("signed update channel", () => {
     expect(f.paths).toContain(`/${f.betaChannel}.signed.json`);
   });
 
+  test("enabling install-on-quit after downloading arms the cached verified update", async () => {
+    const f = await fixture();
+    const app = f.controller();
+    await app.check();
+    expect((await app.download()).state).toBe("downloaded");
+    f.quit(0);
+    expect(f.installs()).toBe(0);
+    app.apply({
+      source: { kind: "feed", url: f.url },
+      settings: { ...MANUAL_SETTINGS, installOnQuit: true },
+    });
+    await f.updater.downloadPromise;
+    f.quit(1);
+    expect(f.installs()).toBe(0);
+    f.quit(0);
+    expect(f.installs()).toBe(1);
+    expect(f.paths.filter((path) => path === `/${f.artifact}`)).toHaveLength(1);
+    app.dispose();
+  });
+
   test("dispose cancels the schedule and detaches from the updater", async () => {
     const f = await fixture();
     const clock = fakeTimers();
     const app = f.controller(
       f.publicPem,
-      { autoCheck: true, autoDownload: false, installOnQuit: false },
+      { channel: "stable", autoCheck: true, autoDownload: false, installOnQuit: false },
       { timers: clock.timers },
     );
     app.dispose();

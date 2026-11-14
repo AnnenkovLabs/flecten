@@ -27,9 +27,11 @@ export async function createExtensions(
   config: HarnessConfig,
   options: McpSessionOptions = {},
   skillActivations: SkillActivations = new Map(),
+  projectRoot?: string | null,
 ): Promise<AppExtensions> {
   const [skills, mcp] = await Promise.all([
     discoverSkills(cwd, {
+      ...(projectRoot === undefined ? {} : { projectRoot }),
       sources: config.skills?.sources,
       ...(config.skills?.trust ? { trust: config.skills.trust } : {}),
     }),

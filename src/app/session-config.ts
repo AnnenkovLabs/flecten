@@ -86,12 +86,14 @@ export async function systemPrompt(
   sections: readonly PromptSection[],
   tools: ToolRegistry,
   role?: "talker" | "worker",
+  projectRoot?: string | null,
 ): Promise<SystemPrompt> {
   const maxPromptTokens = config.context.promptBudget ?? configuredBudget();
   const built = await buildPrompt(cwd, {
     sections,
     tools: tools.specs(),
     maxPromptTokens,
+    ...(projectRoot === undefined ? {} : { projectRoot }),
     ...(role ? { role } : {}),
   });
   return {

@@ -52,7 +52,7 @@
     const feedUrl = patch.feedUrl !== undefined ? patch.feedUrl : config.update?.feedUrl;
     const github = patch.github !== undefined ? patch.github : config.update?.github;
     config.update = {
-      channel: patch.channel ?? config.update?.channel ?? "stable",
+      channel: patch.channel ?? config.update?.channel ?? "beta",
       autoCheck: patch.autoCheck ?? config.update?.autoCheck ?? true,
       autoDownload: patch.autoDownload ?? config.update?.autoDownload ?? true,
       installOnQuit: patch.installOnQuit ?? config.update?.installOnQuit ?? true,
@@ -160,7 +160,7 @@
       </div>
       <label class="st-field">
         <span class="st-label">{t("Update channel")}</span>
-        <select class="st-input" value={config.update?.channel ?? "stable"} onchange={(event) => patchUpdate({ channel: event.currentTarget.value === "beta" ? "beta" : "stable" })}>
+        <select class="st-input" value={config.update?.channel ?? "beta"} onchange={(event) => patchUpdate({ channel: event.currentTarget.value === "beta" ? "beta" : "stable" })}>
           <option value="stable">{t("Stable")}</option>
           <option value="beta">{t("Beta")}</option>
         </select>

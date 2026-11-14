@@ -149,7 +149,7 @@
   text-align: center;
 }
 @media (hover: hover) and (pointer: fine) {
-  button.perm-preset:hover {
+  button.perm-access-mode:not(.is-active):hover {
     background: rgba(240, 239, 237, 0.04);
     color: var(--text);
     border-radius: 12px;
@@ -185,7 +185,7 @@
 }
 
 @media (pointer: coarse) {
-  .perm-preset,
+  .perm-access-mode,
   .perm-seg-btn {
     min-height: 44px;
   }

@@ -61,6 +61,11 @@ export interface AgentSkillDiagnostic {
 }
 
 export interface AgentInfo {
+  projectRoot?: string | null;
+  trustState?: "unknown" | "trusted" | "untrusted";
+  trustRequired?: boolean;
+  trustAccepted?: boolean;
+  accessMode?: import("../../../shared/access-mode").ActiveAccessMode;
   configPath?: string;
   cwd: string;
   project: string;

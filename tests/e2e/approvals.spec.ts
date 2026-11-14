@@ -1,29 +1,99 @@
-import { readdir, readFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
-import { environmentProblem, launchApp } from "./fixtures";
+import { expect, type Locator, type Page, test } from "@playwright/test";
+import type { AgentEvent } from "../../ui/src/lib/agent-protocol";
+import { type AppHarness, environmentProblem, type LaunchOptions, launchApp } from "./fixtures";
 
 const models = {
   "e2e-model": { name: "E2E Mock", context: 131072, output: 4096, tools: true, reasoning: false },
 };
 
+async function launchApprovalApp(options: LaunchOptions): Promise<AppHarness> {
+  const h = await launchApp(options);
+  try {
+    await h.page.emulateMedia({ reducedMotion: "reduce" });
+    await h.app.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      window?.restore();
+      window?.hide();
+    });
+    await expect(h.page.locator(".composer-access")).toBeVisible();
+    const trust = h.page.locator("dialog.project-trust");
+    if (await trust.isVisible()) {
+      await trust.getByRole("button", { name: "Do not trust", exact: true }).dispatchEvent("click");
+      const confirm = trust.getByRole("button", { name: "Continue without trust", exact: true });
+      if (await confirm.isVisible()) await confirm.dispatchEvent("click");
+      await expect(trust).toBeHidden();
+    }
+    return h;
+  } catch (error) {
+    console.error(await h.page.locator("body").innerText(), h.consoleErrors);
+    await h.close();
+    throw error;
+  }
+}
+
+async function capture(h: AppHarness, name: string, locator?: Locator): Promise<void> {
+  // Native snapshots map a window, so only an explicitly private Xvfb display may capture them.
+  if (process.env.FLECTEN_E2E_PRIVATE_DISPLAY !== "1") return;
+  const bounds = await locator?.boundingBox();
+  const rect = bounds
+    ? {
+        x: Math.floor(bounds.x),
+        y: Math.floor(bounds.y),
+        width: Math.ceil(bounds.width),
+        height: Math.ceil(bounds.height),
+      }
+    : undefined;
+  const image = await h.app.evaluate(
+    async ({ BrowserWindow }, { region, privateDisplay }) => {
+      const window = BrowserWindow.getAllWindows()[0];
+      if (!window) throw new Error("Approval fixture window is unavailable");
+      if (privateDisplay) window.showInactive();
+      try {
+        return (await window.webContents.capturePage(region, { stayHidden: true, stayAwake: true }))
+          .toPNG()
+          .toString("base64");
+      } finally {
+        window.hide();
+      }
+    },
+    { region: rect, privateDisplay: process.env.FLECTEN_E2E_PRIVATE_DISPLAY === "1" },
+  );
+  await writeFile(test.info().outputPath(name), Buffer.from(image, "base64"));
+}
+
+async function chooseAccessMode(page: Page, label: "Agent" | "Full access"): Promise<void> {
+  await page.locator(".composer-access").getByRole("button").dispatchEvent("click");
+  await page
+    .getByRole("listbox", { name: "Access mode", exact: true })
+    .getByRole("option")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .dispatchEvent("click");
+  await expect(
+    page.getByRole("button", { name: `Access mode: ${label}`, exact: true }),
+  ).toBeVisible();
+}
+
 test("approval scope, both viewports, persisted rule and revocation", async () => {
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
-  const h = await launchApp({
+  const h = await launchApprovalApp({
     models,
     locale: "en",
     firstCalls: [{ name: "bash", arguments: { command: "printf approval-system-ok" } }],
+    reply: "Approval scope check complete.",
   });
   try {
     const { page } = h;
     await page.locator("#prompt").fill("Run the local command after my approval.");
-    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await page.getByRole("button", { name: "Send", exact: true }).dispatchEvent("click");
     const card = page.locator("section.approval").last();
     await expect(card).toBeVisible();
-    await card.getByText("Details", { exact: true }).click();
+    await card.getByText("Details", { exact: true }).dispatchEvent("click");
     await expect(card.getByText("Working directory", { exact: true })).toBeVisible();
-    await card.getByText("Details", { exact: true }).click();
+    await card.getByText("Details", { exact: true }).dispatchEvent("click");
     for (const [width, height] of [
       [1480, 940],
       [1180, 640],
@@ -34,15 +104,14 @@ test("approval scope, both viewports, persisted rule and revocation", async () =
         { width, height },
       );
       await page.setViewportSize({ width, height });
-      await card.scrollIntoViewIfNeeded();
-      await page.screenshot({
-        path: test.info().outputPath(`approval-${width}.png`),
-        animations: "disabled",
+      await expect(card.getByRole("button", { name: "Allow once", exact: true })).toBeInViewport({
+        ratio: 1,
       });
-      await card.screenshot({
-        path: test.info().outputPath(`approval-card-${width}.png`),
-        animations: "disabled",
+      await expect(card.getByRole("button", { name: "Deny", exact: true })).toBeInViewport({
+        ratio: 1,
       });
+      await capture(h, `approval-${width}.png`);
+      await capture(h, `approval-card-${width}.png`, card);
       const bounds = await card.boundingBox();
       expect(bounds).not.toBeNull();
       expect(bounds?.height).toBeLessThan(240);
@@ -52,18 +121,26 @@ test("approval scope, both viewports, persisted rule and revocation", async () =
         true,
       );
     }
-    await card.getByText("More options", { exact: true }).click();
-    await card.getByRole("button", { name: "Remember…", exact: true }).click();
-    await expect(card.getByText("Only this action in this folder.", { exact: true })).toBeVisible();
-    await card.getByRole("button", { name: "Save exact rule", exact: true }).click();
+    await card.getByText("More options", { exact: true }).dispatchEvent("click");
+    await card.getByRole("button", { name: "Remember…", exact: true }).dispatchEvent("click");
+    await expect(
+      card.getByText("Only identical arguments, paths and working directory will match.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await card.getByRole("button", { name: "Save exact rule", exact: true }).dispatchEvent("click");
     await expect(card.getByText("Allowed and saved", { exact: true })).toBeVisible();
     const config = JSON.parse(await readFile(join(h.cwd, "flecten.config.json"), "utf8"));
     expect(config.permissions.rules.length).toBe(1);
     expect(config.permissions.rules[0].requestKey).toHaveLength(64);
     expect(config.permissions.rules[0].cwd).toBe(h.cwd);
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("button", { name: "Settings", exact: true }).dispatchEvent("click");
     const dialog = page.locator("dialog.settings-dialog");
-    await dialog.locator(".rail").getByRole("button", { name: "Permissions", exact: true }).click();
+    await dialog
+      .locator(".rail")
+      .getByRole("button", { name: "Access", exact: true })
+      .dispatchEvent("click");
+    await dialog.getByText("Advanced access settings", { exact: true }).dispatchEvent("click");
     await expect(dialog.getByText("Exact arguments and resources", { exact: true })).toBeVisible();
     for (const [width, height] of [
       [1480, 940],
@@ -75,16 +152,13 @@ test("approval scope, both viewports, persisted rule and revocation", async () =
         { width, height },
       );
       await page.setViewportSize({ width, height });
-      await page.screenshot({
-        path: test.info().outputPath(`permission-settings-${width}.png`),
-        animations: "disabled",
-      });
+      await capture(h, `permission-settings-${width}.png`);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );
     }
-    await dialog.getByRole("button", { name: "Remove rule", exact: true }).click();
-    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    await dialog.getByRole("button", { name: "Remove rule", exact: true }).dispatchEvent("click");
+    await dialog.getByRole("button", { name: "Save", exact: true }).dispatchEvent("click");
     await expect
       .poll(
         async () =>
@@ -101,21 +175,25 @@ test("approval scope, both viewports, persisted rule and revocation", async () =
 test("mandatory checkpoint and queued denial preserve human feedback", async () => {
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
-  const h = await launchApp({
+  const h = await launchApprovalApp({
     models,
     locale: "en",
     firstCalls: [{ name: "bash", arguments: { command: "printf checkpoint-test" } }],
   });
   try {
     const { page } = h;
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByRole("button", { name: "Settings", exact: true }).dispatchEvent("click");
     const dialog = page.locator("dialog.settings-dialog");
-    await dialog.locator(".rail").getByRole("button", { name: "Permissions", exact: true }).click();
+    await dialog
+      .locator(".rail")
+      .getByRole("button", { name: "Access", exact: true })
+      .dispatchEvent("click");
+    await dialog.getByText("Advanced access settings", { exact: true }).dispatchEvent("click");
     await dialog
       .getByRole("group", { name: "Always ask a person", exact: true })
       .getByRole("checkbox", { name: "Terminal", exact: true })
-      .check();
-    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+      .dispatchEvent("click");
+    await dialog.getByRole("button", { name: "Save", exact: true }).dispatchEvent("click");
     await expect
       .poll(async () =>
         JSON.parse(
@@ -126,19 +204,27 @@ test("mandatory checkpoint and queued denial preserve human feedback", async () 
         ),
       )
       .toBe(true);
-    await dialog.getByRole("button", { name: "Close settings", exact: true }).click();
+    await dialog
+      .getByRole("button", { name: "Close settings", exact: true })
+      .dispatchEvent("click");
     await page.locator("#prompt").fill("Run the checkpoint command.");
-    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await page.getByRole("button", { name: "Send", exact: true }).dispatchEvent("click");
     const card = page.locator("section.approval").last();
-    await card.getByText("Details", { exact: true }).click();
+    await card.getByText("Details", { exact: true }).dispatchEvent("click");
     await expect(
       card.getByText("Human approval required every time", { exact: true }),
     ).toBeVisible();
-    await card.getByText("Details", { exact: true }).click();
+    await card.getByText("Details", { exact: true }).dispatchEvent("click");
     await expect(card.getByRole("button", { name: "For this chat", exact: true })).toHaveCount(0);
+    await expect(
+      card.getByRole("button", { name: "Repeat this action in this chat", exact: true }),
+    ).toHaveCount(0);
     await expect(card.getByRole("button", { name: "Remember…", exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
-    await dialog.locator(".rail").getByRole("button", { name: "Permissions", exact: true }).click();
+    await page.getByRole("button", { name: "Settings", exact: true }).dispatchEvent("click");
+    await dialog
+      .locator(".rail")
+      .getByRole("button", { name: "Access", exact: true })
+      .dispatchEvent("click");
     const queue = dialog.locator(".perm-approvals");
     await expect(queue.locator(".perm-approval")).toHaveCount(1);
     for (const [width, height] of [
@@ -151,21 +237,20 @@ test("mandatory checkpoint and queued denial preserve human feedback", async () 
         { width, height },
       );
       await page.setViewportSize({ width, height });
-      await queue.scrollIntoViewIfNeeded();
-      await page.screenshot({
-        path: test.info().outputPath(`approval-queue-${width}.png`),
-        animations: "disabled",
-      });
+      await queue.evaluate((node) => node.scrollIntoView({ block: "center" }));
+      await capture(h, `approval-queue-${width}.png`);
     }
-    await queue.getByText("More options", { exact: true }).click();
+    await queue.getByText("More options", { exact: true }).dispatchEvent("click");
     const feedback =
       "Do not run this command. Inspect the existing output instead.\nKeep this instruction verbatim.";
     await queue
       .getByRole("textbox", { name: "Feedback for the agent", exact: true })
       .fill(feedback);
-    await queue.getByRole("button", { name: "Deny", exact: true }).click();
+    await queue.getByRole("button", { name: "Deny", exact: true }).dispatchEvent("click");
     await expect(queue.locator(".perm-approval")).toHaveCount(0);
-    await dialog.getByRole("button", { name: "Close settings", exact: true }).click();
+    await dialog
+      .getByRole("button", { name: "Close settings", exact: true })
+      .dispatchEvent("click");
     await expect(card.getByText("Denied", { exact: true })).toBeVisible();
     const sessions = join(h.cwd, ".liquid", "sessions");
     await expect
@@ -191,5 +276,149 @@ test("mandatory checkpoint and queued denial preserve human feedback", async () 
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();
+  }
+});
+
+test("composer access mode persists the approval policy and execution boundary", async () => {
+  const problem = environmentProblem();
+  test.skip(Boolean(problem), problem);
+  const h = await launchApprovalApp({ models, locale: "en" });
+  try {
+    const { page } = h;
+    const config = async () =>
+      JSON.parse(await readFile(join(h.cwd, "flecten.config.json"), "utf8"));
+    await expect(
+      page.getByRole("button", { name: "Access mode: Custom access", exact: true }),
+    ).toBeVisible();
+    await chooseAccessMode(page, "Full access");
+    await expect.poll(config).toMatchObject({
+      permissions: { externalPath: "allow", destructive: "allow", shell: "allow" },
+      sandbox: { enabled: false, allowNetwork: true },
+    });
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Access mode: Full access", exact: true }),
+    ).toBeVisible();
+    await chooseAccessMode(page, "Agent");
+    await expect.poll(config).toMatchObject({
+      permissions: { externalPath: "ask", destructive: "ask", shell: "allow" },
+      sandbox: { enabled: true, allowNetwork: true },
+    });
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Access mode: Agent", exact: true }),
+    ).toBeVisible();
+    expect(h.consoleErrors).toEqual([]);
+  } finally {
+    await h.close();
+  }
+});
+
+test("folder grants cover the chat and saved project scope without repeated requests", async () => {
+  const problem = environmentProblem();
+  test.skip(Boolean(problem), problem);
+  const folder = await mkdtemp(join(tmpdir(), "liquid-e2e-external-"));
+  const paths = [join(folder, "first.txt"), join(folder, "second.txt")];
+  await Promise.all(paths.map((path, index) => writeFile(path, `External file ${index + 1}\n`)));
+  const h = await launchApprovalApp({
+    models,
+    locale: "en",
+    firstCalls: paths.map((path) => ({ name: "read", arguments: { path } })),
+    reply: "Folder check complete.",
+  });
+  try {
+    const { page } = h;
+    const config = async () =>
+      JSON.parse(await readFile(join(h.cwd, "flecten.config.json"), "utf8"));
+    const send = async (prompt: string) => {
+      await page.locator("#prompt").fill(prompt);
+      await page.getByRole("button", { name: "Send", exact: true }).dispatchEvent("click");
+    };
+    const pending = page.locator("section.approval:not(.is-settled)");
+    await chooseAccessMode(page, "Agent");
+    await send("Read both files from the folder I approve for this chat.");
+    await expect(pending).toHaveCount(1);
+    await expect(pending.getByText("Allow folder access?", { exact: true })).toBeVisible();
+    await expect(pending.locator(".approval-body > .approval-target")).toHaveText([folder]);
+    await expect(pending.getByRole("button", { name: "Allow once", exact: true })).toBeVisible();
+    await expect(
+      pending.getByRole("button", { name: "Remember folder access", exact: true }),
+    ).toBeVisible();
+    await h.app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.setContentSize(1180, 640),
+    );
+    await page.setViewportSize({ width: 1180, height: 640 });
+    for (const label of ["For this chat", "Allow once", "Remember folder access", "Deny"]) {
+      await expect(pending.getByRole("button", { name: label, exact: true })).toBeInViewport({
+        ratio: 1,
+      });
+    }
+    await pending
+      .getByRole("button", { name: "For this chat", exact: true })
+      .dispatchEvent("click");
+    await expect(
+      page.getByText("Файл прочитан. Folder check complete.", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(pending).toHaveCount(0);
+    await expect(page.locator("section.approval")).toHaveCount(1);
+    expect((await config()).permissions.rules).toEqual([]);
+
+    await page.getByRole("button", { name: "New task", exact: true }).dispatchEvent("click");
+    await send("Read the same two files in this new chat.");
+    await expect(pending).toHaveCount(1);
+    await expect(pending.locator(".approval-body > .approval-target")).toHaveText([folder]);
+    await pending
+      .getByRole("button", { name: "Remember folder access", exact: true })
+      .dispatchEvent("click");
+    await expect(
+      page.getByText("Файл прочитан. Folder check complete.", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(pending).toHaveCount(0);
+    await expect
+      .poll(async () => (await config()).permissions.rules)
+      .toEqual([
+        expect.objectContaining({ action: "external_path", pathPrefix: folder, policy: "allow" }),
+      ]);
+    expect((await config()).permissions.rules[0].requestKey).toBeUndefined();
+
+    await page.getByRole("button", { name: "New task", exact: true }).dispatchEvent("click");
+    await send("Use the saved project folder grant to read the files again.");
+    await expect(
+      page.getByText("Файл прочитан. Folder check complete.", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(page.locator("section.approval")).toHaveCount(0);
+    const sessions = join(h.cwd, ".liquid", "sessions");
+    await expect
+      .poll(async () => {
+        const events = (
+          await Promise.all(
+            (
+              await readdir(sessions, { withFileTypes: true })
+            )
+              .filter((entry) => entry.isDirectory())
+              .map(async (session) => {
+                const text = await readFile(join(sessions, session.name, "events.jsonl"), "utf8");
+                return text
+                  .split("\n")
+                  .filter(Boolean)
+                  .map((line) => (JSON.parse(line) as { event: AgentEvent }).event);
+              }),
+          )
+        ).flat();
+        const reads = events.filter(
+          (event) => event.type === "tool.finished" && event.call.name === "read",
+        );
+        return {
+          reads: reads.length,
+          successful: reads.filter((event) => event.type === "tool.finished" && event.result.ok)
+            .length,
+          approvals: events.filter((event) => event.type === "approval.requested").length,
+        };
+      })
+      .toEqual({ reads: 6, successful: 6, approvals: 2 });
+    expect(h.consoleErrors).toEqual([]);
+  } finally {
+    await h.close();
+    await rm(folder, { recursive: true, force: true });
   }
 });

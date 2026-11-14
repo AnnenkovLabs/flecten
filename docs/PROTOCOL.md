@@ -110,7 +110,7 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `queue.add` | да | `text`, `attachments?`, `contexts?`, `id?` | `result`; сообщение уйдёт после текущего запуска |
 | `queue.edit` | да | `id`, `text` | `result` |
 | `queue.remove` | да | `id` | `result` |
-| `approval.respond` | да | `id`, `decision` | `result` |
+| `approval.respond` | да | `id`, `decision`, `feedback?` | `result` |
 | `approval.allowAll` | да | `ids` | `result` |
 | `approval.denyAll` | да | `ids` | `result` |
 | `tool.cancel` | да | `callId` | `result` |
@@ -129,13 +129,16 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `sessions.delete` | нет | `id`, `confirm: true` | итог удаления |
 | `sessions.fork` | нет | `id`, `sequence?` или `turn?` | `session` |
 | `settings.get` | нет | нет | `settings` |
+| `access.set` | нет | `mode: agent/confirm/full` | `info`; затем `status` |
 | `voice.status` | нет | нет | `voice`: engine, providerId, имя провайдера/движка, модель, язык; для локального режима проверяет установку |
 | `voice.transcribe` | нет | `id` (UUID), `audio` (base64: до 2 МиБ для API, 2 900 044 байт WAV для локального), `mimeType`, `destination?` (engine, providerId, model, language из voice.status) | `text`: распознанная речь |
 | `voice.cancel` | нет | `id` | отмена распознавания или установки и дерева процесса |
 | `voice.check` | нет | `id` (UUID), `engine` (faster-whisper или vosk), `local` (python, whisperModel, voskModel, device) | `voiceSetup`: ready, message |
 | `voice.prepare` | нет | `id` (UUID), `engine`, `local` | установка движка и загрузка модели, `voiceSetup`: ready, message |
 | `settings.save` | нет | `config`, `clearApiKeys?` | `info`; затем `status` |
-| `trust.accept` | нет | нет | `info`; затем `status` |
+| `trust.accept` | нет | нет | `info`; сохраняет доверие папке, затем `status` |
+| `trust.reject` | нет | нет | `info`; сохраняет отказ, затем `status` |
+| `projects.list` | нет | нет | `projects`: добавленные папки, trust, sessions и группа с `projectRoot: null` |
 | `model.set` | нет | `provider`, `model`, `reasoning?`, `variant?` | `info`; затем `status` |
 | `model.probe` | нет | `provider`, `model` | итог проверки модели |
 | `provider.discover` | нет | `protocol`, `baseUrl`, `apiKey?`, `headers?` | `result` |
@@ -162,7 +165,8 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 - `reasoning`: `none`, `minimal`, `low`, `medium`, `high`, `xhigh` или `max`; без него берётся значение из конфига, а модель без такого уровня получает ближайший поддержанный.
 - `files.read`: путь относительно проекта; symlink раскрывается до проверки, файл вне проекта, FIFO и устройство отклоняются. Отдаётся не больше 512 KB текста по границе строки (`truncated: true`), секреты замаскированы, у бинарного файла `binary: true` и пустой `text`. Так окно открывает файл из карточки и полный лог тула.
 - `files.write`: сохраняет существующий UTF-8 файл до 512 КБ атомарно с прежними правами и BOM. `expectedHash` берётся из последнего `files.read`; несовпадение отклоняет запись и предлагает открыть актуальную версию. Бинарные, усечённые, замаскированные файлы, UTF-16 и служебные пути `.git`/`.liquid` доступны только для просмотра, с `readOnlyReason` вместо `hash`. Путь за пределы проекта не допускается.
-- `decision`: `allow_once`, `allow_always` или `deny`. `allow_always` сохраняет правило в конфиг.
+- `decision`: `allow_once`, `allow_session`, `allow_always` или `deny`. Для `external_path` одноразовый ответ покрывает подготовленный вызов, session-ответ разрешает указанную папку с подпапками в памяти чата, always-ответ сохраняет `external_path` + `pathPrefix` в проект. Для остальных действий session и always сохраняют точное действие по аргументам, cwd и ресурсам. Human checkpoint допускает только одноразовое разрешение. `feedback` передаёт модели поправку пользователя.
+- `access.set.mode`: `agent`, `confirm` или `full`. Команда сохраняет согласованные базовые permissions и sandbox, сохраняя providers, rules, checkpoints и остальные поля. В ответе `info.accessMode` и в `status` приходит `agent | confirm | full | custom`; `custom` вычисляется при отличающихся базовых настройках и не принимается как режим команды.
 - `target`: `before` (по умолчанию, состояние до хода) или `after`. `force` перезаписывает файлы, которые пользователь менял после хода; `includeProtected` разрешает защищённые пути.
 - `protocol`: `openai-chat`, `openai-responses`, `anthropic-messages` или `gemini`.
 - `clientId` связывает ошибку `run_failed` с черновиком окна, у которого ещё нет `sessionId`.
@@ -236,7 +240,7 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 - `notice.applied` приходит, когда модель получила уведомление оболочки, например о завершённой фоновой задаче.
 - `budget` приходит при каждом изменении расхода; `budget.exceeded` называет предел (токены, деньги или время), который остановил задачу.
 - `run.interrupted` пишется в лог задачи, которую оборвал перезапуск или падение sidecar.
-- `approval.requested` приходит с `approval.expiresAt`; в этот момент вызов будет отклонён. `approval.resolved.by`: `user`, `timeout` или `aborted`.
+- `approval.requested` приходит с `approval.expiresAt`; в этот момент вызов будет отклонён. `approval.resolved.by`: `user`, `timeout`, `aborted`, `policy` или `persistence`. `by: policy` означает повторную оценку изменившихся прав: `choice: allow_once` продолжает уже разрешённый вызов без нового клика, `choice: deny` завершает запрещённый. `by: persistence` означает ошибку сохранения grants. Актуальные ask и human checkpoints остаются ожидающими; исход по политике не является новым ответом пользователя и не создаёт сохранённое правило.
 - `error.limit` (`rate`, `five_hour`, `weekly`, `billing`) и `resetAt` приходят, когда задачу остановил лимит провайдера.
 
 ## Служебные сообщения
@@ -245,13 +249,17 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 
 | Сообщение | Источник | Полезная нагрузка |
 |---|---|---|
-| `status` | sidecar | проект, ветка, пользователь, провайдер, модель, окно контекста, список провайдеров, навыки, MCP, песочница, промпт, снимки shell, `configError?`, `sessions` |
+| `status` | sidecar | проект, ветка, пользователь, провайдер, модель, окно контекста, список провайдеров, навыки, MCP, песочница, `accessMode`, промпт, снимки shell, `configError?`, `sessions` |
 | `response` | sidecar и оболочка | `requestId`, `ok`, поля ответа или `error` |
 | `sessions.interrupted` | sidecar | `interrupted`, `resumed` |
 | `agent.exit` | оболочка | `code`, `signal?`, `message?` |
 | `project.changed` | оболочка | `cwd` |
+| `projects.changed` | оболочка | список папок изменён, нужно обновить `projects.list` |
+| `session.open` | оболочка | `id`; открыть сессию после готовности выбранной рабочей папки |
 
-`status` приходит при старте, после `hello`, `status`, `trust.accept`, `settings.save` и `model.set`. `sessions` это активность всех задач: `sessionId`, `running`, `turns`, `queue`, `approvals`, `jobs`. Если провайдер не настроен, `configError` содержит причину, но sidecar продолжает работать.
+`status` содержит `projectRoot: string | null` и `trustState: unknown | trusted | untrusted`. `projectRoot: null` означает работу без проекта.
+
+`status` приходит при старте, после `hello`, `status`, `trust.accept`, `trust.reject`, `settings.save`, `access.set` и `model.set`. `sessions` это активность всех задач: `sessionId`, `running`, `turns`, `queue`, `approvals`, `jobs`. Если провайдер не настроен, `configError` содержит причину, но sidecar продолжает работать.
 
 `sessions.interrupted` приходит после старта, если прошлый процесс оборвал задачи. `interrupted` перечисляет их, `resumed` те, которые sidecar сам продолжил (`sessions.autoResume`, не больше `sessions.maxConcurrent`; задачу, которая уже была продолжением, повторно не продолжает).
 

@@ -33,7 +33,7 @@ export default {
   "Applying decision…": "判断を適用中…",
   "Expired: waiting for confirmation": "期限切れ: 確認待ち",
   "Save this exact action for this project?": "この操作をこのプロジェクト用に保存しますか？",
-  "Only identical arguments, paths and working directory will match. You can revoke this rule in Permissions.":
+  "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
     "すべての引数、パス、作業ディレクトリが一致する場合のみ適用します。権限設定から取り消せます。",
   "For this chat": "このチャットで許可",
   "Save exact rule": "完全一致ルールを保存",
@@ -43,8 +43,8 @@ export default {
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "通常の操作を許可します。破壊的操作のルールとサンドボックスの制限は引き続き適用されます。",
   "Saved rules": "保存済みルール",
-  "Rules belong to this project. Removing a rule takes effect when you save, including during an active run.":
-    "ルールはこのプロジェクトに適用されます。削除は保存時に反映され、実行中も有効です。",
+  "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
+    "ルールはグローバルに保存されます。ルールの削除は保存時に反映され、実行中のタスクにも適用されます。",
   "No saved rules.": "保存済みルールはありません。",
   "All matching actions": "一致するすべての操作",
   "Exact arguments and resources": "引数とリソースの完全一致",
@@ -64,4 +64,38 @@ export default {
   "Feedback for the agent": "エージェントへのコメント",
   "OS sandbox available": "OSサンドボックスは利用可能",
   "OS sandbox unavailable": "OSサンドボックスは利用不可",
+  Access: "アクセス",
+  "Access mode": "アクセスモード",
+  Agent: "エージェント",
+  "Confirm changes": "変更を確認",
+  "Custom access": "カスタムアクセス",
+  "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.":
+    "プロジェクト内で読み取り、編集、コマンドを実行します。別のフォルダーへのアクセスや元に戻せない操作には確認が必要です。",
+  "Reads freely. Asks before changes, commands and connected tools.":
+    "読み取りは確認なしで行います。変更、コマンド、接続ツールの使用前に確認します。",
+  "Works across your computer without routine approvals. Process isolation is off.":
+    "通常の許可確認なしでコンピューター全体を操作します。プロセスの隔離は無効です。",
+  "Advanced settings differ from these modes.": "詳細設定がこれらのモードと異なります。",
+  "Saved rules and human checkpoints still apply in every mode.":
+    "保存済みルールと人による確認は、すべてのモードで引き続き適用されます。",
+  "Advanced access settings": "アクセスの詳細設定",
+  "Action permissions": "操作ごとの許可",
+  "Process isolation": "プロセスの隔離",
+  "Isolate processes": "プロセスを隔離する",
+  "Limit commands to the project and approved folders.":
+    "コマンドの実行範囲をプロジェクトと許可済みフォルダーに制限します。",
+  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
+    "隔離が有効な場合、コマンドの実行範囲はプロジェクトとこのチャットで許可されたフォルダーに制限されます。",
+  "Allow folder access?": "フォルダーへのアクセスを許可しますか？",
+  "Folder access covers the displayed paths and their subfolders.":
+    "表示されたパスとそのサブフォルダーがアクセス対象になります。",
+  "Access is shared with agents in this chat.":
+    "アクセス許可は、このチャットのエージェント間で共有されます。",
+  "Repeat this action in this chat": "このチャットで同じ操作を許可",
+  "Remember folder access": "フォルダーへのアクセスを記憶",
+  "Access mode: {0}": ["アクセスモード: ", 0],
+  "Could not change access. Try again. {0}": [
+    "アクセスを変更できませんでした。もう一度お試しください。",
+    0,
+  ],
 } as const;

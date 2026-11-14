@@ -3,6 +3,7 @@ import AiBrain01Icon from "@hugeicons/core-free-icons/AiBrain01Icon";
 import ArrowDown01Icon from "@hugeicons/core-free-icons/ArrowDown01Icon";
 import ArrowDown02Icon from "@hugeicons/core-free-icons/ArrowDown02Icon";
 import ArrowRight01Icon from "@hugeicons/core-free-icons/ArrowRight01Icon";
+import ArrowTurnUpIcon from "@hugeicons/core-free-icons/ArrowTurnUpIcon";
 import ArrowUp02Icon from "@hugeicons/core-free-icons/ArrowUp02Icon";
 import Asterisk02Icon from "@hugeicons/core-free-icons/Asterisk02Icon";
 import Attachment01Icon from "@hugeicons/core-free-icons/Attachment01Icon";
@@ -68,6 +69,7 @@ export const ICONS = {
   refresh: Refresh01Icon,
   terminal: TerminalIcon,
   "arrow-up": ArrowUp02Icon,
+  continue: ArrowTurnUpIcon,
   "arrow-down": ArrowDown02Icon,
   stop: StopIcon,
   spark: SparklesIcon,

@@ -37,8 +37,8 @@ export default {
   "Applying decision…": "Aplicando decisão…",
   "Expired: waiting for confirmation": "Prazo expirado: aguardando confirmação",
   "Save this exact action for this project?": "Salvar esta ação exata para este projeto?",
-  "Only identical arguments, paths and working directory will match. You can revoke this rule in Permissions.":
-    "Todos os argumentos, caminhos e o diretório de trabalho devem coincidir. Você pode revogar a regra em Permissões.",
+  "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
+    "Todos os argumentos, caminhos e o diretório de trabalho devem coincidir. Você pode revogar a regra em Acesso.",
   "For this chat": "Para esta conversa",
   "Save exact rule": "Salvar regra exata",
   "Remember…": "Lembrar…",
@@ -47,8 +47,8 @@ export default {
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "Permite ações comuns. As regras destrutivas e os limites do ambiente isolado continuam ativos.",
   "Saved rules": "Regras salvas",
-  "Rules belong to this project. Removing a rule takes effect when you save, including during an active run.":
-    "As regras pertencem a este projeto. A remoção entra em vigor ao salvar, inclusive durante uma execução ativa.",
+  "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
+    "As regras são salvas globalmente. A remoção de uma regra entra em vigor ao salvar, inclusive durante uma execução.",
   "No saved rules.": "Nenhuma regra salva.",
   "All matching actions": "Todas as ações correspondentes",
   "Exact arguments and resources": "Argumentos e recursos exatos",
@@ -69,4 +69,38 @@ export default {
   "Feedback for the agent": "Comentário para o agente",
   "OS sandbox available": "Sandbox do sistema disponível",
   "OS sandbox unavailable": "Sandbox do sistema indisponível",
+  Access: "Acesso",
+  "Access mode": "Modo de acesso",
+  Agent: "Agente",
+  "Confirm changes": "Confirmar alterações",
+  "Custom access": "Acesso personalizado",
+  "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.":
+    "Lê, edita e executa comandos no projeto. Pede permissão para acessar outra pasta ou realizar ações irreversíveis.",
+  "Reads freely. Asks before changes, commands and connected tools.":
+    "Lê sem perguntar. Pede permissão para alterações, comandos e ferramentas conectadas.",
+  "Works across your computer without routine approvals. Process isolation is off.":
+    "Trabalha em todo o computador sem pedir permissões de rotina. O isolamento de processos está desativado.",
+  "Advanced settings differ from these modes.": "As configurações avançadas diferem destes modos.",
+  "Saved rules and human checkpoints still apply in every mode.":
+    "As regras salvas e as confirmações humanas continuam valendo em todos os modos.",
+  "Advanced access settings": "Configurações avançadas de acesso",
+  "Action permissions": "Permissões por ação",
+  "Process isolation": "Isolamento de processos",
+  "Isolate processes": "Isolar processos",
+  "Limit commands to the project and approved folders.":
+    "Limitar os comandos ao projeto e às pastas autorizadas.",
+  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
+    "Com o isolamento ativado, os comandos ficam no projeto e nas pastas autorizadas para este chat.",
+  "Allow folder access?": "Permitir acesso à pasta?",
+  "Folder access covers the displayed paths and their subfolders.":
+    "O acesso abrange os caminhos indicados e suas subpastas.",
+  "Access is shared with agents in this chat.":
+    "O acesso é compartilhado com os agentes deste chat.",
+  "Repeat this action in this chat": "Repetir esta ação neste chat",
+  "Remember folder access": "Lembrar acesso à pasta",
+  "Access mode: {0}": ["Modo de acesso: ", 0],
+  "Could not change access. Try again. {0}": [
+    "Não foi possível alterar o acesso. Tente novamente. ",
+    0,
+  ],
 } as const;

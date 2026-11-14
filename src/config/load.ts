@@ -6,7 +6,7 @@ import { HarnessError } from "../errors";
 import { atomicWrite } from "../util/atomic";
 import { defaultConfig } from "./defaults";
 import { migrateConfig } from "./migrate";
-import { profilePath, settingsFor } from "./profile";
+import { profilePath } from "./profile";
 import { bindProviderCredential, readProviderCredential } from "./provider-credential";
 import {
   CONFIG_SCHEMA_VERSION,
@@ -83,17 +83,14 @@ export function inferProvider(model: string): string | undefined {
 
 export async function loadConfig(cwd: string, explicitPath?: string): Promise<HarnessConfig> {
   const profile = profilePath(explicitPath);
-  const local = await loadConfigFile(cwd, explicitPath, !profile);
-  if (!profile) return local;
+  if (!profile) return loadConfigFile(cwd, explicitPath);
   const directory = dirname(profile);
   if (!existsSync(profile)) {
-    // Seed once from the existing settings, including destination-bound credentials.
-    await saveConfigFile(directory, HarnessConfigSchema.parse(settingsFor(local, "shared")), {
-      path: profile,
-    });
+    // Import existing settings once. Project files never override the global profile afterward.
+    const existing = await loadConfigFile(cwd, undefined, false);
+    await saveConfigFile(directory, existing, { path: profile });
   }
-  const shared = await loadConfigFile(directory, profile);
-  return HarnessConfigSchema.parse({ ...local, ...settingsFor(shared, "shared") });
+  return loadConfigFile(directory, profile);
 }
 
 async function loadConfigFile(
@@ -180,21 +177,7 @@ export async function saveConfig(
 ): Promise<string> {
   const profile = profilePath(options.path);
   if (!profile) return saveConfigFile(cwd, config, options);
-  await saveConfigFile(dirname(profile), HarnessConfigSchema.parse(settingsFor(config, "shared")), {
-    ...options,
-    path: profile,
-  });
-  const local = await loadConfigFile(cwd, undefined, false);
-  const project = settingsFor(config, "project");
-  if (JSON.stringify(settingsFor(local, "project")) !== JSON.stringify(project)) {
-    // Keep legacy model settings and credentials intact in the original project file.
-    await saveConfigFile(
-      cwd,
-      { ...local, ...project },
-      options.signal ? { signal: options.signal } : {},
-    );
-  }
-  return profile;
+  return saveConfigFile(dirname(profile), config, { ...options, path: profile });
 }
 
 async function saveConfigFile(

@@ -157,6 +157,7 @@ export async function runEdit(
   args: EditArgs,
   context: {
     cwd: string;
+    authorizedExternalPaths?: string[];
     signal?: AbortSignal;
     sessionId?: string;
     reads: ReadTracker;
@@ -173,7 +174,7 @@ export async function runEdit(
 
   const path = resolveToolPath(context.cwd, args.path);
   try {
-    ensureInside(context.cwd, path, args.why);
+    ensureInside(context.cwd, path, args.why, context.authorizedExternalPaths);
   } catch (error) {
     return { ok: false, output: "", error: error instanceof Error ? error.message : String(error) };
   }

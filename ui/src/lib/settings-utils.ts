@@ -1,3 +1,4 @@
+import { ACCESS_MODES } from "../../../shared/access-mode";
 import { t } from "./i18n.svelte";
 import type { CatalogSummary, HarnessSettings, ProviderProtocol, ProviderSettings } from "./types";
 
@@ -265,14 +266,7 @@ const PERMISSION_FIELDS = [
 ] as const;
 
 const PERMISSION_DEFAULTS: Omit<NonNullable<HarnessSettings["permissions"]>, "rules"> = {
-  read: "auto",
-  write: "auto",
-  shell: "auto",
-  network: "ask",
-  mcp: "ask",
-  skill: "allow",
-  externalPath: "deny",
-  destructive: "ask",
+  ...ACCESS_MODES.agent.permissions,
   approvalTimeoutMs: 300_000,
 };
 

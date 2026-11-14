@@ -16,6 +16,10 @@
     onRenameTask: (id: string, title: string) => void;
     onDeleteTask: (id: string) => void;
     onSearch: (query: string) => void;
+    onSelectProject?: (project: Project, taskId?: string) => void;
+    onRemoveProject?: (project: Project) => void;
+    onProjectTrust?: (project: Project) => void;
+    onAddProject?: () => void;
     twinActive?: boolean;
     onOpenTwin?: () => void;
     onOpenDictionary?: () => void;
@@ -32,6 +36,7 @@
     onRenameTask,
     onDeleteTask,
     onSearch,
+    onSelectProject, onRemoveProject, onProjectTrust, onAddProject,
     twinActive = false,
     onOpenTwin,
     onOpenDictionary,
@@ -60,7 +65,7 @@
             const prompt = task.lastPrompt?.toLocaleLowerCase(i18n.locale) ?? "";
             return title.includes(needle) || prompt.includes(needle);
           });
-      if (matched.length > 0) result.push({ ...project, tasks: matched });
+      if (projectMatch || matched.length > 0) result.push({ ...project, tasks: matched });
     }
     return result;
   });
@@ -121,6 +126,7 @@
 
 <aside class="sidebar" class:is-hidden={hidden} inert={hidden} aria-label={t("Projects and tasks")}>
   <div class="side-top">
+    <button class="side-action" type="button" onclick={onAddProject}><Icon name="folder-plus" /><span>{t("Add folder")}</span></button>
     <button class="side-action" type="button" title={t("New task")} onclick={onNewTask}>
       <Icon name="plus" />
       <span>{t("New task")}</span>
@@ -170,6 +176,7 @@
         {onSelectTask}
         {onRenameTask}
         {onDeleteTask}
+        {onSelectProject} {onRemoveProject} {onProjectTrust}
       />
     {:else}
       <p class="side-empty" role="status">{t("No results")}</p>

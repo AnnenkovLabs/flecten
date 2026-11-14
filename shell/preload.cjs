@@ -66,6 +66,8 @@ if (isRenderer) {
     setLocale: (locale) => ipcRenderer.send("window:locale", locale),
     control: (action) => ipcRenderer.send("window:control", action),
     chooseProject: () => ipcRenderer.invoke("liquid:choose-project"),
+    selectProject: (path, sessionId) => ipcRenderer.invoke("liquid:select-project", path, sessionId),
+    removeProject: (path) => ipcRenderer.invoke("liquid:remove-project", path),
     pickAttachments: () => ipcRenderer.invoke("liquid:pick-attachments"),
     pasteImage: () => ipcRenderer.invoke("liquid:paste-image"),
     describePaths: (paths) => ipcRenderer.invoke("liquid:describe-paths", paths),

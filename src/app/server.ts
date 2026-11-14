@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   // One core per project: a second window or app on the same folder waits, then gets project_locked.
   const lock = await lockProject(cwd);
   process.once("exit", () => lock.release());
-  const app = await createAppService(cwd);
+  const app = await createAppService(cwd, productEnv("PROJECTLESS") === "1" ? null : cwd);
   const diagnostics = new DiagnosticsRuntime(cwd);
   app.session.subscribe((event) => diagnostics.record(event));
   process.on("uncaughtExceptionMonitor", (error) => {

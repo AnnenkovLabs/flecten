@@ -5,7 +5,6 @@ export type SettingsSectionId =
   | "general"
   | "providers"
   | "permissions"
-  | "sandbox"
   | "tools"
   | "history"
   | "dictionary"
@@ -57,22 +56,23 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
   {
     id: "permissions",
     get label() {
-      return t("Permissions");
+      return t("Access");
     },
     icon: "key",
     get fields() {
-      return [t("Rules"), t("Policies"), t("Approvals"), t("Allow all"), t("Deny all")];
-    },
-  },
-  {
-    id: "sandbox",
-    get label() {
-      return t("Sandbox");
-    },
-    icon: "layers",
-    get fields() {
       return [
+        t("Permissions"),
+        t("Access mode"),
+        t("Agent"),
+        t("Confirm changes"),
+        t("Full access"),
+        t("Rules"),
+        t("Policies"),
+        t("Approvals"),
+        t("Allow all"),
+        t("Deny all"),
         t("Sandbox"),
+        t("Process isolation"),
         t("Network"),
         t("Blocked read paths"),
         t("Blocked write paths"),

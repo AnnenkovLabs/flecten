@@ -24,7 +24,7 @@ async function readSettings(page: Page) {
   });
 }
 
-test("choosing a folder preserves the desktop models, key and preferences with project safety isolated", async () => {
+test("choosing a folder preserves all global settings and asks for folder trust", async () => {
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
   const second = await mkdtemp(join(tmpdir(), "flecten-new-workspace-"));
@@ -66,9 +66,11 @@ test("choosing a folder preserves the desktop models, key and preferences with p
       true,
     );
     expect(switched.settings?.config.ui?.sendShortcut).toBe("modifier-enter");
-    expect(switched.settings?.config.sandbox?.enabled).toBe(true);
-    expect(switched.settings?.config.permissions?.rules).toEqual([]);
-    expect(switched.settings?.config.hooks?.preToolUse).toEqual([]);
+    expect(switched.settings?.config.sandbox).toEqual(original.settings?.config.sandbox);
+    expect(switched.settings?.config.permissions).toEqual(original.settings?.config.permissions);
+    expect(switched.settings?.config.hooks).toEqual(original.settings?.config.hooks);
+    await expect(page.getByRole("dialog", { name: "Do you trust this folder?" })).toBeVisible();
+    await page.getByRole("button", { name: "Trust folder", exact: true }).click();
 
     const profile = await readFile(join(h.cwd, "app-profile/flecten.config.json"), "utf8");
     expect(profile).not.toContain("e2e-profile-key");

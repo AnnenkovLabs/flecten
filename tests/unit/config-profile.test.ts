@@ -73,8 +73,8 @@ test("desktop profile keeps models, keys and personal preferences when the works
     reasoning: "high",
   });
   expect(second.ui).toEqual({ sendShortcut: "modifier-enter", followUpBehavior: "steer" });
-  expect(second.permissions?.shell).toBe("auto");
-  expect(second.hooks.preToolUse).toEqual([]);
+  expect(second.permissions?.shell).toBe("allow");
+  expect(second.hooks.preToolUse).toMatchObject([{ command: "project-only-hook" }]);
   expect(configPath(f.second)).toBe(join(f.profile, "flecten.config.json"));
   expect(await readFile(join(f.first, "flecten.config.json"), "utf8")).toBe(f.original);
 
@@ -83,7 +83,7 @@ test("desktop profile keeps models, keys and personal preferences when the works
   await saveConfig(f.second, second);
   const first = await loadConfig(f.first);
   expect(first.ui).toEqual(second.ui);
-  expect(first.permissions?.shell).toBe("allow");
+  expect(first.permissions?.shell).toBe("deny");
   expect(first.hooks.preToolUse).toMatchObject([{ command: "project-only-hook" }]);
   expect((await loadConfig(f.second)).permissions?.shell).toBe("deny");
   expect(first.providers.personal?.apiKey).toBe("profile-test-key");
@@ -93,6 +93,16 @@ test("desktop profile keeps models, keys and personal preferences when the works
   expect(await readFile(join(f.first, "flecten.config.json"), "utf8")).toBe(f.original);
   await saveConfig(f.second, second, { clearSecrets: ["personal"] });
   expect((await loadConfig(f.first)).providers.personal?.apiKey).toBeUndefined();
+});
+
+test("an existing global profile ignores even malformed project configs", async () => {
+  const f = await fixture();
+  await loadConfig(f.first);
+  await Bun.write(join(f.second, "flecten.config.json"), "invalid local JSON");
+  const config = await loadConfig(f.second);
+  expect(config.provider).toBe("personal");
+  await saveConfig(f.second, config);
+  expect(await Bun.file(join(f.second, "flecten.config.json")).text()).toBe("invalid local JSON");
 });
 
 test("explicit config paths keep their existing independent configuration and credential scope", async () => {

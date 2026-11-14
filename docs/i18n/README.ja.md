@@ -53,7 +53,7 @@ export OPENAI_API_KEY=...
 bun run app:dev
 ```
 
-`bun run app:dev` は Vite を起動し、Bun 上でコアを立ち上げ、ホットリロード付きの Electron ウィンドウを開きます。現在のディレクトリがプロジェクトルートです。別の場所で作業するには `FLECTEN_CWD` を設定します。
+`bun run app:dev` は Vite を起動し、Bun 上でコアを立ち上げ、ホットリロード付きの Electron ウィンドウを開きます。新しいプロファイルはプロジェクト未選択で開きます。アプリでフォルダーを追加するか、`FLECTEN_CWD` で明示的に指定してください。次回の起動時には選択が復元されます。
 
 ```bash
 # または別のプロバイダー

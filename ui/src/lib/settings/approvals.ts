@@ -31,6 +31,7 @@ export function approvalViews(info: AgentInfo | null): ApprovalView[] {
         ...(approval.risks ? { risks: approval.risks } : {}),
         ...(approval.grantLabel ? { grantLabel: approval.grantLabel } : {}),
         ...(approval.arguments ? { arguments: approval.arguments } : {}),
+        ...(approval.paths ? { paths: approval.paths } : {}),
       });
   }
   for (const approval of info?.approvals ?? []) {

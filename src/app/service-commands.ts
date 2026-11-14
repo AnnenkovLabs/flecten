@@ -19,10 +19,11 @@ export function slashCommands(
   cwd: string,
   skills: () => readonly Skill[],
   extra: () => readonly string[] = () => [],
+  project = true,
 ) {
   const directories = () => [
-    ...commandDirectories(cwd, homedir()),
-    ...extra().map((dir) => ({ dir, scope: "project" as const })),
+    ...commandDirectories(cwd, homedir()).filter((entry) => project || entry.scope === "user"),
+    ...(project ? extra() : []).map((dir) => ({ dir, scope: "project" as const })),
   ];
   return {
     async list(): Promise<SlashEntry[]> {

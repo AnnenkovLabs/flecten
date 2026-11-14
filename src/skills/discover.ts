@@ -25,6 +25,8 @@ export interface SkillDiscovery {
 }
 
 export interface DiscoverSkillsOptions {
+  /** Projectless chats load only explicitly located user skill directories. */
+  projectRoot?: string | null;
   home?: string;
   sources?: readonly SkillSourceId[] | undefined;
   trust?: Readonly<Record<string, SkillTrust>> | undefined;
@@ -86,11 +88,12 @@ export async function discoverSkills(
   const diagnostics: SkillDiagnostic[] = [];
   const skills = new Map<string, Skill>();
   const sourceOf = new Map<string, string>();
-  const root = resolve(cwd);
+  const root = resolve(options.projectRoot ?? cwd);
   const home = resolve(options.home ?? homedir());
   const enabled = new Set(options.sources ?? SKILL_SOURCES);
 
   for (const scope of skillScopes(root, home)) {
+    if (options.projectRoot === null && scope.source === "project") continue;
     if (!enabled.has(scope.id)) continue;
     if (!(await isDirectory(scope.directory))) continue;
 

@@ -11,7 +11,6 @@ import { materializeModule, moduleText } from "./package";
 import { ModulePlatform } from "./platform";
 
 export interface ModuleRuntimeOptions extends McpSessionOptions {
-  requestTrust?(context: ToolContext): Promise<void>;
   services?(sessionId?: string): Services;
   sessionId?: string;
   reportPlatformError?(owner: string, error: unknown): void;

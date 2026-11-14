@@ -15,6 +15,7 @@ import part19 from "./editor-3";
 import hooks from "./hooks";
 import marketplace from "./marketplace";
 import modules from "./modules";
+import projects from "./projects";
 import part13 from "./providers";
 import part14 from "./providers-2";
 import part15 from "./providers-3";
@@ -31,6 +32,7 @@ import twinCorrection from "./twin-correction";
 import vision from "./vision";
 
 export default {
+  ...projects,
   ...twin,
   ...twinCorrection,
   ...dictionary,

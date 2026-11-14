@@ -2,6 +2,7 @@ import { dirname, join } from "node:path";
 import bundledBase from "../../prompts/base.md" with { type: "text" };
 import contextPagesPrompt from "../../prompts/context-pages.md" with { type: "text" };
 import memoryPrompt from "../../prompts/memory.md" with { type: "text" };
+import projectlessPrompt from "../../prompts/projectless.md" with { type: "text" };
 import responseSummary from "../../prompts/response-summary.md" with { type: "text" };
 import talkerBase from "../../prompts/talker.md" with { type: "text" };
 import workerBase from "../../prompts/worker.md" with { type: "text" };
@@ -31,6 +32,8 @@ export interface PromptSection {
 export type PromptSectionInput = string | PromptSection;
 
 export interface BuildPromptOptions {
+  /** Null explicitly disables project instruction discovery, independently of tool cwd. */
+  readonly projectRoot?: string | null;
   readonly role?: "talker" | "worker";
   readonly sections?: readonly PromptSectionInput[];
   readonly tools?: readonly {
@@ -176,7 +179,10 @@ export async function buildPrompt(
       : options.role === "worker"
         ? Promise.resolve(workerBase)
         : readBasePrompt(),
-    loadInstructions(cwd, options.instructions),
+    loadInstructions(options.projectRoot ?? cwd, {
+      ...options.instructions,
+      ...(options.projectRoot === null ? { project: [], local: [], nested: false } : {}),
+    }),
   ]);
   const parts: PromptBudgetPart[] = [
     {
@@ -196,6 +202,16 @@ export async function buildPrompt(
           },
         ]),
     { id: "environment", text: environment(cwd), required: true, workingLanguage: "en" },
+    ...(options.projectRoot === null
+      ? [
+          {
+            id: "projectless",
+            text: projectlessPrompt.trim(),
+            required: true,
+            workingLanguage: "en" as const,
+          },
+        ]
+      : []),
   ];
   if (options.tools?.some((tool) => tool.name === "memory")) {
     parts.push({ id: "memory", text: memoryPrompt.trim(), required: true, workingLanguage: "en" });

@@ -1,3 +1,4 @@
+import type { ActiveAccessMode } from "../../../shared/access-mode";
 import { t } from "./i18n.svelte";
 import type { IconName } from "./types";
 
@@ -14,7 +15,6 @@ export const POLICY_ACTIONS = [
 export type PolicyAction = (typeof POLICY_ACTIONS)[number];
 export type Policy = "deny" | "auto" | "ask" | "allow";
 export type PolicyMap = Record<PolicyAction, Policy>;
-export type PresetId = "read_only" | "workspace" | "full" | "custom";
 export type ApprovalDecision = "allow_once" | "allow_session" | "allow_always" | "deny";
 
 export interface ApprovalView {
@@ -31,6 +31,7 @@ export interface ApprovalView {
   risks?: Array<{ id: string; label: string; detail: string }>;
   grantLabel?: string;
   arguments?: Array<{ name: string; value: string }>;
+  paths?: string[] | undefined;
 }
 
 export interface ActionMeta {
@@ -45,13 +46,6 @@ export interface PolicyOption {
   value: Policy;
   label: string;
   description: string;
-}
-
-export interface PolicyPreset {
-  id: Exclude<PresetId, "custom">;
-  label: string;
-  description: string;
-  policies: PolicyMap;
 }
 
 export const POLICY_OPTIONS: readonly PolicyOption[] = [
@@ -177,68 +171,41 @@ export const ACTION_META: Record<PolicyAction, ActionMeta> = {
   },
 };
 
-export const PRESETS: readonly PolicyPreset[] = [
-  {
-    id: "read_only",
-    get label() {
-      return t("Read-only");
-    },
-    get description() {
-      return t(
-        "Reads the project and skills. Writing, shell commands, and external paths are blocked. Network and MCP access require approval.",
-      );
-    },
-    policies: {
-      read: "auto",
-      write: "deny",
-      shell: "deny",
-      network: "ask",
-      mcp: "ask",
-      skill: "auto",
-      external_path: "ask",
-    },
-  },
-  {
-    id: "workspace",
-    get label() {
-      return t("Working folder");
-    },
-    get description() {
-      return t(
-        "Writes within the project. Shell commands, network, MCP, and external paths require approval.",
-      );
-    },
-    policies: {
-      read: "auto",
-      write: "auto",
-      shell: "ask",
-      network: "ask",
-      mcp: "ask",
-      skill: "auto",
-      external_path: "ask",
-    },
-  },
-  {
-    id: "full",
-    get label() {
+export function accessModeLabel(mode: ActiveAccessMode): string {
+  switch (mode) {
+    case "agent":
+      return t("Agent");
+    case "confirm":
+      return t("Confirm changes");
+    case "full":
       return t("Full access");
-    },
-    get description() {
-      return t("Allows ordinary actions. Destructive rules and sandbox limits still apply.");
-    },
-    policies: {
-      read: "allow",
-      write: "allow",
-      shell: "allow",
-      network: "allow",
-      mcp: "allow",
-      skill: "allow",
-      external_path: "allow",
-    },
-  },
-];
+    case "custom":
+      return t("Custom access");
+  }
+}
 
-const CUSTOM_DESCRIPTION = "These settings don't match any preset. Check each row before saving.";
+export function accessModeDescription(mode: ActiveAccessMode): string {
+  switch (mode) {
+    case "agent":
+      return t(
+        "Reads, edits and runs commands in the project. Asks before accessing another folder or destructive actions.",
+      );
+    case "confirm":
+      return t("Reads freely. Asks before changes, commands and connected tools.");
+    case "full":
+      return t("Works across your computer without routine approvals. Process isolation is off.");
+    case "custom":
+      return t("Advanced settings differ from these modes.");
+  }
+}
+
+export function approvalSessionLabel(action: string): string {
+  return action === "external_path" ? t("For this chat") : t("Repeat this action in this chat");
+}
+
+export function approvalScopePaths(approval: Pick<ApprovalView, "target" | "paths">): string[] {
+  return [approval.target || approval.paths?.[0] || ""].filter(Boolean);
+}
 
 export function buildPolicy(
   source: Readonly<Partial<Record<PolicyAction, Policy>>> = {},
@@ -249,23 +216,6 @@ export function buildPolicy(
     policy[action] = source[action] ?? fallback;
   }
   return policy;
-}
-
-export function applyPreset(preset: PresetId, current: PolicyMap = buildPolicy()): PolicyMap {
-  if (preset === "custom") return { ...current };
-  const match = PRESETS.find((entry) => entry.id === preset);
-  return match ? { ...match.policies } : { ...current };
-}
-
-export function isCustom(policy: PolicyMap): boolean {
-  return !PRESETS.some((preset) =>
-    POLICY_ACTIONS.every((action) => preset.policies[action] === policy[action]),
-  );
-}
-
-export function presetDescription(preset: PresetId): string {
-  if (preset === "custom") return t(CUSTOM_DESCRIPTION);
-  return PRESETS.find((entry) => entry.id === preset)?.description ?? t(CUSTOM_DESCRIPTION);
 }
 
 export function approvalAgeLabel(requestedAt: number, now: number = Date.now()): string {
@@ -338,6 +288,8 @@ export function approvalActionTitle(action: string): string {
       return t("Use connected tool?");
     case "skill":
       return t("Activate skill?");
+    case "external_path":
+      return t("Allow folder access?");
     default:
       return t("Allow this action?");
   }
