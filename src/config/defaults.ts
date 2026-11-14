@@ -138,7 +138,6 @@ export function defaultConfig(): HarnessConfig {
     commands: { dirs: [] },
     modes: { dirs: [] },
     subagents: { dirs: [] },
-    lsp: { servers: {}, formatters: {} },
     hooks: HooksConfigSchema.parse({}),
     catalog: { autoRefresh: true, ttlMs: 43_200_000 },
     permissions: {

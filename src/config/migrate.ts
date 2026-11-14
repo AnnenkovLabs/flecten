@@ -5,9 +5,10 @@ export function migrateConfig(input: unknown): unknown {
   if (!isObject(input)) return input;
   const version = input.schemaVersion ?? 1;
   if (version !== 1 && version !== 2 && version !== 3) return input;
-  // Retired plugins must neither execute nor prevent an existing project from opening.
+  // Retired extensions must neither execute nor prevent an existing project from opening.
   const next: Record<string, unknown> = { ...input };
   delete next.plugins;
+  delete next.lsp;
   if (version === 3) return next;
   next.schemaVersion = 3;
   const context = input.context;

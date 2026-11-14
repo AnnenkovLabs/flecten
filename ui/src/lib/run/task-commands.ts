@@ -55,23 +55,23 @@ export class TaskCommands {
 
   async editQueued(id: string, text: string): Promise<void> {
     if (text.trim().length === 0) return;
-    const sessionId = this.#sessionId();
+    const current = this.#currentView();
     try {
       const response = await requestAgent(
         { type: "queue.edit", ...this.#routed(), id, text },
         10_000,
       );
-      if (sessionId === this.#sessionId()) this.#view.attach(response.state);
+      if (current()) this.#view.attach(response.state);
     } catch (error) {
       toast.error(message(error));
     }
   }
 
   async removeQueued(id: string): Promise<void> {
-    const sessionId = this.#sessionId();
+    const current = this.#currentView();
     try {
       const response = await requestAgent({ type: "queue.remove", ...this.#routed(), id }, 10_000);
-      if (sessionId === this.#sessionId()) this.#view.attach(response.state);
+      if (current()) this.#view.attach(response.state);
     } catch (error) {
       toast.error(message(error));
     }
@@ -83,6 +83,7 @@ export class TaskCommands {
     choice: ApprovalChoice,
     feedback?: string,
   ): Promise<void> {
+    const current = this.#currentView();
     const item = this.#view.thread.items.find(
       (entry) => entry.kind === "approval" && entry.approval.id === id,
     );
@@ -100,7 +101,7 @@ export class TaskCommands {
         },
         10_000,
       );
-      if (sessionId !== this.#sessionId()) return;
+      if (sessionId !== this.#sessionId() || !current()) return;
       if (response.approval && item.state === "pending")
         this.#view.thread.resolveApproval(response.approval.id, response.approval.choice, "user");
       this.#view.attach(response.state);
@@ -121,29 +122,38 @@ export class TaskCommands {
   }
 
   async stopJob(id: string): Promise<void> {
+    const current = this.#currentView();
     try {
       const response = await requestAgent<Response>(
         { type: "jobs.stop", ...this.#routed(), id },
         15_000,
       );
-      if (response.job) this.#view.upsertJob(response.job);
+      if (current() && response.job) this.#view.upsertJob(response.job);
     } catch (error) {
       toast.error(message(error));
     }
   }
 
   async compact(focus?: string): Promise<void> {
+    const current = this.#currentView();
     try {
       const response = await requestAgent<Response>(
         { type: "context.compact", ...this.#routed(), ...(focus ? { focus } : {}) },
         120_000,
       );
+      if (!current()) return;
       if (response.context) this.#view.context.apply(response.context);
       if (response.scheduled) toast.show(t("Context will be compacted before the next request"));
       else toast.show(response.compacted ? t("Context compacted") : t("Nothing to compact yet"));
     } catch (error) {
       toast.error(message(error));
     }
+  }
+
+  #currentView(): () => boolean {
+    const sessionId = this.#sessionId();
+    const generation = this.#view.generation;
+    return () => sessionId === this.#sessionId() && generation === this.#view.generation;
   }
 
   #routed(): { sessionId?: string } {

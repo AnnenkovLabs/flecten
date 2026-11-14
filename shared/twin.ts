@@ -73,6 +73,18 @@ export const TwinSnapshotSchema = z.object({
     usage: TwinUsageSchema,
     provider: z.string(),
     model: z.string(),
+    samples: z
+      .array(
+        z
+          .object({
+            sourceId: TwinSourceIdSchema,
+            sessionId: text(256),
+            quote: text(4000),
+          })
+          .strict(),
+      )
+      .max(16)
+      .optional(),
   }),
   limits: z.object({
     maxSessions: z.number().int(),

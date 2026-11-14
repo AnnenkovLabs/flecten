@@ -1,5 +1,4 @@
-import { mkdir, stat } from "node:fs/promises";
-import { dirname } from "node:path";
+import { stat } from "node:fs/promises";
 import type { ToolResult } from "../../core/types";
 import type { CheckpointStore } from "../../store/checkpoints";
 import { atomicWrite } from "../../util/atomic";
@@ -11,6 +10,7 @@ export async function runWrite(
   args: WriteArgs,
   context: {
     cwd: string;
+    signal?: AbortSignal;
     sessionId?: string;
     reads: {
       record(path: string, content: string): void;
@@ -72,6 +72,7 @@ export async function runWrite(
   if (context.checkpoints) {
     try {
       const checkpoint = await context.checkpoints.capture({
+        ...(context.signal ? { signal: context.signal } : {}),
         paths: [display],
         label: `write ${display}`,
         tool: "write",
@@ -84,9 +85,8 @@ export async function runWrite(
     }
   }
 
-  await mkdir(dirname(path), { recursive: true });
   try {
-    await atomicWrite(path, args.content);
+    await atomicWrite(path, args.content, undefined, context.signal);
   } catch (error) {
     return {
       ok: false,

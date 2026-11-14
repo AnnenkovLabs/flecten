@@ -67,7 +67,7 @@ test("settings save practical preferences and apply them to the composer", async
     expect(saved.maxOutputTokens).toBe(0);
     await dialog.getByRole("button", { name: "Закрыть", exact: true }).click();
     await page.reload();
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     const prompt = page.locator("#prompt");
     await prompt.fill("Read README.md");
     await expect(page.getByRole("button", { name: "Отправить", exact: true })).toBeEnabled();

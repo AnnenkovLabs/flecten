@@ -6,10 +6,11 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, normalize, sep } from "node:path";
-import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import electron from "electron";
 import { registerAttachmentIpc } from "./attachments.mjs";
+import { watchAgentOutput } from "./agent-output.mjs";
+import { bundledAgent, smokeRenderer } from "./packaged-smoke.mjs";
 import { MODULE_FRAME_DOCUMENT } from "./module-frame.mjs";
 import { captureWhenLoaded } from "./screenshot.mjs";
 import { installSessionLinks } from "./deep-links.mjs";
@@ -43,6 +44,7 @@ const windowActions = new Set(["minimize", "maximize", "close"]);
 const commandTypes = new Set(require("./agent-commands.json"));
 const automated = headless || smoke || screenshotPath !== null;
 preserveUserData(app);
+if (smoke && smokeOut) app.setPath("userData", join(dirname(smokeOut), "profile"));
 function isTrustedIpcSender(event) {
   if (!mainWindow || mainWindow.isDestroyed()) return false;
   if (!event.sender || event.sender.id !== mainWindow.webContents.id) return false;
@@ -137,23 +139,25 @@ async function handleProtocol(request) {
 let interfaceLocale = "en";
 let mainWindow = null;
 let agent = null;
+let closeAgentOutput = null;
+let smokeAgent = null;
 let updateRuntime = null;
 let smokeDone = false;
 const queued = [];
 const sessionLinks = installSessionLinks({ app, automated, emit: sendToRenderer, focus: () => focusWindow(mainWindow), openProject: (path) => {
   if (agentCwd === path) return false;
   agentCwd = path;
-  if (agent) { agent.kill(); agent = null; }
+  stopAgent();
   if (mainWindow) { sendToRenderer({ type: "project.changed", cwd: path }); startAgent(); }
   return true;
 } });
 
-function finishSmoke(status) {
+function finishSmoke(result) {
   if (!smoke || smokeDone) return;
   smokeDone = true;
   try {
     if (!smokeOut) throw new Error("FLECTEN_SMOKE_OUT is not set");
-    writeFileSync(smokeOut, `${JSON.stringify(status)}\n`);
+    writeFileSync(smokeOut, `${JSON.stringify({ ...result, agent: smokeAgent })}\n`);
     app.quit();
   } catch (error) {
     console.error(`[smoke] ${error instanceof Error ? error.message : String(error)}`);
@@ -191,47 +195,40 @@ function resolveAgent() {
 function startAgent() {
   if (agent) return;
   const { command, args } = resolveAgent();
+  if (smoke) smokeAgent = bundledAgent(command, process.resourcesPath, app.isPackaged);
   const child = spawn(command, args, {
     cwd: agentCwd,
-    env: { ...process.env, FLECTEN_CWD: agentCwd, BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
+    env: { ...process.env, FLECTEN_CWD: agentCwd, FLECTEN_PROFILE: app.getPath("userData"), BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
     stdio: ["pipe", "pipe", "pipe"],
   });
   agent = child;
 
-  createInterface({ input: child.stdout }).on("line", (line) => {
-    if (line.trim().length === 0) return;
-    try {
-      const message = JSON.parse(line);
-      if (smoke && message.type === "status") finishSmoke(message);
+  closeAgentOutput = watchAgentOutput(child, {
+    current: () => agent === child,
+    message: (message) => {
       sendToRenderer(message);
       if (message.type === "status") {
         updateRuntime?.applyStatus(message);
         sessionLinks.status();
       }
-    } catch {
-      sendToRenderer({ type: "error", code: "protocol", message: "agent sent invalid JSON" });
-    }
-  });
-
-  createInterface({ input: child.stderr }).on("line", (line) => {
-    console.error(`[agent] ${line}`);
-  });
-
-  // A replaced agent (another project was opened) ends quietly: only the current one reports.
-  child.on("error", (error) => {
-    if (agent !== child) return;
-    sendToRenderer({ type: "agent.exit", code: null, message: error.message });
-  });
-
-  child.on("exit", (code, signal) => {
-    if (agent !== child) return;
-    agent = null;
-    sendToRenderer({ type: "agent.exit", code, signal });
+    },
+    invalid: () => sendToRenderer({ type: "error", code: "protocol", message: "agent sent invalid JSON" }),
+    stderr: (line) => console.error(`[agent] ${line}`),
+    failed: (error) => sendToRenderer({ type: "agent.exit", code: null, message: error.message }),
+    exited: (code, signal) => { agent = null; closeAgentOutput = null; sendToRenderer({ type: "agent.exit", code, signal }); },
   });
 
   for (const line of queued.splice(0)) {
     if (child.stdin.writable) child.stdin.write(line);
   }
+}
+
+function stopAgent() {
+  closeAgentOutput?.();
+  closeAgentOutput = null;
+  const child = agent;
+  agent = null;
+  child?.kill("SIGTERM");
 }
 
 function sendToAgent(command) {
@@ -271,6 +268,12 @@ function createWindow() {
   });
 
   mainWindow = win;
+  if (smoke) win.webContents.once("did-finish-load", () => {
+    void smokeRenderer(win).then(finishSmoke).catch((error) => {
+      console.error(`[smoke] ${error instanceof Error ? error.message : String(error)}`);
+      app.exit(1);
+    });
+  });
   registerCloseConfirmation(win, dialog, () => interfaceLocale);
   const trustedMedia = (contents, details) =>
     contents === win.webContents && details.isMainFrame &&
@@ -386,10 +389,7 @@ ipcMain.handle("liquid:choose-project", async (event) => {
   const selected = result.canceled ? undefined : result.filePaths[0];
   if (!selected) return null;
   agentCwd = selected;
-  if (agent) {
-    agent.kill();
-    agent = null;
-  }
+  stopAgent();
   startAgent();
   sendToRenderer({ type: "project.changed", cwd: selected });
   return selected;
@@ -445,7 +445,7 @@ app.whenReady().then(() => {
   if (smoke) {
     setTimeout(() => {
       if (smokeDone) return;
-      console.error("[smoke] timed out waiting for status");
+      console.error("[smoke] timed out waiting for packaged renderer readiness");
       app.exit(1);
     }, 20_000);
   }
@@ -460,10 +460,7 @@ app.on("before-quit", () => {
     updateRuntime.dispose();
     updateRuntime = null;
   }
-  if (agent) {
-    agent.kill("SIGTERM");
-    agent = null;
-  }
+  stopAgent();
 });
 
 app.on("window-all-closed", () => {

@@ -93,6 +93,33 @@ describe.skipIf(process.platform === "win32")("terminal tool", () => {
     expect(listed.output).toContain("default");
   }, 20_000);
 
+  test("returns new command output when scrollback discards older lines", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-scrollback-"));
+    dirs.push(cwd);
+    const manager = new TerminalManager({ shell: "/bin/sh", scrollback: 6 });
+    managers.push(manager);
+    const ctx = context(cwd, manager);
+    const fill = await runTerminal(
+      {
+        op: "run",
+        command:
+          'i=0; while [ "$i" -lt 20 ]; do printf \'old-%04d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\\n\' "$i"; i=$((i+1)); done',
+      },
+      ctx,
+    );
+    expect(fill.ok).toBe(true);
+    expect(manager.get("default")?.snapshot().truncated).toBe(true);
+    const result = await runTerminal(
+      { op: "run", command: "printf 'new-result\\nnew-next\\nnew-tail\\n'" },
+      ctx,
+    );
+    expect(result).toMatchObject({ ok: true, data: { exitCode: 0 } });
+    expect(result.output).toContain("new-tail");
+    const output = (result.data as { output: string }).output;
+    expect(output).toContain("new-tail");
+    expect(output).not.toContain("old-");
+  });
+
   test("can write to an interactive process and kill it", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-interactive-"));
     dirs.push(cwd);

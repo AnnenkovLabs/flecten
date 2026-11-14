@@ -122,6 +122,7 @@ export async function runDelete(args: DeleteArgs, context: ToolContext): Promise
           }
         }
         const checkpoint = await context.checkpoints.capture({
+          signal: context.signal,
           paths: capturePaths,
           label: `delete ${display}`,
           tool: "delete",
@@ -136,6 +137,7 @@ export async function runDelete(args: DeleteArgs, context: ToolContext): Promise
   }
 
   try {
+    context.signal.throwIfAborted();
     if (info.isDirectory()) await rm(path, { recursive: true });
     else await rm(path);
   } catch (error) {

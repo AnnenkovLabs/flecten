@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from "../lib/i18n.svelte";
+  import { formatDuration } from "../lib/agent";
   import { countLabel } from "../lib/format";
   import { expandable } from "../lib/motion";
   import { groupActions } from "../lib/run/action-groups";
@@ -19,6 +20,16 @@
   let { id, summary, onOpenChanges }: Props = $props();
   let expanded = $state(false);
   let wasFailed = false;
+  let now = $state(Date.now());
+  const duration = $derived(summary.live && summary.startedAt !== undefined
+    ? formatDuration(Math.max(0, now - summary.startedAt))
+    : summary.duration);
+  $effect(() => {
+    if (!summary.live || summary.startedAt === undefined) return;
+    now = Date.now();
+    const timer = setInterval(() => { now = Date.now(); }, 100);
+    return () => clearInterval(timer);
+  });
   const latest = $derived(summary.list.at(-1));
   const preview = $derived(summary.list.filter((action) => (action.tool === "task" && action.running) || action.id === latest?.id));
   const additions = $derived(summary.files.reduce((sum, file) => sum + file.add, 0));
@@ -60,7 +71,7 @@
         </span>
       {/if}
     </span>
-    <span>{summary.live ? t("Working") : summary.failed ? t("Error") : summary.stopped ? t("Stopped") : t("Worked")} {summary.duration}</span>
+    <span>{summary.live ? t("Working") : summary.failed ? t("Error") : summary.stopped ? t("Stopped") : t("Worked")} {duration}</span>
     <span class="sep" aria-hidden="true">·</span>
     <span>{actionLabel}</span>
     <span class="chevron" class:is-open={expanded}>

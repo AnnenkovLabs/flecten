@@ -69,10 +69,11 @@ describe("instruction hierarchy", () => {
       expect(promptStamp(built, 24_000).instructions?.sources).toEqual(
         built.instructions.sources.map(({ kind, path }) => ({ kind, path })),
       );
-      expect(built.system.indexOf("managed rule")).toBeLessThan(built.system.indexOf("user rule"));
-      expect(built.system.indexOf("user rule")).toBeLessThan(built.system.indexOf("project rule"));
-      expect(built.system.indexOf("project rule")).toBeLessThan(built.system.indexOf("local rule"));
-      expect(built.system.indexOf("local rule")).toBeLessThan(built.system.indexOf("nested rule"));
+      const instructions = built.instructions.text;
+      expect(instructions.indexOf("managed rule")).toBeLessThan(instructions.indexOf("user rule"));
+      expect(instructions.indexOf("user rule")).toBeLessThan(instructions.indexOf("project rule"));
+      expect(instructions.indexOf("project rule")).toBeLessThan(instructions.indexOf("local rule"));
+      expect(instructions.indexOf("local rule")).toBeLessThan(instructions.indexOf("nested rule"));
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }

@@ -79,12 +79,10 @@ describe("tool output budget", () => {
 
   test("maps tools to explicit output classes", () => {
     expect(toolOutputClass("read")).toBe("read");
-    expect(toolOutputClass("lsp")).toBe("read");
     expect(toolOutputClass("grep")).toBe("search");
     expect(toolOutputClass("glob")).toBe("search");
     expect(toolOutputClass("bash")).toBe("bash");
     expect(toolOutputClass("terminal")).toBe("log");
-    expect(toolOutputClass("git")).toBe("log");
     expect(toolOutputClass("edit")).toBe("default");
   });
 });

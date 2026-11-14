@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -12,13 +13,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: prepare GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - name: Read the curated changelog for this version
+        run: bun scripts/release-notes.mjs "$RUNNER_TEMP/release-notes.md"
+      - name: Create or update the release draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          title="Flecten ${GITHUB_REF_NAME#v} Alpha"
+          if gh release view "$GITHUB_REF_NAME" --json isDraft > /dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "$title" --notes-file "$RUNNER_TEMP/release-notes.md" --prerelease
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --prerelease --title "$title" --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi
+
   quality:
+    needs: prepare
     uses: ./.github/workflows/quality.yml
     permissions:
       contents: read
 
   verify:
     name: verify (${{ matrix.os }})
+    needs: prepare
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     strategy:
@@ -95,7 +122,17 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          bun run smoke:packaged 2>&1 | tee diagnostics/smoke.log
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+            installers=(release/*.AppImage)
+            test -f "${installers[0]}"
+            for installer in "${installers[@]}"; do
+              chmod +x "$installer"
+              FLECTEN_SMOKE_EXECUTABLE="$PWD/$installer" APPIMAGE_EXTRACT_AND_RUN=1 bun run smoke:packaged 2>&1 | tee -a diagnostics/smoke.log
+            done
+          else
+            bun run smoke:packaged 2>&1 | tee diagnostics/smoke.log
+          fi
       - name: Capture window on failure
         if: failure()
         continue-on-error: true
@@ -174,8 +211,11 @@ jobs:
           for marker in "${markers[@]}"; do
             echo "- $(basename "$marker")" >> "$GITHUB_STEP_SUMMARY"
           done
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: release/*
-          fail_on_unmatched_files: true
-          generate_release_notes: true
+      - name: Upload artifacts and publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release upload "$GITHUB_REF_NAME" release/* --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease
+          gh release view "$GITHUB_REF_NAME" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"

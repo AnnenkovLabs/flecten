@@ -53,7 +53,11 @@ export interface AgentReplay {
   running: boolean;
 }
 
-export type AgentEvent = AgentEventBody & { seq?: number };
+export type AgentEvent = AgentEventBody & {
+  seq?: number;
+  timestamp?: number;
+  reasoningStartedAt?: number;
+};
 
 type AgentEventBody =
   | AgentLeafEvent

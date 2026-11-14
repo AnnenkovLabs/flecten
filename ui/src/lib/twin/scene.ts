@@ -19,6 +19,8 @@ export function createTwinScene(
   let count = 0;
   let quality = 1;
   let width = canvas.clientWidth;
+  let learningFrame: number | undefined;
+  let completionFrame: number | undefined;
   const still = () => paused || motion.matches || !interactive;
   const shown = () => visible && !document.hidden && width > 0 && !lost && !disposed;
 
@@ -44,7 +46,7 @@ export function createTwinScene(
     last = now;
     try {
       renderer ??= createTwinRenderer(canvas);
-      const pose = rig.frame(elapsed / 1000, still());
+      const pose = rig.frame(elapsed / 1000, still(), learningFrame, completionFrame);
       // ponytail: size-adaptive framebuffer capped at 512px and 24fps; profile GPU timing before raising it.
       const resolution = Math.max(
         Math.min(64, width),
@@ -123,8 +125,10 @@ export function createTwinScene(
 
   let drag: { id: number; x: number; distance: number } | undefined;
   return {
-    set(state: TwinState, emotion: TwinEmotion): void {
+    set(state: TwinState, emotion: TwinEmotion, frame?: number, completion?: number): void {
       rig.set(state, emotion);
+      learningFrame = frame;
+      completionFrame = completion;
       canvas.dataset.emotion = emotion;
       canvas.dataset.state = state;
       wake();

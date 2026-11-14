@@ -50,6 +50,9 @@ tmp/
 # Private research data, never publish
 docs/SOURCE-MESSAGES.md
 
+# Private operator playbook for AI agents, never publish
+AGENT-PLAYBOOK.md
+
 # Legacy prototype, not part of the shipped app
 /web/
 

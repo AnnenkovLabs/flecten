@@ -70,6 +70,7 @@ async function startMockProvider(
   holdSummary: boolean,
   calls?: Array<{ name: string; arguments: Record<string, unknown> }>,
   usage?: LaunchOptions["usage"],
+  twinLearning = false,
 ): Promise<MockProvider> {
   const child = spawn("bun", [mockScript], {
     cwd: repoRoot,
@@ -80,6 +81,7 @@ async function startMockProvider(
       E2E_MOCK_CHUNK_MS: String(chunkMs),
       E2E_MOCK_SUMMARY_PAUSE_MS: String(summaryPauseMs),
       E2E_MOCK_HOLD_SUMMARY: holdSummary ? "1" : "0",
+      E2E_MOCK_TWIN_LEARNING: twinLearning ? "1" : "0",
       ...(calls ? { E2E_MOCK_CALLS: JSON.stringify(calls) } : {}),
       ...(usage ? { E2E_MOCK_USAGE: JSON.stringify(usage) } : {}),
       ...(reply === undefined ? {} : { E2E_MOCK_REPLY: reply }),
@@ -224,6 +226,8 @@ function launchEnvironment(cwd: string, configPath: string, user?: string): Reco
 }
 
 export interface LaunchOptions {
+  /** Exercise the normal desktop profile instead of an explicitly selected config file. */
+  appProfile?: boolean;
   /** null leaves the product default; other E2E paths explicitly exercise a single agent. */
   conversation?: boolean | null;
   /** null leaves fresh storage untouched, proving the product default. */
@@ -242,6 +246,8 @@ export interface LaunchOptions {
   summaryPauseMs?: number;
   /** Keep the streamed completion open until the test has observed its pending UI. */
   holdSummary?: boolean;
+  /** Hold a valid Twin extraction until releaseSummary, so real training remains observable. */
+  twinLearning?: boolean;
   /** Final answer of the mock model instead of the README summary. */
   reply?: string;
   directory?: string;
@@ -280,6 +286,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
       options.holdSummary ?? false,
       options.firstCalls,
       options.usage,
+      options.twinLearning,
     );
     const configPath = join(cwd, "flecten.config.json");
     if (owned) {
@@ -303,20 +310,27 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
     }
 
     let entryPoint = shellMain;
-    if (options.userData) {
-      mkdirSync(options.userData, { recursive: true });
+    const userData =
+      options.userData ?? (options.appProfile ? join(cwd, "app-profile") : undefined);
+    if (userData) {
+      mkdirSync(userData, { recursive: true });
       entryPoint = join(cwd, "e2e-profile.cjs");
       writeFileSync(
         entryPoint,
         [
           'const { app } = require("electron");',
-          `app.setPath("appData", ${JSON.stringify(dirname(options.userData))});`,
-          `app.setPath("userData", ${JSON.stringify(options.userData)});`,
+          `app.setPath("appData", ${JSON.stringify(dirname(userData))});`,
+          `app.setPath("userData", ${JSON.stringify(userData)});`,
           `import(${JSON.stringify(pathToFileURL(shellMain).href)});`,
         ].join("\n"),
       );
     }
 
+    const env = launchEnvironment(cwd, configPath, options.user);
+    if (options.appProfile) {
+      delete env.FLECTEN_CONFIG;
+      env.FLECTEN_SECRET_BACKEND = "file";
+    }
     app = await electron.launch({
       executablePath,
       args: [
@@ -330,7 +344,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
       ],
       cwd: repoRoot,
       env: {
-        ...launchEnvironment(cwd, configPath, options.user),
+        ...env,
         FLECTEN_VOICE_HOME: options.voiceHome ?? join(cwd, ".voice-cache"),
       },
       timeout: 30_000,

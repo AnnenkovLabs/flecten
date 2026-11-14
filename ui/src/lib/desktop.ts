@@ -99,7 +99,8 @@ export async function describeDroppedFiles(files: readonly File[]): Promise<{
 export function sendAgent(command: AgentCommand): boolean {
   const bridge = window.desktop?.agent;
   if (!bridge) return false;
-  bridge.send(command);
+  // The sidecar speaks JSONL; detach reactive proxies before Electron clones the command.
+  bridge.send(JSON.parse(JSON.stringify(command)) as AgentCommand);
   return true;
 }
 

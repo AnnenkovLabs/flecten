@@ -87,6 +87,7 @@ function createSingleProvider(
   const transport = { ...config.transport, ...definition.transport };
   const timeoutMs = definition.transportTimeoutMs ?? transport.timeoutMs;
   const providerFetch = createProviderFetch({
+    httpErrors: "response",
     headers: definition.headers,
     ...(definition.proxy ? { proxy: definition.proxy } : {}),
     ...(timeoutMs ? { timeoutMs } : {}),

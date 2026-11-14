@@ -86,7 +86,6 @@ describe("config migrations", () => {
     expect(config.commands).toEqual({ dirs: [] });
     expect(config.modes).toEqual({ dirs: [] });
     expect(config.subagents).toEqual({ dirs: [] });
-    expect(config.lsp).toEqual({ servers: {}, formatters: {} });
     expect(config.context.promptBudget).toBe(24_000);
     expect(config.context.compactWarn).toEqual([70, 85, 95]);
     expect(config.context.outputBudgetRatio).toBe(0.1);
@@ -104,7 +103,7 @@ describe("config migrations", () => {
   });
 
   test.each([undefined, 1, 2, 3])(
-    "drops retired plugins from schema %s while preserving modules and explicit extensions",
+    "drops retired plugins and LSP from schema %s while preserving modules and explicit extensions",
     async (schemaVersion) => {
       const cwd = await tempDir();
       const path = join(cwd, CONFIG_FILE);
@@ -112,6 +111,7 @@ describe("config migrations", () => {
       const input = {
         schemaVersion,
         plugins: { enabled: true, dirs: ["./old-plugin"], trusted: { "./old-plugin": "old-hash" } },
+        lsp: { servers: { typescript: { command: "typescript-language-server" } } },
         modules,
         skills: { sources: [] },
         mcp: { servers: { docs: { command: "bun", args: ["docs.ts"] } } },
@@ -122,6 +122,7 @@ describe("config migrations", () => {
       await writeFile(path, JSON.stringify(input));
       const config = await loadConfig(cwd);
       expect(config).not.toHaveProperty("plugins");
+      expect(config).not.toHaveProperty("lsp");
       expect(config.modules).toMatchObject(modules);
       expect(config.skills?.sources).toEqual([]);
       expect(config.mcp.servers.docs).toMatchObject(input.mcp.servers.docs);
@@ -132,6 +133,7 @@ describe("config migrations", () => {
       await saveConfig(cwd, config);
       const saved = await Bun.file(path).json();
       expect(saved).not.toHaveProperty("plugins");
+      expect(saved).not.toHaveProperty("lsp");
       expect(saved.modules).toMatchObject(modules);
     },
   );

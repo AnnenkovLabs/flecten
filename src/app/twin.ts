@@ -61,6 +61,7 @@ export async function projectTwin(options: TwinOptions) {
   const mutex = new Mutex();
   let operation: AbortController | undefined;
   let pending: Promise<void> | undefined;
+  let samples: NonNullable<TwinSnapshot["training"]["samples"]> = [];
   const writable = () => {
     if (loadError) throw new Error(loadError);
   };
@@ -78,10 +79,13 @@ export async function projectTwin(options: TwinOptions) {
       })),
       candidates: state.candidates,
       entries: state.entries,
-      training:
-        operation && !["reading", "learning"].includes(state.training.state)
-          ? { ...state.training, state: "learning" }
-          : state.training,
+      training: {
+        ...state.training,
+        ...(operation && !["reading", "learning"].includes(state.training.state)
+          ? { state: "learning" }
+          : {}),
+        ...(operation && samples.length ? { samples } : {}),
+      },
       limits: TWIN_LIMITS,
     });
   }
@@ -102,6 +106,7 @@ export async function projectTwin(options: TwinOptions) {
     if (state.candidates.length > 88)
       throw new Error("Review pending candidates before importing more history.");
     const controller = new AbortController();
+    samples = [];
     operation = controller;
     const signal = AbortSignal.any([
       controller.signal,
@@ -183,6 +188,11 @@ export async function projectTwin(options: TwinOptions) {
           await save();
           return;
         }
+        samples = messages.slice(0, 16).map((message) => ({
+          sourceId: message.sourceId,
+          sessionId: message.sessionId,
+          quote: safeMemoryText(message.text, options.secrets()).slice(0, 4000),
+        }));
         state.training.state = "learning";
         await save();
         const snapshot = await get();
@@ -234,6 +244,7 @@ export async function projectTwin(options: TwinOptions) {
         };
         await save();
       } finally {
+        samples = [];
         operation = undefined;
       }
     };

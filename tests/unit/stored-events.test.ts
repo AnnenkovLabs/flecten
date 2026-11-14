@@ -54,7 +54,9 @@ describe("stored events", () => {
       const log = await DurableEventLog.open(path, id);
       for (const event of events) await log.append(event);
       await log.close();
-      expect(await readSession(cwd, id)).toEqual(events);
+      expect(await readSession(cwd, id)).toEqual(
+        events.map((event) => ({ ...event, timestamp: expect.any(Number) })),
+      );
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }

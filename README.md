@@ -40,7 +40,7 @@ The agent loop is table stakes. Flecten fixes what breaks after the demo.
 | 🪞 It works like a generic assistant, not like you | A **Twin** that learns your voice and rejects work that is not yours |
 
 <p align="center">
-<b>20</b> built-in tools &nbsp;·&nbsp; <b>4</b> provider protocols &nbsp;·&nbsp; <b>7</b> interface languages &nbsp;·&nbsp; <b>85%</b> coverage gate
+<b>18</b> built-in tools &nbsp;·&nbsp; <b>4</b> provider protocols &nbsp;·&nbsp; <b>7</b> interface languages &nbsp;·&nbsp; <b>85%</b> coverage gate
 </p>
 
 ## 🚀 Quick start
@@ -108,7 +108,7 @@ It learns from your past sessions and sources, writes specs in your terms, and r
 
 | | Area | What you get |
 |---|---|---|
-| 🛠️ | Tools | 20 built-in: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `git`, `lsp`, `terminal`, `bash`, `jobs`, `memory`, `done`; plus `skill` and `module` |
+| 🛠️ | Tools | 18 built-in: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `memory`, `done`; plus `skill` and `module` |
 | 🛡️ | Safety | `deny` / `auto` / `ask` / `allow` permissions, a bubblewrap / seatbelt sandbox, command hooks, and approvals that wait inside the call |
 | 💻 | Terminal | A persistent PTY per session, background `jobs` with logs and `wait`, and process-tree cancellation |
 | 🔁 | Runs | Parallel tasks, a queue that survives reloads, steering, recovery after a core crash, and per-run token, cost, and time budgets |
@@ -127,7 +127,7 @@ flowchart LR
   UI <-->|commands / events| SC[Sidecar on Bun]
   SC <--> CORE[Agent core]
   CORE --> PROV[Providers<br/>OpenAI · Anthropic · Gemini]
-  CORE --> TOOLS[20 tools + Skills + MCP]
+  CORE --> TOOLS[18 tools + Skills + MCP]
   TOOLS --> SEC[Security<br/>permissions · sandbox · hooks]
   CORE --> STORE[(events.jsonl<br/>checkpoints · shadow git)]
 ```

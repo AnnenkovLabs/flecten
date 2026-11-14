@@ -16,7 +16,7 @@ async function sandbox(
 ): Promise<ToolResult | undefined> {
   const policy = context.sandbox;
   if (!policy) return undefined;
-  if (request.action === "read" || request.action === "write" || request.tool === "lsp") {
+  if (request.action === "read" || request.action === "write") {
     const action = request.action === "write" ? "write" : "read";
     if (request.tool === "memory") {
       const check = await policy.checkMemory(action);
@@ -33,7 +33,7 @@ async function sandbox(
     const cwd = typeof args.cwd === "string" ? args.cwd : context.cwd;
     const check = await policy.checkRead(cwd);
     if (!check.allowed) return denied(check.reason, "sandbox");
-    const command = request.tool === "lsp" ? undefined : shellText(request);
+    const command = shellText(request);
     if (command !== undefined) {
       const shell = policy.checkShell(command);
       if (!shell.allowed) return denied(shell.reason, "sandbox");

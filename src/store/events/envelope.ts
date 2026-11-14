@@ -177,8 +177,20 @@ export class DurableEventLog {
       // ponytail: scans the log on open to recover seq; store seq in a sidecar if startup cost matters.
       const lastSeq = envelopes.reduce((max, envelope) => Math.max(max, envelope.seq), 0);
       await mkdir(dirname(path), { recursive: true });
-      const handle = await openFile(path, "a", 0o600);
-      return new DurableEventLog(sessionId, handle, lastSeq + 1);
+      const handle = await openFile(path, "a+", 0o600);
+      try {
+        const { size } = await handle.stat();
+        if (size > 0) {
+          const last = Buffer.alloc(1);
+          await handle.read(last, 0, 1, size - 1);
+          // Keep an incomplete tail as its own corrupt line, never merge it with a new event.
+          if (last[0] !== 10) await handle.appendFile("\n", "utf8");
+        }
+        return new DurableEventLog(sessionId, handle, lastSeq + 1);
+      } catch (error) {
+        await handle.close();
+        throw error;
+      }
     } catch (error) {
       DurableEventLog.writers.delete(sessionId);
       throw error;

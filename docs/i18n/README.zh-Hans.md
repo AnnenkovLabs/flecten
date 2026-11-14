@@ -40,7 +40,7 @@
 | 🪞 它像通用助手，而不像你 | **Twin** 学习你的风格，拒绝不像你的成果 |
 
 <p align="center">
-<b>20</b> 个内置工具 &nbsp;·&nbsp; <b>4</b> 种提供商协议 &nbsp;·&nbsp; <b>7</b> 种界面语言 &nbsp;·&nbsp; <b>85%</b> 覆盖率门槛
+<b>18</b> 个内置工具 &nbsp;·&nbsp; <b>4</b> 种提供商协议 &nbsp;·&nbsp; <b>7</b> 种界面语言 &nbsp;·&nbsp; <b>85%</b> 覆盖率门槛
 </p>
 
 ## 🚀 快速开始
@@ -108,7 +108,7 @@ FLECTEN_PROVIDER=anthropic FLECTEN_MODEL=claude-sonnet-4-6 bun run app:dev
 
 | | 领域 | 内容 |
 |---|---|---|
-| 🛠️ | 工具 | 20 个内置：`read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `git`, `lsp`, `terminal`, `bash`, `jobs`, `memory`, `done`；另有 `skill` 和 `module` |
+| 🛠️ | 工具 | 18 个内置：`read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `memory`, `done`；另有 `skill` 和 `module` |
 | 🛡️ | 安全 | `deny` / `auto` / `ask` / `allow` 权限、bubblewrap / seatbelt 沙箱、命令钩子，以及在调用内等待的审批 |
 | 💻 | 终端 | 每会话一个持久 PTY、带日志和 `wait` 的后台 `jobs`、进程树取消 |
 | 🔁 | 运行 | 并行任务、重载后仍存在的队列、steering、核心崩溃后恢复，以及每次运行的 token、成本和时间预算 |
@@ -127,7 +127,7 @@ flowchart LR
   UI <-->|commands / events| SC[Sidecar on Bun]
   SC <--> CORE[Agent core]
   CORE --> PROV[Providers<br/>OpenAI · Anthropic · Gemini]
-  CORE --> TOOLS[20 tools + Skills + MCP]
+  CORE --> TOOLS[18 tools + Skills + MCP]
   TOOLS --> SEC[Security<br/>permissions · sandbox · hooks]
   CORE --> STORE[(events.jsonl<br/>checkpoints · shadow git)]
 ```

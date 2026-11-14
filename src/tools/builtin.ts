@@ -10,16 +10,12 @@ import { runDone } from "./done/run";
 import { doneExecutionSchema, doneSpec } from "./done/schema";
 import { runEdit } from "./edit/run";
 import { editSpec } from "./edit/schema";
-import { runGit } from "./git/run";
-import { gitSpec } from "./git/schema";
 import { runGlob } from "./glob/run";
 import { globSpec } from "./glob/schema";
 import { runGrep } from "./grep/run";
 import { grepSpec } from "./grep/schema";
 import { runJobs } from "./jobs/run";
 import { jobsSpec } from "./jobs/schema";
-import { runLsp } from "./lsp/run";
-import { lspSpec } from "./lsp/schema";
 import { memoryTool } from "./memory/run";
 import { runMove } from "./move/run";
 import { moveSpec } from "./move/schema";
@@ -63,8 +59,6 @@ export function builtinTools(imageFocus = false): Tool[] {
       provenance: (args) => ({ source: "web", ref: args.query }),
       execute: runWebSearch,
     }),
-    defineTool({ ...gitSpec, mutating: true, execute: runGit }),
-    defineTool({ ...lspSpec, execute: runLsp }),
     defineTool({
       ...terminalSpec,
       mutating: true,

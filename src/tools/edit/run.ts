@@ -157,6 +157,7 @@ export async function runEdit(
   args: EditArgs,
   context: {
     cwd: string;
+    signal?: AbortSignal;
     sessionId?: string;
     reads: ReadTracker;
     checkpoints?: CheckpointStore;
@@ -288,6 +289,7 @@ export async function runEdit(
   if (context.checkpoints) {
     try {
       const checkpoint = await context.checkpoints.capture({
+        ...(context.signal ? { signal: context.signal } : {}),
         paths: [display],
         label: `edit ${display}`,
         tool: "edit",
@@ -301,7 +303,7 @@ export async function runEdit(
   }
 
   try {
-    await atomicWrite(path, final);
+    await atomicWrite(path, final, undefined, context.signal);
   } catch (error) {
     return {
       ok: false,

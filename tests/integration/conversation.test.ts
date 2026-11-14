@@ -246,6 +246,7 @@ test("durable replay keeps mirror IDs and restores Worker history without copyin
     type: "worker.event",
     sessionId: "s_conversation",
     event: originalCall,
+    timestamp: expect.any(Number),
   });
   const resumedWorker = scriptedProvider([answer("Restored the execution context.")]);
   const resumedTalker = scriptedProvider([

@@ -95,7 +95,7 @@ test("main thread with a tool call and HTML summary", async () => {
 
   try {
     const { page } = harness;
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await sendPrompt(page);
 
     const runSummary = page.locator("button.run-summary").first();
@@ -144,7 +144,7 @@ test("settings surface", async () => {
 
   try {
     const { page } = harness;
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
     await expect(page.locator("dialog.settings-dialog")).toBeVisible();
     await expect(page.locator(".main-skeleton")).toBeHidden();
@@ -172,7 +172,7 @@ test("new session screen and empty state", async () => {
 
   try {
     const { page } = harness;
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await expect(page.locator(".ns-recent-empty")).toHaveText(
       "Здесь появятся задачи этого проекта.",
     );
@@ -202,7 +202,7 @@ test("reduced motion keeps the live run static", async () => {
 
   try {
     const { page } = harness;
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await setSize(harness, 1180, 640);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await sendPrompt(page);

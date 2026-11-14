@@ -6,6 +6,7 @@ const delayMs = Math.max(0, Number(process.env.E2E_MOCK_DELAY_MS ?? 0));
 const chunkMs = Math.max(0, Number(process.env.E2E_MOCK_CHUNK_MS ?? 0));
 const summaryPauseMs = Math.max(0, Number(process.env.E2E_MOCK_SUMMARY_PAUSE_MS ?? 0));
 const holdSummary = process.env.E2E_MOCK_HOLD_SUMMARY === "1";
+const twinLearning = process.env.E2E_MOCK_TWIN_LEARNING === "1";
 let releaseSummary;
 const summaryReleased = new Promise((resolve) => {
   releaseSummary = resolve;
@@ -96,6 +97,12 @@ const server = Bun.serve({
         `${event({ content: "A screenshot with a small test image." }, "stop")}data: [DONE]\n\n`,
       );
     if (delayMs > 0) await Bun.sleep(delayMs);
+    if (twinLearning && (!body.tools || body.tools.length === 0)) {
+      await summaryReleased;
+      return sse(
+        `${event({ content: JSON.stringify({ candidates: [] }) }, "stop")}data: [DONE]\n\n`,
+      );
+    }
     const conversation =
       (await subagentReply(
         body,

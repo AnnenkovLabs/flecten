@@ -12,6 +12,25 @@ function streamOf(chunks: string[]): ReadableStream<Uint8Array> {
 }
 
 describe("SSE parser", () => {
+  test.each(["\n", "\r\n", "\r"])(
+    "handles %j line endings across every chunk boundary",
+    async (ending) => {
+      const text = ["event: message", "data: one", "data: two", "", "data: next", "", ""].join(
+        ending,
+      );
+      for (let split = 0; split <= text.length; split += 1) {
+        const messages = [];
+        for await (const message of parseSse(streamOf([text.slice(0, split), text.slice(split)]))) {
+          messages.push(message);
+        }
+        expect(messages).toEqual([
+          { event: "message", data: "one\ntwo" },
+          { event: "", data: "next" },
+        ]);
+      }
+    },
+  );
+
   test("parses events split across chunks", async () => {
     const messages = [];
     for await (const message of parseSse(

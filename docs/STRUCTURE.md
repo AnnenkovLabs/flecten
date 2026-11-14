@@ -19,7 +19,7 @@
 | `src/app/session-history.ts`, `session-export.ts` | retention, корзина и экспорт |
 | `src/app/extensions.ts`, `extension-runtime.ts`, `extension-handlers.ts` | жизненный цикл MCP/skills и запросы окна |
 | `src/app/provider-state.ts`, `provider-ops.ts`, `provider-secrets.ts` | представление провайдеров, проверки, actualize и скрытие секретов |
-| `src/config/` | версии, миграции, Zod-схемы, defaults, project-scoped secrets, destination binding, чтение и запись в исходный путь |
+| `src/config/` | версии, миграции, Zod-схемы, defaults, общий desktop profile, отдельные настройки проекта, scoped secrets, destination binding и атомарная запись |
 | `src/core/session/` | канонический lifecycle, бюджет, approvals, запуск, остановка и события |
 | `src/core/loop/` | stream, tool batches, continuation, retry и compaction |
 | `src/core/pages/`, `src/context/` | typed lifecycle страниц Worker, архивный порт, summary, tokenizer, бюджет и pruning |

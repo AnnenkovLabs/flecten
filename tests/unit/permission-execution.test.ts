@@ -258,23 +258,18 @@ describe("guarded tool execution", () => {
     expect(f.engine.pending()).toEqual([]);
   });
 
-  test("arbitrary executable LSP overrides cannot inherit automatic read permission", async () => {
-    const f = await fixture([
-      { action: "read", policy: "allow" },
-      { action: "shell", policy: "ask" },
-    ]);
-    f.listen((event) => {
-      if (event.type === "approval.requested") void f.waiters.respond(event.approval.id, "deny");
-    });
+  test("removed Git and LSP calls are unknown and never request permission", async () => {
+    const f = await fixture([{ action: "read", policy: "allow" }]);
     const results = await f.run([
-      {
-        id: "lsp",
-        name: "lsp",
-        args: { operation: "diagnostics", path: "file.ts", command: "unexpected-executable" },
-      },
+      { id: "removed-git", name: "git", args: { operation: "diff", path: "." } },
+      { id: "removed-lsp", name: "lsp", args: { operation: "diagnostics", path: "file.ts" } },
     ]);
-    expect(results[0]?.data).toMatchObject({ kind: "permission" });
-    expect(f.events.some((event) => event.type === "approval.requested")).toBe(true);
+    expect(results).toHaveLength(2);
+    for (const result of results) {
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain("Unknown tool");
+    }
+    expect(f.events.some((event) => event.type === "approval.requested")).toBe(false);
   });
 
   test("executes exactly the frozen schema output that hooks and approvals observed", async () => {

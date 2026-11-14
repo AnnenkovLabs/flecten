@@ -1,4 +1,5 @@
 export default {
+  "On sessions from any harness.": "На сессиях из любого харнесса.",
   "Your Twin": "Ваш Twin",
   "Learning from your decisions": "Учится на ваших решениях",
   "Ready to work with you": "Готов работать с вами",

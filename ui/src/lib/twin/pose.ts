@@ -1,3 +1,5 @@
+import { LearningRig } from "./learning";
+
 export type TwinState = "idle" | "learning" | "ready" | "answer";
 export type TwinEmotion = "calm" | "pleased" | "angry" | "furious";
 export type TwinPose = Record<string, number | number[]>;
@@ -28,9 +30,11 @@ export class TwinRig {
   #tuft = poses.idle.tuft;
   #impulse = -10;
   #time = 0;
+  #learning = new LearningRig();
 
   set(state: TwinState, emotion: TwinEmotion): void {
     if (state === this.state && emotion === this.emotion) return;
+    if (state === "learning" && this.state !== "learning") this.#learning = new LearningRig();
     this.state = state;
     this.emotion = emotion;
   }
@@ -52,7 +56,9 @@ export class TwinRig {
     this.#impulse = this.#time;
   }
 
-  frame(delta: number, still: boolean): TwinPose {
+  frame(delta: number, still: boolean, learningFrame?: number, completionFrame?: number): TwinPose {
+    if (this.state === "learning" && learningFrame !== undefined)
+      return this.#learning.frame(learningFrame, completionFrame);
     const dt = clamp(delta, 0, 0.05);
     if (!still) this.#time += dt;
     const t = this.#time;

@@ -36,10 +36,6 @@ export interface ViewHooks {
   checkpointSaved(): void;
 }
 
-/**
- * The task on screen: its thread, live status line, queue strip, jobs and budget. The run
- * store routes only this task's events here; other tasks keep running behind it.
- */
 export class TaskView {
   state = $state<SessionState | null>(null);
   pendingSend = $state(false);
@@ -64,12 +60,16 @@ export class TaskView {
   readonly worker = new WorkerView(this.thread);
   readonly twin = new TwinView();
   readonly subagents = new SubagentsView();
-  /** The prompt of the latest run, for «Повторить». */
   lastPrompt = "";
   readonly #hooks: ViewHooks;
   /** The run on screen was sent from this window: its message is already in the thread. */
   #localStart = false;
   #retiredEpochs = new Set<string>();
+  #generation = 0;
+
+  get generation(): number {
+    return this.#generation;
+  }
 
   constructor(hooks: ViewHooks) {
     this.#hooks = hooks;
@@ -104,6 +104,7 @@ export class TaskView {
   }
 
   reset(title = ""): void {
+    this.#generation += 1;
     this.thread.clear();
     this.hookRuns = [];
     this.worker.reset();
@@ -125,7 +126,6 @@ export class TaskView {
     this.#localStart = false;
   }
 
-  /** The user sent a run: the message shows at once, before the core answers. */
   begin(prompt: string): void {
     this.thread.beginRun(prompt, nowIso());
     this.lastPrompt = prompt;
@@ -151,7 +151,7 @@ export class TaskView {
     this.#jobs = [job, ...others].sort((left, right) => right.startedAt - left.startedAt);
   }
 
-  /** Rebuilds the thread from stored and replayed events, without timers or toasts. */
+  /** Rebuilds the thread from stored and replayed events without toasts. */
   restore(events: readonly AgentEvent[]): void {
     this.thread.restoring = true;
     try {
@@ -277,7 +277,7 @@ export class TaskView {
           event.event.type === "subagent.event" ||
           event.event.type === "subagent.finished"
         ) {
-          this.subagents.apply(event.event);
+          this.subagents.apply(event.event, event);
           this.#syncSubagents();
           return;
         }
@@ -311,11 +311,11 @@ export class TaskView {
         );
         return;
       case "turn.started":
-        this.thread.turnStarted(event.turn);
+        this.thread.turnStarted(event.turn, event.timestamp);
         this.#status("Thinking");
         return;
       case "reasoning.delta":
-        this.thread.reasoningDelta(event.text);
+        this.thread.reasoningDelta(event.text, event.timestamp);
         this.live = true;
         this.#status("Thinking");
         return;
@@ -336,6 +336,8 @@ export class TaskView {
           event.display?.reasoning ?? event.reasoning,
           event.toolCalls,
           event.display?.summary ?? event.summary,
+          event.timestamp,
+          event.reasoningStartedAt,
         );
         if (event.toolCalls.length > 0) this.#status("Working");
         return;
@@ -432,30 +434,31 @@ export class TaskView {
         this.budget = event.budget;
         return;
       case "run.interrupted":
-        this.thread.finishRun(interruptedResult(event.sessionId));
+        this.thread.finishRun(interruptedResult(event.sessionId), event.timestamp ?? event.at);
         this.thread.push(interruptedNotice(event.reason, event.at));
         this.live = false;
         this.#status("Interrupted");
         return;
       case "session.finished":
-        this.#finished(event.result);
+        this.#finished(event.result, event.timestamp);
         return;
     }
   }
-
   #started(event: Extract<SessionEvent, { type: "session.started" }>): void {
     const prompt = event.prompt ?? "";
     const local = this.#localStart && !event.queueId && !this.thread.restoring;
     this.#localStart = false;
     this.thread.settleNotices();
-    if (local) this.thread.startClock();
-    else if (event.resumed) {
-      this.thread.beginRun(null);
-      this.thread.push(resumedNotice());
-    } else if (event.internal) {
-      this.thread.beginRun(null);
+    if (local) this.thread.startClock(event.timestamp);
+    else if (event.resumed || event.internal) {
+      this.thread.beginRun(null, undefined, event.timestamp);
+      if (event.resumed) this.thread.push(resumedNotice());
     } else {
-      this.thread.beginRun(prompt, nowIso());
+      this.thread.beginRun(
+        prompt,
+        new Date(event.timestamp ?? Date.now()).toISOString(),
+        event.timestamp,
+      );
       this.lastPrompt = prompt;
       this.title ||= prompt.split("\n")[0]?.slice(0, 72) ?? "";
     }
@@ -465,8 +468,8 @@ export class TaskView {
     this.#status("Thinking");
   }
 
-  #finished(result: AgentRunResult): void {
-    this.thread.finishRun(result);
+  #finished(result: AgentRunResult, timestamp?: number): void {
+    this.thread.finishRun(result, timestamp);
     this.#syncSubagents();
     if (result.budget) this.budget = result.budget;
     if (result.stopReason === "budget") this.thread.push(budgetNotice(result));

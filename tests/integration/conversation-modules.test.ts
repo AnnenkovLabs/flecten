@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { Event, ToolResult } from "../../src/core/types";
 import { ModuleActionSchema } from "../../src/modules/actions";
 import { readModule } from "../../src/modules/package";
+import { computerEnvironmentProblem } from "../helpers/computer-environment";
 import { moduleFixture, type ProviderInput } from "../helpers/modules";
 
 const prefix = "mcp_module_computer-use__runtime_";
@@ -32,8 +33,7 @@ async function within<T>(promise: Promise<T>): Promise<T> {
   ]);
 }
 
-test("conversation surface and Worker share one computer and human takeover stops Worker input", async () => {
-  if (process.platform !== "linux" || !Bun.which("Xvfb")) return;
+async function computerConversation() {
   const f = await moduleFixture({ conversation: true });
   const act = Promise.withResolvers<void>();
   const inspectStopped = Promise.withResolvers<void>();
@@ -69,7 +69,12 @@ test("conversation surface and Worker share one computer and human takeover stop
     });
     const call = (tool: string, args: Record<string, unknown> = {}) => ({
       name: "module",
-      args: { operation: "call", name: "computer-use", tool: `${prefix}${tool}`, arguments: args },
+      args: {
+        operation: "call",
+        name: "computer-use",
+        tool: `${prefix}${tool}`,
+        arguments: args,
+      },
     });
     f.script(async (input) => {
       if (talker(input)) {
@@ -151,7 +156,16 @@ test("conversation surface and Worker share one computer and human takeover stop
     await f.close();
     await rm(f.cwd, { recursive: true, force: true });
   }
-}, 20_000);
+}
+
+const computerProblem = computerEnvironmentProblem();
+const computerName =
+  "conversation surface and Worker share one computer and human takeover stops Worker input";
+test.skipIf(computerProblem !== undefined)(
+  `${computerName}${computerProblem ? ` (skipped: ${computerProblem})` : ""}`,
+  computerConversation,
+  20_000,
+);
 
 test("Talker exposes module inspection without activation, invocation or deactivation", async () => {
   const f = await moduleFixture({ conversation: true });

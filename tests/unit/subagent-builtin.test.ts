@@ -72,7 +72,7 @@ describe("builtin subagent specs", () => {
     const implement = specOf(runtime, "implement");
     const review = specOf(runtime, "review");
 
-    expect(explore.allowedTools).toEqual(["read", "grep", "glob", "lsp", "web_fetch"]);
+    expect(explore.allowedTools).toEqual(["read", "grep", "glob", "web_fetch"]);
     expect(explore.allowedTools).not.toContain("write");
     expect(explore.allowedTools).not.toContain("bash");
     expect(explore.allowedTools).not.toContain("terminal");
@@ -89,12 +89,11 @@ describe("builtin subagent specs", () => {
         "bash",
         "terminal",
         "todo",
-        "git",
       ]),
     );
     expect(implement.permissions.length).toBeGreaterThan(0);
 
-    expect(review.allowedTools).toEqual(["read", "grep", "glob", "git", "lsp"]);
+    expect(review.allowedTools).toEqual(["read", "grep", "glob"]);
     expect(review.allowedTools).not.toContain("write");
     expect(review.allowedTools).not.toContain("edit");
     expect(review.permissions.length).toBeGreaterThan(0);

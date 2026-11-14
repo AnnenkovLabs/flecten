@@ -75,6 +75,7 @@ export interface RunTurn {
 
 export interface RunSummary {
   duration: string;
+  startedAt?: number;
   actions: number;
   criteria: number;
   list: RunAction[];

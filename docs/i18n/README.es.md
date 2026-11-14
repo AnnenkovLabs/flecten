@@ -40,7 +40,7 @@ El bucle del agente es lo básico. Flecten corrige lo que se rompe después de l
 | 🪞 Trabaja como un asistente genérico, no como tú | Un **Twin** que aprende tu voz y rechaza trabajo que no es tuyo |
 
 <p align="center">
-<b>20</b> herramientas integradas &nbsp;·&nbsp; <b>4</b> protocolos de proveedor &nbsp;·&nbsp; <b>7</b> idiomas de interfaz &nbsp;·&nbsp; <b>85%</b> umbral de cobertura
+<b>18</b> herramientas integradas &nbsp;·&nbsp; <b>4</b> protocolos de proveedor &nbsp;·&nbsp; <b>7</b> idiomas de interfaz &nbsp;·&nbsp; <b>85%</b> umbral de cobertura
 </p>
 
 ## 🚀 Inicio rápido
@@ -108,7 +108,7 @@ Aprende de tus sesiones y fuentes anteriores, escribe specs en tus términos y r
 
 | | Área | Qué incluye |
 |---|---|---|
-| 🛠️ | Herramientas | 20 integradas: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `git`, `lsp`, `terminal`, `bash`, `jobs`, `memory`, `done`; además de `skill` y `module` |
+| 🛠️ | Herramientas | 18 integradas: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `memory`, `done`; además de `skill` y `module` |
 | 🛡️ | Seguridad | permisos `deny` / `auto` / `ask` / `allow`, sandbox bubblewrap / seatbelt, hooks de comandos y aprobaciones que esperan dentro de la llamada |
 | 💻 | Terminal | un PTY persistente por sesión, `jobs` en segundo plano con registros y `wait`, y cancelación del árbol de procesos |
 | 🔁 | Ejecuciones | tareas en paralelo, una cola que sobrevive a recargas, steering, recuperación tras una caída del núcleo y presupuestos de tokens, coste y tiempo por ejecución |
@@ -127,7 +127,7 @@ flowchart LR
   UI <-->|commands / events| SC[Sidecar on Bun]
   SC <--> CORE[Agent core]
   CORE --> PROV[Providers<br/>OpenAI · Anthropic · Gemini]
-  CORE --> TOOLS[20 tools + Skills + MCP]
+  CORE --> TOOLS[18 tools + Skills + MCP]
   TOOLS --> SEC[Security<br/>permissions · sandbox · hooks]
   CORE --> STORE[(events.jsonl<br/>checkpoints · shadow git)]
 ```

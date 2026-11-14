@@ -331,7 +331,14 @@ export class StreamableHttpClient implements McpRequestClient {
       },
       body: JSON.stringify(message),
       signal,
+      redirect: "manual",
     });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new McpHttpError("MCP redirect refused; configure the server's final URL", {
+        status: response.status,
+      });
+    }
     const sessionId = response.headers.get("mcp-session-id");
     if (sessionId !== null) this.#sessionId = sessionId;
 
@@ -363,16 +370,19 @@ export class StreamableHttpClient implements McpRequestClient {
       if (!response.body) throw new McpHttpError("MCP server returned an empty SSE stream");
       let matched = false;
       let value: unknown;
-      for await (const event of parseSse(response.body, signal)) {
-        const message = parseJson(event.data);
-        if (message === undefined) continue;
-        const outcome = await this.#handleMessage(message, id, signal);
-        if (!outcome.matched) continue;
-        matched = true;
-        value = outcome.value;
-        break;
+      try {
+        for await (const event of parseSse(response.body, signal)) {
+          const message = parseJson(event.data);
+          if (message === undefined) continue;
+          const outcome = await this.#handleMessage(message, id, signal);
+          if (!outcome.matched) continue;
+          matched = true;
+          value = outcome.value;
+          break;
+        }
+      } finally {
+        await response.body.cancel().catch(() => undefined);
       }
-      await response.body.cancel().catch(() => undefined);
       if (matched) return value;
       throw new McpHttpError("MCP SSE stream ended without a matching JSON-RPC response");
     }

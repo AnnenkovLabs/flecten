@@ -2,11 +2,15 @@
   import { onMount } from "svelte";
   import { t } from "../../lib/i18n.svelte";
   import { createTwinScene } from "../../lib/twin/scene";
-  let { state: characterState = "idle", emotion = "calm", compact = false, size = 448 }: {
+  let { state: characterState = "idle", emotion = "calm", compact = false, size = 448, learningFrame, completionFrame, motionPaused = false, controls = true }: {
     state?: "idle" | "learning" | "ready" | "answer";
     emotion?: "calm" | "pleased" | "angry" | "furious";
     compact?: boolean;
     size?: number;
+    learningFrame?: number;
+    completionFrame?: number | undefined;
+    motionPaused?: boolean;
+    controls?: boolean;
   } = $props();
   const pose = $derived(emotion === "angry" || emotion === "furious" ? emotion : characterState);
   const interactive = $derived(!compact && size >= 112);
@@ -19,14 +23,14 @@
     scene = current;
     return () => current.dispose();
   });
-  $effect(() => { scene?.set(characterState, emotion); });
-  $effect(() => { scene?.pause(paused); });
+  $effect(() => { scene?.set(characterState, emotion, learningFrame, completionFrame); });
+  $effect(() => { scene?.pause(paused || motionPaused); });
 </script>
 
 <span class="twin-character" class:compact aria-hidden={compact || undefined} data-testid="twin-character" style={`--twin-size:${size}px`}>
   <canvas bind:this={canvas} class:fallback aria-label={t("Your Twin")} width="64" height="64"></canvas>
   {#if fallback}<img src={`./twin/${pose}.webp`} alt={t("Your Twin")} width="640" height="640" draggable="false" />{/if}
-  {#if interactive}
+  {#if interactive && controls}
     <button type="button" class="character-input" aria-label={t("Interact with Twin")} title={t("Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.")}
       onpointermove={(event) => scene?.point(event)} onpointerdown={(event) => scene?.down(event)} onpointerup={(event) => scene?.up(event)}
       onpointerleave={() => scene?.leave()} onpointercancel={() => scene?.cancel()} onlostpointercapture={() => scene?.cancel()} onkeydown={(event) => scene?.key(event)}></button>

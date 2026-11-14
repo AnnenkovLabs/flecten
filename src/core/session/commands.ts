@@ -50,8 +50,8 @@ export async function dispatch(
       return { item, queue: queue.list() };
     }
     case "queue.remove": {
-      const cancelled = queue.markCancelled(command.id);
-      queue.remove(command.id);
+      const removed = queue.remove(command.id);
+      const cancelled = { ...removed, state: "cancelled" as const };
       steering.push(cancelled);
       await runtime.saveQueue();
       return { item: cancelled, queue: queue.list() };

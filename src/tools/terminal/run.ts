@@ -25,8 +25,8 @@ function snapshotData(snapshot: TerminalSnapshot): Record<string, unknown> {
   };
 }
 
-function cleanOutput(snapshot: TerminalSnapshot, marker: string): string {
-  let text = Bun.stripANSI(snapshot.plainText).replaceAll("\r\n", "\n").replaceAll("\r", "");
+function cleanOutput(output: string, marker: string): string {
+  let text = Bun.stripANSI(output).replaceAll("\r\n", "\n").replaceAll("\r", "");
   const frame = commandCompletion(text, marker);
   if (frame) text = text.slice(0, frame.start) + text.slice(frame.end);
   return text.trimEnd();
@@ -186,6 +186,7 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
   }
 
   const before = session.snapshot();
+  const outputCursor = session.outputCursor;
   const startedAt = Date.now();
   const marker = `__FLECTEN_DONE_${crypto.randomUUID().replaceAll("-", "")}__`;
   const timeoutMs = Math.min(args.timeoutMs ?? manager.commandTimeoutMs, 600_000);
@@ -201,7 +202,7 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
   if (aborted) await manager.close(id);
   const durationMs = Math.round(performance.now() - started);
   const snapshot = session.snapshot();
-  const text = cleanOutput(snapshot, marker);
+  const text = cleanOutput(session.outputSince(outputCursor), marker);
   const markerCode = commandCompletion(snapshot.plainText, marker)?.exitCode ?? null;
   const exitCode = markerCode ?? (snapshot.running ? null : snapshot.exitCode);
   const timedOut = !aborted && markerCode === null && snapshot.running;
@@ -213,7 +214,7 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
     durationMs,
     exitCode,
     signal: snapshot.signal,
-    stdout: text.slice(before.plainText.length),
+    stdout: text,
     stderr: "",
     truncated: snapshot.truncated,
     timedOut,
@@ -236,7 +237,7 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
       timedOut,
       aborted,
       command: args.command,
-      output: text.slice(before.plainText.length).slice(0, 50_000),
+      output: text.slice(0, 50_000),
     },
   };
 }

@@ -80,10 +80,13 @@ export class SessionStorage {
     }
     return value as EventEnvelope[];
   }
-  async read(sessionId: string): Promise<Event[]> {
-    return (await this.envelopes(sessionId)).flatMap(({ event }) => {
+  async read(sessionId: string): Promise<(Event & { timestamp?: number })[]> {
+    return (await this.envelopes(sessionId)).flatMap(({ event, ts, schemaVersion }) => {
       const parsed = eventSchema.safeParse(event);
-      return parsed.success ? [parsed.data as Event] : [];
+      if (!parsed.success) return [];
+      return [
+        { ...parsed.data, ...(schemaVersion > 0 ? { timestamp: Date.parse(ts) } : {}) } as Event,
+      ];
     });
   }
   list(options: SessionListOptions = {}) {

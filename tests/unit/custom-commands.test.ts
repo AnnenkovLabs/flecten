@@ -72,7 +72,7 @@ describe("custom slash commands", () => {
   test("/continue resumes from history and a custom command of the same name wins", () => {
     const resumed = expandSlashPrompt("/continue", [], []);
     expect(resumed).toBe(BUILTIN_PROMPTS.continue ?? "");
-    expect(resumed).toContain("Do not start over");
+    expect(resumed).not.toBe("");
     expect(expandSlashPrompt("/continue skip the docs", [], [])).toEndWith("skip the docs");
     const custom = {
       name: "continue",

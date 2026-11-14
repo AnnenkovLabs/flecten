@@ -31,9 +31,9 @@ const CLASS_RULES: Record<ToolOutputClass, ClassRule> = {
   default: { share: 0.08, min: 128, max: 4_000 },
 };
 
-const READ_TOOLS = new Set(["read", "lsp"]);
+const READ_TOOLS = new Set(["read"]);
 const SEARCH_TOOLS = new Set(["grep", "glob", "web_search"]);
-const LOG_TOOLS = new Set(["terminal", "git", "web", "web_fetch"]);
+const LOG_TOOLS = new Set(["terminal", "web", "web_fetch"]);
 const BASH_TOOLS = new Set(["bash"]);
 
 function finite(value: number, fallback: number): number {

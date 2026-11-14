@@ -27,7 +27,7 @@ test("opens the new session screen, runs a tool and renders the HTML summary", a
   try {
     const { page } = harness;
 
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await page.locator("#prompt").fill(PROMPT);
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
 
@@ -92,7 +92,7 @@ test("shows a skeleton while the summary html is streaming", async () => {
   try {
     const { page } = harness;
 
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await page.locator("#prompt").fill(PROMPT);
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
 
@@ -120,7 +120,7 @@ test("queues a message during a run and finishes it", async () => {
   try {
     const { page } = harness;
 
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await page.locator("#prompt").fill(PROMPT);
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
 

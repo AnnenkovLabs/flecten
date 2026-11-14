@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { cp, mkdir, readdir, readFile, rename, stat, utimes, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
-import type { Event, RunStopReason } from "../../core/types";
+import type { Event } from "../../core/types";
 import { newId } from "../../util/ids";
 import { redact } from "../../util/redact";
 import { copyPageArchive } from "../pages";
@@ -111,6 +111,28 @@ function titleFromPrompt(prompt: string, id: string): string {
   return first.slice(0, 72) || id;
 }
 
+function applyLifecycle(
+  summary: Pick<SessionSummary, "running" | "interrupted" | "stopReason">,
+  event: Event,
+): void {
+  switch (event.type) {
+    case "session.started":
+      summary.running = true;
+      delete summary.interrupted;
+      delete summary.stopReason;
+      break;
+    case "run.interrupted":
+      summary.running = false;
+      summary.interrupted = true;
+      break;
+    case "session.finished":
+      summary.running = false;
+      delete summary.interrupted;
+      summary.stopReason = event.result.stopReason;
+      break;
+  }
+}
+
 async function listSessionIds(cwd: string): Promise<string[]> {
   const entries = await readdir(sessionsRoot(cwd), { withFileTypes: true }).catch(
     (error: unknown) => {
@@ -133,8 +155,9 @@ async function scanSession(cwd: string, id: string): Promise<SessionSummary | un
     let lastPrompt = redact(started.event.prompt);
     let messageCount = 0;
     let tokens = 0;
-    let stopReason: RunStopReason | undefined;
+    const lifecycle: Pick<SessionSummary, "running" | "interrupted" | "stopReason"> = {};
     for (const envelope of read.envelopes) {
+      applyLifecycle(lifecycle, envelope.event);
       switch (envelope.event.type) {
         case "session.started":
           if (!envelope.event.internal) lastPrompt = redact(envelope.event.prompt);
@@ -143,7 +166,6 @@ async function scanSession(cwd: string, id: string): Promise<SessionSummary | un
           messageCount += 1;
           break;
         case "session.finished":
-          stopReason = envelope.event.result.stopReason;
           tokens += envelope.event.result.usage.input + envelope.event.result.usage.output;
           break;
       }
@@ -159,7 +181,7 @@ async function scanSession(cwd: string, id: string): Promise<SessionSummary | un
       project: basename(cwd),
       createdAt,
       updatedAt: meta.mtime.toISOString(),
-      ...(stopReason === undefined ? {} : { stopReason }),
+      ...lifecycle,
       messageCount,
       tokens,
       lastPrompt,
@@ -263,27 +285,19 @@ export async function recordSessionEvent(cwd: string, event: Event): Promise<voi
         messageCount: 0,
         tokens: 0,
         lastPrompt: redact(event.prompt),
-        running: true,
       };
     } else {
       next = { ...current, updatedAt: now };
       if (event.type === "session.started") {
         next.project = basename(cwd);
         if (!event.internal) next.lastPrompt = redact(event.prompt);
-        next.running = true;
-        delete next.interrupted;
-        delete next.stopReason;
       } else if (event.type === "message.finished") {
         next.messageCount += 1;
-      } else if (event.type === "run.interrupted") {
-        next.running = false;
-        next.interrupted = true;
-      } else {
-        next.running = false;
-        next.stopReason = event.result.stopReason;
+      } else if (event.type === "session.finished") {
         next.tokens = (current.tokens ?? 0) + event.result.usage.input + event.result.usage.output;
       }
     }
+    applyLifecycle(next, event);
 
     if (index >= 0) sessions[index] = next;
     else sessions.push(next);

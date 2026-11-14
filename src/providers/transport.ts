@@ -71,6 +71,8 @@ export interface ProviderFetchOptions {
   timeoutMs?: number | undefined;
   idleTimeoutMs?: number | undefined;
   headers?: Record<string, string> | undefined;
+  /** Streaming adapters classify HTTP failures with the full response metadata. */
+  httpErrors?: "throw" | "response";
   tls?: BunFetchRequestInit["tls"];
 }
 
@@ -406,7 +408,11 @@ export function createProviderFetch(options: ProviderFetchOptions = {}): Provide
         ...(options.tls === undefined ? {} : { tls: options.tls }),
       });
 
-      if (response.ok || REDIRECT_STATUS.has(response.status)) {
+      if (
+        response.ok ||
+        REDIRECT_STATUS.has(response.status) ||
+        options.httpErrors === "response"
+      ) {
         return idleTimeoutMs > 0 ? idleResponse(response, idleTimeoutMs) : response;
       }
 

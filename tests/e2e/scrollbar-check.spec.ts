@@ -34,7 +34,7 @@ test("the document never scrolls at either window size, before and after a run",
     }
   };
   try {
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await measure("new session");
     await page.locator("#prompt").fill("Прочитай README.md и покажи итог");
     await page.getByRole("button", { name: "Отправить", exact: true }).click();

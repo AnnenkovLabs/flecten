@@ -35,7 +35,7 @@ export function hasCheckpoint(result: AgentToolResult): boolean {
 /**
  * The visible thread of the task on screen, built from its events: user messages, the run
  * with turns and tool calls, the answer, approval cards and notices. Live events and a
- * replayed log go through the same methods; `restoring` turns off timings.
+ * replayed log go through the same methods, using the original event times.
  */
 export class ThreadView {
   items = $state<ThreadItem[]>([]);
@@ -95,9 +95,9 @@ export class ThreadView {
   }
 
   /** A new run with the user's message; `null` for a run without one, as a resume. */
-  beginRun(prompt: string | null, at?: string): void {
+  beginRun(prompt: string | null, at?: string, timestamp = Date.now()): void {
     this.resetRun();
-    this.#runStarted = performance.now();
+    this.#runStarted = timestamp;
     this.#currentPrompt = prompt ?? "";
     if (prompt !== null) {
       this.push({ kind: "message", id: nextId("msg"), text: prompt, ...(at ? { at } : {}) });
@@ -105,8 +105,8 @@ export class ThreadView {
   }
 
   /** The core started the run this window sent: the message is already on screen. */
-  startClock(): void {
-    this.#runStarted = performance.now();
+  startClock(timestamp = Date.now()): void {
+    this.#runStarted = timestamp;
   }
 
   /** Only the latest notice offers to continue: a new run settles the older ones. */
@@ -120,9 +120,9 @@ export class ThreadView {
     this.items.push(item);
   }
 
-  turnStarted(index: number): void {
+  turnStarted(index: number, timestamp = Date.now()): void {
     if (this.#currentTurn) this.#currentTurn.reasoningStreaming = false;
-    this.#turnStartedAt = performance.now();
+    this.#turnStartedAt = timestamp;
     this.#thinkingStartedAt = 0;
     // Compaction and hook notices can create this turn before its start event arrives.
     const existing = this.#turns.find((turn) => turn.index === index);
@@ -136,9 +136,9 @@ export class ThreadView {
     this.pendingCalls = [];
   }
 
-  reasoningDelta(text: string): void {
+  reasoningDelta(text: string, timestamp = Date.now()): void {
     const turn = this.#ensureTurn();
-    if (this.#thinkingStartedAt === 0) this.#thinkingStartedAt = performance.now();
+    if (this.#thinkingStartedAt === 0) this.#thinkingStartedAt = timestamp;
     turn.reasoning += text;
     turn.reasoningStreaming = true;
     this.#ensureRun();
@@ -185,13 +185,17 @@ export class ThreadView {
     reasoning: string,
     toolCalls: AgentToolCall[],
     summary?: string,
+    timestamp?: number,
+    reasoningStartedAt?: number,
   ): void {
     const turn = this.#ensureTurn();
     if (reasoning.length > 0) turn.reasoning = reasoning;
     turn.reasoningStreaming = false;
     if (turn.reasoning.length > 0) {
-      const started = this.#thinkingStartedAt || this.#turnStartedAt || this.#runStarted;
-      if (!this.restoring && started > 0) turn.reasoningMs = performance.now() - started;
+      const started =
+        reasoningStartedAt ?? (this.#thinkingStartedAt || this.#turnStartedAt || this.#runStarted);
+      if ((!this.restoring || timestamp !== undefined) && started > 0)
+        turn.reasoningMs = Math.max(0, (timestamp ?? Date.now()) - started);
     }
     this.#thinkingStartedAt = 0;
     if (text.length > 0 || summary !== undefined) this.#showAnswer(text, summary);
@@ -305,11 +309,11 @@ export class ThreadView {
     if (run) run.summary.live = false;
   }
 
-  finishRun(result: AgentRunResult): void {
+  finishRun(result: AgentRunResult, timestamp?: number): void {
     for (const turn of this.#turns) {
-      if (turn.reasoningStreaming && !this.restoring) {
+      if (turn.reasoningStreaming && (!this.restoring || timestamp !== undefined)) {
         const started = this.#thinkingStartedAt || this.#turnStartedAt || this.#runStarted;
-        if (started > 0) turn.reasoningMs = performance.now() - started;
+        if (started > 0) turn.reasoningMs = Math.max(0, (timestamp ?? Date.now()) - started);
       }
       turn.reasoningStreaming = false;
     }
@@ -328,7 +332,7 @@ export class ThreadView {
     if (run) {
       run.summary = {
         ...run.summary,
-        ...this.#progress(),
+        ...this.#progress(timestamp),
         criteria: this.#done?.evidence.length ?? 0,
         text: this.#done?.summary ?? "",
         live: false,
@@ -428,9 +432,12 @@ export class ThreadView {
     return item;
   }
 
-  #progress(): Pick<RunSummary, "duration" | "actions" | "list" | "turns" | "files"> {
+  #progress(
+    timestamp = Date.now(),
+  ): Pick<RunSummary, "duration" | "startedAt" | "actions" | "list" | "turns" | "files"> {
     return {
-      duration: formatDuration(performance.now() - this.#runStarted),
+      duration: formatDuration(Math.max(0, timestamp - (this.#runStarted || timestamp))),
+      ...(this.#runStarted ? { startedAt: this.#runStarted } : {}),
       actions: this.#actions.length,
       list: [...this.#actions],
       turns: this.#visibleTurns(),

@@ -10,7 +10,7 @@ test("thread and composer polish", async () => {
   const harness = await launchApp({ delayMs: 300 });
   const { app, page } = harness;
   try {
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
     await page.setViewportSize({ width: 1180, height: 640 });
     await app.evaluate(({ BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0]?.setSize(1180, 640);

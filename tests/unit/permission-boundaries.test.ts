@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { osSandboxFor } from "../../src/app/service-policy";
@@ -12,7 +12,6 @@ import {
 } from "../../src/security/os-sandbox";
 import { PermissionEngine } from "../../src/security/permissions";
 import { SandboxPolicy } from "../../src/security/sandbox";
-import { runGit } from "../../src/tools/git/run";
 import { runGlob } from "../../src/tools/glob/run";
 import { runGrep } from "../../src/tools/grep/run";
 
@@ -129,25 +128,4 @@ describe("resource boundaries", () => {
       expect(await readFile(join(cwd, "AGENTS.md"), "utf8")).toBe("original");
     },
   );
-  test("a read-only Git inspection cannot execute a repository fsmonitor", async () => {
-    const cwd = await directory();
-    const init = Bun.spawn(["git", "init", "-q"], { cwd, stdout: "pipe", stderr: "pipe" });
-    expect(await init.exited).toBe(0);
-    const marker = join(cwd, "executed");
-    const hook = join(cwd, "monitor.sh");
-    await writeFile(hook, `#!/bin/sh\nprintf executed > '${marker}'\nprintf token\n`);
-    await chmod(hook, 0o755);
-    const config = Bun.spawn(["git", "config", "core.fsmonitor", hook], {
-      cwd,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    expect(await config.exited).toBe(0);
-    const result = await runGit(
-      { operation: "status" },
-      { cwd, signal: new AbortController().signal },
-    );
-    expect(result.ok).toBe(true);
-    expect(await Bun.file(marker).exists()).toBe(false);
-  });
 });

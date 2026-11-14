@@ -2,8 +2,8 @@ import type { Event, SessionId } from "../core/types";
 import { redactKnown } from "../util/redact";
 import { RedactionStream } from "../util/redaction-stream";
 
-/** An event as it goes to the UI: a sequence number every window can resume from. */
-export type StampedEvent = Event & { seq: number };
+/** UI metadata survives replay so every window resumes the same sequence and clock. */
+export type StampedEvent = Event & { seq: number; timestamp: number; reasoningStartedAt?: number };
 
 export interface JournalReplay {
   sessionId: SessionId;
@@ -105,7 +105,11 @@ export class EventJournal {
 
   #record(event: Event): StampedEvent {
     this.#seq += 1;
-    const stamped = { ...redactKnown(event, this.secrets()), seq: this.#seq } as StampedEvent;
+    const stamped = {
+      ...redactKnown(event, this.secrets()),
+      seq: this.#seq,
+      timestamp: Date.now(),
+    } as StampedEvent;
     const sessionId = event.sessionId;
     if (sessionId === undefined) return stamped;
     if (event.type === "session.started") {
@@ -117,6 +121,21 @@ export class EventJournal {
     const run = this.#runs.get(sessionId);
     if (!run) return stamped;
     const leaf = leafEvent(event);
+    // A finished message replaces its deltas, but replay still needs the reasoning clock.
+    if (leaf.type === "message.finished") {
+      for (let index = run.events.length - 1; index >= 0; index -= 1) {
+        const entry = run.events[index];
+        if (!entry || streamScope(entry) !== streamScope(event)) continue;
+        const previous = leafEvent(entry);
+        if (previous.type === "reasoning.delta") stamped.reasoningStartedAt = entry.timestamp;
+        if (
+          previous.type === "message.finished" ||
+          previous.type === "message.reset" ||
+          previous.type === "turn.started"
+        )
+          break;
+      }
+    }
     if (leaf.type === "message.finished" || leaf.type === "message.reset") {
       run.events = run.events.filter(
         (entry) =>

@@ -31,7 +31,10 @@ export class SubagentsView {
         item.thread.interruptTools();
       }
   }
-  apply(envelope: ChildEvent): void {
+  apply(
+    envelope: ChildEvent,
+    timing: Pick<AgentEvent, "timestamp" | "reasoningStartedAt"> = envelope,
+  ): void {
     if (envelope.type === "subagent.started") {
       if (this.items.some((item) => item.id === envelope.subagent.id)) return;
       this.items.push({
@@ -58,10 +61,10 @@ export class SubagentsView {
     const thread = item.thread;
     switch (event.type) {
       case "session.started":
-        thread.beginRun(null);
+        thread.beginRun(null, undefined, timing.timestamp);
         return;
       case "turn.started":
-        thread.turnStarted(event.turn);
+        thread.turnStarted(event.turn, timing.timestamp);
         return;
       case "message.started":
         thread.appendText("");
@@ -70,7 +73,7 @@ export class SubagentsView {
         thread.appendText(event.text);
         return;
       case "reasoning.delta":
-        thread.reasoningDelta(event.text);
+        thread.reasoningDelta(event.text, timing.timestamp);
         return;
       case "message.reset":
         thread.messageReset();
@@ -83,6 +86,8 @@ export class SubagentsView {
           event.display?.reasoning ?? event.reasoning,
           event.toolCalls,
           event.display?.summary ?? event.summary,
+          timing.timestamp,
+          timing.reasoningStartedAt,
         );
         return;
       case "tool_call.progress":
@@ -98,7 +103,7 @@ export class SubagentsView {
         thread.finishTool(event.call, event.result);
         return;
       case "session.finished":
-        thread.finishRun(event.result);
+        thread.finishRun(event.result, timing.timestamp);
         return;
       case "error":
         thread.note("x", "", "", event.message);

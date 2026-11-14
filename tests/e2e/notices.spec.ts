@@ -34,7 +34,7 @@ test("temporary notices stay clear of the composer and pause while being read", 
 
   try {
     const { app, page } = harness;
-    await expect(page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(page.getByRole("region", { name: "Новая задача", exact: true })).toBeVisible();
 
     await agentEvent(app, {
       type: "error",
@@ -82,7 +82,9 @@ test("a second window on the same project says why and does not restart its core
   const first = await launchApp();
 
   try {
-    await expect(first.page.locator('section[aria-label="Новая сессия"]')).toBeVisible();
+    await expect(
+      first.page.getByRole("region", { name: "Новая задача", exact: true }),
+    ).toBeVisible();
     await expect.poll(() => existsSync(join(first.cwd, ".liquid", "sidecar.lock"))).toBe(true);
 
     const second = await launchApp({ cwd: first.cwd });

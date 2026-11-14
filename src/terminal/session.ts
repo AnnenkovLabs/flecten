@@ -114,6 +114,7 @@ export class TerminalSession {
   private pty: Bun.Terminal | null = null;
   private decoder = new TextDecoder();
   private buffer = "";
+  private outputOffset = 0;
   private lineBreaks = 0;
   private droppedLines = 0;
   private truncated = false;
@@ -266,6 +267,12 @@ export class TerminalSession {
       this.listeners.delete(listener);
     };
   }
+  get outputCursor(): number {
+    return this.outputOffset + this.buffer.length;
+  }
+  outputSince(cursor: number): string {
+    return this.buffer.slice(Math.max(0, cursor - this.outputOffset));
+  }
   snapshot(): TerminalSnapshot {
     const marker = this.truncationMarker();
     return {
@@ -336,6 +343,7 @@ export class TerminalSession {
         remaining -= 1;
       }
       const removed = this.buffer.slice(0, cut);
+      this.outputOffset += removed.length;
       this.buffer = this.buffer.slice(cut);
       this.lineBreaks -= countNewlines(removed);
       this.droppedLines += drop;
@@ -345,6 +353,7 @@ export class TerminalSession {
       const cut = this.buffer.length - MAX_BUFFER_CHARS;
       const removed = this.buffer.slice(0, cut);
       const removedLines = countNewlines(removed);
+      this.outputOffset += removed.length;
       this.buffer = this.buffer.slice(cut);
       this.lineBreaks -= removedLines;
       this.droppedLines += Math.max(1, removedLines);

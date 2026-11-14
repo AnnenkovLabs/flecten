@@ -40,7 +40,7 @@
 | 🪞 Він працює як звичайний асистент, а не як ви | **Twin**, що вчиться вашому голосу й відхиляє не вашу роботу |
 
 <p align="center">
-<b>20</b> вбудованих інструментів &nbsp;·&nbsp; <b>4</b> протоколи провайдерів &nbsp;·&nbsp; <b>7</b> мов інтерфейсу &nbsp;·&nbsp; <b>85%</b> поріг покриття
+<b>18</b> вбудованих інструментів &nbsp;·&nbsp; <b>4</b> протоколи провайдерів &nbsp;·&nbsp; <b>7</b> мов інтерфейсу &nbsp;·&nbsp; <b>85%</b> поріг покриття
 </p>
 
 ## 🚀 Швидкий старт
@@ -108,7 +108,7 @@ FLECTEN_PROVIDER=anthropic FLECTEN_MODEL=claude-sonnet-4-6 bun run app:dev
 
 | | Область | Що є |
 |---|---|---|
-| 🛠️ | Інструменти | 20 вбудованих: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `git`, `lsp`, `terminal`, `bash`, `jobs`, `memory`, `done`; плюс `skill` і `module` |
+| 🛠️ | Інструменти | 18 вбудованих: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `memory`, `done`; плюс `skill` і `module` |
 | 🛡️ | Безпека | права `deny` / `auto` / `ask` / `allow`, пісочниця bubblewrap / seatbelt, хуки команд і approvals з очікуванням усередині виклику |
 | 💻 | Термінал | persistent PTY на сесію, фонові `jobs` з логами та `wait`, скасування дерева процесів |
 | 🔁 | Прогони | паралельні задачі, черга переживає перезавантаження, steering, відновлення після падіння ядра, ліміти токенів, вартості й часу на прогон |
@@ -127,7 +127,7 @@ flowchart LR
   UI <-->|commands / events| SC[Sidecar on Bun]
   SC <--> CORE[Agent core]
   CORE --> PROV[Providers<br/>OpenAI · Anthropic · Gemini]
-  CORE --> TOOLS[20 tools + Skills + MCP]
+  CORE --> TOOLS[18 tools + Skills + MCP]
   TOOLS --> SEC[Security<br/>permissions · sandbox · hooks]
   CORE --> STORE[(events.jsonl<br/>checkpoints · shadow git)]
 ```

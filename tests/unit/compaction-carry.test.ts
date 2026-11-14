@@ -232,7 +232,7 @@ describe("typed compaction carry-forward", () => {
     };
     await appendFile(path, `${JSON.stringify(malformed)}\n`);
     const events = await readSession(cwd, id);
-    expect(events).toEqual([legacy]);
+    expect(events).toEqual([{ ...legacy, timestamp: expect.any(Number) }]);
     const restored = replayMessages(
       events.map((event, index) => ({ seq: index + 1, event })),
     ).messages;

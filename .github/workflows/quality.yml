@@ -58,6 +58,12 @@ jobs:
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
       - run: bunx playwright install-deps chromium
+      - name: Install private desktop test prerequisites
+        run: sudo apt-get install -y xvfb xauth xdotool imagemagick dbus-x11 python3-gi gir1.2-gtk-3.0
+      - name: Require and test the Linux computer conversation
+        run: |
+          bun -e 'const { computerEnvironmentProblem } = await import("./tests/helpers/computer-environment.ts"); const problem = computerEnvironmentProblem(); if (problem) throw new Error(problem);'
+          bun test tests/integration/conversation-modules.test.ts
       - run: bun run build:ui
       - run: bun run build:agent
       - name: Require a working Electron environment

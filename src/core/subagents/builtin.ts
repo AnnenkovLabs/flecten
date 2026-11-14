@@ -44,7 +44,7 @@ export const exploreSubagent: SubagentSpec = {
   name: "Explore",
   description: "Read-only reconnaissance: maps files, traces code and collects external facts.",
   systemPrompt: explorePrompt.trim(),
-  allowedTools: ["read", "grep", "glob", "lsp", "web_fetch"],
+  allowedTools: ["read", "grep", "glob", "web_fetch"],
   permissions: [
     { action: "read", policy: "allow" },
     { action: "network", policy: "allow", note: "web_fetch only" },
@@ -73,7 +73,6 @@ export const implementSubagent: SubagentSpec = {
     "terminal",
     "jobs",
     "todo",
-    "git",
   ],
   permissions: [
     { action: "read", policy: "allow" },
@@ -90,11 +89,10 @@ export const reviewSubagent: SubagentSpec = {
   name: "Review",
   description: "Read-only review of a diff or change with a pass or fail verdict.",
   systemPrompt: reviewPrompt.trim(),
-  allowedTools: ["read", "grep", "glob", "git", "lsp"],
+  allowedTools: ["read", "grep", "glob"],
   permissions: [
     { action: "read", policy: "allow" },
     { action: "shell", policy: "deny" },
-    { action: "shell", tool: "git", policy: "allow", note: "read-only git commands" },
     { action: "write", policy: "deny" },
   ],
   budget: { maxTurns: 20, maxTokens: 48_000 },

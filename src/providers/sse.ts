@@ -92,6 +92,7 @@ export async function* parseSse(
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let skipLf = false;
   let event = "";
   let data: string[] = [];
 
@@ -104,18 +105,17 @@ export async function* parseSse(
   }
 
   function* consumeLine(line: string): Generator<SseMessage> {
-    const clean = line.endsWith("\r") ? line.slice(0, -1) : line;
-    if (clean.length === 0) {
+    if (line.length === 0) {
       yield* dispatch();
       return;
     }
-    if (clean.startsWith(":")) return;
-    if (clean.startsWith("event:")) {
-      event = clean.slice(6).trim();
+    if (line.startsWith(":")) return;
+    if (line.startsWith("event:")) {
+      event = line.slice(6).trim();
       return;
     }
-    if (clean.startsWith("data:")) {
-      const value = clean.slice(5);
+    if (line.startsWith("data:")) {
+      const value = line.slice(5);
       data.push(value.startsWith(" ") ? value.slice(1) : value);
     }
   }
@@ -124,13 +124,20 @@ export async function* parseSse(
     while (!signal?.aborted) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let newline = buffer.indexOf("\n");
-      while (newline >= 0) {
-        const line = buffer.slice(0, newline);
-        buffer = buffer.slice(newline + 1);
-        yield* consumeLine(line);
-        newline = buffer.indexOf("\n");
+      const chunk = decoder.decode(value, { stream: true });
+      for (const character of chunk) {
+        if (skipLf) {
+          skipLf = false;
+          if (character === "\n") continue;
+        }
+        if (character === "\r" || character === "\n") {
+          const line = buffer;
+          buffer = "";
+          skipLf = character === "\r";
+          yield* consumeLine(line);
+        } else {
+          buffer += character;
+        }
       }
     }
     buffer += decoder.decode();

@@ -111,27 +111,36 @@
 
   function followEnd(): void {
     if (!scroller || scroller.clientHeight === 0) return;
+    // A resize can run before the browser delivers the user's queued scroll event.
+    if (releaseFollowOnScrollUp()) {
+      onScroll();
+      return;
+    }
     scroller.scrollTop = scroller.scrollHeight;
     viewport.scroll();
     lastTop = scroller.scrollTop;
   }
 
+  function releaseFollowOnScrollUp(): boolean {
+    if (scroller.scrollTop >= lastTop - 1 || distanceToEnd() <= 1) return false;
+    if (atBottom) {
+      atBottom = false;
+      seenMessages = messageCount;
+    }
+    return true;
+  }
+
   function onScroll(): void {
     viewport.scroll();
     if (restoring || taskId !== currentTask || scroller.clientHeight === 0) return;
-    const movedUp = scroller.scrollTop < lastTop - 1;
+    const movedDown = scroller.scrollTop > lastTop + 1;
+    const movedUp = releaseFollowOnScrollUp();
     lastTop = scroller.scrollTop;
-    if (viewport.adjusting) return;
-    const near = distanceToEnd() <= NEAR_BOTTOM;
-    if (near) {
+    if (!movedUp && viewport.adjusting) return;
+    const distance = distanceToEnd();
+    if (!movedUp && (distance <= 1 || (movedDown && distance <= NEAR_BOTTOM))) {
       atBottom = true;
       unread = 0;
-      seenMessages = messageCount;
-      rememberPosition();
-      return;
-    }
-    if (atBottom && movedUp) {
-      atBottom = false;
       seenMessages = messageCount;
     }
     rememberPosition();

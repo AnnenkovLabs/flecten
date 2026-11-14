@@ -75,7 +75,7 @@ export class RunQueue {
 
   remove(id: string): QueueItem {
     const item = this.find(id);
-    if (item.state === "sending") throw stateError(id, item.state, "remove");
+    if (item.state !== "pending") throw stateError(id, item.state, "remove");
     this.items = this.items.filter((entry) => entry.id !== id);
     return copy(item);
   }

@@ -116,6 +116,7 @@ export async function runMove(args: MoveArgs, context: ToolContext): Promise<Too
   if (context.checkpoints) {
     try {
       const checkpoint = await context.checkpoints.capture({
+        signal: context.signal,
         paths: target === undefined ? [displayFrom] : [displayFrom, displayTo],
         label: `move ${displayFrom} -> ${displayTo}`,
         tool: "move",
@@ -132,7 +133,9 @@ export async function runMove(args: MoveArgs, context: ToolContext): Promise<Too
   }
 
   try {
+    context.signal.throwIfAborted();
     await mkdir(dirname(to), { recursive: true });
+    context.signal.throwIfAborted();
     await rename(from, to);
   } catch (error) {
     return { ok: false, output: "", error: message(error) };

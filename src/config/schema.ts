@@ -11,7 +11,6 @@ import {
   type FailoverTargetSchema,
   type HookCommandSchema,
   HooksConfigSchema,
-  LspConfigSchema,
   ModesConfigSchema,
   type PermissionActionSchema,
   type PermissionPolicySchema,
@@ -300,7 +299,6 @@ export const HarnessConfigSchema = z
     commands: CommandsConfigSchema,
     modes: ModesConfigSchema,
     subagents: SubagentsConfigSchema,
-    lsp: LspConfigSchema,
     ui: z
       .object({
         sendShortcut: z.enum(["enter", "modifier-enter"]).default("enter"),
@@ -408,7 +406,6 @@ export type TelemetryConfig = z.infer<typeof TelemetryConfigSchema>;
 export type CommandsConfig = z.infer<typeof CommandsConfigSchema>;
 export type ModesConfig = z.infer<typeof ModesConfigSchema>;
 export type SubagentsConfig = z.infer<typeof SubagentsConfigSchema>;
-export type LspConfig = z.infer<typeof LspConfigSchema>;
 export type HooksConfig = z.infer<typeof HooksConfigSchema>;
 export type HookCommand = z.infer<typeof HookCommandSchema>;
 export type PermissionPolicy = z.infer<typeof PermissionPolicySchema>;

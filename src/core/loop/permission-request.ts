@@ -19,7 +19,6 @@ const FILE_ACTIONS: Record<string, PermissionAction> = {
   move: "write",
 };
 const INTERNAL = new Set(["ask", "done", "task"]);
-const GIT_READ = new Set(["status", "log", "branch"]);
 const TERMINAL_READ = new Set(["read", "list"]);
 const JOBS_READ = new Set(["list", "output", "wait"]);
 
@@ -36,14 +35,9 @@ function actionFor(tool: Tool, args: Record<string, unknown>): PermissionAction 
     return ["save", "forget", "reconcile"].includes(String(args.operation)) ? "write" : "read";
   if (tool.name === "worker") return args.operation === "status" ? "read" : "write";
   if (tool.name === "todo") return args.op === "list" ? "read" : "write";
-  if (tool.name === "git")
-    return GIT_READ.has(String(args.operation)) ||
-      (["diff", "show"].includes(String(args.operation)) && typeof args.path === "string")
-      ? "read"
-      : "shell";
   if (tool.name === "terminal") return TERMINAL_READ.has(String(args.op)) ? "read" : "shell";
   if (tool.name === "jobs") return JOBS_READ.has(String(args.op)) ? "read" : "shell";
-  if (tool.name === "bash" || tool.name === "lsp") return "shell";
+  if (tool.name === "bash") return "shell";
   if (["web", "web_fetch", "web_search"].includes(tool.name)) return "network";
   return FILE_ACTIONS[tool.name] ?? (tool.mutating ? "write" : "read");
 }
@@ -105,7 +99,7 @@ export async function permissionRequest(
   }
   const known =
     FILE_ACTIONS[tool.name] !== undefined ||
-    ["memory", "todo", "git", "terminal", "jobs", "worker", "context"].includes(tool.name);
+    ["memory", "todo", "terminal", "jobs", "worker", "context"].includes(tool.name);
   const bounded =
     ((native && known && (action === "read" || action === "write")) || tool.source === "skill") &&
     [...resources].every((path) => isInside(context.cwd, path));
@@ -129,7 +123,7 @@ export async function permissionRequest(
     ? paths.join(" → ")
     : (command ?? args.url ?? args.query ?? args.name ?? args.id ?? args.operation ?? args.op);
   if (typeof target === "string") request.target = target;
-  if (action === "shell" && command !== undefined && tool.name !== "lsp") {
+  if (action === "shell" && command !== undefined) {
     const risks = await shellRisks(
       command,
       typeof args.cwd === "string" ? args.cwd : undefined,

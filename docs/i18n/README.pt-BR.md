@@ -40,7 +40,7 @@ O loop do agente é o básico. Flecten corrige o que quebra depois da demo.
 | 🪞 Ele trabalha como um assistente genérico, não como você | Um **Twin** que aprende a sua voz e rejeita trabalho que não é seu |
 
 <p align="center">
-<b>20</b> ferramentas integradas &nbsp;·&nbsp; <b>4</b> protocolos de provedor &nbsp;·&nbsp; <b>7</b> idiomas de interface &nbsp;·&nbsp; <b>85%</b> limite de cobertura
+<b>18</b> ferramentas integradas &nbsp;·&nbsp; <b>4</b> protocolos de provedor &nbsp;·&nbsp; <b>7</b> idiomas de interface &nbsp;·&nbsp; <b>85%</b> limite de cobertura
 </p>
 
 ## 🚀 Início rápido
@@ -108,7 +108,7 @@ Ele aprende com as suas sessões e fontes anteriores, escreve specs nos seus ter
 
 | | Área | O que inclui |
 |---|---|---|
-| 🛠️ | Ferramentas | 20 integradas: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `git`, `lsp`, `terminal`, `bash`, `jobs`, `memory`, `done`; além de `skill` e `module` |
+| 🛠️ | Ferramentas | 18 integradas: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `memory`, `done`; além de `skill` e `module` |
 | 🛡️ | Segurança | permissões `deny` / `auto` / `ask` / `allow`, sandbox bubblewrap / seatbelt, hooks de comandos e aprovações que esperam dentro da chamada |
 | 💻 | Terminal | um PTY persistente por sessão, `jobs` em segundo plano com logs e `wait`, e cancelamento da árvore de processos |
 | 🔁 | Execuções | tarefas em paralelo, uma fila que sobrevive a recargas, steering, recuperação após uma queda do núcleo e orçamentos de tokens, custo e tempo por execução |
@@ -127,7 +127,7 @@ flowchart LR
   UI <-->|commands / events| SC[Sidecar on Bun]
   SC <--> CORE[Agent core]
   CORE --> PROV[Providers<br/>OpenAI · Anthropic · Gemini]
-  CORE --> TOOLS[20 tools + Skills + MCP]
+  CORE --> TOOLS[18 tools + Skills + MCP]
   TOOLS --> SEC[Security<br/>permissions · sandbox · hooks]
   CORE --> STORE[(events.jsonl<br/>checkpoints · shadow git)]
 ```

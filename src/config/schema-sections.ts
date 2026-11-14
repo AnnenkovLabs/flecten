@@ -219,13 +219,5 @@ export const SubagentsConfigSchema = z
   .default({ dirs: [] })
   .optional();
 
-export const LspConfigSchema = z
-  .object({
-    servers: z.record(z.string(), z.unknown()).default({}),
-    formatters: z.record(z.string(), z.unknown()).default({}),
-  })
-  .default({ servers: {}, formatters: {} })
-  .optional();
-
 // ponytail: defaulted fields stay optional in the inferred type so existing HarnessConfig
 // literals compile; make them required once every consumer reads config through loadConfig.

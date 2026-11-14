@@ -20,8 +20,6 @@
 | `ask` | `question`, `options`, `allowCustom` | Показывает вопрос и сразу возвращает результат. Не ждёт ответа и не выдаёт approval. Пустой `options` означает свободный ответ. |
 | `web_fetch` | `url` | Публичный HTTP(S), до 10 секунд и 2 МиБ. HTML преобразуется в читаемый текст; JavaScript не исполняется. |
 | `web_search` | `query` | До 8 результатов DuckDuckGo: заголовок, URL и snippet. Для проверки содержания источник нужно открыть через `web_fetch`. |
-| `git` | `operation`, `staged`, `path`, `maxLines`, `maxCount`, `rev`, `message`, `allowCommit` | `status`, `diff`, `log`, `show`, `branch`, `commit`. По умолчанию до 400 строк и 20 log-записей. Commit включает только уже staged-правки и требует `allowCommit: true` с сообщением. |
-| `lsp` | `operation`, `path`, `line`, `character`, `newName`, `command`, `args`, `timeoutMs` | `diagnostics`, `definition`, `references`, `symbols`, `rename`, `format`. Позиции с 1, таймаут до 60 секунд. Rename возвращает preview, format возвращает diff; правки не применяются автоматически. |
 | `terminal` | `op`, `id`, `command`, `input`, `cwd`, `cols`, `rows`, `timeoutMs` | Постоянный PTY: `run`, `write`, `read`, `resize`, `kill`, `list`. Ожидание до 600 секунд; истечение ожидания оставляет процесс работать. Ненулевой exit при `run` означает ошибку. |
 | `bash` | `command`, `cwd`, `timeoutMs`, `background` | Новая shell для каждого вызова; `cd` и env между вызовами не сохраняются. По умолчанию 120 секунд, максимум 600. Foreground timeout убивает дерево процессов; background возвращает job id. |
 | `jobs` | `op`, `id`, `lines`, `offset`, `timeoutMs` | `list`, `output`, `wait`, `stop` для фоновых `bash` jobs. Хвост по умолчанию 80 строк, максимум 2000; `offset` задаёт позицию в символах. `wait` до 30 минут; timeout оставляет job работать. |
@@ -31,7 +29,7 @@
 
 `grep` по умолчанию принимает regex, а `literal: true` включает точный поиск текста. `filesWithMatches` имеет приоритет над `count`; `count` считает совпавшие строки. Это режимы поиска данных, а не способ определять intent или состояние агента.
 
-`git` не предоставляет stage, push, reset или amend. Флаг `allowCommit` подтверждает аргументы вызова, но не заменяет авторизацию пользователя. Для `ask` отсутствие ответа или прошедшее время также не означают согласие.
+Для `ask` отсутствие ответа или прошедшее время также не означают согласие.
 
 ## Выбор и порядок
 

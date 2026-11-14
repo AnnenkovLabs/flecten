@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { smokeEnvironment, validateSmokeResult } from "./smoke-environment.mjs";
 
 const root = resolve(import.meta.dir, "..");
 const timeoutMs = 30_000;
@@ -70,14 +71,7 @@ const config = {
 
 writeFileSync(join(workdir, "flecten.config.json"), `${JSON.stringify(config, null, 2)}\n`);
 
-const env = {
-  ...process.env,
-  FLECTEN_SMOKE: "1",
-  FLECTEN_SMOKE_OUT: out,
-  FLECTEN_CWD: workdir,
-  FLECTEN_CONFIG: join(workdir, "flecten.config.json"),
-};
-delete env.ELECTRON_RUN_AS_NODE;
+const env = smokeEnvironment(process.env, workdir, out);
 
 const args = process.argv.slice(2);
 const useXvfb = process.platform === "linux" && !process.env.DISPLAY;
@@ -86,14 +80,7 @@ const commandArgs = useXvfb ? ["-a", executable, ...args] : args;
 try {
   await run(command, commandArgs, { env });
   if (!existsSync(out)) throw new Error("smoke did not write status");
-  const status = JSON.parse(readFileSync(out, "utf8"));
-  if (status.type !== "status") throw new Error(`unexpected smoke event: ${status.type}`);
-  if (!status.cwd || resolve(status.cwd) !== resolve(workdir)) {
-    throw new Error(`unexpected cwd: ${status.cwd}`);
-  }
-  if (!Array.isArray(status.providers) || status.providers.length === 0) {
-    throw new Error("status has no providers");
-  }
+  const status = validateSmokeResult(JSON.parse(readFileSync(out, "utf8")), workdir);
   console.log(`packaged smoke ok: ${status.provider}/${status.model}`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

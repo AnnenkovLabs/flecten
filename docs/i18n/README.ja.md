@@ -40,7 +40,7 @@
 | 🪞 汎用アシスタントとして動き、あなたらしくない | **Twin** があなたの声を学び、あなたらしくない成果を拒否 |
 
 <p align="center">
-<b>20</b> 組み込みツール &nbsp;·&nbsp; <b>4</b> プロバイダープロトコル &nbsp;·&nbsp; <b>7</b> インターフェース言語 &nbsp;·&nbsp; <b>85%</b> カバレッジ基準
+<b>18</b> 組み込みツール &nbsp;·&nbsp; <b>4</b> プロバイダープロトコル &nbsp;·&nbsp; <b>7</b> インターフェース言語 &nbsp;·&nbsp; <b>85%</b> カバレッジ基準
 </p>
 
 ## 🚀 クイックスタート
@@ -108,7 +108,7 @@ FLECTEN_PROVIDER=anthropic FLECTEN_MODEL=claude-sonnet-4-6 bun run app:dev
 
 | | 領域 | 内容 |
 |---|---|---|
-| 🛠️ | ツール | 20 組み込み: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `git`, `lsp`, `terminal`, `bash`, `jobs`, `memory`, `done`。さらに `skill` と `module` |
+| 🛠️ | ツール | 18 組み込み: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `memory`, `done`。さらに `skill` と `module` |
 | 🛡️ | 安全性 | `deny` / `auto` / `ask` / `allow` の権限、bubblewrap / seatbelt サンドボックス、コマンドフック、呼び出し内で待機する承認 |
 | 💻 | ターミナル | セッションごとの永続 PTY、ログと `wait` を備えたバックグラウンド `jobs`、プロセスツリーのキャンセル |
 | 🔁 | 実行 | 並列タスク、再読み込みを生き残るキュー、steering、コアクラッシュ後の復旧、実行ごとのトークン・コスト・時間予算 |
@@ -127,7 +127,7 @@ flowchart LR
   UI <-->|commands / events| SC[Sidecar on Bun]
   SC <--> CORE[Agent core]
   CORE --> PROV[Providers<br/>OpenAI · Anthropic · Gemini]
-  CORE --> TOOLS[20 tools + Skills + MCP]
+  CORE --> TOOLS[18 tools + Skills + MCP]
   TOOLS --> SEC[Security<br/>permissions · sandbox · hooks]
   CORE --> STORE[(events.jsonl<br/>checkpoints · shadow git)]
 ```

@@ -1,4 +1,5 @@
 export default {
+  "On sessions from any harness.": "あらゆるハーネスのセッションから。",
   "Your Twin": "あなたのTwin",
   "Learning from your decisions": "あなたの判断から学習中",
   "Ready to work with you": "一緒に作業する準備ができました",

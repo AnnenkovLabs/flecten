@@ -1,4 +1,5 @@
 export default {
+  "On sessions from any harness.": "从任意框架的会话中学习。",
   "Your Twin": "你的 Twin",
   "Learning from your decisions": "正在学习你的决策",
   "Ready to work with you": "准备与你协作",

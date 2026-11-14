@@ -1,11 +1,12 @@
 import { existsSync } from "node:fs";
 import { realpath } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { productEnv } from "../../shared/environment.cjs";
 import { HarnessError } from "../errors";
 import { atomicWrite } from "../util/atomic";
 import { defaultConfig } from "./defaults";
 import { migrateConfig } from "./migrate";
+import { profilePath, settingsFor } from "./profile";
 import { bindProviderCredential, readProviderCredential } from "./provider-credential";
 import {
   CONFIG_SCHEMA_VERSION,
@@ -18,6 +19,10 @@ import { loadSecrets, saveSecrets } from "./secrets";
 export const CONFIG_FILE = "flecten.config.json";
 
 export function configPath(cwd: string, explicitPath?: string): string {
+  return profilePath(explicitPath) ?? projectConfigPath(cwd, explicitPath);
+}
+
+function projectConfigPath(cwd: string, explicitPath?: string): string {
   const selected = explicitPath ?? (productEnv("CONFIG")?.trim() || undefined);
   if (selected) return selected;
   const preferred = join(cwd, CONFIG_FILE);
@@ -77,9 +82,28 @@ export function inferProvider(model: string): string | undefined {
 }
 
 export async function loadConfig(cwd: string, explicitPath?: string): Promise<HarnessConfig> {
+  const profile = profilePath(explicitPath);
+  const local = await loadConfigFile(cwd, explicitPath, !profile);
+  if (!profile) return local;
+  const directory = dirname(profile);
+  if (!existsSync(profile)) {
+    // Seed once from the existing settings, including destination-bound credentials.
+    await saveConfigFile(directory, HarnessConfigSchema.parse(settingsFor(local, "shared")), {
+      path: profile,
+    });
+  }
+  const shared = await loadConfigFile(directory, profile);
+  return HarnessConfigSchema.parse({ ...local, ...settingsFor(shared, "shared") });
+}
+
+async function loadConfigFile(
+  cwd: string,
+  explicitPath?: string,
+  environment = true,
+): Promise<HarnessConfig> {
   const defaults = defaultConfig();
   const selectedPath = explicitPath ?? (productEnv("CONFIG")?.trim() || undefined);
-  const path = configPath(cwd, explicitPath);
+  const path = projectConfigPath(cwd, explicitPath);
   const file = Bun.file(path);
   let input: unknown = {};
 
@@ -106,8 +130,8 @@ export async function loadConfig(cwd: string, explicitPath?: string): Promise<Ha
   }
 
   const explicit = parsed.data;
-  const envProvider = productEnv("PROVIDER")?.trim();
-  const envModel = productEnv("MODEL")?.trim();
+  const envProvider = environment ? productEnv("PROVIDER")?.trim() : undefined;
+  const envModel = environment ? productEnv("MODEL")?.trim() : undefined;
   const fileProviderSet =
     typeof input === "object" &&
     input !== null &&
@@ -154,8 +178,32 @@ export async function saveConfig(
   config: HarnessConfig,
   options: { clearSecrets?: string[]; path?: string; signal?: AbortSignal } = {},
 ): Promise<string> {
+  const profile = profilePath(options.path);
+  if (!profile) return saveConfigFile(cwd, config, options);
+  await saveConfigFile(dirname(profile), HarnessConfigSchema.parse(settingsFor(config, "shared")), {
+    ...options,
+    path: profile,
+  });
+  const local = await loadConfigFile(cwd, undefined, false);
+  const project = settingsFor(config, "project");
+  if (JSON.stringify(settingsFor(local, "project")) !== JSON.stringify(project)) {
+    // Keep legacy model settings and credentials intact in the original project file.
+    await saveConfigFile(
+      cwd,
+      { ...local, ...project },
+      options.signal ? { signal: options.signal } : {},
+    );
+  }
+  return profile;
+}
+
+async function saveConfigFile(
+  cwd: string,
+  config: HarnessConfig,
+  options: { clearSecrets?: string[]; path?: string; signal?: AbortSignal } = {},
+): Promise<string> {
   options.signal?.throwIfAborted();
-  const path = configPath(cwd, options.path);
+  const path = projectConfigPath(cwd, options.path);
   const parsed = HarnessConfigSchema.parse(config);
   parsed.schemaVersion = CONFIG_SCHEMA_VERSION;
   const secrets = await loadSecrets(cwd, Object.keys(parsed.providers));

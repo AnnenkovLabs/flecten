@@ -77,7 +77,7 @@
           }
         ]
       },
-      "revision": "4d00d0627ffdad2999d9f264ec7846befedb8794ffe228d9c9091e84325fe3ff",
+      "revision": "e010927ee81c74d1d884df76f79cc275ff88ce3f2e25a2083dc91be76154027a",
       "packageUrl": "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/packages/computer-use.json"
     },
     {
@@ -218,7 +218,7 @@
           }
         ]
       },
-      "revision": "15efc3877118636f5689a45d6f24611228d4bf2c449ae9049e97a1ee3371ff52",
+      "revision": "7b387b5b23cfbd152a748cf3692d58f8850e9c7a18d272e40d90b1f8a189c5d6",
       "packageUrl": "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/packages/studio-harness.json"
     },
     {

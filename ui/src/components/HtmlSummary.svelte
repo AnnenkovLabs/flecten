@@ -94,7 +94,7 @@
   const visible = $derived(streaming && height > 0);
 
   let scanner = new SummaryHtmlStream();
-  let sourceLength = 0;
+  let sourceText = "";
   let pending: SummaryToken[] = [];
   let frameReady = false;
   let configuring = false;
@@ -122,7 +122,7 @@
 
   function resetStream(): void {
     scanner = new SummaryHtmlStream();
-    sourceLength = 0;
+    sourceText = "";
     pending = [];
     finished = false;
     sentFinish = false;
@@ -157,10 +157,10 @@
   $effect(() => {
     const source = html.slice(0, MAX_SUMMARY_CHARS);
     const done = complete;
-    if (source.length < sourceLength) resetStream();
-    if (source.length > sourceLength) {
-      const chunk = source.slice(sourceLength);
-      sourceLength = source.length;
+    if (!source.startsWith(sourceText) || (finished && source !== sourceText)) resetStream();
+    if (source.length > sourceText.length) {
+      const chunk = source.slice(sourceText.length);
+      sourceText = source;
       for (const token of scanner.push(chunk)) pending.push(token);
     }
     if (done && !finished) {

@@ -71,7 +71,6 @@ function validateFiles(files: PatchFile[]): void {
     }
     claimed.set(path, line);
   };
-
   for (const file of files) {
     if (file.path.length === 0) throw new Error(`Line ${file.line}: empty file path`);
     claim(file.path, file.line);
@@ -106,7 +105,6 @@ export function parseApplyPatch(patch: string): PatchFile[] {
   while (lines[index] === "") index += 1;
   if (lines[index] !== BEGIN) throw new Error(`Patch must start with ${BEGIN}`);
   index += 1;
-
   const files: PatchFile[] = [];
   let current: PatchFile | undefined;
   let hunk: Hunk | undefined;
@@ -116,7 +114,6 @@ export function parseApplyPatch(patch: string): PatchFile[] {
     files.push(current);
     hunk = undefined;
   };
-
   for (; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
     const lineNumber = index + 1;
@@ -318,13 +315,17 @@ async function restoreFile(path: string, content: string): Promise<void> {
   await rename(temp, path);
 }
 
-async function commitChanges(changes: FileChange[]): Promise<void> {
+async function commitChanges(changes: FileChange[], signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
   const staged: Array<{ path: string; temp: string }> = [];
+  let published = false;
   try {
     for (const change of changes) {
       if (change.content === null) continue;
       staged.push({ path: change.path, temp: await stageFile(change.path, change.content) });
     }
+    signal.throwIfAborted();
+    published = true;
     for (const entry of staged) await rename(entry.temp, entry.path);
     for (const change of changes) {
       if (change.content === null) await rm(change.path);
@@ -333,7 +334,7 @@ async function commitChanges(changes: FileChange[]): Promise<void> {
     await Promise.all(
       staged.map((entry) => rm(entry.temp, { force: true }).catch(() => undefined)),
     );
-    for (const change of changes) {
+    for (const change of published ? changes : []) {
       try {
         if (change.previous === null) await rm(change.path, { force: true });
         else await restoreFile(change.path, change.previous);
@@ -437,6 +438,7 @@ export async function runApplyPatch(
         preImages[change.display] = change.previous === null ? null : { content: change.previous };
       }
       const checkpoint = await context.checkpoints.capture({
+        signal: context.signal,
         paths: displays,
         label: `apply_patch ${files.length} file(s)`,
         tool: "apply_patch",
@@ -450,7 +452,7 @@ export async function runApplyPatch(
   }
 
   try {
-    await commitChanges(changes);
+    await commitChanges(changes, context.signal);
   } catch (error) {
     return failure(error);
   }

@@ -2,14 +2,17 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { HarnessConfigSchema } from "../../src/config/schema";
 import { createSession } from "../../src/core/session/session";
 import type { Event, RunResult } from "../../src/core/types";
 import { postStream } from "../../src/providers/http";
 import { parseRateLimit, providerErrorCode, resetRateLimits } from "../../src/providers/rate-limit";
+import { createProvider } from "../../src/providers/registry";
 import { TransportError } from "../../src/providers/transport";
 import type { ModelEvent, ModelProvider } from "../../src/providers/types";
 import { builtinTools } from "../../src/tools/builtin";
 import { ToolRegistry } from "../../src/tools/registry";
+import { collect, request } from "../helpers/provider-adapters";
 
 const NOW = 1_800_000_000_000;
 const limits = {
@@ -97,6 +100,57 @@ describe("subscription windows", () => {
 });
 
 describe("provider http on long limits", () => {
+  test("registry adapter preserves limit metadata without retrying long windows", async () => {
+    let calls = 0;
+    const resetAt = Math.floor(Date.now() / 1000) * 1000 + 3_600_000;
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        calls += 1;
+        return Response.json(
+          { error: { type: "usage_limit_reached" } },
+          {
+            status: 429,
+            headers: {
+              "anthropic-ratelimit-unified-status": "rejected",
+              "anthropic-ratelimit-unified-representative-claim": "five_hour",
+              "anthropic-ratelimit-unified-reset": String(resetAt / 1000),
+            },
+          },
+        );
+      },
+    });
+    try {
+      const config = HarnessConfigSchema.parse({
+        useDefaults: false,
+        provider: "limit-regression",
+        model: "test-model",
+        providers: {
+          "limit-regression": {
+            protocol: "openai-chat",
+            baseUrl: server.url.toString(),
+            models: { "test-model": {} },
+            transport: { retries: 2 },
+          },
+        },
+      });
+      const provider = createProvider(config);
+      const error = await collect(
+        provider.provider.stream(request(), new AbortController().signal),
+      ).catch((caught: unknown) => caught);
+      expect(calls).toBe(1);
+      expect(error).toBeInstanceOf(TransportError);
+      expect(error).toMatchObject({
+        limitKind: "five_hour",
+        resetAt,
+        providerCode: "usage_limit_reached",
+        status: 429,
+      });
+    } finally {
+      server.stop(true);
+    }
+  });
+
   test("does not hammer a five-hour window and reports its reset", async () => {
     let calls = 0;
     const server = Bun.serve({
