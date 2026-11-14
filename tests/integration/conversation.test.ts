@@ -37,14 +37,11 @@ async function until(predicate: () => boolean) {
 }
 
 async function harness(
-  command: string | undefined = undefined,
+  source = 'process.stdout.write("stream-begin\\n"); setTimeout(() => {}, 30_000);',
   beforePersist?: (event: Event) => Promise<void>,
 ) {
   const cwd = await mkdtemp(join(tmpdir(), "flecten-conversation-"));
-  command ??= await bunCommand(
-    cwd,
-    'process.stdout.write("stream-begin\\n"); setTimeout(() => {}, 30_000);',
-  );
+  const command = await bunCommand(cwd, source);
   const config = HarnessConfigSchema.parse({ useDefaults: false, catalog: { autoRefresh: false } });
   const talker = scriptedProvider([
     [
@@ -126,7 +123,7 @@ async function harness(
 
 test("conversation continues while real Worker command streams, steering reaches its next boundary, and references retain identity", async () => {
   const h = await harness(
-    "printf 'stream-begin\\n'; while [ ! -f release ]; do sleep 0.02; done; printf 'stream-end\\n'",
+    'process.stdout.write("stream-begin\\n"); while (!(await Bun.file("release").exists())) await Bun.sleep(20); process.stdout.write("stream-end\\n");',
   );
   await h.session.send({ type: "run", prompt: "Проверь проект. Не меняй API." });
   await until(() => h.child("tool.output").length > 0);
@@ -229,7 +226,7 @@ test("force stop reaches the Worker independently from a finished Talker respons
 }, 10_000);
 
 test("durable replay keeps mirror IDs and restores Worker history without copying the user's conversation", async () => {
-  const h = await harness("printf 'verified\\n'");
+  const h = await harness('console.log("verified")');
   await h.session.send({ type: "run", prompt: "Сохрани исходную формулировку дословно." });
   await until(() => h.child("session.finished").length > 0);
   await until(() => h.events.some((event) => event.type === "session.started" && event.internal));

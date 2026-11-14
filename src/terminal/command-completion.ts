@@ -1,6 +1,6 @@
 import { shellName } from "./shell";
 
-/** Explicit shell protocol: a per-command nonce, integer, and LF or a repeated nonce. */
+/** Explicit shell protocol: a per-command nonce, integer, and LF or a colon terminator. */
 export interface CommandCompletion {
   start: number;
   end: number;
@@ -10,12 +10,12 @@ export interface CommandCompletion {
 export function commandWithCompletion(command: string, shell: string, marker: string): string {
   switch (shellName(shell).toLowerCase()) {
     case "cmd":
-      return `${command}\r\necho ${marker}%errorlevel%${marker}\r\n`;
+      return `${command}\r\necho ${marker}%errorlevel%:\r\n`;
     case "powershell":
     case "pwsh":
       // PowerShell -Command reports the last pipeline's success as 0/1.
       // LASTEXITCODE is sticky across cmdlets and cannot represent that status.
-      return `${command}\r\n$__liquidCode = if ($?) { 0 } else { 1 }; Write-Output ("${marker}" + $__liquidCode + "${marker}")\r\n`;
+      return `${command}\r\n$__liquidCode = if ($?) { 0 } else { 1 }; Write-Output ("${marker}" + $__liquidCode + ":")\r\n`;
     default:
       return `${command}\nprintf '\\n${marker}%s\\n' "$?"\n`;
   }
@@ -33,11 +33,11 @@ export function commandCompletion(text: string, marker: string): CommandCompleti
       cursor += 1;
     const valueEnd = cursor;
     if (text[cursor] === "\r") cursor += 1;
-    const framed = text.startsWith(marker, valueEnd);
+    const framed = text[valueEnd] === ":";
     if (valueEnd > digitsStart && (framed || text[cursor] === "\n")) {
       const exitCode = Number(text.slice(valueStart, valueEnd));
       if (Number.isSafeInteger(exitCode))
-        return { start, end: framed ? valueEnd + marker.length : cursor + 1, exitCode };
+        return { start, end: framed ? valueEnd + 1 : cursor + 1, exitCode };
     }
     start = text.indexOf(marker, start + marker.length);
   }

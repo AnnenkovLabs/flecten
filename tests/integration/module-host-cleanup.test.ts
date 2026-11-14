@@ -10,7 +10,6 @@ test("module host awaits async cleanup once on stdin closure and shutdown signal
     await Bun.write(
       entry,
       `export default () => {
-      process.stdout.write("ready\\n");
       let calls = 0;
       return async () => {
         calls++;
@@ -43,8 +42,29 @@ test("module host awaits async cleanup once on stdin closure and shutdown signal
         },
       );
       try {
+        // A setup callback can return before the host installs its shutdown handlers.
+        // The protocol response confirms the actual host is ready to accept shutdown.
+        child.stdin.write(
+          `${JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "initialize",
+            params: {
+              protocolVersion: "2025-06-18",
+              capabilities: {},
+              clientInfo: { name: "cleanup-test", version: "1.0.0" },
+            },
+          })}\n`,
+        );
+        await child.stdin.flush();
         const reader = child.stdout.getReader();
-        expect(new TextDecoder().decode((await reader.read()).value)).toContain("ready");
+        let response = "";
+        while (!response.includes("\n")) {
+          const chunk = await reader.read();
+          if (chunk.done) throw new Error("Module host exited before initialization");
+          response += new TextDecoder().decode(chunk.value);
+        }
+        expect(JSON.parse(response.split("\n")[0] ?? "").id).toBe(1);
         reader.releaseLock();
         if (operation === "stdin") child.stdin.end();
         else child.kill(operation as NodeJS.Signals);

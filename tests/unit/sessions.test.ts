@@ -81,10 +81,14 @@ describe("session history", () => {
       expect(await readSession(cwd, "s-saved")).toEqual(events);
 
       const service = await createAppService(cwd);
-      expect(await service.listSessions()).toEqual([
-        expect.objectContaining({ id: "s-saved", title: "Сохрани этот чат" }),
-      ]);
-      expect(await service.readSession("s-saved")).toEqual(events);
+      try {
+        expect(await service.listSessions()).toEqual([
+          expect.objectContaining({ id: "s-saved", title: "Сохрани этот чат" }),
+        ]);
+        expect(await service.readSession("s-saved")).toEqual(events);
+      } finally {
+        await service.dispose();
+      }
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }

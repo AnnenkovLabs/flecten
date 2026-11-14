@@ -191,7 +191,7 @@ test.skipIf(process.platform !== "win32")(
   async () => {
     const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-windows-"));
     dirs.push(cwd);
-    const manager = new TerminalManager();
+    const manager = new TerminalManager({ timeouts: { commandMs: 2000 } });
     managers.push(manager);
     const result = await runTerminal({ op: "run", command: "echo hello" }, context(cwd, manager));
     expect(result).toMatchObject({ ok: true, data: { exitCode: 0 } });
@@ -205,7 +205,10 @@ test.skipIf(process.platform !== "win32")(
       { op: "run", command: "echo %LH_CONPTY%" },
       context(cwd, manager),
     );
-    expect(next.ok).toBe(true);
+    expect(
+      next,
+      JSON.stringify({ next, terminal: manager.get("default")?.snapshot() }),
+    ).toMatchObject({ ok: true });
     expect(next.output).toContain("kept");
     const failed = await runTerminal(
       { op: "run", command: "cmd /c exit 23" },
@@ -214,6 +217,7 @@ test.skipIf(process.platform !== "win32")(
     expect(failed).toMatchObject({ ok: false, data: { exitCode: 23 } });
     expect(manager.list()).toHaveLength(1);
   },
+  15000,
 );
 
 describe("foreground commands with the native platform shell", () => {

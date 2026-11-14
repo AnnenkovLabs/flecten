@@ -81,6 +81,7 @@ function measureOnce(binary, args, cwd) {
     let out = "";
     let err = "";
     let settled = false;
+    let outcome;
     const timer = setTimeout(() => {
       finish(new Error(`no status within ${RUN_TIMEOUT_MS}ms${err ? `: ${err}` : ""}`));
     }, RUN_TIMEOUT_MS);
@@ -89,9 +90,8 @@ function measureOnce(binary, args, cwd) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      outcome = { error, ms };
       child.kill("SIGKILL");
-      if (error) reject(error);
-      else resolve(ms);
     }
 
     child.stdout.setEncoding("utf8");
@@ -121,6 +121,10 @@ function measureOnce(binary, args, cwd) {
     child.on("error", (error) => finish(error));
     child.on("exit", (code) => {
       finish(new Error(`sidecar exited (${code}) before status${err ? `: ${err.trim()}` : ""}`));
+    });
+    child.on("close", () => {
+      if (outcome?.error) reject(outcome.error);
+      else resolve(outcome?.ms);
     });
   });
 }
