@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import { t } from "../lib/i18n.svelte";
   import { modal } from "../lib/modal";
   import { formatModelName } from "../lib/model-name";
   import { settings } from "../lib/settings.svelte";
-  import { ALL_EFFORTS, REASONING_LABELS } from "../lib/settings-utils";
+  import { ALL_EFFORTS, clone, REASONING_LABELS } from "../lib/settings-utils";
+  import { fetchModelMetadata, refreshedModelMetadata } from "../lib/settings/model-metadata";
   import { modelIssues } from "../lib/settings/validation";
   import type { ReasoningEffort } from "../lib/types";
   import Icon from "./Icon.svelte";
@@ -27,9 +29,33 @@
   );
 
   let confirmDelete = $state(false);
+  let refreshing = $state(false);
+  let metadataError = $state("");
+  let mounted = true;
+  onDestroy(() => { mounted = false; });
 
-
-
+  async function refreshDetails(): Promise<void> {
+    if (!model || refreshing) return;
+    const id = modelId;
+    const owner = providerId;
+    const provider = settings.settings?.providers[providerId];
+    const baseline = clone(model);
+    refreshing = true;
+    metadataError = "";
+    try {
+      const result = await fetchModelMetadata(settings, providerId, modelId, true);
+      if (!mounted || !model || !provider || modelId !== id || providerId !== owner || settings.settings?.providers[providerId] !== provider) return;
+      provider.models[modelId] = refreshedModelMetadata(model, result.model, baseline);
+      provider.modelMetadataBaseline = {
+        ...provider.modelMetadataBaseline,
+        [modelId]: clone(result.model),
+      };
+    } catch (cause) {
+      if (mounted) metadataError = cause instanceof Error ? cause.message : String(cause);
+    } finally {
+      refreshing = false;
+    }
+  }
   function toggleLevel(level: ReasoningEffort): void {
     if (!model) return;
     const current = model.reasoningLevels ?? [];
@@ -86,7 +112,17 @@
 
     <div class="sheet-body">
       <section class="sheet-section">
-        <h3 class="st-title">{t("General")}</h3>
+        <div class="section-heading">
+          <h3 class="st-title">{t("General")}</h3>
+          <button class="st-btn st-btn--quiet st-btn--sm" type="button" disabled={refreshing} onclick={refreshDetails}>
+            <Icon name="refresh" size={13} />
+            {refreshing ? t("Updating…") : t("Refresh model details")}
+          </button>
+        </div>
+        {#if metadataError}<span class="st-error" role="alert">{metadataError}</span>{/if}
+        {#if model.context === undefined || model.output === undefined}
+          <p class="st-hint">{t("Unknown limits stay blank. Enter them manually if needed.")}</p>
+        {/if}
         <div class="st-grid">
           <label class="st-field span-2">
             <span class="st-label">{t("Name")}</span>
@@ -300,6 +336,13 @@
   .sheet-section {
     display: flex;
     flex-direction: column;
+    gap: 12px;
+  }
+
+  .section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 12px;
   }
 

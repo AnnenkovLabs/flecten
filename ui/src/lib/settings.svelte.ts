@@ -5,13 +5,9 @@ import { formatModelName } from "./model-name";
 import type { ApprovalDecision, ApprovalView } from "./permissions";
 import { applyPreferences } from "./preferences.svelte";
 import { answerAllApprovals, approvalViews, respondApproval } from "./settings/approvals";
+import { addCustomProvider } from "./settings/provider-add";
 import { actualizeProvider, probeKey, probeModel, testProvider } from "./settings/provider-checks";
-import {
-  activateIfNeeded,
-  mergeModels,
-  providerWithBaseUrl,
-  uniqueProviderId,
-} from "./settings/provider-draft";
+import { activateIfNeeded, mergeModels, providerWithBaseUrl } from "./settings/provider-draft";
 import { settingsIssue } from "./settings/validation";
 import {
   cleanSettings,
@@ -19,7 +15,6 @@ import {
   emptyProvider,
   filterCatalog,
   filterProviders,
-  hostName,
   saveBlocker,
   settingsDirty,
 } from "./settings-utils";
@@ -76,6 +71,7 @@ export class SettingsStore {
     protocol: "openai-chat" as ProviderProtocol,
     baseUrl: "",
     apiKey: "",
+    checkConnection: true,
   });
 
   get dirty(): boolean {
@@ -283,6 +279,7 @@ export class SettingsStore {
         name: provider.name,
         ...(provider.apiKeyEnv ? { apiKeyEnv: provider.apiKeyEnv } : {}),
         models: clone(provider.models) as Record<string, ModelInfo>,
+        modelMetadataBaseline: clone(provider.models) as Record<string, ModelInfo>,
       };
       this.#added(id);
       this.notice = t("Added {0}: {1}", [
@@ -297,72 +294,22 @@ export class SettingsStore {
   }
 
   async discover(): Promise<void> {
-    if (!this.settings) return;
-    const baseUrl = this.custom.baseUrl.trim();
-    if (baseUrl.length === 0) {
-      this.error = t("Enter a base URL");
-      return;
-    }
-    this.discovering = true;
-    this.error = "";
-    this.discoverResult = null;
-    try {
-      const response = await requestAgent<Response>(
-        {
-          type: "provider.discover",
-          protocol: this.custom.protocol,
-          baseUrl,
-          ...(this.custom.apiKey ? { apiKey: this.custom.apiKey } : {}),
-        },
-        90_000,
-      );
-      const result = response.result as DiscoverResult | undefined;
-      if (!result) throw new Error("discovery did not return models");
-      this.discoverResult = result;
-      const sameUrl = providerWithBaseUrl(this.settings, result.baseUrl);
-      const current = sameUrl ? this.settings.providers[sameUrl] : undefined;
-      if (sameUrl && current) {
-        this.notice = mergeModels(current, result.models, sameUrl);
-        if (this.custom.apiKey) current.apiKey = this.custom.apiKey;
-        this.#added(sameUrl, true);
-        return;
-      }
-      const id = uniqueProviderId(this.settings, result.providerId);
-      this.settings.providers[id] = {
-        ...emptyProvider(result.protocol, result.baseUrl),
-        name: result.providerName || hostName(result.baseUrl),
-        ...(this.custom.apiKey ? { apiKey: this.custom.apiKey } : {}),
-        models: clone(result.models),
-      };
-      this.#added(id, true);
-      this.notice =
-        result.warnings.length > 0
-          ? t("Added {0}: {1}, {2} without a catalog", [
-              result.providerName,
-              modelsCount(Object.keys(result.models).length),
-              result.warnings.length,
-            ])
-          : t("Added {0}: {1}", [
-              result.providerName,
-              modelsCount(Object.keys(result.models).length),
-            ]);
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : String(error);
-    } finally {
-      this.discovering = false;
-    }
+    const checkConnection = this.custom.checkConnection;
+    const id = await addCustomProvider(this);
+    if (!id) return;
+    this.#added(id);
+    this.custom.apiKey = "";
+    this.custom.baseUrl = "";
+    this.custom.checkConnection = true;
+    if (checkConnection) void this.test(id);
   }
 
-  /** A provider joined the draft: select it, close the add dialog, test a custom one. */
-  #added(id: string, custom = false): void {
+  /** A provider joined the draft: select it and close the add dialog. */
+  #added(id: string): void {
     if (!this.settings) return;
     activateIfNeeded(this.settings, id);
     this.selected = id;
     this.addOpen = false;
-    if (!custom) return;
-    this.custom.apiKey = "";
-    this.custom.baseUrl = "";
-    void this.test(id);
   }
 
   actualizeProvider(id: string): Promise<void> {
@@ -409,6 +356,7 @@ export class SettingsStore {
         {
           type: "settings.save",
           config: cleaned,
+          ...(this.baseline ? { baseline: this.baseline } : {}),
           ...(this.clearApiKeys.length > 0 ? { clearApiKeys: [...this.clearApiKeys] } : {}),
         },
         60_000,

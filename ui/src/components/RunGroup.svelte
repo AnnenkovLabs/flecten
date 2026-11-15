@@ -250,7 +250,7 @@
   }
 
   .turn + .turn {
-    margin-top: 6px;
+    margin-top: 2px;
   }
 
   .run-preview { margin-left: 22px; }

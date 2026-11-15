@@ -110,9 +110,10 @@ export class SessionCompaction {
 
   reading(sessionId: SessionId | undefined, history: Message[]): ContextReading | undefined {
     if (sessionId === undefined) return undefined;
-    if (this.#reading?.sessionId === sessionId) return this.#reading.value;
-    if (history.length === 0) return undefined;
     const { system, tools, context } = this.#options;
+    if (this.#reading?.sessionId === sessionId)
+      return { ...this.#reading.value, window: context.window, reserve: context.reserve };
+    if (history.length === 0) return undefined;
     const used = contextEstimate(system, history, tools);
     return { used, window: context.window, reserve: context.reserve, source: "estimate" };
   }

@@ -53,11 +53,11 @@
       {#each manager.filtered as entry (`${entry.source}:${entry.name}`)}
         <ModuleProductCard {entry} {manager} />
       {:else}
-        {#if !manager.loading}<div class="st-empty"><p>{t("No matching modules. Clear the search or choose another category.")}</p><button class="st-btn st-btn--quiet" type="button" onclick={() => { manager.query = ""; manager.category = "all"; }}>{t("Clear filters")}</button></div>{/if}
+        {#if !manager.loading}<div class="st-empty"><p>{manager.catalog.entries.length ? t("No matching modules. Clear the search or choose another category.") : t("No modules in connected catalogs. Add an HTTPS catalog to get started.")}</p>{#if manager.catalog.entries.length}<button class="st-btn st-btn--quiet" type="button" onclick={() => { manager.query = ""; manager.category = "all"; }}>{t("Clear filters")}</button>{/if}</div>{/if}
       {/each}
     </div>
     <details class="st-details catalog-sources"><summary>{t("Catalog sources")}<Icon name="chevron-down" size={14} /></summary><div class="st-details-body">
-      <p class="st-hint">{t("The built-in catalog works offline. Add an HTTPS catalog to discover community modules.")}</p>
+      <p class="st-hint">{t("Add an HTTPS catalog to discover community modules.")}</p>
       {#each manager.catalog.sources as source (source.id)}<div class="catalog-source"><div><strong>{source.name}</strong><p class="st-hint">{source.bundled ? t("Included with Flecten") : source.id}</p></div>{#if !source.bundled}<button class="st-btn st-btn--quiet" type="button" disabled={manager.locked} onclick={() => manager.marketplace({ action: "removeSource", url: source.id })} aria-label={t("Disconnect catalog: {0}", [source.name])}>{t("Disconnect")}</button>{/if}</div>{/each}
       <form class="catalog-add" onsubmit={(event) => { event.preventDefault(); void manager.marketplace({ action: "addSource", url: manager.catalogUrl.trim() }); }}>
         <label class="st-field"><span class="st-label">{t("Catalog URL")}</span><input class="st-input" type="url" required bind:value={manager.catalogUrl} placeholder="https://example.org/modules.json" /></label>
@@ -78,6 +78,7 @@
   .category-field { min-width: 0; }
   .market-filters input, select { min-height: 40px; }
   .market-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: var(--space-8) var(--space-4); }
+  .market-list > .st-empty { grid-column: 1 / -1; }
   .module-glyph { display: grid; place-items: center; flex: 0 0 44px; min-height: 44px; border-radius: 8px; background: var(--raised); color: var(--text-2); }
   .installed-label { display: inline-flex; align-items: center; gap: var(--space-1); }
   .module-detail { display: grid; gap: var(--space-6); min-width: 0; }

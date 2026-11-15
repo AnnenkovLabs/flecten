@@ -1,4 +1,8 @@
 export default {
+  "No new supported user messages were found. No model request was made.":
+    "新しく取り込めるユーザーメッセージはありませんでした。モデルへのリクエストは送信していません。",
+  "Training finished. No supported traits were found.":
+    "学習が完了しました。根拠のある特性は見つかりませんでした。",
   "On sessions from any harness.": "あらゆるハーネスのセッションから。",
   "Your Twin": "あなたのTwin",
   "Learning from your decisions": "あなたの判断から学習中",

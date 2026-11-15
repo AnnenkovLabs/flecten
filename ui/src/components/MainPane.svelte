@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { AccessMode, ActiveAccessMode } from "../../../shared/access-mode";
   import { t } from "../lib/i18n.svelte";
   import type { PickedFile } from "../lib/composer/attachments";
   import type { MentionItem, QueuedMessage, SendMode, SkillCommand } from "../lib/composer/types";
   import type { ContextReference } from "../lib/composer/context-types";
+  import type { ComposerEdit } from "../lib/message-types";
   import type { ContextView } from "../lib/context-meter.svelte";
   import type { NewSessionTask } from "../lib/new-session";
   import type { SummaryDestination } from "../lib/markdown/summary-navigation";
@@ -30,8 +30,6 @@
     model: string;
     reasoning: ReasoningChoice;
     variant?: string | undefined;
-    accessMode: ActiveAccessMode;
-    accessChanging: boolean;
   }
 
   interface Props {
@@ -47,15 +45,20 @@
     liveLabel: string;
     pendingCalls: PendingToolCall[];
     busy: boolean;
+    historyDisabled?: boolean;
     focusToken: number;
     composer: ComposerConfig;
     onOpenChanges: () => void;
     onNavigateSummary: (destination: SummaryDestination) => void;
     onRepeat: (prompt?: string) => void;
+    onEditMessage?: (messageId: string, text: string) => void;
+    editing?: ComposerEdit | null;
+    onCancelEdit?: () => void;
+    onSaveEdit?: (text: string, attachments: string[], contexts: ContextReference[], retainedAttachments: string[]) => Promise<boolean>;
+    onSelectVersion?: (messageId: string, variantId: string) => Promise<boolean>;
     onModelSelect: (provider: string, model: string) => void;
     onReasoningChange: (value: ReasoningChoice) => void;
     onVariantChange: (value: string | undefined) => void;
-    onAccessModeChange: (mode: AccessMode) => void;
     queued: QueuedMessage[];
     sendMode: SendMode;
     files: string[];
@@ -90,15 +93,20 @@
     liveLabel,
     pendingCalls,
     busy,
+    historyDisabled,
     focusToken,
     composer,
     onOpenChanges,
     onNavigateSummary,
     onRepeat,
+    onEditMessage,
+    editing,
+    onCancelEdit,
+    onSaveEdit,
+    onSelectVersion,
     onModelSelect,
     onReasoningChange,
     onVariantChange,
-    onAccessModeChange,
     queued,
     sendMode,
     files,
@@ -142,9 +150,6 @@
     model={composer.model}
     reasoning={composer.reasoning}
     variant={composer.variant}
-    accessMode={composer.accessMode}
-    accessChanging={composer.accessChanging}
-    {onAccessModeChange}
     {sendMode}
     {queued}
     {files}
@@ -158,6 +163,10 @@
     {onReasoningChange}
     {onVariantChange}
     {onSend}
+    {editing}
+    editBlocked={historyDisabled}
+    {onCancelEdit}
+    {onSaveEdit}
     {onQueueEdit}
     {onQueueRemove}
     {onSendModeChange}
@@ -188,9 +197,12 @@
       {liveLabel}
       {pendingCalls}
       {busy}
+      {historyDisabled}
       {onOpenChanges}
       {onNavigateSummary}
       {onRepeat}
+      {onEditMessage}
+      {onSelectVersion}
     />
     <div class="dock">
       <Toast />

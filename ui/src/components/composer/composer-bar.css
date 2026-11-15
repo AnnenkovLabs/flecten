@@ -1,5 +1,4 @@
-.composer-bar, .composer-left, .composer-access { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.composer-access > span { color: var(--muted); font-size: 12px; white-space: nowrap; padding-inline-start: 6px; }
+.composer-bar, .composer-left { display: flex; align-items: center; gap: 2px; min-width: 0; }
 .composer-right {
   display: flex;
   align-items: center;

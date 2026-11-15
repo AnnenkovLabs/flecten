@@ -67,6 +67,11 @@ export async function actualizeProvider(host: CheckHost, id: string): Promise<vo
     const draft = host.settings?.providers[id];
     if (fresh && draft) draft.models = refreshedDraftModels(fresh, draft.models, baseline);
     if (fresh && host.baseline?.providers[id]) host.baseline.providers[id].models = clone(fresh);
+    if (result?.modelMetadataBaseline) {
+      if (draft) draft.modelMetadataBaseline = clone(result.modelMetadataBaseline);
+      const saved = host.baseline?.providers[id];
+      if (saved) saved.modelMetadataBaseline = clone(result.modelMetadataBaseline);
+    }
     host.info = response.info ?? result?.info ?? host.info;
     host.actualizeResult = result ?? null;
     if (result) host.notice = actualizeNotice(result);

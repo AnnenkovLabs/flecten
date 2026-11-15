@@ -75,16 +75,23 @@ export async function streamAssistant(
       reserve: options.reserveTokens,
       source: "estimate",
     });
+  const modelMessages = await visionMessages(
+    requestMessages,
+    options.toolContext.inspectImage,
+    options.signal,
+  );
   const request = {
     model: options.provider.model,
     system: options.system,
-    messages: await visionMessages(
-      requestMessages,
-      options.toolContext.inspectImage,
-      options.signal,
-    ),
+    messages: modelMessages,
     tools: options.tools.specs(),
-    maxTokens: options.maxTokens,
+    maxTokens: Math.max(
+      1,
+      Math.min(
+        options.maxTokens,
+        options.contextWindow - contextEstimate(options.system, modelMessages, options.tools),
+      ),
+    ),
     ...(options.reasoning ? { reasoning: options.reasoning } : {}),
     ...(options.variant ? { variant: options.variant } : {}),
   };

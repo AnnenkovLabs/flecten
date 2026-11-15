@@ -67,11 +67,23 @@ function failure(error: unknown): ToolResult {
   return { ok: false, output: "", error: error instanceof Error ? error.message : String(error) };
 }
 
-function pageArchive(paths: SessionPaths): PageArchive {
+function pageArchive(
+  paths: SessionPaths,
+  allowed?: () => Promise<ReadonlySet<number>>,
+): PageArchive {
+  const visible = async () => {
+    const pages = await pageNumbers(paths);
+    const selected = await allowed?.();
+    return selected ? pages.filter((page) => selected.has(page)) : pages;
+  };
+  const assertVisible = async (page: number) => {
+    if (allowed && !(await allowed()).has(page))
+      throw new Error("Page is outside the selected conversation branch");
+  };
   return {
     async list(access) {
       try {
-        const pages = await pageNumbers(paths);
+        const pages = await visible();
         const entries = await Promise.all(
           pages.map(async (page) => {
             const summary = await archiveFile(paths, page, "summary");
@@ -97,6 +109,7 @@ function pageArchive(paths: SessionPaths): PageArchive {
     async read(input, access) {
       try {
         const args = PageReadSchema.parse(input);
+        await assertVisible(args.page);
         const kind = args.kind ?? "summary";
         const path = await archiveFile(paths, args.page, kind);
         if (access && !(await access(path))) throw new Error("Page archive read denied");
@@ -132,7 +145,8 @@ function pageArchive(paths: SessionPaths): PageArchive {
     async search(input, access) {
       try {
         const args = PageSearchSchema.parse(input);
-        const pages = args.page === undefined ? await pageNumbers(paths) : [args.page];
+        const pages = args.page === undefined ? await visible() : [args.page];
+        if (args.page !== undefined) await assertVisible(args.page);
         const limit = args.limit ?? 50;
         const output: string[] = [];
         let size = 0;
@@ -185,10 +199,19 @@ function pageArchive(paths: SessionPaths): PageArchive {
 export function pageSink(
   paths: SessionPaths,
   secrets: () => readonly string[] = () => [],
+  initialPages?: () => Promise<ReadonlySet<number>>,
 ): PageSink {
+  const written = new Set<number>();
+  let previous: Promise<ReadonlySet<number>> | undefined;
+  const allowed = initialPages
+    ? async () => {
+        previous ??= initialPages();
+        return new Set([...(await previous), ...written]);
+      }
+    : undefined;
   return {
     logsDir: paths.logs,
-    archive: pageArchive(paths),
+    archive: pageArchive(paths, allowed),
     async write(page, markdown, transcript, signal) {
       if (!Number.isSafeInteger(page) || page < 1) throw new Error("Invalid page number");
       signal?.throwIfAborted();
@@ -203,6 +226,7 @@ export function pageSink(
           signal,
         );
       await atomicWrite(file, redactKnown(markdown, secrets()), 0o600, signal);
+      written.add(page);
       return file;
     },
     async count() {

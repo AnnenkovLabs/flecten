@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { HarnessConfig, ProviderConfig } from "../config/schema";
 import { actualizeModels } from "../providers/actualize";
-import { catalogProviders, formatModelName } from "../providers/catalog";
+import { catalogProviders, formatModelName, syncCatalog } from "../providers/catalog";
 import { discoverProvider, testProvider } from "../providers/discovery";
+import { modelMetadata } from "../providers/model-metadata";
 import { type ProbeResult, probeModel } from "../providers/probe";
 import { resolveApiKey } from "../providers/registry";
 import { draftProviderConfig, redactProviderError } from "./provider-secrets";
@@ -20,7 +21,13 @@ export interface ProviderOpsContext {
 
 type ProviderOps = Pick<
   AppService,
-  "test" | "registerDraft" | "catalogList" | "catalogProvider" | "probeModel" | "actualizeProvider"
+  | "test"
+  | "modelMetadata"
+  | "registerDraft"
+  | "catalogList"
+  | "catalogProvider"
+  | "probeModel"
+  | "actualizeProvider"
 > & { clearDrafts(): void };
 
 function verifiedEntry(probe: ProbeResult) {
@@ -43,8 +50,44 @@ export function providerOps(context: ProviderOpsContext): ProviderOps {
     }
   }
 
+  function target(input: { providerId?: string; draftToken?: string }): ProviderConfig {
+    pruneDrafts();
+    if (input.draftToken) {
+      const provider = drafts.get(input.draftToken)?.provider;
+      if (!provider) throw new Error("provider draft token is invalid or expired");
+      return provider;
+    }
+    const provider = input.providerId ? context.config().providers[input.providerId] : undefined;
+    if (!provider) throw new Error("unknown provider");
+    return provider;
+  }
+
   return {
     clearDrafts: () => drafts.clear(),
+    async modelMetadata(input) {
+      const definition = target(input);
+      let apiKey: string | undefined;
+      const warnings: string[] = [];
+      try {
+        apiKey = resolveApiKey(input.providerId ?? input.draftToken ?? "metadata", definition);
+      } catch (error) {
+        warnings.push(redactProviderError(error, definition));
+      }
+      const result = await modelMetadata(
+        context.cwd,
+        definition,
+        input.model,
+        apiKey,
+        input.refresh,
+      );
+      return {
+        ...result,
+        warnings: [
+          ...warnings,
+          ...result.warnings.map((warning) => redactProviderError(warning, definition)),
+        ],
+      };
+    },
     async test(input) {
       pruneDrafts();
       const config = context.config();
@@ -109,12 +152,15 @@ export function providerOps(context: ProviderOpsContext): ProviderOps {
       const config = context.config();
       const current = config.providers[id];
       if (!current) throw new Error(`unknown provider: ${id}`);
+      await syncCatalog(context.cwd);
       const apiKey = resolveApiKey(id, current);
       const result = await discoverProvider(context.cwd, {
         protocol: current.protocol,
         baseUrl: current.baseUrl,
         ...(apiKey ? { apiKey } : {}),
         headers: current.headers,
+        ...(current.proxy ? { proxy: current.proxy } : {}),
+        ...(current.transportTimeoutMs ? { transportTimeoutMs: current.transportTimeoutMs } : {}),
       });
       const discovered = result.models;
       const modelIds = Object.keys(discovered);
@@ -137,6 +183,7 @@ export function providerOps(context: ProviderOpsContext): ProviderOps {
         return false;
       });
       definition.models = merged.models;
+      definition.modelMetadataBaseline = structuredClone(discovered);
       const probedModel = active ? next.model : (modelIds[0] as string);
       if (active && next.variant && !definition.models[probedModel]?.variants?.[next.variant]) {
         delete next.variant;
@@ -160,6 +207,7 @@ export function providerOps(context: ProviderOpsContext): ProviderOps {
       await context.commit(next);
       return {
         providerId: id,
+        modelMetadataBaseline: definition.modelMetadataBaseline,
         info: context.info(),
         models: modelIds.length,
         added: merged.added,

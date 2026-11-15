@@ -106,6 +106,25 @@ function secretConfig(): HarnessConfig {
 }
 
 describe("settings sanitization", () => {
+  test("model metadata baselines mask and restore saved headers", () => {
+    const config = secretConfig();
+    const provider = config.providers.test;
+    if (!provider) throw new Error("test provider missing");
+    provider.modelMetadataBaseline = structuredClone(provider.models);
+    provider.modelMetadataBaseline["baseline-only"] = {
+      headers: { Authorization: "baseline-secret" },
+    };
+    const safe = sanitize(config);
+    expect(safe.providers.test?.modelMetadataBaseline?.["test-1"]?.headers?.["X-Model-Key"]).toBe(
+      SECRET_MASK,
+    );
+    expect(JSON.stringify(safe)).not.toContain("sk-model-secret");
+    expect(JSON.stringify(safe)).not.toContain("baseline-secret");
+    const restored = mergeSecrets(safe, config, []);
+    expect(restored.providers.test?.modelMetadataBaseline).toEqual(provider.modelMetadataBaseline);
+    expect(configSecrets(config)).toContain("baseline-secret");
+  });
+
   test("removes keys, header values, auth commands and MCP env", () => {
     const safe = sanitize(secretConfig());
     const provider = safe.providers.test;

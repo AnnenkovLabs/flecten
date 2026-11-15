@@ -38,6 +38,7 @@ export async function sessionAttachments(
   sessionId: string,
   options: SessionOptions,
   snapshot?: AttachmentSnapshot,
+  input: { strict?: boolean } = {},
 ) {
   if (snapshot) {
     const saved = AttachmentSnapshotSchema.parse(snapshot);
@@ -49,10 +50,12 @@ export async function sessionAttachments(
       parts,
       blocks: saved.blocks,
       media: saved.media,
+      snapshot: saved,
     };
   }
   const loaded = await loadAttachments(paths, {
     cwd: options.cwd,
+    ...input,
     modalities: options.modalities,
     describeImages: Boolean(options.vision),
   });
@@ -74,7 +77,15 @@ export async function sessionAttachments(
       ),
     ),
   ];
-  return { parts, blocks, media };
+  const entries = loaded.entries.map((entry) => ({
+    ...entry,
+    mediaIndexes: entry.mediaIndexes.filter((index) => index < media.length),
+    blockIndexes: [
+      ...entry.blockIndexes,
+      ...entry.mediaIndexes.map((index) => loaded.blocks.length + index),
+    ],
+  }));
+  return { parts, blocks, media, snapshot: { media, blocks, entries } };
 }
 
 export function toolMediaOptions(options: SessionOptions, sessionId: string) {

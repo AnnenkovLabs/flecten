@@ -24,10 +24,14 @@ export function setComposerTask(task: string): void {
   composerDrafts.task = task;
 }
 
-export function writeComposerDraft(text: string, mentions: MentionSpan[] = []): void {
-  if (text.length > 0) composerDrafts.documents[composerDrafts.task] = { text, mentions };
-  else delete composerDrafts.documents[composerDrafts.task];
-  composerDrafts.values = updateDraft(composerDrafts.values, composerDrafts.task, text);
+export function writeComposerDraft(
+  text: string,
+  mentions: MentionSpan[] = [],
+  task = composerDrafts.task,
+): void {
+  if (text.length > 0) composerDrafts.documents[task] = { text, mentions };
+  else delete composerDrafts.documents[task];
+  composerDrafts.values = updateDraft(composerDrafts.values, task, text);
 }
 
 /** A file picker may resolve after navigation. Its files still belong to the task that opened it. */

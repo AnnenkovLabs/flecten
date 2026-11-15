@@ -42,7 +42,6 @@ import { runVision } from "./vision";
 export type { SessionHandle, SessionPeek } from "./handle";
 export type { SessionOptions } from "./options";
 export type { SessionMemory } from "./run-input";
-/** How long a call waits for the user's approval before it is refused. */
 export const DEFAULT_APPROVAL_TIMEOUT_MS = 300_000;
 const RECENT_RUNS = 64;
 export function createSession(options: SessionOptions): SessionHandle {
@@ -236,7 +235,10 @@ export function createSession(options: SessionOptions): SessionHandle {
       prompt,
       ...(input === prompt ? {} : { input }),
       ...(attached.media.length > 0 ? { attachments: attached.media } : {}),
+      attachmentSnapshot: attached.snapshot,
+      ...(extras.contexts?.length ? { contexts: extras.contexts } : {}),
       ...(reasoning ? { reasoning } : {}),
+      ...(options.variant ? { variant: options.variant } : {}),
       ...(options.promptStamp && !options.language ? { system: options.promptStamp } : {}),
       ...(extras.queueId ? { queueId: extras.queueId } : {}),
       ...(extras.resumed ? { resumed: true } : {}),
@@ -453,9 +455,7 @@ export function createSession(options: SessionOptions): SessionHandle {
     getHistory(): readonly Message[] {
       return [...history];
     },
-    async flush(): Promise<void> {
-      await persistence.flush();
-    },
+    flush: () => compaction.settled().then(() => persistence.flush()),
     async dispose(): Promise<void> {
       calls.abortAll(new Error("Session closed"));
       if (currentSessionId) await options.modules?.close(currentSessionId);
@@ -488,6 +488,7 @@ export function createSession(options: SessionOptions): SessionHandle {
         if (recentRuns.length > RECENT_RUNS) recentRuns.shift();
       }
       return run(command.prompt, command.reasoning, command.sessionId, command.attachments, {
+        ...(command.attachmentSnapshot ? { attachmentSnapshot: command.attachmentSnapshot } : {}),
         ...(command.contexts ? { contexts: command.contexts } : {}),
         ...(command.resumed ? { resumed: true } : {}),
         ...(command.internal ? { internal: true } : {}),

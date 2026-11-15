@@ -182,7 +182,7 @@ export const TwinUpdateSchema = z.object({
       appliesWhen: text(300),
       reaction: TwinReactionSchema,
       strength: z.number().int().min(1).max(3),
-      voice: text(600),
+      voice: z.string().max(600),
     })
     .strict(),
 });

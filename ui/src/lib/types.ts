@@ -1,6 +1,7 @@
 import type { HookConfiguration, HookName } from "../../../shared/hooks";
-import type { AgentInfo, AgentPendingApproval } from "./agent-types";
+import type { AgentPendingApproval } from "./agent-types";
 import type { IconName } from "./icons";
+import type { UserMessageItem } from "./message-types";
 import type { ErrorItem } from "./run-errors";
 
 export type { IconName };
@@ -139,7 +140,7 @@ export interface WorkerItem {
 export type ThreadItem =
   | WorkerItem
   | { kind: "worker-tool"; id: string; reference: string }
-  | { kind: "message"; id: string; text: string; at?: string }
+  | UserMessageItem
   | ApprovalItem
   | NoticeItem
   | { kind: "run"; id: string; summary: RunSummary }
@@ -287,6 +288,8 @@ export interface ProviderSettings {
   name?: string;
   headers: Record<string, string>;
   models: Record<string, ModelInfo>;
+  modelAutoRefresh?: { enabled: boolean; overwriteManual: boolean };
+  modelMetadataBaseline?: Record<string, ModelInfo>;
   reasoningReplay: "auto" | "always" | "never" | "alias";
   reasoningDetails: "auto" | "always" | "never";
   thinking: "auto" | "enabled" | "disabled";
@@ -473,25 +476,6 @@ export interface CatalogStatus {
   fallbackModels: number;
 }
 
-export interface ProbeResult {
-  text: boolean;
-  tools: boolean;
-  reasoning?: boolean;
-  latencyMs: number;
-  error?: string;
-}
-
-export interface ProviderActualizeResult {
-  providerId: string;
-  info: AgentInfo;
-  models: number;
-  added: string[];
-  updated: string[];
-  removed: string[];
-  warnings: string[];
-  probedModel: string;
-  probe: ProbeResult;
-}
-
 export type { AgentCommand, AgentEvent } from "./agent-protocol";
 export type * from "./agent-types";
+export type { ProbeResult, ProviderActualizeResult } from "./settings/provider-protocol";

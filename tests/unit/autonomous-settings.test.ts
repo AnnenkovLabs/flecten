@@ -6,13 +6,15 @@ import { contextWindow, maxOutputTokens, modelContext } from "../../src/app/prov
 import { defaultConfig } from "../../src/config/defaults";
 import { migrateConfig } from "../../src/config/migrate";
 import { HarnessConfigSchema } from "../../src/config/schema";
+import { contextEstimate } from "../../src/core/loop/context";
 import { createSession } from "../../src/core/session/session";
-import type { RunResult } from "../../src/core/types";
+import type { Event, RunResult } from "../../src/core/types";
 import type { ModelEvent, ModelProvider } from "../../src/providers/types";
 import { builtinTools } from "../../src/tools/builtin";
 import { ToolRegistry } from "../../src/tools/registry";
 import { settingsIssue } from "../../ui/src/lib/settings/validation";
 import type { HarnessSettings } from "../../ui/src/lib/types";
+import { scriptedProvider } from "../helpers/fake-provider";
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -96,7 +98,7 @@ describe("autonomous settings", () => {
     expect(calls).toBe(10);
   });
 
-  test("uses native model output and reserves room for it; explicit limits still apply", () => {
+  test("uses native model output with a separate reply reserve; explicit limits still apply", () => {
     const config = defaultConfig();
     const provider = config.providers[config.provider];
     if (!provider) throw new Error("default provider missing");
@@ -106,12 +108,66 @@ describe("autonomous settings", () => {
     };
     expect(maxOutputTokens(config)).toBe(128_000);
     expect(contextWindow(config)).toBe(1_000_000);
-    expect(modelContext(config).reserve).toBe(128_000);
+    expect(modelContext(config).reserve).toBe(config.context.reserve);
     config.maxOutputTokens = 4096;
     expect(maxOutputTokens(config)).toBe(4096);
     config.maxOutputTokens = 0;
     provider.maxOutputTokens = 8192;
     expect(maxOutputTokens(config)).toBe(8192);
+  });
+
+  test("a large native output limit does not consume the million-token input window", () => {
+    const config = defaultConfig();
+    const provider = config.providers[config.provider];
+    if (!provider) throw new Error("default provider missing");
+    provider.models[config.model] = { context: 1_048_576, output: 943_718 };
+    const context = modelContext(config);
+    expect(context.window).toBe(1_048_576);
+    expect(context.window - context.reserve).toBe(1_032_576);
+    expect(maxOutputTokens(config)).toBe(943_718);
+  });
+
+  test("long input reaches the model without early compaction and the reply fits remaining context", async () => {
+    const config = defaultConfig();
+    const definition = config.providers[config.provider];
+    if (!definition) throw new Error("default provider missing");
+    definition.models[config.model] = { context: 1_048_576, output: 943_718 };
+    const provider = scriptedProvider([
+      [
+        { type: "text", delta: "Complete." },
+        { type: "done", reason: "end" },
+      ],
+    ]);
+    const tools = new ToolRegistry([], { limits: config.tools });
+    const events: Event[] = [];
+    const handle = await session(provider, {
+      tools,
+      maxOutputTokens: maxOutputTokens(config),
+      context: modelContext(config),
+      loop: { maxTurns: 1, continuations: 0, parallelTools: false },
+    });
+    handle.subscribe((event) => events.push(event));
+    try {
+      await handle.send({ type: "run", prompt: "context ".repeat(80_000) });
+      expect(provider.requests).toHaveLength(1);
+      const request = provider.requests[0];
+      if (!request) throw new Error("model request missing");
+      const used = contextEstimate(request.system, request.messages, tools);
+      expect(used).toBeGreaterThan(104_858);
+      expect(request.maxTokens).toBe(1_048_576 - used);
+      expect(request.maxTokens).toBeLessThan(943_718);
+      expect(events.some((event) => event.type === "context.compacted")).toBe(false);
+      expect(events.find((event) => event.type === "context.usage")).toMatchObject({
+        window: 1_048_576,
+        reserve: 16_000,
+      });
+      handle.update({ context: { window: 2_000_000, reserve: 32_000 } });
+      expect(await handle.send({ type: "status" })).toMatchObject({
+        context: { used, window: 2_000_000, reserve: 32_000 },
+      });
+    } finally {
+      await handle.dispose();
+    }
   });
 
   test("migrates shipped ceilings and preserves deliberate limits and permissions", () => {

@@ -24,7 +24,7 @@ export async function platform(
 export async function installExample(f: PlatformFixture, name: string) {
   await f.app.modules.change({
     operation: "install",
-    path: join(import.meta.dirname, "../../src/marketplace/modules", name),
+    path: join(import.meta.dirname, "../fixtures/modules", name),
   });
   const module = (await f.app.modules.state()).modules.find((m) => m.name === name);
   if (!module) throw new Error(`Missing example ${name}`);

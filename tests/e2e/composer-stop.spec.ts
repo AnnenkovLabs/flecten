@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import type { AgentEvent } from "../../ui/src/lib/agent-protocol";
 import { launchApp } from "./fixtures";
 
 const models = {
@@ -17,8 +18,8 @@ async function ready(page: Page): Promise<void> {
   if (await trust.isVisible()) await trust.click();
 }
 
-async function aligned(page: Page) {
-  const boxes = await page.locator(".composer:visible").evaluate((composer) => {
+async function aligned(page: Page, actionSelector = ".composer-actions") {
+  const boxes = await page.locator(".composer:visible").evaluate((composer, selector) => {
     const rect = (selector: string) => {
       const element = selector === ".composer" ? composer : composer.querySelector(selector);
       if (!element) throw new Error(`Missing ${selector}`);
@@ -29,10 +30,10 @@ async function aligned(page: Page) {
       composer: rect(".composer"),
       prompt: rect("#prompt"),
       bar: rect(".composer-bar"),
-      actions: rect(".composer-actions"),
+      actions: rect(selector),
       voice: rect(".voice"),
     };
-  });
+  }, actionSelector);
   expect(boxes.bar.x - boxes.composer.x).toBe(12);
   expect(boxes.composer.x + boxes.composer.width - boxes.actions.x - boxes.actions.width).toBe(12);
   expect(boxes.voice.y).toBe(boxes.actions.y);
@@ -250,3 +251,91 @@ test("three-part composer stays available with an idle Talker and a running Work
     await h.close();
   }
 });
+
+for (const mode of ["graceful", "force"] as const) {
+  test(`${mode} stop before Worker starts restores Continue and voice, including replay`, async () => {
+    const h = await launchApp({ conversation: true, delayMs: 3000, fakeMicrophone: true, models });
+    const events: AgentEvent[] = [];
+    try {
+      const { page, app } = h;
+      await ready(page);
+      await page.exposeFunction("recordStopLifecycle", (event: AgentEvent) => events.push(event));
+      await page.evaluate(() => {
+        const observer = window as unknown as {
+          recordStopLifecycle(event: unknown): Promise<void>;
+        };
+        window.desktop?.agent?.onEvent((event) => {
+          if (event.type === "session.started" || event.type === "worker.event")
+            void observer.recordStopLifecycle(event);
+        });
+      });
+      const title = `Stop ${mode} before starting Worker`;
+      const prompt = page.locator("#prompt");
+      await prompt.fill(title);
+      await prompt.press("Enter");
+      await expect.poll(() => events.some((event) => event.type === "session.started")).toBe(true);
+      await page.getByRole("button", { name: "Остановка", exact: true }).click();
+      if (mode === "force") {
+        const force = page.getByRole("button", { name: "Остановить принудительно", exact: true });
+        await expect(force).toBeEnabled();
+        await force.click();
+      }
+      const resume = page.locator(".composer-bar").getByRole("button", {
+        name: "Продолжить",
+        exact: true,
+      });
+      const voice = page.getByRole("button", { name: "Голосовой ввод", exact: true });
+      await expect(resume).toBeEnabled();
+      await expect(voice).toBeEnabled();
+      await expect(page.getByRole("group", { name: "Действия агента" })).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: `${title}, остановлено`, exact: true }),
+      ).toBeVisible();
+      expect(
+        events.some(
+          (event) => event.type === "worker.event" && event.event.type === "session.started",
+        ),
+      ).toBe(false);
+      await expect
+        .poll(() =>
+          events.some(
+            (event) =>
+              event.type === "worker.event" &&
+              event.event.type === "session.state" &&
+              !event.event.state.running,
+          ),
+        )
+        .toBe(true);
+      await voice.click();
+      await expect(page.getByRole("status").filter({ hasText: "Запись" })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(resume).toBeEnabled();
+      await page.reload();
+      await page.locator(".task-row").filter({ hasText: title }).click();
+      await expect(resume).toBeEnabled();
+      await expect(voice).toBeEnabled();
+      await expect(page.getByRole("group", { name: "Действия агента" })).toHaveCount(0);
+      for (const [width, height] of [
+        [1480, 940],
+        [1180, 640],
+      ] as const) {
+        await app.evaluate(
+          ({ BrowserWindow }, size) =>
+            BrowserWindow.getAllWindows()[0]?.setContentSize(size.width, size.height),
+          { width, height },
+        );
+        await page.setViewportSize({ width, height });
+        await aligned(page, ".continue");
+        await page.screenshot({
+          path: test.info().outputPath(`unstarted-worker-${mode}-${width}x${height}.png`),
+        });
+      }
+      await resume.click();
+      await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeEnabled();
+      await expect(resume).toHaveCount(0);
+      expect(h.consoleErrors).toEqual([]);
+    } finally {
+      await h.close();
+    }
+  });
+}

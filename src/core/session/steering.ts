@@ -27,6 +27,10 @@ export async function prepareSteering(
         queueId: item.id,
         ...(loaded.parts.length ? { attachments: loaded.parts } : {}),
         ...(loaded.media.length ? { attachmentRefs: loaded.media } : {}),
+        ...(loaded.blocks.length || loaded.media.length
+          ? { attachmentSnapshot: loaded.snapshot }
+          : {}),
+        ...(item.contexts?.length ? { contexts: item.contexts } : {}),
       };
     }),
   );

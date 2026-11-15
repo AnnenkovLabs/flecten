@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
   import type { TwinStore } from "../../lib/twin.svelte";
   import { i18n, t } from "../../lib/i18n.svelte";
   import Icon from "../Icon.svelte";
@@ -33,7 +33,7 @@
     }
     learningVisible = false;
   });
-  onMount(() => { void twin.load(); });
+  $effect(() => { twin.projectEpoch; untrack(() => { void twin.load(); }); });
 </script>
 
 <div bind:this={page} class="twin-page" data-testid="twin-page">

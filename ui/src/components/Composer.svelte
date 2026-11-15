@@ -1,23 +1,22 @@
 <script lang="ts">
-  import type { AccessMode, ActiveAccessMode } from "../../../shared/access-mode";
   import { t } from "../lib/i18n.svelte";
   import { onMount, tick } from "svelte";
   import { isModifier } from "../lib/platform";
   import { preferences } from "../lib/preferences.svelte";
   import {
-    addAttachments,
     mentionedPaths,
     mentionEntries,
     type PickedFile,
   } from "../lib/composer/attachments";
   import type { Attachment, MentionItem, QueuedMessage, SendMode, SkillCommand } from "../lib/composer/types";
-  import { imageMentions, appendImageMentions } from "../lib/composer/images";
+  import { attachDraftFiles } from "../lib/composer/attachment-draft";
   import { VoiceInput } from "../lib/composer/voice-input.svelte";
   import type { ContextView } from "../lib/context-meter.svelte";
   import { describeDroppedFiles } from "../lib/desktop";
   import { composerDrafts, writeComposerAttachments, writeComposerDraft } from "../lib/composer/drafts.svelte";
   import { toast } from "../lib/toast.svelte";
   import type { ProviderInfo, ReasoningChoice } from "../lib/types";
+  import type { ComposerEdit } from "../lib/message-types";
   import { COMPOSER_FOCUS_EVENT, consumeComposerFocus } from "../lib/ui-polish";
   import ComposerBar from "./ComposerBar.svelte";
   import PromptEditor from "./composer/PromptEditor.svelte";
@@ -29,6 +28,7 @@
   import QueueTray from "./composer/QueueTray.svelte";
   import SlashMenu from "./composer/SlashMenu.svelte";
   import VoiceGlow from "./composer/VoiceGlow.svelte";
+  import Icon from "./Icon.svelte";
   import "./composer/composer-frame.css";
 
   interface Props {
@@ -46,9 +46,6 @@
     model: string;
     reasoning: ReasoningChoice;
     variant?: string | undefined;
-    accessMode: ActiveAccessMode;
-    accessChanging: boolean;
-    onAccessModeChange: (mode: AccessMode) => void;
     queued: QueuedMessage[];
     sendMode: SendMode;
     files: string[];
@@ -67,6 +64,10 @@
     onQueueRemove: (id: string) => void;
     onSendModeChange: (mode: SendMode) => void;
     onStop: () => void;
+    editing?: ComposerEdit | null | undefined;
+    editBlocked?: boolean | undefined;
+    onCancelEdit?: (() => void) | undefined;
+    onSaveEdit?: ((text: string, attachments: string[], contexts: ContextReference[], retainedAttachments: string[]) => Promise<boolean>) | undefined;
   }
 
   let {
@@ -84,9 +85,6 @@
     model,
     reasoning,
     variant,
-    accessMode,
-    accessChanging,
-    onAccessModeChange,
     queued,
     sendMode,
     files,
@@ -105,6 +103,10 @@
     onQueueRemove,
     onSendModeChange,
     onStop,
+    editing = null,
+    editBlocked = false,
+    onCancelEdit,
+    onSaveEdit,
   }: Props = $props();
 
   let text = $state("");
@@ -119,6 +121,9 @@
   let dropActive = $state(false);
   let draftTask = $state("");
   let insertedContext = 0;
+  let savingEdit = $state(false);
+  let editError = $state(false);
+  const activeDraft = $derived(editing?.key ?? composerDrafts.task);
   const voice = $derived(new VoiceInput({
     text: () => text,
     caret: () => editor?.hasFocus() ? editor.caret() : null,
@@ -132,23 +137,13 @@
   const knownPaths = $derived(new Set(files));
 
   async function pickFiles(): Promise<void> {
-    const task = composerDrafts.task;
+    const task = activeDraft;
     attachFiles(task, await onPickAttachments());
   }
 
   function attachFiles(task: string, files: PickedFile[]): void {
-    const current = task === draftTask && task === composerDrafts.task;
-    const existing = current ? attachments : composerDrafts.attachments[task] ?? [];
-    const snapshot = current ? { text, mentions } : composerDrafts.documents[task] ?? { text: "", mentions: [] };
-    const images = imageMentions(files, snapshot.mentions);
-    if (current) editor?.insertImages(images);
-    else if (images.length) {
-      const updated = appendImageMentions(snapshot, images);
-      composerDrafts.documents[task] = updated;
-      composerDrafts.values[task] = updated.text;
-    }
-    const next = addAttachments(existing, files.filter((file) => file.kind !== "image"));
-    writeComposerAttachments(task, next);
+    const current = task === draftTask && task === activeDraft;
+    const next = attachDraftFiles(task, files, current ? { text, mentions, attachments, insertImages: (images) => editor?.insertImages(images) } : undefined);
     if (current) attachments = next;
   }
 
@@ -163,7 +158,7 @@
     dropActive = false;
     const dropped = [...(event.dataTransfer?.files ?? [])];
     if (dropped.length === 0) return;
-    const task = composerDrafts.task;
+    const task = activeDraft;
     const { accepted, missing } = await describeDroppedFiles(dropped);
     attachFiles(task, accepted);
     if (missing > 0) toast.error(t("Some files could not be read. Attach them using the paperclip."));
@@ -174,7 +169,7 @@
     const hasImage = [...(event.clipboardData?.items ?? [])].some((item) => item.type.startsWith("image/"));
     if (pasted.length === 0 && !hasImage) return;
     event.preventDefault();
-    const task = composerDrafts.task;
+    const task = activeDraft;
     const { accepted } = await describeDroppedFiles(pasted);
     if (accepted.length > 0) {
       attachFiles(task, accepted);
@@ -185,7 +180,7 @@
   }
 
   $effect(() => {
-    const task = composerDrafts.task;
+    const task = activeDraft;
     if (task === draftTask) return;
     voice.cancel();
     draftTask = task;
@@ -196,22 +191,24 @@
     dropActive = false;
     closeMention();
     slashOpen = false;
+    editError = false;
+    if (editing) void tick().then(() => editor?.focus());
   });
 
   $effect(() => {
     const insertion = composerDrafts.insertion;
     if (insertion === insertedContext) return;
     insertedContext = insertion;
-    const saved = composerDrafts.documents[composerDrafts.task];
-    if (saved && saved.text !== text && composerDrafts.task === draftTask) {
+    const saved = composerDrafts.documents[activeDraft];
+    if (saved && saved.text !== text && activeDraft === draftTask) {
       text = saved.text;
       mentions = saved.mentions;
     }
   });
 
   $effect(() => {
-    if (composerDrafts.task !== draftTask) return;
-    writeComposerDraft(text, mentions);
+    if (activeDraft !== draftTask) return;
+    writeComposerDraft(text, mentions, draftTask);
     writeComposerAttachments(draftTask, attachments);
   });
 
@@ -236,9 +233,9 @@
       if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
     };
     const onVoiceEscape = (event: KeyboardEvent): void => {
-      if (event.key !== "Escape" || !voice.active) return;
-      event.preventDefault();
-      voice.cancel();
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (voice.active) { event.preventDefault(); voice.cancel(); }
+      else if (editing) { event.preventDefault(); cancelEdit(); }
     };
     if (consumeComposerFocus()) void tick().then(focusTextarea);
     window.addEventListener(COMPOSER_FOCUS_EVENT, onFocusRequest);
@@ -260,6 +257,7 @@
 
   function submit(event: SubmitEvent): void {
     event.preventDefault();
+    if (editing) { void saveEdit(); return; }
     if (!running && !voice.active && text.trim().length === 0 && attachments.length === 0) {
       if (canContinue && !controlCooldown) onContinue();
       return;
@@ -268,6 +266,7 @@
   }
 
   function sendDraft(mode: SendMode): void {
+    if (editing) { void saveEdit(); return; }
     if (voice.active || providers.length === 0) return;
     if (text.trim().length === 0 && attachments.length === 0) return;
     const paths = attachments
@@ -289,13 +288,33 @@
     editor?.focus();
   }
 
+  async function saveEdit(): Promise<void> {
+    if (!editing || savingEdit || editBlocked || voice.active || !canSend || !onSaveEdit) return;
+    savingEdit = true;
+    editError = false;
+    const paths = attachments.flatMap((attachment) => attachment.path ? [attachment.path] : []);
+    const retained = attachments.filter((attachment) => !attachment.path).map((attachment) => attachment.id);
+    const references = mentions.flatMap((mention) => mention.context ? [mention.context] : []);
+    for (const path of mentions.filter((mention) => mention.kind === "file" || mention.kind === "folder" || mention.kind === "image").map((mention) => mention.path)) if (!paths.includes(path)) paths.push(path);
+    try { editError = !(await onSaveEdit(text, paths, references, retained)); }
+    catch { editError = true; }
+    finally { savingEdit = false; }
+  }
+
+  function cancelEdit(): void {
+    if (savingEdit) return;
+    voice.cancel();
+    onCancelEdit?.();
+    void tick().then(() => editor?.focus());
+  }
+
   function closeMention(): void {
     mentionOpen = false;
     mentionQuery = "";
   }
 
   function updateComposerHints(): void {
-    if (text.startsWith("/") && !text.includes("\n")) {
+    if (!editing && text.startsWith("/") && !text.includes("\n")) {
       slashOpen = true;
       closeMention();
       return;
@@ -339,21 +358,28 @@
 
   async function selectMention(item: MentionItem): Promise<void> {
     const start = mentionStart;
-    const task = composerDrafts.task;
+    const task = activeDraft;
     const source = text;
     try {
       const resolved = await resolveMention(item);
-      if (task === composerDrafts.task && mentionOpen && source === text && start === mentionStart) editor?.insertMention(start, resolved);
+      if (task === activeDraft && mentionOpen && source === text && start === mentionStart) editor?.insertMention(start, resolved);
       closeMention();
     } catch (error) { toast.error(error instanceof Error ? error.message : String(error)); }
   }
 
   function onKeydown(event: KeyboardEvent): void {
     if (event.isComposing || event.keyCode === 229) return;
+    if (savingEdit) { event.preventDefault(); return; }
     if (event.key === "Escape" && voice.active) {
       event.preventDefault();
       event.stopPropagation();
       voice.cancel();
+      return;
+    }
+    if (event.key === "Escape" && editing) {
+      event.preventDefault();
+      event.stopPropagation();
+      cancelEdit();
       return;
     }
     if (event.key === "Escape" && running) {
@@ -380,7 +406,11 @@
 <footer class="composer-wrap" data-harness-region="composer" class:is-hero={layout === "hero"}>
   <div class="composer-stack">
     <QueueTray items={queued} onEdit={onQueueEdit} onRemove={onQueueRemove} />
-  <form class="composer" class:is-dropping={dropActive} bind:this={form} onsubmit={submit}>
+  <form class="composer" class:is-dropping={dropActive} class:is-editing={Boolean(editing)} aria-busy={savingEdit} inert={savingEdit} bind:this={form} onsubmit={submit}>
+    {#if editing}
+      <div class="composer-edit-header"><span><Icon name="edit" size={14} />{t("Editing message")}</span><button class="composer-edit-cancel" type="button" disabled={savingEdit} onclick={cancelEdit}>{t("Cancel")}</button></div>
+      {#if editError}<p class="composer-edit-error" role="alert">{t("Could not save this message. Your edit is still here. Try again.")}</p>{/if}
+    {/if}
     {#if voice.active}
       <VoiceGlow stream={voice.stream} processing={voice.state === "processing"} />
     {/if}
@@ -390,6 +420,7 @@
     {#if attachments.length > 0}
       <AttachmentStrip
         {attachments}
+        disabled={savingEdit}
         onRemove={(id) => (attachments = attachments.filter((entry) => entry.id !== id))}
       />
     {/if}
@@ -428,13 +459,15 @@
       />
     {/key}
     <ComposerBar
+      editing={Boolean(editing)}
+      editPending={savingEdit}
       {running}
       {stopping}
       {canContinue}
       {controlCooldown}
       {onContinue}
       hasDraft={text.trim().length > 0 || attachments.length > 0}
-      canSend={canSend && !voice.active}
+      canSend={canSend && !voice.active && !savingEdit && (!editing || !editBlocked)}
       voiceSupported={voice.supported}
       voiceListening={voice.state === "listening"}
       voicePending={voice.state === "requesting" || voice.state === "processing"}
@@ -451,9 +484,6 @@
       {model}
       {reasoning}
       {variant}
-      {accessMode}
-      {accessChanging}
-      {onAccessModeChange}
       onSend={(mode) => sendDraft(mode)}
       onAttach={() => void pickFiles()}
       {onModelSelect}

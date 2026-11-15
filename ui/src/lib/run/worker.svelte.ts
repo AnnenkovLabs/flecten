@@ -46,6 +46,8 @@ export class WorkerView {
   apply(envelope: Extract<AgentEvent, { type: "worker.event" }>): void {
     const event = envelope.event;
     this.usage = tokenUsageEvent(this.usage, event);
+    // Stopping a conversation also publishes an idle snapshot for a Worker that never ran.
+    if (!this.#current && event.type === "session.state" && !event.state.running) return;
     if (event.type === "session.started" || !this.#current) {
       this.stopping = false;
       this.#continuationSettled = false;

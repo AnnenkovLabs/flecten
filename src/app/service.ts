@@ -4,14 +4,11 @@ import type { HarnessConfig } from "../config/schema";
 import { createSession, type SessionOptions } from "../core/session/session";
 import { catalogStatus, providerFromCatalog, syncCatalog } from "../providers/catalog";
 import { discoverProvider } from "../providers/discovery";
-import { createProvider } from "../providers/registry";
-import type { ModelProvider } from "../providers/types";
 import { PermissionEngine } from "../security/permissions";
 import type { PermissionRule } from "../security/types";
 import { discoverSkills } from "../skills/discover";
 import type { SkillActivations } from "../skills/tool";
 import { loadSessionMedia, saveSessionMedia } from "../store/attachments";
-import { pageSink } from "../store/pages";
 import { sessionPaths } from "../store/paths";
 import { saveQueue } from "../store/queue";
 import { appInfo } from "./app-info";
@@ -29,22 +26,18 @@ import {
 import { testHook } from "./hook-test";
 import { IdeTerminal } from "./ide-terminal";
 import { projectMemory } from "./memory";
+import { messageBranches } from "./message-branches";
 import { moduleService } from "./modules";
 import { configWithRememberedRules } from "./permission-persistence";
 import { projectTrust, saveProjectTrust } from "./project-trust";
+import { providerAutoRefresh } from "./provider-auto-refresh";
 import { providerOps } from "./provider-ops";
 import { configSecrets } from "./provider-secrets";
-import {
-  describeProviderError,
-  hydrateActiveModel,
-  maxOutputTokens,
-  modelContext,
-  unconfiguredProvider,
-} from "./provider-state";
+import { hydrateActiveModel } from "./provider-state";
 import { autoResumable, markInterrupted } from "./recovery";
 import { RunSpend } from "./run-spend";
 import { RESUME_PROMPT, slashCommands } from "./service-commands";
-import { inputModalities, osSandboxFor, permissionRules, sandboxFor } from "./service-policy";
+import { osSandboxFor, permissionRules, sandboxFor } from "./service-policy";
 import { settingsActions } from "./service-settings";
 import type { AppInfo, AppService } from "./service-types";
 import {
@@ -53,9 +46,15 @@ import {
   runBudgets,
   systemPrompt,
   terminalSettings,
-  usagePrice,
 } from "./session-config";
 import { sessionRetention } from "./session-history";
+import {
+  configuredProvider,
+  sessionModelOptions,
+  sessionModelTools,
+} from "./session-model-options";
+import { sessionModels } from "./session-models";
+import { sessionPages } from "./session-pages";
 import { SessionPool } from "./session-pool";
 import { sessionModelHistory } from "./session-replay";
 import { restoredSession } from "./session-restore";
@@ -65,13 +64,13 @@ import { subagentChildRunner } from "./subagent-child";
 import { appSubagents, subagentToolCatalog } from "./subagents";
 import { translationOptions } from "./translation";
 import { createTwin } from "./twin";
-import { visionOptions } from "./vision";
 import { voiceService } from "./voice";
 
 export type * from "./service-types";
 export async function createAppService(
   cwd: string,
   projectRoot: string | null = cwd,
+  onRefresh?: () => void,
 ): Promise<AppService> {
   let config: HarnessConfig = await loadConfig(cwd, productEnv("CONFIG"));
   const voice = voiceService(() => config);
@@ -118,6 +117,7 @@ export async function createAppService(
     () => modules.runtime.services(),
     () => modules.runtime.project.prepare(new AbortController().signal),
   );
+  const models = sessionModels(logs);
   await modules.runtime.project.prepare(new AbortController().signal);
   let tools = registryFor(() => extensions, config, modules.runtime.tool);
   let prompt = await systemPrompt(cwd, config, extensions.sections, tools, undefined, projectRoot);
@@ -154,22 +154,7 @@ export async function createAppService(
   const shell = new ShellSnapshots(cwd, checkpoints, projectRoot !== null);
   shell.configure(config);
 
-  let configError: string | undefined;
-  const buildProvider = (): ModelProvider => {
-    try {
-      const active = createProvider(config);
-      configError = undefined;
-      return active.provider;
-    } catch (error) {
-      configError = describeProviderError(
-        error,
-        config.provider,
-        config.providers[config.provider],
-      );
-      return unconfiguredProvider(error, config.model);
-    }
-  };
-  let provider = buildProvider();
+  let { provider, configError } = configuredProvider(config);
   const twin = await createTwin(cwd, { config: () => config, provider: () => provider });
   const runChild = subagentChildRunner({
     modules: modules.runtime,
@@ -234,56 +219,49 @@ export async function createAppService(
     subagents = subagentsFor();
     subagentToolCatalog(tools, subagents);
     prompt = await systemPrompt(cwd, config, extensions.sections, tools, undefined, projectRoot);
-    pool.update({
-      tools,
+    pool.update((id) => ({
+      tools: sessionModelTools(models.config(config, id), tools),
       system: prompt.system,
       systemParts: prompt.systemParts,
       promptStamp: prompt.stamp,
       hooks: trusted ? config.hooks : {},
       subagentRunnerFactory: subagents.factory,
-    });
+    }));
   }
 
-  const liveOptions = () =>
-    ({
-      provider,
+  const liveOptions = (sessionId?: string) => {
+    const current = models.config(config, sessionId);
+    return {
+      ...sessionModelOptions(current, current === config ? provider : undefined),
       modules: modules.runtime,
-      vision: visionOptions(config),
-      language: config.conversation?.enabled ? undefined : language(config),
-      providerId: config.provider,
+      language: config.conversation?.enabled ? undefined : language(current),
       secrets: () => configSecrets(config),
-      model: config.model,
-      tools,
+      tools: sessionModelTools(current, tools),
       system: prompt.system,
       systemParts: prompt.systemParts,
       promptStamp: prompt.stamp,
       limits: config.tools,
-      maxOutputTokens: maxOutputTokens(config),
-      reasoning: config.reasoning,
-      variant: config.variant,
-      context: modelContext(config),
       loop: config.loop,
       ...(trusted ? { hooks: config.hooks } : {}),
       permissions,
       approvalTimeoutMs: approvalTimeout(config),
       budgets: runBudgets(config),
-      price: usagePrice(config),
       sandbox,
       osSandbox,
       security: () => ({ sandbox, osSandbox }),
       terminal: terminalSettings(config),
       shellCheckpoints: shell.service,
-      modalities: inputModalities(config),
       memory: memory.port,
       dictionary: { list: async () => (await dictionary.list()).entries },
-    }) satisfies Partial<SessionOptions>;
+    } satisfies Partial<SessionOptions>;
+  };
 
-  const sessionOptions = (): SessionOptions => ({
+  const sessionOptions = (sessionId?: string): SessionOptions => ({
     cwd,
-    ...liveOptions(),
+    ...liveOptions(sessionId),
     checkpoints,
     subagentRunnerFactory: subagents.factory,
-    pages: (sessionId) => pageSink(sessionPaths(cwd, sessionId), () => configSecrets(config)),
+    pages: sessionPages(cwd, logs, () => configSecrets(config)),
     expandPrompt: commands.expand,
     logDir: (sessionId) => sessionPaths(cwd, sessionId).logs,
     loadHistory: (sessionId) => sessionModelHistory(cwd, sessionId, skillActivations, logs),
@@ -292,7 +270,6 @@ export async function createAppService(
     saveQueue: (sessionId, queue) => saveQueue(cwd, sessionId, queue),
     onEvent: (event) => logs.persist(event),
   });
-
   const pool = new SessionPool({
     maxActive: () => config.sessions?.maxConcurrent ?? 4,
     beforeRun: async () => {
@@ -301,10 +278,15 @@ export async function createAppService(
     },
     secrets: () => configSecrets(config),
     async create(sessionId) {
-      const options = { ...sessionOptions(), ...(await restoredSession(cwd, sessionId, logs)) };
+      if (sessionId) await models.load(sessionId);
+      const options = {
+        ...sessionOptions(sessionId),
+        ...(await restoredSession(cwd, sessionId, logs)),
+      };
       const events = sessionId ? await logs.read(sessionId) : [];
       if (
-        (config.conversation?.enabled && events.length === 0) ||
+        (config.conversation?.enabled &&
+          !events.some((event) => event.type === "session.started")) ||
         events.some(
           (event) =>
             event.type === "worker.event" ||
@@ -315,7 +297,14 @@ export async function createAppService(
           events,
           twin,
           configure: (current, execute, answer) =>
-            conversationOptions(current, config, extensions.sections, execute, answer, projectRoot),
+            conversationOptions(
+              current,
+              models.config(config, sessionId),
+              extensions.sections,
+              execute,
+              answer,
+              projectRoot,
+            ),
         });
       }
       return createSession(options);
@@ -330,28 +319,33 @@ export async function createAppService(
     logs,
     (id) => spend.delete(id),
   );
-  pool.subscribe((event) => spend.note(event));
+  pool.subscribe((event) => {
+    spend.note(event);
+    models.note(event);
+  });
 
-  const info = (): AppInfo => {
-    const focused = pool.getSessionId();
-    return appInfo({
-      cwd,
-      projectRoot,
-      config,
-      cost: spend.get(focused)?.cost,
-      trustRequired,
-      trusted,
-      trustState,
-      extensions,
-      memoryRecords: memory.count,
-      prompt: prompt.stamp,
-      shell: shell.state,
-      configError,
-    });
+  const info = (sessionId?: string): AppInfo => {
+    return {
+      ...appInfo({
+        cwd,
+        projectRoot,
+        config: models.config(config, sessionId),
+        cost: spend.get(sessionId ?? pool.getSessionId())?.cost,
+        trustRequired,
+        trusted,
+        trustState,
+        extensions,
+        memoryRecords: memory.count,
+        prompt: prompt.stamp,
+        shell: shell.state,
+        configError,
+      }),
+      ...(sessionId ? { sessionId } : {}),
+    };
   };
 
   async function apply(): Promise<void> {
-    provider = buildProvider();
+    ({ provider, configError } = configuredProvider(config));
     permissions.replaceRules({
       rules: permissionRules(config),
       destructive: destructivePolicy(config),
@@ -361,11 +355,14 @@ export async function createAppService(
     tools.setLimits(config.tools);
     shell.configure(config);
     await refreshExtensions();
-    pool.update(liveOptions());
+    pool.update(liveOptions);
   }
   function commit(next: HarnessConfig | (() => HarnessConfig), clearSecrets: string[] = []) {
     return serialized(async () => {
-      if (typeof next === "function") next = next();
+      if (typeof next === "function") {
+        next = next();
+        if (next === config) return;
+      }
       await saveConfig(cwd, next, { clearSecrets });
       config = await loadConfig(cwd, productEnv("CONFIG"));
       await apply();
@@ -378,16 +375,7 @@ export async function createAppService(
     info,
   });
 
-  if (config.catalog.autoRefresh) {
-    void catalogStatus(cwd)
-      .then((status) => (status.stale ? syncCatalog(cwd) : status))
-      .catch(() => undefined);
-    const timer = setInterval(
-      () => void syncCatalog(cwd).catch(() => undefined),
-      Math.max(config.catalog.ttlMs, 60 * 60 * 1000),
-    );
-    timer.unref?.();
-  }
+  const providerRefresh = providerAutoRefresh({ cwd, config: () => config, commit, onRefresh });
 
   async function acceptTrust() {
     if (projectRoot === null || trusted) return info();
@@ -433,7 +421,17 @@ export async function createAppService(
       await refreshExtensions();
       return commands.list();
     },
-    ...settingsActions(() => config, commit, info),
+    ...settingsActions(
+      () => config,
+      commit,
+      info,
+      async (input) => {
+        const event = await models.select(input.sessionId, input);
+        pool.updateSession(input.sessionId, liveOptions(input.sessionId));
+        pool.publish(event);
+        return info(input.sessionId);
+      },
+    ),
     discover: (input) => discoverProvider(cwd, input),
     listSessions: async (options) => {
       await retention.maintain();
@@ -444,6 +442,7 @@ export async function createAppService(
       return logs.list({ ...options, query });
     },
     readSession: (id) => logs.read(id),
+    ...messageBranches(pool, logs, sessionOptions),
     renameSession: (id, title) => logs.rename(id, title),
     async deleteSession(id, input) {
       const confirmed = input === true || (typeof input === "object" && input.confirm === true);
@@ -456,6 +455,7 @@ export async function createAppService(
     },
     forkSession: (id, options) => logs.fork(id, options),
     test: providers.test,
+    modelMetadata: providers.modelMetadata,
     registerDraft: providers.registerDraft,
     acceptTrust,
     rejectTrust,
@@ -479,12 +479,14 @@ export async function createAppService(
       };
     },
     async dispose() {
+      await providerRefresh.dispose();
       await retention.settled();
       voice.dispose();
       await twin.dispose();
       await ideTerminal.dispose();
       extensionControl.close();
       await pool.dispose();
+      await models.settled();
       await writes.catch(() => undefined);
       await Promise.all([shell.settled(), pruning]);
       await logs.closeAll();

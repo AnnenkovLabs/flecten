@@ -11,7 +11,8 @@
       "ui/svelte.config.js",
       "!!.kilo",
       "!!.deploy",
-      "!!src/marketplace"
+      "!!src/marketplace",
+      "!!tests/fixtures/modules"
     ]
   },
   "formatter": {

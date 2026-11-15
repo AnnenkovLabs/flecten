@@ -65,9 +65,10 @@ export async function projectTwin(options: TwinOptions) {
   const writable = () => {
     if (loadError) throw new Error(loadError);
   };
-  const save = () => {
+  const save = async (next: TwinState, signal?: AbortSignal) => {
     writable();
-    return store.save(state);
+    await store.save(next, signal);
+    state = next;
   };
 
   async function get(): Promise<TwinSnapshot> {
@@ -105,6 +106,7 @@ export async function projectTwin(options: TwinOptions) {
     if (operation) throw new Error("Twin is already learning. Cancel the current import first.");
     if (state.candidates.length > 88)
       throw new Error("Review pending candidates before importing more history.");
+    const target = options.target();
     const controller = new AbortController();
     samples = [];
     operation = controller;
@@ -113,17 +115,24 @@ export async function projectTwin(options: TwinOptions) {
       lifetime.signal,
       AbortSignal.timeout(120_000),
     ]);
-    const target = options.target();
-    state.sourceIds = [...new Set(sourceIds)];
-    state.training = {
-      ...idleTraining(),
-      state: "reading",
-      provider: target.providerId,
-      model: target.model,
-    };
     const execute = async () => {
+      let usage = idleTraining().usage;
       try {
-        await save();
+        await mutex.run(() =>
+          save(
+            {
+              ...state,
+              sourceIds: [...new Set(sourceIds)],
+              training: {
+                ...idleTraining(),
+                state: "reading",
+                provider: target.providerId,
+                model: target.model,
+              },
+            },
+            signal,
+          ),
+        );
         const selected = await Promise.all(
           definitions
             .filter((source) => sourceIds.includes(source.id))
@@ -153,39 +162,47 @@ export async function projectTwin(options: TwinOptions) {
             sessions.add(sessionKey);
           }
         };
-        let sessionFiles = 0;
         for (const source of selected) {
           signal.throwIfAborted();
           if (source.database) add(await sourceMessages(source, options.secrets(), signal));
           for (const file of source.files) {
             if (
-              sessionFiles >= TWIN_LIMITS.maxSessions ||
+              sessions.size >= TWIN_LIMITS.maxSessions ||
               messages.length >= TWIN_LIMITS.maxMessages ||
               characters >= TWIN_LIMITS.maxInputCharacters
             )
               break;
             signal.throwIfAborted();
-            sessionFiles += 1;
             try {
               add(await readSession(source, file, options.secrets(), signal));
             } catch (error) {
               signal.throwIfAborted();
               source.source.warnings.push(
-                `Session could not be read: ${error instanceof Error ? error.message : String(error)}`,
+                safeMemoryText(
+                  `Session could not be read: ${error instanceof Error ? error.message : String(error)}`,
+                  options.secrets(),
+                ).slice(0, 1000),
               );
             }
           }
         }
         signal.throwIfAborted();
-        state.training.sessions = sessions.size;
-        state.training.messages = messages.length;
         if (!messages.length) {
-          state.training = {
-            ...state.training,
-            state: "ready",
-            message: "No new supported user messages were found. No model request was made.",
-          };
-          await save();
+          await mutex.run(() =>
+            save(
+              {
+                ...state,
+                training: {
+                  ...state.training,
+                  sessions: sessions.size,
+                  messages: 0,
+                  state: "ready",
+                  message: "No new supported user messages were found. No model request was made.",
+                },
+              },
+              signal,
+            ),
+          );
           return;
         }
         samples = messages.slice(0, 16).map((message) => ({
@@ -193,8 +210,20 @@ export async function projectTwin(options: TwinOptions) {
           sessionId: message.sessionId,
           quote: safeMemoryText(message.text, options.secrets()).slice(0, 4000),
         }));
-        state.training.state = "learning";
-        await save();
+        await mutex.run(() =>
+          save(
+            {
+              ...state,
+              training: {
+                ...state.training,
+                sessions: sessions.size,
+                messages: messages.length,
+                state: "learning",
+              },
+            },
+            signal,
+          ),
+        );
         const snapshot = await get();
         const result = await learn(
           target,
@@ -203,46 +232,74 @@ export async function projectTwin(options: TwinOptions) {
           options.secrets(),
           signal,
         );
+        usage = result.usage;
         signal.throwIfAborted();
         await mutex.run(async () => {
           signal.throwIfAborted();
-          const additions = result.candidates.filter(
-            (candidate) => !state.entries.some((prior) => prior.id === candidate.id),
-          );
+          const known = new Set(state.entries.map((entry) => entry.id));
+          const additions = result.candidates.filter((candidate) => {
+            if (known.has(candidate.id)) return false;
+            known.add(candidate.id);
+            return true;
+          });
           if (state.entries.length + additions.length > TWIN_LIMITS.maxProfileEntries)
             throw new Error("Twin profile is full. Remove obsolete traits before learning more.");
-          state.entries.push(
-            ...additions.map((candidate) => ({
-              ...candidate,
-              revision: 1,
-              updatedAt: new Date().toISOString(),
-            })),
+          await save(
+            {
+              ...state,
+              enabled: state.enabled || result.candidates.length > 0,
+              entries: [
+                ...state.entries,
+                ...additions.map((candidate) => ({
+                  ...candidate,
+                  revision: 1,
+                  updatedAt: new Date().toISOString(),
+                })),
+              ],
+              // ponytail: retain 5000 message hashes; add a source cursor if long-running imports exceed this bound.
+              processed: [
+                ...new Set([...state.processed, ...messages.map((message) => message.digest)]),
+              ].slice(-5000),
+              training: {
+                ...state.training,
+                state: "ready",
+                message:
+                  "Twin learned these reactions and can now represent your taste to the Worker. You can edit any trait.",
+                usage,
+              },
+            },
+            signal,
           );
-          // ponytail: retain 5000 message hashes; add a source cursor if long-running imports exceed this bound.
-          state.processed = [
-            ...new Set([...state.processed, ...messages.map((message) => message.digest)]),
-          ].slice(-5000);
-          state.training = {
-            ...state.training,
-            state: "ready",
-            message:
-              "Twin learned these reactions and can now represent your taste to the Worker. You can edit any trait.",
-            usage: result.usage,
-          };
-          if (result.candidates.length) state.enabled = true;
-          await save();
         });
       } catch (error) {
-        state.training = {
-          ...state.training,
-          ...(error instanceof TwinInferenceError ? { usage: error.usage } : {}),
-          state: controller.signal.aborted || lifetime.signal.aborted ? "cancelled" : "error",
-          message: safeMemoryText(
-            error instanceof Error ? error.message : String(error),
-            options.secrets(),
-          ).slice(0, 2000),
-        };
-        await save();
+        await mutex.run(async () => {
+          const failed: TwinState = {
+            ...state,
+            training: {
+              ...state.training,
+              usage: error instanceof TwinInferenceError ? error.usage : usage,
+              state: controller.signal.aborted || lifetime.signal.aborted ? "cancelled" : "error",
+              message: safeMemoryText(
+                error instanceof Error ? error.message : String(error),
+                options.secrets(),
+              ).slice(0, 2000),
+            },
+          };
+          try {
+            await save(failed);
+          } catch (saveError) {
+            state = {
+              ...state,
+              training: {
+                ...failed.training,
+                message: safeMemoryText(
+                  `${failed.training.message}\nTraining status could not be saved: ${saveError instanceof Error ? saveError.message : String(saveError)}`,
+                  options.secrets(),
+                ).slice(0, 2000),
+              },
+            };
+          }
+        });
       } finally {
         samples = [];
         operation = undefined;
@@ -267,11 +324,16 @@ export async function projectTwin(options: TwinOptions) {
           throw new Error("Twin revision conflict. Reload before editing this trait.");
         if (safeMemoryText(JSON.stringify(parsed), options.secrets()) !== JSON.stringify(parsed))
           throw new Error("Remove credentials before saving a trait.");
-        Object.assign(entry, parsed.edits, {
+        const updated = {
+          ...entry,
+          ...parsed.edits,
           revision: entry.revision + 1,
           updatedAt: new Date().toISOString(),
+        };
+        await save({
+          ...state,
+          entries: state.entries.map((current) => (current.id === entry.id ? updated : current)),
         });
-        await save();
         return get();
       });
     },
@@ -279,9 +341,11 @@ export async function projectTwin(options: TwinOptions) {
       const parsed = TwinConfigureSchema.parse(input);
       return mutex.run(async () => {
         writable();
-        if (parsed.enabled !== undefined) state.enabled = parsed.enabled;
-        if (parsed.sourceIds !== undefined) state.sourceIds = [...new Set(parsed.sourceIds)];
-        await save();
+        await save({
+          ...state,
+          ...(parsed.enabled === undefined ? {} : { enabled: parsed.enabled }),
+          ...(parsed.sourceIds === undefined ? {} : { sourceIds: [...new Set(parsed.sourceIds)] }),
+        });
         return get();
       });
     },
@@ -297,21 +361,29 @@ export async function projectTwin(options: TwinOptions) {
         const candidate = state.candidates.find((item) => item.id === candidateId);
         if (!candidate)
           throw new Error("Candidate no longer exists. Reload Twin before reviewing it.");
+        let entries = state.entries;
         if (action === "accept") {
           const accepted = TwinCandidateSchema.parse({ ...candidate, ...edits });
           if (
             safeMemoryText(JSON.stringify(accepted), options.secrets()) !== JSON.stringify(accepted)
           )
             throw new Error("Remove credentials before saving a preference.");
-          if (state.entries.length >= TWIN_LIMITS.maxProfileEntries)
-            throw new Error(
-              "Twin profile is full. Forget an obsolete trait before adding another.",
-            );
-          if (!state.entries.some((entry) => entry.id === accepted.id))
-            state.entries.push({ ...accepted, revision: 1, updatedAt: new Date().toISOString() });
+          if (!entries.some((entry) => entry.id === accepted.id)) {
+            if (entries.length >= TWIN_LIMITS.maxProfileEntries)
+              throw new Error(
+                "Twin profile is full. Forget an obsolete trait before adding another.",
+              );
+            entries = [
+              ...entries,
+              { ...accepted, revision: 1, updatedAt: new Date().toISOString() },
+            ];
+          }
         }
-        state.candidates = state.candidates.filter((item) => item.id !== candidateId);
-        await save();
+        await save({
+          ...state,
+          entries,
+          candidates: state.candidates.filter((item) => item.id !== candidateId),
+        });
         return get();
       });
     },
@@ -323,8 +395,7 @@ export async function projectTwin(options: TwinOptions) {
         if (!entry) throw new Error("Twin trait not found");
         if (entry.revision !== expectedRevision)
           throw new Error("Twin revision conflict. Reload before forgetting this trait.");
-        state.entries = state.entries.filter((entry) => entry.id !== id);
-        await save();
+        await save({ ...state, entries: state.entries.filter((entry) => entry.id !== id) });
         return get();
       });
     },
@@ -346,7 +417,7 @@ export async function projectTwin(options: TwinOptions) {
           {
             sourceId: "liquid",
             sessionId: "twin-editor",
-            reference: parsed.path ? `Twin correction: ${parsed.path}` : "Twin profile editor",
+            reference: parsed.path ?? "Twin profile editor",
             digest: memoryDigest(quote),
             quote,
           },
@@ -354,11 +425,18 @@ export async function projectTwin(options: TwinOptions) {
       };
       return mutex.run(async () => {
         writable();
-        if (state.entries.length >= TWIN_LIMITS.maxProfileEntries)
-          throw new Error("Twin profile is full. Forget an obsolete trait before adding another.");
-        if (!state.entries.some((entry) => entry.id === candidate.id))
-          state.entries.push({ ...candidate, revision: 1, updatedAt: new Date().toISOString() });
-        await save();
+        let entries = state.entries;
+        if (!entries.some((entry) => entry.id === candidate.id)) {
+          if (entries.length >= TWIN_LIMITS.maxProfileEntries)
+            throw new Error(
+              "Twin profile is full. Forget an obsolete trait before adding another.",
+            );
+          entries = [
+            ...entries,
+            { ...candidate, revision: 1, updatedAt: new Date().toISOString() },
+          ];
+        }
+        await save({ ...state, entries });
         return get();
       });
     },

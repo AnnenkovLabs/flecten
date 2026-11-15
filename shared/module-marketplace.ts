@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { ModuleIdSchema } from "./modules";
 
-/** Live catalog of the Flecten repository; GitHub serves it once the repository is public. */
-export const FLECTEN_MARKETPLACE_URL =
-  "https://raw.githubusercontent.com/AnnenkovLabs/flecten/main/src/marketplace/index.json";
-
 export const MarketplaceUrlSchema = z
   .url()
   .max(2048)

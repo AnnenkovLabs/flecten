@@ -14,6 +14,7 @@ import part18 from "./editor-2";
 import part19 from "./editor-3";
 import hooks from "./hooks";
 import marketplace from "./marketplace";
+import messageHistory from "./message-history";
 import modules from "./modules";
 import projects from "./projects";
 import part13 from "./providers";
@@ -41,6 +42,7 @@ export default {
   ...vision,
   ...modules,
   ...marketplace,
+  ...messageHistory,
   ...tools,
   ...context,
   ...part0,

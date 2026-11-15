@@ -120,6 +120,12 @@ export default {
   "optional for a local server": "необов’язково для локального сервера",
   "Scanning API…": "Сканування API…",
   "Connect and find models": "Підключити й знайти моделі",
+  "Check connection before adding": "Перевіряти підключення перед додаванням",
+  "Turn off if your provider blocks checks. Add models manually after adding the provider.":
+    "Вимкніть, якщо провайдер блокує перевірку. Після додавання вкажіть моделі вручну.",
+  "Add without checking": "Додати без перевірки",
   "The app will get the model list from the API and fill in context limits and capabilities from the catalog.":
     "Програма отримає список моделей з API та доповнить дані про контекст і можливості з каталогу.",
+  "Provider added without checking. Add models manually in the Models tab.":
+    "Провайдера додано без перевірки. Вкажіть моделі вручну на вкладці «Моделі».",
 } as const;

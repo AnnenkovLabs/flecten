@@ -177,6 +177,14 @@ export const ProviderConfigSchema = z
     name: z.string().min(1).optional(),
     headers: z.record(z.string(), z.string()).default({}),
     models: z.record(z.string(), ModelConfigSchema).default({}),
+    modelAutoRefresh: z
+      .object({
+        enabled: z.boolean().default(false),
+        overwriteManual: z.boolean().default(false),
+      })
+      .optional(),
+    // Each field tracks its last automatic value; protected fields may come from older imports.
+    modelMetadataBaseline: z.record(z.string(), z.object(ModelConfigSchema.shape)).optional(),
     reasoningReplay: ReasoningReplaySchema.default("auto"),
     reasoningDetails: z.enum(["auto", "always", "never"]).default("auto"),
     thinking: z.enum(["auto", "enabled", "disabled"]).default("auto"),

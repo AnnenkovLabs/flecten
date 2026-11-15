@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "category": "product-business",
+  "entries": [
+    {
+      "id": "mera-tw104fae8b",
+      "term": "GEO (Generative Engine Optimization) / AEO",
+      "aliases": [
+        "Generative Engine Optimization",
+        "GEO оптимизация",
+        "GEO стратегия",
+        "AEO",
+        "Answer Engine Optimization",
+        "цитируемость в ИИ-ответах",
+        "генеративная оптимизация"
+      ],
+      "category": "product-business",
+      "definition": "Optimising content to be cited and recommended inside AI-generated answers (ChatGPT, Perplexity, Gemini, Google AI Overviews / AI Mode) rather than to rank in a list of blue links. AEO (Answer Engine Optimization) is the narrower sibling aimed at direct answer extraction; the stack is treated as cumulative - SEO for crawlability, AEO for extractable structure, GEO for entity authority and citation frequency. Note GEO here is *not* geographic/local SEO. In practice: marketing briefs now say \"we need a GEO strategy\" meaning measure and increase brand citations in LLM answers, tracked as share-of-voice in AI responses. По-русски: нужна GEO-стратегия: чтобы бренд цитировали в ответах ChatGPT и Perplexity (since 2024 concept, mainstream 2025)",
+      "clarification": "Not geographic or local SEO and not geotargeting; not classic blue-link ranking work.",
+      "sources": ["https://ahrefs.com/blog/geo-generative-engine-optimization/"]
+    },
+    {
+      "id": "mera-tw4b4c314f",
+      "term": "AI slop",
+      "aliases": ["слоп", "ии-слоп", "slop PR", "слоп контент", "нагенерённый слоп"],
+      "category": "product-business",
+      "definition": "Low-quality, mass-produced AI-generated content - text, images, video, code, PRs - churned out with no human curation, valued for volume rather than substance. It was named 2025 word of the year by major dictionaries and is now the standard pejorative in editorial, moderation and code-review contexts (\"slop PR\", \"slop farm\"). In practice: a maintainer closes an issue saying \"this is slop\" meaning AI-generated, unverified and not worth reviewing. По-русски: закрой этот PR - это слоп, сгенерённый ИИ и никем не проверенный (since 2024, mainstream 2025 (2025 word of the year))",
+      "clarification": "Not literal waste or pig feed and not generic spam; it means unreviewed mass-produced AI content.",
+      "sources": ["https://www.merriam-webster.com/wordplay/word-of-the-year"]
+    },
+    {
+      "id": "mera-tw6e5c2dfd",
+      "term": "Workslop",
+      "aliases": ["work slop", "воркслоп", "рабочий слоп", "имитация работы от ИИ"],
+      "category": "product-business",
+      "definition": "AI-generated workplace output - decks, reports, emails, PRDs - that looks like completed work but lacks substance, so it shifts the real effort onto the recipient who must decode or redo it. Coined in a Harvard Business Review piece with BetterUp/Stanford research quantifying the hours lost per incident; it names the specific cost of AI-enabled *appearance* of productivity. In practice: managers say \"that doc is workslop\" meaning it passes back the work rather than doing it. По-русски: этот отчёт - воркслоп: выглядит как работа, но переваливает её на читателя (since September 2025)",
+      "clarification": "Not general busywork or workplace drudgery; it is AI output that pushes the real work onto the recipient.",
+      "sources": ["https://hbr.org/2025/09/ai-generated-workslop-is-destroying-productivity"]
+    },
+    {
+      "id": "mera-tw1cd205be",
+      "term": "Agentic AI / AI-native / Services-as-Software / outcome-based pricing",
+      "aliases": [
+        "Agentic AI",
+        "AI-native",
+        "Services-as-Software",
+        "outcome-based pricing",
+        "AI-native продукт",
+        "агентный ИИ",
+        "агентик AI",
+        "оплата за результат",
+        "сервис как софт"
+      ],
+      "category": "product-business",
+      "definition": "The current business vocabulary stack. **Agentic** describes systems that plan, use tools and execute multi-step work without step-by-step human prompting (as opposed to a chatbot or copilot). **AI-native** describes a product architected around those agents rather than retrofitted with AI features. **Services-as-Software** is the delivery model where software returns a finished business outcome (a resolved ticket, a qualified lead) rather than a tool for a human to do the work - and **outcome-based pricing** is its commercial form: charging per resolved ticket or task completed instead of per seat. In practice: a brief says \"make it agentic, price it per resolution\" meaning autonomous multi-step execution billed on outcomes, not seats. По-русски: сделай продукт агентным и с оплатой за результат, а не за место (since 2024-2025, dominant 2025-2026)",
+      "clarification": "Do not call any LLM feature 'agentic', equate AI-native with having a chatbot, or assume per-seat SaaS pricing.",
+      "sources": ["https://www.anthropic.com/engineering/building-effective-agents"]
+    }
+  ]
+}

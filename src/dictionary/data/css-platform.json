@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "category": "css-platform",
+  "entries": [
+    {
+      "id": "mera-twa9238de2",
+      "term": "CSS if()",
+      "aliases": [
+        "CSS if",
+        "if() in CSS",
+        "css-if",
+        "условная функция CSS",
+        "if() условие в CSS",
+        "инлайн style() запрос"
+      ],
+      "category": "css-platform",
+      "definition": "A CSS value-level conditional function that shipped in Chrome 137 (27 May 2025). It evaluates `style()`, `media()` and `supports()` queries inline inside a declaration and returns the matching value, with an `else` branch - bringing branching logic into property values without a separate rule or `@media` block. Not to be confused with SCSS/Less `if()` preprocessor conditionals or with the older `@supports`/`@media` at-rules. In practice: developers write `background: if(style(--variant: danger): red; else: gray)` to branch a single property on a custom-property \"flag\" instead of duplicating selectors. По-русски: хочу условие прямо в значении CSS-свойства - через if() со style(), без дублирования правил (since May 2025)",
+      "clarification": "Not Sass @if, Less conditionals or the custom-property space-toggle hack; not duplicated selectors with @media.",
+      "sources": ["https://developer.chrome.com/blog/if-article"]
+    },
+    {
+      "id": "mera-tw55ab1f88",
+      "term": "CSS anchor positioning (anchor-name / position-anchor / position-area)",
+      "aliases": [
+        "CSS anchor positioning",
+        "anchor-name / position-anchor / position-area",
+        "anchor-name",
+        "position-anchor",
+        "position-area",
+        "inset-area",
+        "position-try-fallbacks",
+        "якорное позиционирование CSS",
+        "анкор позишенинг"
+      ],
+      "category": "css-platform",
+      "definition": "A layout API that tethers an absolutely/fixed-positioned element to one or more \"anchor\" elements without affecting surrounding layout, using `anchor-name`, `position-anchor`, the `anchor()` function, the `position-area` grid, and `position-try-fallbacks` for overflow recovery. As of September 2026 it is supported across all major browsers, so it has moved from \"Chrome-only experiment\" to the default recommendation for tooltips, menus and popovers. Note the property was renamed from `inset-area` to `position-area` during standardization. In practice: developers say \"anchor the tooltip with `position-area: block-start span-inline-end` and a `position-try-fallbacks` list\" instead of pulling in Floating UI / Popper. По-русски: привяжи тултип к кнопке на чистом CSS через anchor-name и position-area, без Floating UI (since 2024 (Chrome 125), interoperable 2026)",
+      "clarification": "Not Popper.js or Floating UI, not Chrome-only behind a flag, and never the renamed-away inset-area property.",
+      "sources": [
+        "https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Anchor_positioning/Using"
+      ]
+    },
+    {
+      "id": "mera-twbd8d545a",
+      "term": "CSS @function (custom functions)",
+      "aliases": [
+        "CSS @function",
+        "custom functions",
+        "@function at-rule",
+        "custom CSS functions",
+        "кастомные функции в CSS",
+        "своя функция на CSS",
+        "@function правило"
+      ],
+      "category": "css-platform",
+      "definition": "An at-rule that lets authors define reusable, parameterised custom CSS functions returning a value, with typed parameters, defaults, local custom properties and conditional logic inside the body. Shipped in Chrome 139 (August 2025). Not to be confused with `@property` (which registers a custom property's type) or with preprocessor mixins/functions. In practice: developers write `@function --fluid(--min, --max) { result: clamp(…) }` and then call `font-size: --fluid(1rem, 3rem)` in place of a Sass function. По-русски: объяви свою функцию на CSS через @function и вызывай её в font-size вместо Sass (since August 2025)",
+      "clarification": "Not a Sass/Less function or mixin and not @property plus calc(); do not say CSS cannot define functions.",
+      "sources": ["https://developer.chrome.com/blog/new-in-chrome-139"]
+    },
+    {
+      "id": "mera-tw83d37cf9",
+      "term": "sibling-index() / sibling-count()",
+      "aliases": [
+        "sibling-index",
+        ") / sibling-count(",
+        "sibling-count()",
+        "sibling-index()",
+        "индекс соседа в CSS",
+        "css sibling index",
+        "нумерация соседних элементов"
+      ],
+      "category": "css-platform",
+      "definition": "CSS tree-counting functions (Chrome 138) that return an element's 1-based position among its siblings and the total sibling count as integers usable directly in values and inside `calc()`. They remove the need to write out per-item `--i: n` custom properties or long `:nth-child()` chains for staggered animation and index-derived styling. In practice: developers write `transition-delay: calc(sibling-index() * 50ms)` to stagger a list without any JS or inline style index. По-русски: сделай стаггер-задержку через sibling-index(), без --i из шаблона (since June 2025)",
+      "clarification": "Not a JS-set --i custom property, an inline style index, or long :nth-child() chains.",
+      "sources": ["https://developer.chrome.com/blog/new-in-chrome-138"]
+    },
+    {
+      "id": "mera-tw1420804d",
+      "term": "text-box-trim / text-box-edge / text-box",
+      "aliases": [
+        "text-box-trim",
+        "text-box-edge",
+        "text-box",
+        "text-box: trim-both",
+        "leading-trim",
+        "text-edge",
+        "vertical trim",
+        "обрезка полулидинга",
+        "тримминг текста CSS"
+      ],
+      "category": "css-platform",
+      "definition": "CSS properties that trim a font's half-leading from the block-start and/or block-end edge of a text box, using font metrics (`cap`, `ex`, `text`, `alphabetic`) as the trim reference. `text-box` is the shorthand - `text-box: trim-both cap alphabetic` is the canonical incantation. This is the shipped standardisation of what was proposed as `leading-trim`/`text-edge` and what Figma calls \"vertical trim\". In practice: developers add `text-box: trim-both cap alphabetic` to buttons and headings so `padding: 10px` is optically equal on all four sides. По-русски: убери полулидинг у заголовка через text-box: trim-both cap alphabetic, чтобы паддинги были оптически равны (since February 2025 (Chrome 133; Safari 18.2 Dec 2024))",
+      "clarification": "Not the dead leading-trim/text-edge draft names, not Figma top/bottom values, not negative margins or magic-number padding.",
+      "sources": ["https://developer.chrome.com/blog/css-text-box-trim"]
+    },
+    {
+      "id": "mera-tw39d35377",
+      "term": "corner-shape / superellipse() / squircle in CSS",
+      "aliases": [
+        "corner-shape",
+        "superellipse",
+        "squircle in CSS",
+        "superellipse()",
+        "squircle CSS",
+        "corner-shape squircle",
+        "сквиркл",
+        "скругление как у Apple",
+        "суперэллипс"
+      ],
+      "category": "css-platform",
+      "definition": "A CSS property (Chrome 139) that changes the *curvature* of the corners already sized by `border-radius`, via keywords (`round`, `squircle`, `bevel`, `notch`, `scoop`, `square`) or the `superellipse(<number>)` function; `squircle` equals `superellipse(2)`. It is animatable, so corners can morph between concave and convex shapes. In practice: designers ask for \"an Apple-style squircle icon\" and developers write `border-radius: 25%; corner-shape: squircle` instead of hand-authoring an SVG mask. По-русски: сделай иконке сквиркл как у Apple: border-radius плюс corner-shape: squircle (since August 2025)",
+      "clarification": "Not an SVG path, clip-path or PNG mask; do not say squircles are impossible in CSS.",
+      "sources": ["https://developer.chrome.com/blog/implementing-corner-shape"]
+    },
+    {
+      "id": "mera-tw2f5c1e0c",
+      "term": "CSS carousels (::scroll-button(), ::scroll-marker, ::scroll-marker-group, :target-current)",
+      "aliases": [
+        "CSS carousels",
+        "scroll-button",
+        "scroll-marker",
+        "scroll-marker-group",
+        "target-current",
+        "CSS carousels , ::scroll-marker, ::scroll-marker-group, :target-current)",
+        "CSS carousel",
+        "::scroll-marker",
+        "::scroll-button",
+        ":target-current",
+        "карусель на чистом CSS",
+        "css карусель без js"
+      ],
+      "category": "css-platform",
+      "definition": "A set of CSS Overflow Level 5 pseudo-elements (Chrome 135) that generate real carousel UI from an ordinary scroll container: `::scroll-button(left|right|block-start|…)` creates auto-disabling paging buttons, `::scroll-marker` creates a dot/indicator per item which the browser collects into `::scroll-marker-group`, and `:target-current` styles the active marker. Requires `overflow: auto` plus `scroll-snap-type`; delivers accessible carousels with zero JavaScript. In practice: developers say \"do it as a CSS carousel\" meaning `scroll-marker-group: after` plus `::scroll-button()` rules rather than installing Swiper or Embla. По-русски: сделай карусель на чистом CSS через ::scroll-button() и ::scroll-marker, без Swiper (since April 2025)",
+      "clarification": "Not Swiper, Embla or Slick; do not claim dots and prev/next buttons require JavaScript.",
+      "sources": ["https://developer.chrome.com/blog/carousels-with-css"]
+    },
+    {
+      "id": "mera-tw2169be94",
+      "term": "Scroll-driven animations (animation-timeline, scroll(), view())",
+      "aliases": [
+        "Scroll-driven animations",
+        "animation-timeline",
+        "scroll",
+        "view",
+        "Scroll-driven animations , view())",
+        "scroll-driven animations",
+        "scroll-timeline",
+        "view-timeline",
+        "анимация по скроллу",
+        "скролл-анимации на CSS",
+        "GSAP ScrollTrigger"
+      ],
+      "category": "css-platform",
+      "definition": "CSS-native animations whose progress is driven by scroll position rather than time, via `animation-timeline: scroll()` (scroll progress of a container) or `view()` (an element's progress through the viewport), plus `scroll-timeline`/`view-timeline` and `animation-range`. Status matters: shipped in Chromium and Safari, but as of 2026 Firefox still hides it behind `layout.css.scroll-driven-animations.enabled`, so it is not Baseline and needs `@supports` fallbacks. In practice: developers say \"make the progress bar scroll-driven\" and write `animation-timeline: scroll(root block)` with `animation-duration: 1ms` for cross-browser consistency, instead of a scroll event listener or GSAP ScrollTrigger. По-русски: сделай прогресс-бар анимацией по скроллу на CSS через animation-timeline: scroll() (since 2023 (Chrome 115), Safari 2025, Firefox still flagged in 2026)",
+      "clarification": "Not IntersectionObserver, scroll listeners or GSAP ScrollTrigger as the only option; not Baseline - Firefox stays flagged.",
+      "sources": ["https://developer.chrome.com/docs/css-ui/scroll-driven-animations"]
+    },
+    {
+      "id": "mera-tw09b4d930",
+      "term": "CSS gap decorations (row-rule, column-rule, rule-*)",
+      "aliases": [
+        "CSS gap decorations",
+        "row-rule",
+        "column-rule",
+        "rule-*",
+        "gap decorations",
+        "column-rule grid",
+        "rule-inset",
+        "rule-paint-order",
+        "разделители в gap",
+        "линии в гэпах грида"
+      ],
+      "category": "css-platform",
+      "definition": "CSS properties that paint separator lines *inside the gaps* of grid, flexbox and multi-column layouts. `row-rule` and `column-rule` (plus the `rule` shorthand, and `rule-break`, `rule-inset`, `rule-overlap`, `rule-paint-order`) draw purely visual rules that occupy no space and never affect layout. Note this generalises the long-existing multicol-only `column-rule` to grid and flex. In practice: developers say \"use gap decorations\" and write `rule: 1px solid #ddd` on a grid instead of faking dividers with pseudo-elements or per-cell borders. По-русски: нарисуй разделители в гэпах грида через row-rule и column-rule, без псевдоэлементов (since 2026 (Chrome/Edge 149, June 2026))",
+      "clarification": "Not ::before dividers, background gradients or borders on children; column-rule is no longer multicol-only.",
+      "sources": ["https://developer.chrome.com/blog/gap-decorations"]
+    },
+    {
+      "id": "mera-twf28efc0f",
+      "term": "CSS shape()",
+      "aliases": [
+        "CSS shape",
+        "shape() clip-path",
+        "shape() offset-path",
+        "clip-path path()",
+        "функция shape в CSS",
+        "респонсивный clip-path"
+      ],
+      "category": "css-platform",
+      "definition": "A CSS-native shape function for `clip-path` and `offset-path` that takes a `from <position>` plus comma-separated commands (`line`, `hline`, `vline`, `curve … with`, `smooth`, `arc … of`, `close`) using ordinary CSS units - `%`, `rem`, `calc()`, custom properties. It replaces `path()`, which only accepted a fixed-pixel SVG path string, so complex non-polygon shapes are finally responsive and animatable. In practice: developers say \"use `shape()` instead of `path()`\" for a responsive wave/flag/blob clip that scales with the container. По-русски: сделай волну через clip-path: shape(), чтобы тянулась с контейнером, а не path() (since April 2025 (Chrome 135) - Baseline Newly available Feb 2026)",
+      "clarification": "Not clip-path: path() with hardcoded pixels or an SVG clipPath; responsive curved clipping needs no JavaScript.",
+      "sources": ["https://developer.chrome.com/blog/css-shape"]
+    },
+    {
+      "id": "mera-twc84f1976",
+      "term": "CSS contrast-color()",
+      "aliases": [
+        "CSS contrast-color",
+        "contrast-color()",
+        "color-contrast()",
+        "контрастный цвет в CSS",
+        "автоконтраст текста CSS",
+        "функция contrast color"
+      ],
+      "category": "css-platform",
+      "definition": "A CSS color function that takes a color and returns a guaranteed-contrasting color (in the shipped Level 5/6 form: black or white, targeting WCAG AA). It removes hand-maintained background/foreground colour pairs for user-chosen or API-supplied colours. Caveat carried in the spec and MDN: mid-tone backgrounds may still fail readability, so use it with clearly light or dark inputs. It is part of Interop 2026. In practice: developers write `color: contrast-color(var(--badge-bg))` on tag pills and avatars instead of computing luminance in JS. По-русски: поставь цвет текста через contrast-color(var(--bg)), без расчёта яркости в JS (since Safari 26 (Sep 2025), Baseline Newly available April 2026)",
+      "clarification": "Do not compute relative luminance in JS, or cite the never-shipped color-contrast() syntax with candidate color lists.",
+      "sources": [
+        "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/color_value/contrast-color"
+      ]
+    },
+    {
+      "id": "mera-tw3e3e9811",
+      "term": "field-sizing: content",
+      "aliases": [
+        "field-sizing",
+        "field-sizing-content",
+        "авторесайз textarea",
+        "автоувеличение textarea",
+        "scrollHeight авторесайз"
+      ],
+      "category": "css-platform",
+      "definition": "A CSS property that lets form controls size themselves to their content: `field-sizing: content` makes an `<input>`, `<textarea>` or `<select>` auto-grow and shrink as the user types, replacing the classic JavaScript \"resize the textarea on input\" utility. Reached Baseline in 2026; in production you still pair it with `min-`/`max-` constraints to avoid layout shift. Available in Tailwind v4 as `field-sizing-content`. In practice: developers say \"just use `field-sizing: content`\" and delete their auto-resize textarea hook. По-русски: пусть textarea растёт сама через field-sizing: content, без JS-хука (since Chrome 123 (2024), Baseline 2026)",
+      "clarification": "Do not write a JS scrollHeight auto-resize handler or hidden mirror div, or say CSS cannot size a textarea.",
+      "sources": ["https://developer.mozilla.org/en-US/docs/Web/CSS/field-sizing"]
+    }
+  ]
+}

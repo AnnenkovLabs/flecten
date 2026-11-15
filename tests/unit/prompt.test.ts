@@ -21,6 +21,46 @@ async function tempProject(): Promise<string> {
   return mkdtemp(join(tmpdir(), "liquid-prompt-"));
 }
 
+describe("summary presentation", () => {
+  test.each([{}, { role: "talker" as const }])(
+    "prefers HTML and the built-in kit for user-facing summaries: %j",
+    async (options) => {
+      const built = await buildPrompt(process.cwd(), { ...options, instructions: locations() });
+      expect(built.system).toContain("Use HTML by default for final task summaries");
+      expect(built.system).toContain("Prefer the built-in kit for everyday results");
+      expect(built.system).toContain(
+        "Progress updates, clarifying questions and ordinary conversation use Markdown",
+      );
+      expect(built.system).toContain("a one-fact result needs only an HTML paragraph");
+      expect(built.system).toContain("Respect an explicitly requested output format");
+      expect(built.budget.parts.find((part) => part.id === "response-format")).toMatchObject({
+        trimmed: false,
+        omitted: false,
+      });
+      if (options.role === "talker") {
+        expect(built.system).toContain(
+          "add headings when they separate meaningful parts of the result",
+        );
+        expect(built.system).not.toContain("headings only for multi-step answers");
+      }
+    },
+  );
+
+  test.each([{ role: "worker" as const }, { responseFormat: "structured" as const }])(
+    "keeps internal result contracts separate: %j",
+    async (options) => {
+      const built = await buildPrompt(process.cwd(), { ...options, instructions: locations() });
+      expect(built.system).not.toContain("## HTML summary");
+      expect(built.system).not.toContain("Use HTML by default for final task summaries");
+      if (options.role === "worker") {
+        expect(built.system).toContain("ordinary English Markdown");
+      } else {
+        expect(built.budget.parts.some((part) => part.id === "response-format")).toBe(false);
+      }
+    },
+  );
+});
+
 describe("instruction hierarchy", () => {
   test("loads managed, user, project, local and nested sources in order", async () => {
     const cwd = await tempProject();

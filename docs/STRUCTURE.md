@@ -16,10 +16,13 @@
 | `shared/access-mode.ts`, `src/app/access.ts` | общий каталог режимов доступа, определение custom и проверенное изменение security-полей конфига |
 | `src/app/conversation.ts`, `conversation-options.ts`, `worker-tool.ts`, `worker-references.ts` | независимые Talker/Worker, управление, роли, scoped ссылки и события Worker |
 | `src/app/session-pool.ts`, `recovery.ts`, `session-replay.ts` | параллельные задачи, восстановление и история модели |
+| `shared/model-choice.ts`, `src/app/session-models.ts`, `session-model-options.ts` | выбор модели, reasoning и варианта отдельно для каждого чата, durable восстановление и согласованные параметры провайдера |
 | `src/app/event-journal.ts`, `session-logs.ts` | live replay с курсором и durable запись |
 | `src/app/session-history.ts`, `session-export.ts` | retention, корзина и экспорт |
+| `shared/message-branches.ts`, `src/store/events/branches.ts`, `src/app/message-branches.ts`, `message-attachments.ts`, `session-pages.ts` | типизированные версии сообщений, выбор сохранённых вложений, append-only выбор ветки, новое продолжение и scoped архив страниц |
 | `src/app/extensions.ts`, `extension-runtime.ts`, `extension-handlers.ts` | жизненный цикл MCP/skills и запросы окна |
 | `src/app/provider-state.ts`, `provider-ops.ts`, `provider-secrets.ts` | представление провайдеров, проверки, actualize и скрытие секретов |
+| `src/app/provider-auto-refresh.ts`, `src/providers/actualize.ts`, `shared/model-draft.ts`, `ui/src/components/ProviderModelRefresh.svelte` | ежечасное обновление метаданных, сохранение ручных правок по baseline, слияние открытого черновика со свежими моделями и настройки каждого провайдера |
 | `src/config/` | версии, миграции, Zod-схемы, defaults, единый глобальный desktop profile, scoped secrets, destination binding и атомарная запись |
 | `src/core/session/` | канонический lifecycle, бюджет, approvals, запуск, остановка и события |
 | `src/core/loop/` | stream, tool batches, continuation, retry и compaction |
@@ -40,11 +43,13 @@
 | `src/connectors/x/` | отдельный HTTP MCP-сервер X для ChatGPT, OAuth bridge, зашифрованные токены и read-only API |
 | `src/modules/`, `src/core/modules/`, `src/app/modules.ts` | SDK/MCP пакеты, session/project platform, hot-load, зависимости, trust и append-only контекст |
 | `src/modules/marketplace.ts`, `marketplace-download.ts`, `shared/module-marketplace.ts` | встроенный и HTTPS-каталоги, проверка пакетов, зависимости и протокол маркетплейса |
-| `src/marketplace/` | исходники пакетов, публикуемый `index.json` и base64-пакеты каталога репозитория; генерация `scripts/build-marketplace.ts` |
+| `src/marketplace/index.json` | пустой встроенный каталог, включённый в бинарник без сетевого обновления |
 | `src/core/services/`, `src/app/session-storage.ts` | replace/wrap/provide/require, schema-defined сервисы, leases и единый backend журнала/индекса |
 | `src/core/types/event-schema.ts` | общие схемы событий для native drivers и durable read |
 | `src/commands/` | пользовательские и проектные slash-команды |
 | `src/providers/` | четыре адаптера, HTTP/SSE, auth, каталог, probe, discovery и failover |
+| `src/providers/model-metadata.ts`, `ui/src/lib/settings/model-metadata.ts` | получение характеристик из API и каталога, добавление и обновление черновика модели без генерации |
+| `src/providers/model-identity.ts` | сопоставление ID, canonical aliases и производных uncensored/abliterated; версия и checkpoint сохраняются, API endpoint имеет приоритет |
 | `src/translation/`, `src/app/translation.ts` | перевод текстовых узлов, кэш, рабочий язык сессии, локализованный поток и выбранный провайдер |
 | `src/tools/` | реестр, repair, budgets, logs и встроенные инструменты |
 | `src/tools/grep/line-matcher.ts`, `glob/gitignore.ts`, `read/run.ts` | прерываемый regex worker, вложенные ignore scopes и bounded чтение |
@@ -73,9 +78,12 @@
 | `ui/src/App.svelte` | композиция экрана и горячие клавиши |
 | `ui/src/components/ProjectNavigation.svelte`, `ProjectTrust.svelte`, `ProjectGroup.svelte`, `ui/src/lib/run/projects.svelte.ts` | проекты и сессии, контекстное меню папки и запрос доверия при входе |
 | `ui/src/app.css` | единственные токены, шрифт и базовые стили |
+| `ui/src/lib/interface-scale.svelte.ts`, `components/settings/InterfaceScale.svelte` | масштаб интерфейса 75–125%, сохранённый в профиле окна; preload применяет native zoom ко всему layout, включая чат и композер |
 | `ui/src/controls.css` | общие кнопки, поля и переключатели всех поверхностей |
 | `ui/src/lib/modal.ts`, `clipboard.svelte.ts` | единый lifecycle модальных окон и подтверждённое копирование |
 | `ui/src/lib/run.svelte.ts`, `run/` | проекция канонических событий и ответов для экрана |
+| `ui/src/lib/run/model.ts` | выбор модели текущего чата, отдельные общие defaults и сериализация изменений без отката от чужого статуса |
+| `ui/src/lib/run/message-history.svelte.ts`, `composer/drafts.svelte.ts`, `composer/attachment-draft.ts` | режим редактирования в основном композере, отдельный черновик и асинхронные вложения своего сообщения |
 | `ui/src/lib/updater.svelte.ts` | единый live-статус обновлений для чипа заголовка и карточки в настройках |
 | `ui/src/lib/tool-presentation.ts`, `subagent-report.ts` | понятные названия и состояния вызовов, проверка и представление отчётов субагентов |
 | `ui/src/lib/run/subagents.svelte.ts`, `SubagentPane.svelte`, `SubagentAvatar.svelte` | отдельные вкладки, live журнал, остановка и согласованные персонажи субагентов |
@@ -99,7 +107,7 @@
 - `bench/`: 20 deterministic задач, mock provider, runner, Codex CLI adapter и отчёты.
 - `tests/unit/`, `tests/integration/`, `tests/smoke.test.ts`: настоящий сервис и адаптеры с локальными фикстурами.
 - `tests/e2e/`: скрытый Electron с mock provider, сценарии и visual regression на 1480x940 и 1180x640.
-- `src/marketplace/modules/computer-use/`: bundled Linux Computer Use, управление сессией, private display backend, bounded AT-SPI, инструкции и Computer surface. Продуктовый путь проверяет `tests/integration/computer-use.test.ts`.
+- `tests/fixtures/modules/`: прежние пакеты как тестовые примеры SDK, без поставки в приложении; `computer-use/` проверяет Linux Computer Use, управление сессией, private display backend, bounded AT-SPI, инструкции и Computer surface. Продуктовый путь проверяет `tests/integration/computer-use.test.ts`.
 - `.github/workflows/`: reusable quality, coverage text/LCOV, Electron visual regression, platform packaged smoke, packaging/signing и диагностика.
 - `docs/`: архитектура, решения, протокол, безопасность и приёмка; `docs/research/access-ux-2026-11-14.md` фиксирует версии и исходники сравнения permissions UX.
 

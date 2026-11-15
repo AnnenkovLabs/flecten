@@ -135,7 +135,7 @@ describe("durable session media", () => {
     await writeFile(join(cwd, "notes.txt"), "replacement-data");
     const reopened = await createAppService(cwd);
     try {
-      await reopened.setModel({ provider: "test", model: "media-next" });
+      await reopened.setModel({ sessionId: id, provider: "test", model: "media-next" });
       const continued = (await reopened.session.send({
         type: "run",
         sessionId: id,
@@ -204,7 +204,7 @@ describe("durable session media", () => {
     }
     const reopened = await createAppService(cwd);
     try {
-      await reopened.setModel({ provider: "legacy", model: "media" });
+      await reopened.setModel({ sessionId: id, provider: "legacy", model: "media" });
       const before = requests.length;
       const result = (await reopened.session.send({
         type: "run",

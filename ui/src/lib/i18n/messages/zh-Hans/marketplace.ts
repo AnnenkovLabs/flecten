@@ -35,8 +35,9 @@ export default {
     "没有匹配的模块。请清除搜索或选择其他类别。",
   "Clear filters": "清除筛选",
   "Catalog sources": "目录来源",
-  "The built-in catalog works offline. Add an HTTPS catalog to discover community modules.":
-    "内置目录可离线使用。添加 HTTPS 目录以发现社区模块。",
+  "Add an HTTPS catalog to discover community modules.": "添加 HTTPS 目录以发现社区模块。",
+  "No modules in connected catalogs. Add an HTTPS catalog to get started.":
+    "已连接的目录中暂无模块。添加 HTTPS 目录即可开始。",
   "Included with Flecten": "Flecten 内置",
   "Disconnect catalog: {0}": ["断开目录：", 0, ""],
   Disconnect: "断开",

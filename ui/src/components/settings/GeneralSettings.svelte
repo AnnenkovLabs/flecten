@@ -9,6 +9,7 @@
   import VoiceSettings from "./VoiceSettings.svelte";
   import VisionSettings from "./VisionSettings.svelte";
   import TranslationSettings from "./TranslationSettings.svelte";
+  import InterfaceScale from "./InterfaceScale.svelte";
 
   const config = $derived(settings.settings);
 </script>
@@ -28,6 +29,7 @@
             {/each}
           </select>
         </SettingsRow>
+        <InterfaceScale />
       </div>
     </div>
 

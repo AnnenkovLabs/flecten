@@ -38,8 +38,10 @@ export default {
     "No hay módulos coincidentes. Borra la búsqueda o elige otra categoría.",
   "Clear filters": "Borrar filtros",
   "Catalog sources": "Fuentes de catálogos",
-  "The built-in catalog works offline. Add an HTTPS catalog to discover community modules.":
-    "El catálogo integrado funciona sin conexión. Añade un catálogo HTTPS para descubrir módulos de la comunidad.",
+  "Add an HTTPS catalog to discover community modules.":
+    "Añade un catálogo HTTPS para descubrir módulos de la comunidad.",
+  "No modules in connected catalogs. Add an HTTPS catalog to get started.":
+    "No hay módulos en los catálogos conectados. Añade un catálogo HTTPS para empezar.",
   "Included with Flecten": "Incluido con Flecten",
   "Disconnect catalog: {0}": ["Desconectar catálogo: ", 0, ""],
   Disconnect: "Desconectar",

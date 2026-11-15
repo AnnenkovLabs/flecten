@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "category": "mobile-platforms",
+  "entries": [
+    {
+      "id": "mera-tw94429c62",
+      "term": "Android 16 Live Updates / Notification.ProgressStyle",
+      "aliases": [
+        "Android 16 Live Updates",
+        "Notification.ProgressStyle",
+        "Live Updates Android",
+        "ProgressStyle",
+        "POST_PROMOTED_NOTIFICATIONS",
+        "живые обновления Android",
+        "Live Activities на Android"
+      ],
+      "category": "mobile-platforms",
+      "definition": "Android 16's answer to iOS Live Activities: \"Live Updates\" are ongoing, user-initiated, progress-centric notifications that get promoted to the lock screen and to a status-bar chip. They are built with the new `Notification.ProgressStyle` (segments, milestone points, a custom progress-tracker icon) and require `FLAG_ONGOING_EVENT`, the `POST_PROMOTED_NOTIFICATIONS` permission and `setRequestPromotedOngoing`. Not to be confused with foreground-service notifications or with \"Live Activities\" (the Apple term). In practice: Android devs say \"ship it as a Live Update with ProgressStyle\" for delivery/rideshare/navigation tracking. По-русски: покажи доставку как Live Update с Notification.ProgressStyle на Android 16 (since 2025 (Android 16))",
+      "clarification": "Not a RemoteViews foreground-service notification; do not say Android lacks a Live Activities equivalent.",
+      "sources": [
+        "https://developer.android.com/about/versions/16/features/progress-centric-notifications"
+      ]
+    },
+    {
+      "id": "mera-twe01018f7",
+      "term": "iOS 26 / macOS Tahoe 26 (year-based OS versioning)",
+      "aliases": [
+        "iOS 26 / macOS Tahoe 26",
+        "year-based OS versioning",
+        "iOS 26",
+        "macOS Tahoe 26",
+        "macOS Tahoe",
+        "iPadOS 26",
+        "watchOS 26",
+        "iOS 19",
+        "макось Тахо",
+        "год в номере версии Apple"
+      ],
+      "category": "mobile-platforms",
+      "definition": "At WWDC 2025 Apple abandoned sequential OS version numbers and jumped every platform to \"26\", named for the *following* calendar year (the OS spends most of its life in 2026). So iOS 18 → **iOS 26**, macOS 15 Sequoia → **macOS Tahoe 26**, watchOS 11 → watchOS 26, visionOS 2 → visionOS 26, tvOS 26, iPadOS 26. There is no iOS 19-25. Hardware naming is unchanged (iPhone 17, not iPhone 26), and macOS keeps its California name alongside the number. In practice: developers write `@available(iOS 26, *)` and say \"26 or later\" where they used to say \"iOS 19\". По-русски: минимальная цель - iOS 26 и macOS Tahoe 26; никакой iOS 19 не существует (since June 2025)",
+      "clarification": "Not iOS 19 or macOS 16 as next, not a typo or far-future release; hardware still uses iPhone 17-style numbering.",
+      "sources": [
+        "https://www.apple.com/newsroom/2025/06/apple-elevates-the-iphone-experience-with-ios-26/"
+      ]
+    },
+    {
+      "id": "mera-tw6d73b8ab",
+      "term": "SwiftUI WebView / WebPage",
+      "aliases": [
+        "SwiftUI WebView",
+        "WebPage",
+        "WebPage SwiftUI",
+        "WKWebView UIViewRepresentable",
+        "вебвью в SwiftUI",
+        "нативный WebView SwiftUI",
+        "обёртка над WKWebView"
+      ],
+      "category": "mobile-platforms",
+      "definition": "Native SwiftUI web-content APIs added in iOS 26: `WebView` is the SwiftUI view, and `WebPage` is an `@Observable` model object giving programmatic control - loading, navigation, JavaScript evaluation, observable `url`/`title`/`estimatedProgress`. Together they retire the long-standing pattern of wrapping `WKWebView` in a `UIViewRepresentable`. In practice: iOS devs say \"just use SwiftUI's WebView\" and delete their `UIViewRepresentable` WebKit wrapper. По-русски: выкинь обёртку над WKWebView - в iOS 26 есть нативный WebView для SwiftUI (since June 2025 (iOS 26 / Xcode 26))",
+      "clarification": "Do not say SwiftUI has no web view or wrap WKWebView in a UIViewRepresentable.",
+      "sources": ["https://developer.apple.com/documentation/webkit/webview"]
+    },
+    {
+      "id": "mera-tw0c49027b",
+      "term": "AlarmKit",
+      "aliases": [
+        "AlarmManager iOS",
+        "аларм кит",
+        "системные будильники iOS",
+        "будильник из приложения iOS",
+        "таймеры AlarmKit"
+      ],
+      "category": "mobile-platforms",
+      "definition": "An iOS 26 framework letting third-party apps schedule true system-level alarms and countdown timers that break through Focus modes and the silent switch - previously an Apple-only capability. Requires an Apple-approved entitlement plus a Live Activity widget extension, and is driven through `AlarmManager` with async state sequences. In practice: iOS devs say \"we can use AlarmKit now\" instead of faking alarms with repeated local notifications or background audio. По-русски: поставь настоящий будильник через AlarmKit, а не пуши с critical alert (since June 2025 (iOS 26))",
+      "clarification": "Do not say only Apple's Clock app can set alarms, or suggest repeated local notifications with critical alerts.",
+      "sources": ["https://developer.apple.com/documentation/alarmkit"]
+    },
+    {
+      "id": "mera-tw621257ef",
+      "term": "Android XR / Galaxy XR",
+      "aliases": [
+        "Android XR",
+        "Galaxy XR",
+        "Jetpack XR",
+        "андроид XR",
+        "гэлакси XR",
+        "XR-шлем Samsung"
+      ],
+      "category": "mobile-platforms",
+      "definition": "Google's XR operating system for headsets and glasses, built with Samsung and Qualcomm, with Gemini integrated at system level for multimodal, context-aware assistance. The first device, Samsung **Galaxy XR**, shipped 21 Oct 2025 at $1,799; it runs Android apps in floating windows in an unbounded space and added PC Connect for extending a Windows desktop. Developers target it with Jetpack XR SDK / Android XR extensions to Compose, Unity and OpenXR/WebXR. In practice: mobile teams say \"we need an Android XR build\" and reason about spatialised Compose layouts alongside visionOS. По-русски: нужна сборка под Android XR - и продумать пространственные раскладки в Compose (since December 2024 (platform) / October 2025 (first device))",
+      "clarification": "Not Daydream or Cardboard, and not Vision Pro as the only spatial platform; Android XR shipped on Galaxy XR.",
+      "sources": ["https://blog.google/products-and-platforms/platforms/android/samsung-galaxy-xr/"]
+    },
+    {
+      "id": "mera-twa52dd494",
+      "term": "iPhone Air / Apple N1 and C1X silicon",
+      "aliases": [
+        "iPhone Air",
+        "Apple N1 and C1X silicon",
+        "Apple N1",
+        "C1X modem",
+        "айфон эйр",
+        "модем C1X",
+        "чип N1 Apple"
+      ],
+      "category": "mobile-platforms",
+      "definition": "The iPhone Air (Sep 2025) is Apple's thinnest iPhone, and is notable to developers mainly for its silicon: the **N1**, Apple's own wireless chip handling Wi-Fi 7, Bluetooth 6 and Thread (replacing Broadcom), and the **C1X** cellular modem (successor to the C1 introduced in the iPhone 16e), replacing Qualcomm parts, alongside the A19 Pro. It has one rear camera and a smaller battery, which matters for perf/energy budgets. In practice: mobile teams add \"iPhone Air\" as a distinct thermal/battery test target and reference N1/C1X when discussing connectivity behaviour. По-русски: добавь iPhone Air в тесты - там свой модем C1X и чип N1, другой энергобюджет (since September 2025)",
+      "clarification": "Do not assume Qualcomm modems and Broadcom Wi-Fi in every iPhone, or that no iPhone Air exists.",
+      "sources": [
+        "https://www.apple.com/newsroom/2025/09/introducing-iphone-air-a-powerful-new-iphone-with-a-breakthrough-design/"
+      ]
+    },
+    {
+      "id": "mera-twf187452a",
+      "term": "Swift 6.2 \"approachable concurrency\" / default actor isolation",
+      "aliases": [
+        "Swift 6.2 \"approachable concurrency\"",
+        "default actor isolation",
+        "approachable concurrency",
+        "SWIFT_DEFAULT_ACTOR_ISOLATION",
+        "SE-0466",
+        "@concurrent Swift",
+        "дефолтная изоляция MainActor",
+        "конкурентность Swift 6.2"
+      ],
+      "category": "mobile-platforms",
+      "definition": "Swift 6.2's response to the pain of Swift 6 strict concurrency. **SE-0466** lets a module default its isolation to `@MainActor`, so app/UI code no longer needs annotations everywhere; **SE-0461** makes `nonisolated async` functions run on the caller's actor by default, removing spurious actor hops and `Sendable` boundary errors. Enabled via `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` / `SWIFT_APPROACHABLE_CONCURRENCY = YES`, with `@concurrent` as the explicit opt-out for background work. In practice: iOS devs say \"turn on approachable concurrency\" to stop fighting Sendable errors when migrating to Swift 6. По-русски: включи approachable concurrency в Swift 6.2, чтобы не воевать с Sendable (since 2025 (Xcode 26))",
+      "clarification": "Not Swift 6 strict concurrency with mandatory @MainActor annotations and Sendable conformances scattered everywhere.",
+      "sources": ["https://www.swift.org/blog/swift-6.2-released/"]
+    },
+    {
+      "id": "mera-twa6dbf2a1",
+      "term": "Compose Multiplatform for iOS (stable)",
+      "aliases": [
+        "Compose Multiplatform for iOS",
+        "stable",
+        "Compose Multiplatform iOS",
+        "CMP for iOS",
+        "Compose Multiplatform 1.8",
+        "композ мультиплатформ",
+        "общий UI на Kotlin",
+        "шаринг UI KMP"
+      ],
+      "category": "mobile-platforms",
+      "definition": "JetBrains declared Compose Multiplatform for iOS **stable and production-ready** with version 1.8.0 (6 May 2025) - finalised APIs with compatibility guarantees, plus navigation, resources, and iOS accessibility (VoiceOver) support. Requires Kotlin 2.1+/K2. Combined with the Kotlin Multiplatform plugin for IntelliJ and Android Studio, this makes shared Kotlin *UI* (not just shared business logic) a supported option on iOS. In practice: mobile leads say \"CMP for iOS is stable now\" when deciding between sharing only logic (classic KMP) and sharing the whole UI. По-русски: CMP для iOS уже стабильна - можно шарить не только логику, но и UI на Kotlin (since May 2025)",
+      "clarification": "Do not call Compose Multiplatform on iOS alpha, or advise sharing only business logic behind a native SwiftUI layer.",
+      "sources": [
+        "https://blog.jetbrains.com/kotlin/2025/05/compose-multiplatform-1-8-0-released-compose-multiplatform-for-ios-is-stable-and-production-ready/"
+      ]
+    }
+  ]
+}

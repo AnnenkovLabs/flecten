@@ -243,7 +243,7 @@
     {/if}
 
     {#if addOpen}
-      <ModelAddForm {provider} onadded={added} onclose={() => (addOpen = false)} />
+      <ModelAddForm {providerId} {provider} onadded={added} onclose={() => (addOpen = false)} />
     {/if}
 
     {#if selectedIds.length > 0}

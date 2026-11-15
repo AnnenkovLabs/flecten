@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { launchApp } from "./fixtures";
+import { hiddenScreenshot } from "./hidden-screenshot";
 
 test("projectless entry, remembered folders and sessions survive navigation and sidebar removal", async () => {
   const first = await mkdtemp(join(tmpdir(), "flecten-project-one-"));
@@ -16,6 +17,9 @@ test("projectless entry, remembered folders and sessions survive navigation and 
   });
   try {
     const { page } = h;
+    await expect(
+      page.locator(".sidebar").getByRole("button", { name: "Add folder", exact: true }),
+    ).toHaveCount(0);
     await expect(page.getByText("No project selected", { exact: true })).toBeVisible();
     await expect(
       page.getByText("Add a folder to work on a project. You can also start a task without one."),
@@ -31,7 +35,7 @@ test("projectless entry, remembered folders and sessions survive navigation and 
         { width, height },
       );
       await page.setViewportSize({ width, height });
-      await page.screenshot({ path: test.info().outputPath(`projectless-${width}.png`) });
+      await hiddenScreenshot(h, test.info().outputPath(`projectless-${width}.png`));
     }
     await page.locator("#prompt").fill("Task without a project");
     await page.locator("#prompt").press("Enter");
@@ -43,7 +47,9 @@ test("projectless entry, remembered folders and sessions survive navigation and 
       await h.app.evaluate(({ dialog }, path) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
       }, directory);
-      await page.getByRole("button", { name: "Add folder", exact: true }).first().click();
+      await page.locator(".sidebar").getByRole("button", { name: "New task", exact: true }).click();
+      await page.locator(".ns-picker-trigger").click();
+      await page.getByRole("button", { name: "Select folder", exact: true }).click();
       const trust = page.getByRole("dialog", { name: "Do you trust this folder?" });
       await expect(trust).toContainText(directory);
       await trust.getByRole("button", { name: "Trust folder", exact: true }).click();
@@ -84,7 +90,7 @@ test("projectless entry, remembered folders and sessions survive navigation and 
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
       ).toBeLessThanOrEqual(1);
-      await page.screenshot({ path: test.info().outputPath(`project-navigation-${width}.png`) });
+      await hiddenScreenshot(h, test.info().outputPath(`project-navigation-${width}.png`));
     }
   } finally {
     await h.close();

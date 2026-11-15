@@ -138,6 +138,27 @@ test("dictionary rejects malformed IPC payloads without replacing project memory
   ).rejects.toThrow();
 });
 
+test("bundled Oh My Pi survives an older cache and reaches the provider with contextual disambiguation", async () => {
+  const f = await fixture();
+  const initial = DictionarySnapshotSchema.parse(
+    (await f.handlers["dictionary.list"]({ type: "dictionary.list" }))?.dictionary,
+  );
+  expect(initial.entries.find((entry) => entry.id === "oh-my-pi")?.term).toBe("Oh My Pi");
+  const prompt = "  Сравни o-маи-паи с харнессом в текущей рабочей папке.\n";
+  await f.app.session.send({ type: "run", sessionId: "oh-my-pi-context", prompt });
+  const request = JSON.stringify(f.requests[0]);
+  expect(request).toContain(JSON.stringify(prompt).slice(1, -1));
+  expect(request).toContain("Oh My Pi (OMP) is an AI coding agent harness");
+  expect(request).toContain("Oh My Posh is a separate shell-prompt theme tool");
+  expect(request).toContain("A spelling match suggests a possible meaning, not proof of intent");
+  expect(request).toContain("working directory, repository files");
+  expect(request).toContain("OpenMP and other domain-specific expansions");
+  expect(f.app.session.getHistory()[0]?.content).toBe(prompt);
+  expect(
+    f.app.session.getHistory().some((message) => message.content.startsWith("# Dictionary")),
+  ).toBe(false);
+});
+
 test("local definitions preserve valid categories longer than memory topic labels", async () => {
   const f = await fixture();
   const category = "a".repeat(80);

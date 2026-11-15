@@ -23,7 +23,7 @@ const ENTRIES = [
 ];
 const PRODUCT_DIRS = ["src", "ui/src"];
 /** Module package content is loaded by the module runtime, not imported by the harness. */
-const CONTENT_PREFIXES = ["src/marketplace/modules/"];
+const CONTENT_PREFIXES = ["tests/fixtures/modules/"];
 const isContent = (file) => CONTENT_PREFIXES.some((prefix) => rel(file).startsWith(prefix));
 const SIZE_DIRS = ["src", "ui/src", "shell", "scripts", "tests"];
 const TEXT_DIRS = ["docs", "prompts", "ui/src", "src", "shell"];

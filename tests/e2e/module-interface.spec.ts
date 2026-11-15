@@ -29,7 +29,7 @@ test("a module supplies the entire harness, persists its feature, hot reloads an
     await dialog.getByRole("button", { name: "Installed", exact: false }).click();
     await dialog
       .getByLabel("Module folder", { exact: true })
-      .fill(join(import.meta.dirname, "../../src/marketplace/modules/studio-harness"));
+      .fill(join(import.meta.dirname, "../fixtures/modules/studio-harness"));
     await dialog.getByRole("button", { name: "Install from folder", exact: true }).click();
     await dialog.getByRole("button", { name: "Trust this version", exact: true }).click();
     await dialog.getByText("Contents and location", { exact: true }).click();

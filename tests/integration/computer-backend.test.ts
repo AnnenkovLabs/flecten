@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 const { DesktopBackend } = await import(
-  new URL("../../src/marketplace/modules/computer-use/backend.mjs", import.meta.url).href
+  new URL("../fixtures/modules/computer-use/backend.mjs", import.meta.url).href
 );
 const programs = ["Xvfb", "xauth", "xdotool", "import", "dbus-daemon", "firefox", "python3"];
 const supported = process.platform === "linux" && programs.every((program) => Bun.which(program));

@@ -31,9 +31,10 @@ describe("public dictionary snapshots", () => {
           return Response.json(url.endsWith("index.json") ? manifest : category);
         }),
       });
+      const bundled = dictionary.snapshot().entries;
       expect((await dictionary.load()).entries.map((entry) => entry.id)).toContain("liquid-glass");
       const snapshot = await dictionary.syncPublic();
-      expect(snapshot.entries).toEqual([{ ...term, source: "public" }]);
+      expect(snapshot.entries).toEqual([...bundled, { ...term, source: "public" }]);
       expect(snapshot.syncedAt).toBeDefined();
       expect(snapshot.error).toBeUndefined();
       expect(

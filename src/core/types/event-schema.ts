@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { HookRunSchema } from "../../../shared/hooks";
+import { HistoryEditedSchema, HistorySelectedSchema } from "../../../shared/message-branches";
+import { ModelSelectedSchema } from "../../../shared/model-choice";
 import { ModuleReferencesSchema } from "../../../shared/modules";
 import { SessionStateSchema } from "../../../shared/session-state";
 import { SubagentInfoSchema, SubagentResultSchema } from "../../../shared/subagents";
 import { TwinActivitySchema } from "../../../shared/twin-activity";
-import { AttachmentReferencesSchema } from "../attachment-reference";
+import { AttachmentReferencesSchema, AttachmentSnapshotSchema } from "../attachment-reference";
+import { ContextReferencesSchema } from "../context-reference";
 import { MemoryReferencesSchema } from "../memory/command";
 import { ContextSummarySchema } from "../pages/summary";
 import { REASONING_EFFORTS } from "./index";
@@ -59,6 +62,9 @@ const resultSchema = z.object({
 });
 
 const sessionEventSchema = z.discriminatedUnion("type", [
+  HistoryEditedSchema,
+  HistorySelectedSchema,
+  ModelSelectedSchema,
   z.object({
     type: z.literal("twin.activity"),
     sessionId: z.string(),
@@ -108,7 +114,10 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     prompt: z.string(),
     input: z.string().optional(),
     attachments: AttachmentReferencesSchema.optional(),
+    attachmentSnapshot: AttachmentSnapshotSchema.optional(),
+    contexts: ContextReferencesSchema.optional(),
     reasoning: z.enum(REASONING_EFFORTS).optional(),
+    variant: z.string().optional(),
     system: z.unknown().optional(),
     queueId: z.string().optional(),
     resumed: z.boolean().optional(),
@@ -153,6 +162,8 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     text: z.string(),
     input: z.string().optional(),
     attachments: AttachmentReferencesSchema.optional(),
+    attachmentSnapshot: AttachmentSnapshotSchema.optional(),
+    contexts: ContextReferencesSchema.optional(),
     queueId: z.string().optional(),
   }),
   z.object({
@@ -167,6 +178,7 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     text: z.string(),
     moduleReferences: ModuleReferencesSchema.optional(),
     attachments: AttachmentReferencesSchema.optional(),
+    attachmentSnapshot: AttachmentSnapshotSchema.optional(),
   }),
   z.object({ type: z.literal("job.started"), sessionId: z.string(), job: jobSchema }),
   z.object({

@@ -1,5 +1,9 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Interface Scale": "Масштаб интерфейса",
+  "Resize text, controls, and the chat column. Changes apply immediately.":
+    "Изменяет размер текста, элементов управления и колонки чата. Применяется сразу.",
+  "Reset to 100%": "Сбросить до 100%",
   none: "нет",
   "not visible": "не виден",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [

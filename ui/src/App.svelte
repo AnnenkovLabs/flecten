@@ -42,8 +42,6 @@
     model: run.model,
     reasoning: run.reasoning,
     variant: run.variant,
-    accessMode: run.info?.accessMode ?? "custom",
-    accessChanging: run.accessChanging || run.connection !== "ready",
   });
   const startScreen = $derived(run.view.thread.items.length === 0 && !run.view.live);
   const tasks = $derived(
@@ -311,11 +309,11 @@
     <ProjectNavigation
       {run} hidden={sidebarHidden || mode === "ide"}
       onSelectTask={selectTask} onNewTask={newTask}
-      onChooseFolder={() => void chooseFolder()}
       twinActive={twinOpen}
       onOpenTwin={() => { setMode("agent"); twinOpen = true; }}
       onOpenDictionary={() => settings.openPanel("dictionary")}
       onOpenModules={() => settings.openPanel("modules")}
+      onOpenSettings={() => settings.openPanel()}
     />
     </div>
     <main class="workspace" data-harness-region="workspace" aria-label="{t("Workspace")}" aria-busy={run.openingTask !== null}>
@@ -355,7 +353,8 @@
       canContinue={run.controls.canContinue}
       controlCooldown={run.controls.coolingDown}
       onContinue={() => run.controls.continue()}
-      items={run.view.thread.items}
+      items={run.history.items}
+      historyDisabled={run.history.blocked}
       live={run.view.live}
       liveLabel={run.view.liveLabel}
       pendingCalls={run.view.thread.pendingCalls}
@@ -365,10 +364,14 @@
       onOpenChanges={openChanges}
       onNavigateSummary={navigateSummary}
       onRepeat={(prompt) => run.repeat(prompt)}
+      onEditMessage={(id, text) => run.history.begin(id, text)}
+      editing={run.history.editing}
+      onCancelEdit={() => run.history.cancel()}
+      onSaveEdit={(text, attachments, contexts, retained) => run.history.save(text, attachments, contexts, retained)}
+      onSelectVersion={(id, variant) => run.history.select(id, variant)}
       onModelSelect={(provider, model) => run.setModel(provider, model)}
       onReasoningChange={(value) => run.setReasoning(value)}
       onVariantChange={(value) => run.setVariant(value)}
-      onAccessModeChange={(mode) => void run.setAccessMode(mode)}
       queued={run.view.queued}
       sendMode={run.sendMode}
       contexts={run.contextMentions}

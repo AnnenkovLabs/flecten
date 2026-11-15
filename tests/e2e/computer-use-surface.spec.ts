@@ -5,7 +5,7 @@ import { HARNESS_TOKENS } from "../../ui/src/lib/markdown/tokens";
 
 async function openSurface(page: Page, locale = "en") {
   const source = await readFile(
-    join(import.meta.dirname, "../../src/marketplace/modules/computer-use/desktop.html"),
+    join(import.meta.dirname, "../fixtures/modules/computer-use/desktop.html"),
     "utf8",
   );
   const tokens = Object.entries(HARNESS_TOKENS)

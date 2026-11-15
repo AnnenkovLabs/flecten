@@ -1,7 +1,11 @@
 import { readdir, stat } from "node:fs/promises";
 import { basename, extname, isAbsolute, join, relative } from "node:path";
 import { markdownData } from "../util/markdown";
-import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_FILES } from "./attachment-reference";
+import {
+  type AttachmentEntry,
+  MAX_ATTACHMENT_BYTES,
+  MAX_ATTACHMENT_FILES,
+} from "./attachment-reference";
 import { estimateMedia } from "./media";
 import type { ImagePart } from "./types";
 
@@ -28,6 +32,7 @@ const MAX_FOLDER_ENTRIES = 200;
 const SNIFF_BYTES = 8192;
 
 export interface AttachmentOptions {
+  readonly strict?: boolean;
   readonly cwd: string;
   /** Input modalities of the active model, for example ["text", "image", "pdf"]. */
   readonly describeImages?: boolean;
@@ -38,6 +43,7 @@ export interface LoadedAttachments {
   readonly parts: ImagePart[];
   /** Text blocks for files the model reads as text, already wrapped as untrusted data. */
   readonly blocks: string[];
+  readonly entries: AttachmentEntry[];
 }
 
 function block(
@@ -97,6 +103,7 @@ export async function loadAttachments(
 ): Promise<LoadedAttachments> {
   const parts: ImagePart[] = [];
   const blocks: string[] = [];
+  const entries: AttachmentEntry[] = [];
   let textBudget = MAX_TEXT_CHARS_TOTAL;
   const seen = new Set<string>();
 
@@ -106,9 +113,15 @@ export async function loadAttachments(
     seen.add(path);
     const shownRaw = relative(options.cwd, path);
     const shown = shownRaw.length > 0 && !shownRaw.startsWith("..") ? shownRaw : path;
+    const mediaStart = parts.length;
+    const blockStart = blocks.length;
+    let kind: AttachmentEntry["kind"] = "file";
+    let size = 0;
     try {
       const info = await stat(path);
+      size = info.size;
       if (info.isDirectory()) {
+        kind = "folder";
         blocks.push(await folderBlock(path, shown));
         continue;
       }
@@ -120,6 +133,11 @@ export async function loadAttachments(
       }
       const mediaType = BINARY_TYPES[extname(path).toLowerCase()];
       if (mediaType) {
+        kind = mediaType.startsWith("audio/")
+          ? "audio"
+          : mediaType === "application/pdf"
+            ? "pdf"
+            : "image";
         const fits = info.size > 0 && info.size <= MAX_ATTACHMENT_BYTES;
         if (
           fits &&
@@ -169,6 +187,7 @@ export async function loadAttachments(
         continue;
       }
       const sampled = bytes.length < info.size;
+      kind = "text";
       const text = new TextDecoder().decode(bytes, { stream: sampled });
       const room = Math.min(MAX_TEXT_CHARS_PER_FILE, textBudget);
       if (room <= 0) {
@@ -191,13 +210,33 @@ export async function loadAttachments(
         ? `\n[truncated: showing lines 1-${shownLines}${sampled ? " of a larger file" : ` of ${lines}`}. Read the rest with the read tool.]`
         : "";
       blocks.push(block(shown, "text", `${body}${note}`, [["Line count", lines]]));
-    } catch {
+    } catch (error) {
+      if (options.strict)
+        throw new Error(
+          `Cannot read attachment ${shown}: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error },
+        );
       blocks.push(
         block(shown, "missing", "File could not be read. It may have been moved or deleted."),
       );
+    } finally {
+      if (parts.length > mediaStart || blocks.length > blockStart)
+        entries.push({
+          name: basename(path),
+          kind,
+          size,
+          mediaIndexes: Array.from(
+            { length: parts.length - mediaStart },
+            (_, index) => mediaStart + index,
+          ),
+          blockIndexes: Array.from(
+            { length: blocks.length - blockStart },
+            (_, index) => blockStart + index,
+          ),
+        });
     }
   }
-  return { parts, blocks };
+  return { parts, blocks, entries };
 }
 
 export function withAttachmentBlocks(prompt: string, blocks: readonly string[]): string {

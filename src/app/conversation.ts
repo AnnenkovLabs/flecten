@@ -287,6 +287,12 @@ export async function createConversation(
     ...role,
     permissionIntent: workerIntent,
     sessionId: workerId,
+    ...(role.pages
+      ? {
+          pages: (id: string) =>
+            role.pages?.(id, parentId) as import("../core/pages/writer").PageSink,
+        }
+      : {}),
     ...(queue ? { queue } : {}),
     loadHistory: async () => replayMessages(childEvents).messages,
     onEvent: persisted,

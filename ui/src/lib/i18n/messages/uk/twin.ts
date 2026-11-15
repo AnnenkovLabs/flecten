@@ -1,4 +1,8 @@
 export default {
+  "No new supported user messages were found. No model request was made.":
+    "Нових підтримуваних повідомлень користувача не знайдено. Запит до моделі не надсилався.",
+  "Training finished. No supported traits were found.":
+    "Навчання завершено. Підтверджених рис не знайдено.",
   "On sessions from any harness.": "На сесіях із будь-якого харнеса.",
   "Your Twin": "Ваш Twin",
   "Learning from your decisions": "Вчиться на ваших рішеннях",

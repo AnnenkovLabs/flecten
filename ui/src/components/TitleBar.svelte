@@ -89,15 +89,11 @@
     >
       <Icon name="panel-left" />
     </button>
-    <button
-      class="tb-btn"
-      type="button"
-      aria-label={t("Settings")}
-      title={t("Settings")}
-      onclick={onOpenSettings}
-    >
-      <Icon name="settings" />
-    </button>
+    {#if mode === "ide" || sidebarHidden}
+      <button class="tb-btn" type="button" aria-label={t("Settings")} title={t("Settings")} onclick={onOpenSettings}>
+        <Icon name="settings" />
+      </button>
+    {/if}
     {#if showUpdater && updaterStatus}
       <button
         class="tb-update"

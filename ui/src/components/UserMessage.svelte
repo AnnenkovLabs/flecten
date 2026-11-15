@@ -1,26 +1,92 @@
 <script lang="ts">
-  let { text }: { text: string } = $props();
+  import { t } from "../lib/i18n.svelte";
+  import type { MessageVersions } from "../lib/message-types";
+  import { relativeTime, timeTitle } from "../lib/ui-polish";
+  import Icon from "./Icon.svelte";
+
+  interface Props {
+    text: string;
+    at?: string | undefined;
+    now?: number;
+    versions?: MessageVersions | undefined;
+    disabled?: boolean;
+    onEdit?: ((text: string) => void) | undefined;
+    onSelectVersion?: ((variantId: string) => Promise<boolean>) | undefined;
+  }
+
+  let { text, at, now = Date.now(), versions, disabled = false, onEdit, onSelectVersion }: Props = $props();
+  let pending = $state(false);
+  let error = $state("");
+  const locked = $derived(disabled || pending);
+  const disabledTitle = $derived(t("Wait for the current work to finish before changing history."));
+
+  $effect(() => {
+    text;
+    versions?.variantId;
+    error = "";
+  });
+
+  async function selectVersion(index: number): Promise<void> {
+    const variantId = versions?.variants[index];
+    if (locked || !variantId || !onSelectVersion) return;
+    pending = true;
+    error = "";
+    try {
+      if (!(await onSelectVersion(variantId))) error = t("Could not switch versions. Try again.");
+    } catch {
+      error = t("Could not switch versions. Try again.");
+    } finally {
+      pending = false;
+    }
+  }
 </script>
 
 <div class="msg user">
-  <div class="bubble">{text}</div>
+  <div class="message-content">
+    <div class="bubble">{text}</div>
+    {#if onEdit || (versions && versions.count > 1)}
+      <div class="message-actions">
+        {#if versions && versions.count > 1}
+          <div class="message-versions" role="group" aria-label={t("Message versions")}>
+            <button class="st-icon-btn history-button" type="button" disabled={locked || versions.index === 0} title={disabled ? disabledTitle : t("Previous version")} aria-label={t("Previous version")} onclick={() => selectVersion(versions!.index - 1)}>
+              <span class="previous"><Icon name="chevron-right" size={14} /></span>
+            </button>
+            <span class="version-count" aria-label={t("Version {0} of {1}", [versions.index + 1, versions.count])}>{versions.index + 1}/{versions.count}</span>
+            <button class="st-icon-btn history-button" type="button" disabled={locked || versions.index + 1 >= versions.count} title={disabled ? disabledTitle : t("Next version")} aria-label={t("Next version")} onclick={() => selectVersion(versions!.index + 1)}>
+              <Icon name="chevron-right" size={14} />
+            </button>
+          </div>
+        {/if}
+        {#if onEdit}
+          <button class="st-icon-btn history-button edit-message" type="button" disabled={locked} title={disabled ? disabledTitle : t("Edit message")} aria-label={t("Edit message")} onclick={() => { if (!locked) onEdit?.(text); }}><Icon name="edit" size={15} /></button>
+        {/if}
+      </div>
+    {/if}
+    {#if at}<time class="msg-time" datetime={at} title={timeTitle(at, new Date(now))}>{relativeTime(at, new Date(now))}</time>{/if}
+    {#if error}<p class="st-error" role="alert">{error}</p>{/if}
+  </div>
 </div>
 
 <style>
+  .msg-time { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.3; text-align: right; }
   .msg.user {
     display: flex;
     justify-content: flex-end;
-    animation: msg-in 720ms var(--ease-jelly) both;
+  }
+
+  .message-content {
+    min-width: 0;
+    max-width: 85%;
   }
 
   .bubble {
     position: relative;
-    max-width: 85%;
     padding: 2px 0 2px 14px;
     color: var(--text-body);
     font-size: 16px;
     line-height: 1.6;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
     text-wrap: pretty;
   }
 
@@ -33,37 +99,41 @@
     border-radius: 2px;
     background: var(--primary);
     content: "";
-    transform-origin: top center;
-    animation: rule-in 620ms var(--ease-jelly) both;
   }
 
-  @keyframes msg-in {
-    0% {
-      opacity: 0;
-      transform: translateY(11px) scale(0.985);
-    }
-    64% {
-      opacity: 1;
-      transform: translateY(-2px) scale(1.003);
-    }
-    100% {
-      opacity: 1;
-      transform: none;
-    }
+  .message-actions,
+  .message-versions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
   }
 
-  @keyframes rule-in {
-    0% {
-      opacity: 0;
-      transform: scaleY(0.2);
-    }
-    62% {
-      opacity: 1;
-      transform: scaleY(1.04);
-    }
-    100% {
-      opacity: 1;
-      transform: none;
-    }
+  .message-actions {
+    margin-top: 4px;
   }
+
+  .history-button {
+    width: var(--control-sm-h);
+    height: var(--control-sm-h);
+  }
+
+  .history-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .previous {
+    display: grid;
+    transform: rotate(180deg);
+  }
+
+  .version-count {
+    min-width: 3ch;
+    color: var(--muted);
+    text-align: center;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
 </style>

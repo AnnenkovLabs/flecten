@@ -29,7 +29,7 @@ test("install a module, let the agent activate it, and use its custom UI with th
     ).toBeVisible();
     await dialog
       .getByLabel("Module folder", { exact: true })
-      .fill(join(import.meta.dirname, "../../src/marketplace/modules/better-trailer"));
+      .fill(join(import.meta.dirname, "../fixtures/modules/better-trailer"));
     await dialog.getByRole("button", { name: "Install from folder", exact: true }).click();
     await expect(
       dialog.getByRole("heading", { name: "better-trailer", exact: true }),
@@ -113,7 +113,7 @@ test("install a module, let the agent activate it, and use its custom UI with th
     await dialog.getByRole("button", { name: "Installed", exact: false }).click();
     await dialog
       .getByLabel("Module folder", { exact: true })
-      .fill(join(import.meta.dirname, "../../src/marketplace/modules/sqlite-journal"));
+      .fill(join(import.meta.dirname, "../fixtures/modules/sqlite-journal"));
     await dialog.getByRole("button", { name: "Install from folder", exact: true }).click();
     const journal = dialog
       .locator("article")

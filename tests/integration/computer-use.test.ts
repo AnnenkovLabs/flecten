@@ -5,7 +5,7 @@ import type { ToolResult } from "../../src/core/types";
 import { readModule } from "../../src/modules/package";
 import { moduleFixture } from "../helpers/modules";
 
-const packageRoot = join(import.meta.dir, "../../src/marketplace/modules/computer-use");
+const packageRoot = join(import.meta.dir, "../fixtures/modules/computer-use");
 const prefix = "mcp_module_computer-use__runtime_";
 
 async function logContents(directory: string): Promise<string> {

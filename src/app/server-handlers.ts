@@ -16,11 +16,12 @@ import {
 } from "./extension-handlers";
 import { saveProjectFile } from "./file-edit";
 import { previewFile } from "./file-preview";
+import { MessageEditOptionsSchema } from "./message-branches";
 import { MODULE_COMMANDS, type ModuleCommandType, moduleHandlers } from "./module-handlers";
 import { projectList } from "./project-list";
 import { parseProviderTestCommand } from "./provider-state";
 import { pullRequestContext } from "./pull-request-context";
-import { count, headers, optionalId, page, required, strings } from "./server-input";
+import { count, headers, optionalId, page, required, strings, text } from "./server-input";
 import {
   type Handler,
   type RunErrorReporter,
@@ -62,6 +63,7 @@ const APP_COMMANDS = [
   "files.git",
   "ide.terminal",
   "hello",
+  "model.metadata",
   "model.probe",
   "model.set",
   "provider.actualize",
@@ -71,6 +73,8 @@ const APP_COMMANDS = [
   "provider.reauthorize",
   "projects.list",
   "sessions.delete",
+  "sessions.edit",
+  "sessions.branch",
   "sessions.export",
   "sessions.fork",
   "sessions.get",
@@ -166,7 +170,8 @@ function appHandlers(
     status: async (command) => {
       const sessionId = optionalId(command, "sessionId");
       if (!sessionId) return undefined;
-      return { state: await app.session.send({ type: "status", sessionId }) };
+      const state = await app.session.send({ type: "status", sessionId });
+      return { state, info: app.info(sessionId) };
     },
     "trust.accept": async () => ({ info: await app.acceptTrust() }),
     "trust.reject": async () => ({ info: await app.rejectTrust() }),
@@ -179,7 +184,30 @@ function appHandlers(
       if (typeof command.query !== "string") throw new Error("query is required");
       return { sessions: await app.searchSessions(command.query, page(command)) };
     },
-    "sessions.get": async (command) => ({ events: await app.readSession(required(command, "id")) }),
+    "sessions.get": async (command) => ({
+      ...(await app.readMessageHistory(required(command, "id"))),
+    }),
+    "sessions.edit": async (command) => {
+      const reasoning = command.reasoning;
+      if (reasoning !== undefined && !isReasoningEffort(reasoning))
+        throw new Error("reasoning is invalid");
+      return {
+        ...(await app.editMessage(
+          required(command, "id"),
+          required(command, "messageId"),
+          text(command, "text"),
+          reasoning,
+          MessageEditOptionsSchema.parse(command),
+        )),
+      };
+    },
+    "sessions.branch": async (command) => ({
+      ...(await app.selectMessageBranch(
+        required(command, "id"),
+        required(command, "messageId"),
+        required(command, "variantId"),
+      )),
+    }),
     "sessions.export": async (command) => ({
       exported: await exportSession(app.info().cwd, required(command, "id")),
     }),
@@ -209,7 +237,13 @@ function appHandlers(
     "settings.save": async (command) => {
       if (!isObject(command.config)) throw new Error("config is required");
       const clearApiKeys = strings(command.clearApiKeys);
-      return { info: await app.saveSettings({ config: command.config, clearApiKeys }) };
+      return {
+        info: await app.saveSettings({
+          config: command.config,
+          baseline: command.baseline,
+          clearApiKeys,
+        }),
+      };
     },
     "catalog.status": async () => ({ status: await app.catalogStatus() }),
     "catalog.sync": async () => ({ status: await app.catalogSync() }),
@@ -254,6 +288,18 @@ function appHandlers(
     "provider.test": async (command) => ({
       result: await app.test(parseProviderTestCommand(command)),
     }),
+    "model.metadata": async (command) => {
+      const { refresh, ...target } = command;
+      if (refresh !== undefined && typeof refresh !== "boolean") {
+        throw new Error("refresh must be a boolean");
+      }
+      return {
+        result: await app.modelMetadata({
+          ...parseProviderTestCommand(target),
+          ...(refresh === undefined ? {} : { refresh }),
+        }),
+      };
+    },
     "provider.reauthorize": async (command) => {
       const providerId = required(command, "id");
       const model = required(command, "model");
@@ -271,7 +317,9 @@ function appHandlers(
       const variant = command.variant;
       if (variant !== undefined && typeof variant !== "string")
         throw new Error("variant is invalid");
+      const sessionId = optionalId(command, "sessionId");
       const info = await app.setModel({
+        ...(sessionId ? { sessionId } : {}),
         provider: required(command, "provider", message),
         model: required(command, "model", message),
         ...(reasoning ? { reasoning } : {}),

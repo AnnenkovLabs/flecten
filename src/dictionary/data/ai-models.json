@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "category": "ai-models",
+  "entries": [
+    {
+      "id": "mera-twdaa3c64c",
+      "term": "Foundation Models framework / @Generable / @Guide",
+      "aliases": [
+        "Foundation Models framework",
+        "@Generable",
+        "@Guide",
+        "LanguageModelSession",
+        "guided generation Apple",
+        "фреймворк Foundation Models",
+        "локальная модель Apple Intelligence"
+      ],
+      "category": "ai-models",
+      "definition": "Apple's Swift framework (WWDC 2025, iOS 26+) giving third-party apps direct access to the ~3B-parameter on-device LLM behind Apple Intelligence, free and offline. Its signature feature is guided generation: annotate a Swift struct/enum with `@Generable` (and constrain fields with `@Guide`) and `LanguageModelSession.respond(to:generating:)` returns a type-safe instance via constrained decoding - no JSON parsing. Also supports tool calling, streaming partial results and dynamic schemas. In practice: iOS devs say \"just use Foundation Models with a `@Generable` struct\" instead of calling a cloud LLM API for summarisation or extraction. По-русски: сделай суммаризацию на устройстве через Foundation Models и структуру с @Generable (since June 2025)",
+      "clarification": "Not Core ML, NLTagger or a cloud LLM; do not say Apple Intelligence is closed to third-party apps.",
+      "sources": ["https://developer.apple.com/documentation/foundationmodels"]
+    },
+    {
+      "id": "mera-tw8cf154ad",
+      "term": "Claude Sonnet 4.5 / Haiku 4.5 / Opus 4.5",
+      "aliases": [
+        "Claude Sonnet 4.5",
+        "Haiku 4.5",
+        "Opus 4.5",
+        "Sonnet 4.5",
+        "claude-sonnet-4-5",
+        "claude-opus-4-5",
+        "claude-3-5-sonnet",
+        "клод сонет 4.5"
+      ],
+      "category": "ai-models",
+      "definition": "Anthropic's 4.5 generation: Sonnet 4.5 (29 Sep 2025), Haiku 4.5 (15 Oct 2025), Opus 4.5 (24 Nov 2025), with API ids of the form `claude-sonnet-4-5`, `claude-haiku-4-5`, `claude-opus-4-5`. Note the naming order changed in this era - the family name now precedes the version (`claude-sonnet-4-5`, not `claude-3-5-sonnet`) - and Opus is no longer the only strong model, with Sonnet 4.5 positioned for long agentic runs and Haiku 4.5 for cheap speed. In practice: developers pin `claude-sonnet-4-5` in an agent config and say \"run the cheap pass on Haiku 4.5\". По-русски: запусти дешёвый проход на Haiku 4.5, а основной - на claude-sonnet-4-5 (since Sep-Nov 2025)",
+      "clarification": "Not claude-3-5-sonnet-20241022 or claude-3-opus as current, and not the old claude-3-{version}-{family} id ordering.",
+      "sources": ["https://www.anthropic.com/news/claude-sonnet-4-5"]
+    },
+    {
+      "id": "mera-twb4bb7210",
+      "term": "Gemini 3 Pro / Gemini 3 Deep Think",
+      "aliases": [
+        "Gemini 3 Pro",
+        "Gemini 3 Deep Think",
+        "gemini-3-pro",
+        "джемини 3",
+        "гемини 3 про",
+        "thinking level",
+        "Gemini 2.5 Pro"
+      ],
+      "category": "ai-models",
+      "definition": "Google's Gemini 3 generation, launched 18 Nov 2025 with Gemini 3 Pro as the flagship reasoning/coding model across the Gemini app, AI Studio, Vertex AI and Search AI Mode; Gemini 3 Deep Think is an enhanced extended-reasoning mode that reached Ultra subscribers in December 2025. Supersedes the Gemini 2.5 Pro/Flash line (which itself is post-cutoff for many models). Note \"thinking level\" replaced the older explicit thinking-budget token knob for Gemini 3. In practice: teams say \"route the hard tickets to Gemini 3 Pro with a high thinking level\". По-русски: отправь сложные тикеты в Gemini 3 Pro с высоким thinking level (since November 2025)",
+      "clarification": "Not Gemini 1.5 Pro or 2.0 Flash as current, and not a token thinking-budget knob - Gemini 3 uses thinking level.",
+      "sources": [
+        "https://blog.google/innovation-and-ai/technology/developers-tools/gemini-3-developers/"
+      ]
+    },
+    {
+      "id": "mera-tw1183e847",
+      "term": "Nano Banana / Nano Banana Pro",
+      "aliases": [
+        "Nano Banana",
+        "Nano Banana Pro",
+        "нано банана",
+        "нано банан",
+        "Gemini 3 Pro Image",
+        "Gemini 2.5 Flash Image"
+      ],
+      "category": "ai-models",
+      "definition": "The (originally leaked, then official) names for Google's Gemini image generation and editing models: Nano Banana = Gemini 2.5 Flash Image (Aug 2025), Nano Banana Pro = Gemini 3 Pro Image (20 Nov 2025), notable for character consistency across edits, legible in-image text and 2K/4K output. Google adopted the community codename as the product brand. In practice: designers say \"run it through Nano Banana Pro\" meaning prompt-based image editing that preserves the subject and renders readable text. По-русски: прогони картинку через Nano Banana Pro, чтобы текст на ней остался читаемым (since August 2025 / November 2025)",
+      "clarification": "Not a snack, joke or unrelated startup; it is Google's Gemini image generation and editing line.",
+      "sources": ["https://blog.google/technology/ai/nano-banana-pro/"]
+    },
+    {
+      "id": "mera-twd4f8cbd1",
+      "term": "GPT-5 / GPT-5.1 / GPT-5.1-Codex-Max",
+      "aliases": [
+        "GPT-5",
+        "GPT-5.1",
+        "GPT-5.1-Codex-Max",
+        "gpt-5.1-codex-max",
+        "gpt-5.1-codex",
+        "GPT-5.1 Instant",
+        "гпт-5.1",
+        "жпт 5"
+      ],
+      "category": "ai-models",
+      "definition": "OpenAI's current frontier line. GPT-5 shipped 7 Aug 2025 (with a router between fast and thinking modes); GPT-5.1 shipped 13 Nov 2025 as Instant / Thinking / Auto variants plus `gpt-5.1-codex` and `gpt-5.1-codex-mini`, and `gpt-5.1-codex-max` followed 19 Nov 2025 for long-horizon agentic coding. Reasoning-effort control and `prompt_cache_retention: \"24h\"` are era-defining API knobs. The o1/o3/o4-mini \"o-series\" was folded into this line. In practice: engineers say \"use gpt-5.1-codex-max for the long refactor, GPT-5.1 Instant for chat\". По-русски: возьми gpt-5.1-codex-max на длинный рефакторинг, а для чата GPT-5.1 Instant (since August 2025 / November 2025)",
+      "clarification": "Not GPT-4o, o1/o3 or o4-mini as newest; do not claim GPT-5 does not exist yet.",
+      "sources": ["https://openai.com/index/introducing-gpt-5/"]
+    },
+    {
+      "id": "mera-tw9f0d00ea",
+      "term": "Sora 2 / Veo 3.1",
+      "aliases": [
+        "Sora 2",
+        "Veo 3.1",
+        "сора 2",
+        "вео 3.1",
+        "cameo Sora",
+        "видео со синхронным звуком"
+      ],
+      "category": "ai-models",
+      "definition": "The current generation of video models. **Sora 2** (OpenAI, 30 Sep 2025) added synchronised native audio/dialogue, better physics and the \"cameo\" feature for inserting a consented likeness, launched with a social app. **Veo 3.1** (Google, 15 Oct 2025) extended Veo 3's native-audio generation with better narrative control, reference-image conditioning and scene extension, exposed through the Gemini API and Flow. In practice: creative teams say \"generate it in Sora 2\" or \"Veo 3.1 with reference images\" for clips with synced audio, not silent video. По-русски: сгенерь клип в Sora 2 или Veo 3.1 - со звуком и по референсным кадрам (since September-October 2025)",
+      "clarification": "Not the silent 2024 Sora preview or Veo 2 as current; do not assume generated video has no audio.",
+      "sources": ["https://openai.com/index/sora-2/"]
+    }
+  ]
+}

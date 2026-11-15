@@ -50,13 +50,19 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 
 ## Порядок событий и повтор
 
+`sessions.get` возвращает видимые события и `messageVersions` в порядке пользовательских сообщений. Каждый элемент содержит стабильный `messageId`, номер `current` с единицы и список идентификаторов `variants`. `sessions.edit` сохраняет прежнее продолжение, оставляет префикс до выбранного сообщения и сам запускает работу с новым `text`. Ответ приходит после сохранения `session.started`; клиент перечитывает журнал и live replay, не отправляя второй `run`. `sessions.branch` восстанавливает выбранный вариант вместе с его последним продолжением, включая вложенные редакции. Идентификаторы вариантов непрозрачны для клиента.
+
+`messageVersions.attachments` содержит сохранённые вложения выбранного сообщения: `id`, `name`, `kind`, `size`. В `sessions.edit` массив `retainedAttachments` выбирает исходные вложения и context references, которые остаются; новые `attachments` и `contexts` добавляются к ним. Пустой `retainedAttachments` убирает все исходные вложения. Без этого поля каждый переданный массив заменяет свой исходный набор, а пропущенный сохраняет его. Идентификаторы проверяются до изменения истории, новые файлы читаются и сохраняются до создания ветки. `model.set` завершает выбор модели до отправки правки, `reasoning` задаёт уровень нового прогона. Старые snapshots без файловых индексов представлены одним общим вложением.
+
+Смена истории отклоняется во время работы агента, при непустой очереди, ожидающих approvals, фоновых задачах и работающих субагентах. События `history.edited` и `history.selected` сохраняются только в durable журнале и не входят в видимую проекцию. Изменения файлов не откатываются при выборе ветки.
+
 При включённом переводе `session.started.prompt` сохраняет исходное сообщение слово в слово. `input.translated` несёт английский `input`, язык пользователя в `language` и stamp фактического системного префикса в `system`. `message.finished` хранит оригинальные английские `text`, `reasoning`, `summary`; отдельный `display` содержит перевод для окна. Аналогично `context.compacted.displaySummary` отделён от канонического `summary`. Replay модели использует оригиналы, renderer использует display. Ошибка обратного перевода сохраняется как `translation.failed` и показывает оригинал. События `usage` с `purpose: translation` несут провайдера, модель и `durationMs`; бюджет учитывает отдельный тариф переводчика. Аналогично `purpose: vision` обозначает описание изображения отдельной моделью и использует её тариф.
 
 - Sidecar нумерует каждое событие полем `seq`. Номер растёт на весь процесс, общий для всех задач.
 - События одной задачи идут по порядку. `tool.finished` приходит в порядке завершения, а результаты попадают в историю модели в порядке вызова.
 - `events.replay` возвращает события текущего (или последнего) запуска задачи от его `session.started`: `{ "replay": { "sessionId", "events", "seq", "running" } }`. Дельты завершённого сообщения в повтор не входят: `message.finished` несёт тот же текст.
 - Окно после перезагрузки или второе окно применяет `events`, а затем пропускает живые события с `seq` не больше `replay.seq`. Так ни одна дельта не теряется и не приходит дважды.
-- В памяти хранятся последние 32 задачи, до 20 000 событий на запуск. Полная история задачи на диске, её отдаёт `sessions.get`.
+- В памяти хранятся последние 32 задачи, до 20 000 событий на запуск. Полный журнал задачи хранится на диске, `sessions.get` отдаёт выбранную ветку разговора.
 
 ```json
 { "type": "events.replay", "requestId": "r9", "sessionId": "s_1" }
@@ -103,7 +109,7 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `mcp.oauth.cancel` | нет | `id` | отмена авторизации |
 | `mcp.elicitation.respond` | нет | `id`, `response` | `answered`, валидация ответа по форме сервера |
 | `hello` | нет | нет | без ответа, sidecar присылает `status` |
-| `status` | да | `sessionId?` | с `sessionId`: `state` задачи; затем `status` |
+| `status` | опционально | `sessionId?` | с `sessionId`: `state` задачи и её `info`; затем общий `status` |
 | `run` | да | `prompt`, `reasoning?`, `sessionId?`, `clientId?`, `attachments?`, `contexts?`, `resumed?` | без ответа, дальше события задачи |
 | `stop` | да | `sessionId?`, `mode?: graceful / force`, `target?: worker` | `result`, `state`; задача завершается `session.finished` |
 | `steer` | да | `text`, `attachments?`, `contexts?`, `id?` | `result`; сообщение уходит в текущий ход (`steer.applied`) |
@@ -124,7 +130,9 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `events.replay` | да | `sessionId` | `replay` |
 | `sessions.list` | нет | `query?`, `limit?`, `offset?` | `sessions` |
 | `sessions.search` | нет | `query`, `limit?`, `offset?` | `sessions` |
-| `sessions.get` | нет | `id` | `events` |
+| `sessions.get` | нет | `id` | `events`, `messageVersions` выбранной ветки |
+| `sessions.edit` | нет | `id`, `messageId`, `text`, `reasoning?`, `attachments?`, `contexts?`, `retainedAttachments?` | `events`, `messageVersions`; сам запускает новую работу |
+| `sessions.branch` | нет | `id`, `messageId`, `variantId` | `events`, `messageVersions`; выбирает сохранённое продолжение |
 | `sessions.rename` | нет | `id`, `title` | `session` |
 | `sessions.delete` | нет | `id`, `confirm: true` | итог удаления |
 | `sessions.fork` | нет | `id`, `sequence?` или `turn?` | `session` |
@@ -139,11 +147,12 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `trust.accept` | нет | нет | `info`; сохраняет доверие папке, затем `status` |
 | `trust.reject` | нет | нет | `info`; сохраняет отказ, затем `status` |
 | `projects.list` | нет | нет | `projects`: добавленные папки, trust, sessions и группа с `projectRoot: null` |
-| `model.set` | нет | `provider`, `model`, `reasoning?`, `variant?` | `info`; затем `status` |
+| `model.set` | опционально | `sessionId?`, `provider`, `model`, `reasoning?`, `variant?` | `info` выбранного чата либо общих настроек; затем общий `status` |
 | `model.probe` | нет | `provider`, `model` | итог проверки модели |
 | `provider.discover` | нет | `protocol`, `baseUrl`, `apiKey?`, `headers?` | `result` |
 | `provider.draft` | нет | `provider`, `providerId?` | `result` с токеном черновика |
 | `provider.test` | нет | `model` и `providerId` или `draftToken` | `result` |
+| `model.metadata` | нет | `model`, `providerId` или `draftToken`, `refresh?` | `result.model`, `result.warnings`; только чтение API/каталога, без генерации и сохранения |
 | `provider.reauthorize` | нет | `id`, `model` | `result`, обновляет кэш команды авторизации и проверяет модель |
 | `provider.actualize` | нет | `id` | `result`, `info` |
 | `catalog.status` | нет | нет | `status` |
@@ -258,6 +267,8 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `session.open` | оболочка | `id`; открыть сессию после готовности выбранной рабочей папки |
 
 `status` содержит `projectRoot: string | null` и `trustState: unknown | trusted | untrusted`. `projectRoot: null` означает работу без проекта.
+
+Общий `status` передаёт провайдера и модель по умолчанию, без `sessionId`. Ответ на `status` с `sessionId` возвращает отдельную `info` с этим идентификатором и выбором чата. `model.set` с `sessionId` сохраняет служебное событие `model.selected` (`sessionId`, `provider`, `model`, `reasoning?`, `variant?`) в durable журнале чата и публикует его через общий поток событий, не меняя общую настройку. Без `sessionId` команда меняет модель по умолчанию для новых чатов. Существующий чат восстанавливает последний явный выбор, а для старого журнала без `model.selected` использует модель последнего основного запуска. Уже выполняющийся запрос завершается на своей модели; сохранённый выбор применяется при следующем запуске.
 
 `status` приходит при старте, после `hello`, `status`, `trust.accept`, `trust.reject`, `settings.save`, `access.set` и `model.set`. `sessions` это активность всех задач: `sessionId`, `running`, `turns`, `queue`, `approvals`, `jobs`. Если провайдер не настроен, `configError` содержит причину, но sidecar продолжает работать.
 

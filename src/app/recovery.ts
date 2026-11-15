@@ -1,5 +1,6 @@
 import type { HarnessConfig } from "../config/schema";
 import type { Event } from "../core/types";
+import { projectBranches } from "../store/events/branches";
 import { readTolerant } from "../store/events/envelope";
 import { listSessions } from "../store/events/read";
 import { sessionPaths } from "../store/paths";
@@ -27,9 +28,20 @@ export async function markInterrupted(
     : listSessions(cwd, { limit: LIST_LIMIT }));
   const interrupted: InterruptedRun[] = [];
   for (const session of sessions) {
-    const envelopes = storage
+    const stored = storage
       ? await storage.envelopes(session.id)
       : (await readTolerant(sessionPaths(cwd, session.id).events)).envelopes;
+    const selected = projectBranches(stored);
+    if (selected.pending) {
+      // The process stopped between preparing an edit and recording its first user message.
+      await persist({
+        type: "history.selected",
+        sessionId: session.id,
+        branchId: selected.pending.parentBranchId,
+      });
+      continue;
+    }
+    const envelopes = selected.envelopes;
     const workerEvents = envelopes.flatMap(({ event }) =>
       event.type === "worker.event" ? [event.event] : [],
     );

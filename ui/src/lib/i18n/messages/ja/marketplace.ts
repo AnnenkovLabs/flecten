@@ -38,8 +38,10 @@ export default {
     "該当するモジュールがありません。検索をクリアするか、別のカテゴリを選んでください。",
   "Clear filters": "フィルターをクリア",
   "Catalog sources": "カタログの配信元",
-  "The built-in catalog works offline. Add an HTTPS catalog to discover community modules.":
-    "内蔵カタログはオフラインで使えます。HTTPS カタログを追加してコミュニティのモジュールを探せます。",
+  "Add an HTTPS catalog to discover community modules.":
+    "HTTPS カタログを追加してコミュニティのモジュールを探せます。",
+  "No modules in connected catalogs. Add an HTTPS catalog to get started.":
+    "接続済みのカタログにモジュールはありません。HTTPS カタログを追加して始めましょう。",
   "Included with Flecten": "Flecten に同梱",
   "Disconnect catalog: {0}": ["カタログを切断：", 0, ""],
   Disconnect: "切断",

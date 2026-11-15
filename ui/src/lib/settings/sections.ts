@@ -39,6 +39,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
         t("Concurrent tasks"),
         "maxConcurrent",
         t("Interface language"),
+        t("Interface Scale"),
         t("English 简体中文 Português Español 日本語 Українська Русский"),
       ];
     },

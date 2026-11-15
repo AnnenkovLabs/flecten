@@ -1,4 +1,7 @@
 export default {
+  "No new supported user messages were found. No model request was made.":
+    "未找到可导入的新用户消息。未向模型发送请求。",
+  "Training finished. No supported traits were found.": "学习已完成。未找到有依据的特征。",
   "On sessions from any harness.": "从任意框架的会话中学习。",
   "Your Twin": "你的 Twin",
   "Learning from your decisions": "正在学习你的决策",

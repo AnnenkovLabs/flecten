@@ -99,6 +99,12 @@ export default {
   "optional for a local server": "本地服务器可不填",
   "Scanning API…": "正在扫描 API…",
   "Connect and find models": "连接并查找模型",
+  "Check connection before adding": "添加前检查连接",
+  "Turn off if your provider blocks checks. Add models manually after adding the provider.":
+    "如果服务商阻止连接检查，请关闭此选项。添加服务商后，请手动添加模型。",
+  "Add without checking": "跳过检查并添加",
   "The app will get the model list from the API and fill in context limits and capabilities from the catalog.":
     "系统会从 API 获取模型列表，并从目录补充上下文和能力信息。",
+  "Provider added without checking. Add models manually in the Models tab.":
+    "已添加提供商，未进行检查。请在“模型”选项卡中手动添加模型。",
 } as const;

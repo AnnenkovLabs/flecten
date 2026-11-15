@@ -1,5 +1,9 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Interface Scale": "界面缩放",
+  "Resize text, controls, and the chat column. Changes apply immediately.":
+    "调整文字、控件和聊天栏的大小。更改立即生效。",
+  "Reset to 100%": "重置为 100%",
   none: "无",
   "not visible": "不可见",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [

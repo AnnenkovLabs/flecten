@@ -6,7 +6,7 @@ import { expect, test } from "@playwright/test";
 import { launchApp, repoRoot } from "./fixtures";
 
 test("project trust appears on entry, confirms refusal and can be changed before activating a module", async () => {
-  const path = join(repoRoot, "src/marketplace/modules/better-trailer");
+  const path = join(repoRoot, "tests/fixtures/modules/better-trailer");
   const revision = execFileSync(
     "bun",
     [

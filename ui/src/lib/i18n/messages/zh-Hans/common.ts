@@ -1,5 +1,8 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  Profile: "个人资料",
+  "Change name": "更改姓名",
+  "Could not save name. Try again.": "无法保存姓名。请重试。",
   Deny: "禁止",
   "Always block.": "始终阻止。",
   Auto: "自动",

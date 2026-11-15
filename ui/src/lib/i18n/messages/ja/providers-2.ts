@@ -112,6 +112,12 @@ export default {
   "optional for a local server": "ローカルサーバーでは省略可",
   "Scanning API…": "APIを確認中…",
   "Connect and find models": "接続してモデルを検索",
+  "Check connection before adding": "追加前に接続を確認する",
+  "Turn off if your provider blocks checks. Add models manually after adding the provider.":
+    "プロバイダーが接続確認をブロックする場合はオフにしてください。追加後にモデルを手動で追加してください。",
+  "Add without checking": "確認せずに追加",
   "The app will get the model list from the API and fill in context limits and capabilities from the catalog.":
     "APIからモデル一覧を取得し、カタログからコンテキストと対応機能の情報を補います。",
+  "Provider added without checking. Add models manually in the Models tab.":
+    "接続を確認せずにプロバイダーを追加しました。「モデル」タブでモデルを手動で追加してください。",
 } as const;

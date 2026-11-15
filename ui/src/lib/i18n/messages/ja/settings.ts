@@ -1,5 +1,9 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Interface Scale": "インターフェースの倍率",
+  "Resize text, controls, and the chat column. Changes apply immediately.":
+    "文字、操作ボタン、チャット欄の大きさを変更します。変更はすぐに反映されます。",
+  "Reset to 100%": "100% に戻す",
   none: "なし",
   "not visible": "見つかりません",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [

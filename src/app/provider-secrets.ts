@@ -27,6 +27,7 @@ export function sanitize(config: HarnessConfig): HarnessConfig {
       provider.auth.args = provider.auth.args.map((arg) => redact(arg));
     }
     for (const model of Object.values(provider.models)) maskModel(model);
+    for (const model of Object.values(provider.modelMetadataBaseline ?? {})) maskModel(model);
   }
   for (const server of Object.values(next.mcp.servers)) {
     maskValues(server.env);
@@ -167,6 +168,17 @@ export function mergeSecrets(
         : provider.headers,
       models,
     };
+    if (provider.modelMetadataBaseline) {
+      next.modelMetadataBaseline = {};
+      for (const [modelId, model] of Object.entries(provider.modelMetadataBaseline)) {
+        next.modelMetadataBaseline[modelId] = mergeModelSecrets(
+          `provider "${id}" model metadata "${modelId}"`,
+          model,
+          previous?.modelMetadataBaseline?.[modelId],
+          allowMask,
+        );
+      }
+    }
     delete next.apiKey;
     if (apiKey) next.apiKey = apiKey;
     delete next.auth;
@@ -298,7 +310,10 @@ export function providerSecrets(definition: ProviderConfig | undefined): string[
     values.add(definition.auth.command);
     for (const arg of definition.auth.args) values.add(arg);
   }
-  for (const model of Object.values(definition.models)) {
+  for (const model of [
+    ...Object.values(definition.models),
+    ...Object.values(definition.modelMetadataBaseline ?? {}),
+  ]) {
     addSecretHeaders(values, model.headers);
     for (const variant of Object.values(model.variants ?? {})) {
       addSecretHeaders(values, variant.headers);

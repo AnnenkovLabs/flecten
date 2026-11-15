@@ -7,6 +7,7 @@
   import ProviderAdvanced from "./ProviderAdvanced.svelte";
   import ProviderConnection from "./ProviderConnection.svelte";
   import ProviderModels from "./ProviderModels.svelte";
+  import ProviderModelRefresh from "./ProviderModelRefresh.svelte";
 
   const TABS = $derived([
     { id: "connection", label: t("Connection") },
@@ -142,6 +143,10 @@
         aria-labelledby="provider-tab-advanced"
         hidden={tab !== "advanced"}
       >
+        <section class="section">
+          <ProviderModelRefresh {provider} />
+        </section>
+
         <section class="section">
           <h2 class="st-title">{t("Cache and limits")}</h2>
           <div class="fields">

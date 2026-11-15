@@ -52,7 +52,7 @@
         <button class="st-btn st-btn--quiet" type="button" disabled={twin.busy} onclick={() => twin.load(true)}><Icon name="refresh" size={14} />{twin.busy ? t("Scanning…") : t("Scan sources")}</button>
       </div>
       {#if snapshot?.training.state === "ready"}
-        <p class="twin-hint" role="status">{t("Twin is ready. Learned traits apply immediately and you can edit them.")} <button class="twin-text-button" type="button" onclick={() => twin.tab = "profile"}>{t("View your character")}</button></p>
+        <p class="twin-hint" role="status">{snapshot.training.messages === 0 ? t("No new supported user messages were found. No model request was made.") : snapshot.entries.length === 0 ? t("Training finished. No supported traits were found.") : t("Twin is ready. Learned traits apply immediately and you can edit them.")} {#if snapshot.entries.length}<button class="twin-text-button" type="button" onclick={() => twin.tab = "profile"}>{t("View your character")}</button>{/if}</p>
       {:else if snapshot?.training.state === "cancelled"}<p class="twin-hint" role="status">{t("Training cancelled. Your existing character is unchanged.")}</p>{/if}
     {/if}
     <details class="twin-privacy"><summary>{t("What is sent to the model?")}</summary><p>{t("Scanning is local. Learning sends your messages and preceding agent replies to your configured provider, within the limits below.")}</p><p>{t("Training model: {0} / {1}", [snapshot?.training.provider || "…", snapshot?.training.model || "…"])}</p><p>{t("Per training: up to {0} sessions, {1} messages and {2} characters", [snapshot?.limits.maxSessions ?? 0, snapshot?.limits.maxMessages ?? 0, snapshot?.limits.maxInputCharacters ?? 0])}</p></details>

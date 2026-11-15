@@ -1,10 +1,13 @@
+import type { HistoryEdited, HistorySelected } from "../../../shared/message-branches";
+import type { ModelSelected } from "../../../shared/model-choice";
 import type { SessionState } from "../../../shared/session-state";
 import type { SubagentEnvelope } from "../../../shared/subagents";
 import type { TwinActivity } from "../../../shared/twin-activity";
 import type { ContextSummary } from "../../context";
 import type { ApprovalChoice, PermissionAction, PermissionRisk } from "../../security/types";
 import type { JobView } from "../../tools/jobs/view";
-import type { AttachmentReference } from "../attachment-reference";
+import type { AttachmentReference, AttachmentSnapshot } from "../attachment-reference";
+import type { ContextReference } from "../context-reference";
 import type { HookRun } from "../hooks/types";
 import type { MemoryDelivery } from "../memory/command";
 import type { PromptStamp } from "../prompt";
@@ -19,6 +22,9 @@ export type Event =
   | { type: "worker.event"; sessionId: SessionId; event: SessionEvent };
 export type SessionEvent = LeafSessionEvent | SubagentEnvelope<LeafSessionEvent>;
 export type LeafSessionEvent =
+  | HistoryEdited
+  | HistorySelected
+  | ModelSelected
   | { type: "twin.activity"; sessionId: SessionId; activity: TwinActivity }
   | {
       type: "memory.context";
@@ -45,7 +51,10 @@ export type LeafSessionEvent =
       /** Exact text the model received when it differs from the prompt (slash expansion, attachments, memory). */
       input?: string;
       attachments?: AttachmentReference[];
+      attachmentSnapshot?: AttachmentSnapshot;
+      contexts?: ContextReference[];
       reasoning?: ReasoningEffort;
+      variant?: string;
       /** Version, hash and budget of the system prompt this run used. */
       system?: PromptStamp;
       /** Queue item this run came from; a restored queue never sends it again. */
@@ -112,6 +121,8 @@ export type LeafSessionEvent =
       text: string;
       input?: string;
       attachments?: AttachmentReference[];
+      attachmentSnapshot?: AttachmentSnapshot;
+      contexts?: ContextReference[];
       queueId?: string;
     }
   | {
@@ -121,6 +132,7 @@ export type LeafSessionEvent =
       text: string;
       moduleReferences?: import("../../../shared/modules").ModuleReference[];
       attachments?: AttachmentReference[];
+      attachmentSnapshot?: AttachmentSnapshot;
     }
   | { type: "job.started"; sessionId: SessionId; job: JobView }
   | {

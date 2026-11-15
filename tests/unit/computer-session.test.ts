@@ -2,10 +2,10 @@ import { expect, test } from "bun:test";
 import { z } from "zod";
 
 const { ComputerSession } = await import(
-  new URL("../../src/marketplace/modules/computer-use/session.mjs", import.meta.url).href
+  new URL("../fixtures/modules/computer-use/session.mjs", import.meta.url).href
 );
 const { computerSchemas } = await import(
-  new URL("../../src/marketplace/modules/computer-use/schemas.mjs", import.meta.url).href
+  new URL("../fixtures/modules/computer-use/schemas.mjs", import.meta.url).href
 );
 
 const signal = () => new AbortController().signal;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HistoryAttachmentKindSchema } from "../../shared/message-branches";
 
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_ATTACHMENT_FILES = 5;
@@ -30,8 +31,28 @@ export const AttachmentReferencesSchema = z
   .max(MAX_ATTACHMENT_FILES);
 export type AttachmentReference = z.infer<typeof AttachmentReferenceSchema>;
 
-export const AttachmentSnapshotSchema = z.object({
-  media: AttachmentReferencesSchema,
-  blocks: z.array(z.string().max(250_000)).max(100),
+export const AttachmentEntrySchema = z.object({
+  name: z.string().min(1).max(512),
+  kind: HistoryAttachmentKindSchema,
+  size: z.number().int().nonnegative(),
+  mediaIndexes: z.array(z.number().int().nonnegative()).max(MAX_ATTACHMENT_FILES),
+  blockIndexes: z.array(z.number().int().nonnegative()).max(100),
 });
+export type AttachmentEntry = z.infer<typeof AttachmentEntrySchema>;
+
+export const AttachmentSnapshotSchema = z
+  .object({
+    media: AttachmentReferencesSchema,
+    blocks: z.array(z.string().max(250_000)).max(100),
+    entries: z.array(AttachmentEntrySchema).max(100).optional(),
+  })
+  .refine(
+    (snapshot) =>
+      snapshot.entries?.every(
+        (entry) =>
+          entry.mediaIndexes.every((index) => index < snapshot.media.length) &&
+          entry.blockIndexes.every((index) => index < snapshot.blocks.length),
+      ) ?? true,
+    "Invalid saved attachment indexes",
+  );
 export type AttachmentSnapshot = z.infer<typeof AttachmentSnapshotSchema>;

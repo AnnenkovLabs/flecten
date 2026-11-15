@@ -287,6 +287,8 @@ export async function takeSteering(messages: Message[], options: LoopOptions): P
       ...(input !== (steer.display ?? steer.text) ? { input } : {}),
       ...(steer.queueId ? { queueId: steer.queueId } : {}),
       ...(steer.attachmentRefs?.length ? { attachments: steer.attachmentRefs } : {}),
+      ...(steer.attachmentSnapshot ? { attachmentSnapshot: steer.attachmentSnapshot } : {}),
+      ...(steer.contexts?.length ? { contexts: steer.contexts } : {}),
     });
   }
   return steered.length > 0;

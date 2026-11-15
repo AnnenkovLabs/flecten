@@ -1,4 +1,17 @@
 {
   "schemaVersion": 1,
-  "categories": ["design.json", "ai-development.json"]
+  "categories": [
+    "design.json",
+    "ai-development.json",
+    "ai-agents.json",
+    "ai-benchmarks.json",
+    "ai-models.json",
+    "css-platform.json",
+    "developer-tools.json",
+    "infrastructure.json",
+    "mobile-platforms.json",
+    "product-business.json",
+    "web-platform.json",
+    "mcp-ecosystem.json"
+  ]
 }

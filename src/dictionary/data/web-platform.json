@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 1,
+  "category": "web-platform",
+  "entries": [
+    {
+      "id": "mera-tw37acc9b7",
+      "term": "Material 3 Expressive (M3 Expressive)",
+      "aliases": [
+        "Material 3 Expressive",
+        "M3 Expressive",
+        "m3-expressive",
+        "экспрессивный Material 3",
+        "материал 3 экспрессив",
+        "Material 3 expressive motion",
+        "Android 16 expressive"
+      ],
+      "category": "web-platform",
+      "definition": "Google's expressive evolution of Material 3, announced 13 May 2025 and shipping with Android 16 QPR1 and Wear OS 6. It is positioned as an \"expansion pack\" over existing Material 3 rather than a new major version: spring-based natural motion physics, haptics-coupled animation, expanded shape/corner morph library, deeper dynamic-color integration, and a bolder emphasized type scale. Not to be confused with Material You (2021 dynamic color) or plain Material 3. In practice: PMs say \"give it the M3 Expressive treatment\" meaning springy motion, shape morphing on press, emphasized typography and bigger tonal color contrast. По-русски: сделай кнопки в стиле M3 Expressive - пружинная анимация и морфинг формы при нажатии (since May 2025)",
+      "clarification": "Not Material You dynamic color from 2021 and not plain Material 3; not a new major Material version.",
+      "sources": [
+        "https://blog.google/products-and-platforms/platforms/android/material-3-expressive-android-wearos-launch/"
+      ]
+    },
+    {
+      "id": "mera-tw6f8ca6f4",
+      "term": "Tailwind CSS v4 / @theme / Oxide engine",
+      "aliases": [
+        "Tailwind CSS v4",
+        "@theme",
+        "Oxide engine",
+        "Tailwind v4",
+        "Tailwind CSS 4",
+        "tailwind.config.js",
+        "тейлвинд 4",
+        "токены в @theme"
+      ],
+      "category": "web-platform",
+      "definition": "Tailwind CSS v4 (stable Jan 2025) replaces the JavaScript `tailwind.config.js` with CSS-first configuration: design tokens are declared in an `@theme { --color-primary: … }` block as real CSS custom properties, which Tailwind turns into utilities. The new Rust-based \"Oxide\" engine with embedded Lightning CSS does the compiling, the `content` array is gone in favour of automatic source detection, and the three `@tailwind` directives collapse into one `@import \"tailwindcss\"`. In practice: developers say \"put it in `@theme`\" meaning define the token as a CSS variable in the stylesheet rather than editing a JS config object. По-русски: мы на Tailwind v4 - вынеси токены в @theme, а не в tailwind.config.js (since January 2025)",
+      "clarification": "Not tailwind.config.js with theme.extend, not a content globs array, not @tailwind base/components/utilities.",
+      "sources": ["https://tailwindcss.com/blog/tailwindcss-v4"]
+    },
+    {
+      "id": "mera-twd9202f04",
+      "term": "Invoker Commands (command / commandfor) and Interest Invokers (interestfor)",
+      "aliases": [
+        "Invoker Commands",
+        "command / commandfor) and Interest Invokers (interestfor",
+        "Invoker Commands  and Interest Invokers (interestfor)",
+        "invoker commands",
+        "commandfor",
+        "interestfor",
+        "interesttarget",
+        "invoketarget",
+        "command атрибут кнопки",
+        "инвокер команды"
+      ],
+      "category": "web-platform",
+      "definition": "Declarative HTML attributes that wire a button to behaviour on another element with no event listeners. `<button commandfor=\"id\" command=\"show-modal|close|request-close|toggle-popover|…\">` invokes built-in commands (custom ones are prefixed `--`), while `interestfor` triggers on \"interest\" (hover / long-press / focus) and is the standards-track way to build hovercards and tooltips, typically with `popover=\"hint\"`. Note: the interest attribute was renamed from the earlier proposal name `interesttarget` to `interestfor`. In practice: developers write `<button commandfor=\"dlg\" command=\"show-modal\">` instead of `dlg.showModal()` in a click handler, and `interestfor` for hover previews. По-русски: открой диалог декларативно через commandfor и command=\"show-modal\", без JS-обработчика (since 2025 (Invoker Commands Chrome 135; interest invokers late 2025))",
+      "clarification": "Not popovertarget only, not the obsolete invoketarget/invokeaction/interesttarget names, not showModal() from a click handler.",
+      "sources": ["https://developer.mozilla.org/en-US/docs/Web/API/Invoker_Commands_API"]
+    },
+    {
+      "id": "mera-tw7f0a03cd",
+      "term": "Cross-document view transitions / @view-transition",
+      "aliases": [
+        "Cross-document view transitions",
+        "@view-transition",
+        "cross-document view transitions",
+        "view-transition-class",
+        "startViewTransition",
+        "переходы между страницами",
+        "вью транзишены между документами"
+      ],
+      "category": "web-platform",
+      "definition": "The multi-page-application half of the View Transitions API: two same-origin documents each opt in with the `@view-transition { navigation: auto }` at-rule and the browser animates the navigation between them, including push/replace/traverse. It is a progressive enhancement (unsupported browsers just navigate), and is distinct from the original same-document `document.startViewTransition()` JS API. Related newer additions include `view-transition-class`, `view-transition-group`, and nested/scoped transition types via `:active-view-transition-type()`. In practice: developers say \"turn on cross-document view transitions\" meaning add the `@view-transition` at-rule to both pages so an MPA/Astro site animates like an SPA. По-русски: включи кросс-документные view transitions через @view-transition, чтобы MPA анимировалась как SPA (since 2024-2025 (Chrome 126; Safari 18.2))",
+      "clarification": "Not only document.startViewTransition() for SPAs; do not call cross-document transitions impossible or Chrome-only.",
+      "sources": ["https://developer.chrome.com/docs/web-platform/view-transitions/cross-document"]
+    },
+    {
+      "id": "mera-tw683c30e8",
+      "term": "Next.js 16 / Cache Components / \"use cache\"",
+      "aliases": [
+        "Next.js 16",
+        "Cache Components",
+        "\"use cache\"",
+        "use cache directive",
+        "cacheComponents",
+        "cacheLife",
+        "unstable_cache",
+        "директива use cache",
+        "кэширование в Next.js 16"
+      ],
+      "category": "web-platform",
+      "definition": "Next.js 16 makes caching explicit. Enabling `cacheComponents: true` turns on Cache Components, where nothing is cached implicitly and you opt in per function/component/page with the `\"use cache\"` directive; the compiler derives cache keys automatically, and `cacheLife`/`cacheTag` control revalidation. This replaces the Next 13-14 implicit full-route cache, `fetch` auto-caching and `unstable_cache`. It was previewed as \"dynamicIO\"/PPR before landing under the Cache Components name. In practice: developers say \"mark that component `use cache`\" instead of reasoning about `fetch(..., { next: { revalidate } })` or `unstable_cache`. По-русски: проставь \"use cache\" на компонент - в Next.js 16 кэш только явный (since October 2025)",
+      "clarification": "Not the implicit App Router fetch cache, force-cache defaults or unstable_cache; caching is no longer automatic.",
+      "sources": ["https://nextjs.org/blog/next-16"]
+    },
+    {
+      "id": "mera-tw529b56d8",
+      "term": "proxy.ts (Next.js middleware rename)",
+      "aliases": [
+        "proxy.ts",
+        "Next.js middleware rename",
+        "Next.js proxy.ts",
+        "middleware.ts",
+        "next middleware",
+        "прокси файл Next",
+        "переименование middleware"
+      ],
+      "category": "web-platform",
+      "definition": "In Next.js 16 the `middleware.ts` file is renamed to `proxy.ts` and its default export renamed to `proxy`, running on the Node.js runtime. The rename is deliberate messaging: the file is for lightweight request interception/rewrites/redirects at the proxy layer, not for auth-heavy or data-fetching logic. In practice: developers say \"put the redirect in `proxy.ts`\" where they used to say \"put it in middleware\". По-русски: перенеси редирект в proxy.ts - в Next.js 16 middleware.ts переименовали (since October 2025)",
+      "clarification": "Not middleware.ts exporting middleware() with export const config matcher; that file name is gone in Next 16.",
+      "sources": ["https://nextjs.org/blog/next-16"]
+    },
+    {
+      "id": "mera-twc1d313b4",
+      "term": "React Compiler 1.0",
+      "aliases": [
+        "React Compiler",
+        "babel-plugin-react-compiler",
+        "React Forget",
+        "реакт компилятор",
+        "компилятор реакта"
+      ],
+      "category": "web-platform",
+      "definition": "React's optional build-time optimizing compiler reached 1.0 in October 2025. It automatically memoizes components and hook values, making manual `useMemo`, `useCallback` and `React.memo` largely unnecessary; it ships as a Babel plugin / bundler integration plus an ESLint rule for Rules-of-React violations. Distinct from React 19 itself (stable 5 Dec 2024), which brought Server Functions, `useActionState`, `useOptimistic`, `use()` and ref-as-prop. In practice: developers say \"the compiler handles it\" when asked to add `useMemo`, and enable `babel-plugin-react-compiler` in the build. По-русски: у нас включён React Compiler - не добавляй useMemo, он мемоизирует сам (since October 2025)",
+      "clarification": "Not React Forget, not experimental or unreleased; do not tell users to hand-write useMemo, useCallback or React.memo.",
+      "sources": ["https://react.dev/blog/2025/10/07/react-compiler-1"]
+    },
+    {
+      "id": "mera-tw02bc92e4",
+      "term": "Svelte 5 runes ($state, $derived, $effect)",
+      "aliases": [
+        "Svelte 5 runes",
+        "$state",
+        "$derived",
+        "$effect",
+        "руны Svelte",
+        "рунический синтаксис Svelte",
+        "export let props"
+      ],
+      "category": "web-platform",
+      "definition": "Svelte 5's replacement for its old implicit reactivity. Reactive state is declared explicitly with rune functions - `$state`, `$derived`, `$effect`, `$props`, `$bindable` - which are compiler-recognised symbols (not imports) and work in `.svelte.js`/`.svelte.ts` modules, not just components. This retires Svelte 4's `let` = reactive, `$:` reactive statements, `export let` props and `createEventDispatcher`. In practice: Svelte devs say \"convert it to runes\" meaning replace `$:` and bare `let` with `$derived`/`$state`. По-русски: перепиши компонент на руны Svelte 5: $state и $derived вместо $: и export let (since October 2024, dominant through 2025-2026)",
+      "clarification": "Not Svelte 4 implicit reactivity: no bare let as state, no $: statements, no export let props or createEventDispatcher.",
+      "sources": ["https://svelte.dev/docs/svelte/what-are-runes"]
+    },
+    {
+      "id": "mera-twd09df84f",
+      "term": "Zoneless Angular / signals-by-default",
+      "aliases": [
+        "Zoneless Angular",
+        "signals-by-default",
+        "zoneless Angular",
+        "provideZonelessChangeDetection",
+        "linkedSignal",
+        "зонлесс Angular",
+        "Angular без zone.js",
+        "сигналы по умолчанию Angular"
+      ],
+      "category": "web-platform",
+      "definition": "Angular's move away from Zone.js monkey-patching for change detection to signal-driven, \"zoneless\" updates using `signal`, `computed`, `effect`, `input()`, `model()` and `linkedSignal`. Zoneless change detection went developer-preview in v18, stable in v20, and is the default in current Angular, removing `zone.js` from the polyfills and eliminating whole-tree dirty checking. In practice: Angular devs say \"we're zoneless now\" and drop `zone.js`, using `provideZonelessChangeDetection()` and signals instead of `ChangeDetectorRef.detectChanges()`. По-русски: мы уже zoneless - выпилили zone.js и используем сигналы вместо detectChanges (since 2024 experimental → default in Angular 20-22)",
+      "clarification": "Not Zone.js as mandatory with NgZone and markForCheck; signals are not an experimental v17 add-on.",
+      "sources": ["https://angular.dev/guide/zoneless"]
+    },
+    {
+      "id": "mera-tw3ba4d76b",
+      "term": "Vue Vapor Mode",
+      "aliases": [
+        "Vapor Mode",
+        "Vue Vapor",
+        "vapor-mode",
+        "вапор мод",
+        "вейпор режим Vue",
+        "Vue без virtual DOM"
+      ],
+      "category": "web-platform",
+      "definition": "An alternative Vue compilation strategy that compiles components to direct DOM operations with no virtual DOM and no runtime component instances, opted into per component tree. It coexists with the classic vDOM runtime in the same app, cutting bundle size and improving update performance - Vue's counterpart to Svelte/Solid-style fine-grained reactivity. In practice: Vue devs say \"make that tree Vapor\" for perf-critical lists and widgets. По-русски: переведи это дерево во Vapor Mode - Vue отрендерит без virtual DOM (since Vue 3.6 (feature-complete 2025/2026))",
+      "clarification": "Do not say Vue always uses a virtual DOM or that Vapor Mode is a distant experiment.",
+      "sources": ["https://blog.vuejs.org/posts/vue-3-6"]
+    },
+    {
+      "id": "mera-twd3ce9868",
+      "term": "Astro Server Islands (server:defer)",
+      "aliases": [
+        "Astro Server Islands",
+        "server:defer",
+        "Astro server islands",
+        "серверные острова Astro",
+        "Content Layer Astro",
+        "client:visible",
+        "остров на сервере"
+      ],
+      "category": "web-platform",
+      "definition": "An extension of islands architecture to the server: mark a component `server:defer` and Astro renders the page statically and cacheable at the CDN while that component is fetched and streamed in separately, with a `slot=\"fallback\"` placeholder shown meanwhile. Astro 5 also introduced the **Content Layer**, a pluggable, type-safe loader API (with Zod schemas) that replaced content collections limited to local files. In practice: developers say \"make the cart badge a server island\" to keep a page fully cacheable while personalising one component. По-русски: сделай бейдж корзины серверным островом через server:defer - страница останется кэшируемой (since December 2024 (Astro 5))",
+      "clarification": "Not only client islands with client:load/client:visible; personalisation does not force the whole page to SSR.",
+      "sources": ["https://astro.build/blog/astro-5/"]
+    },
+    {
+      "id": "mera-twfc82a7c5",
+      "term": "shadcn registries (namespaced @registry/component) / shadcn MCP",
+      "aliases": [
+        "shadcn registries",
+        "shadcn MCP",
+        "@registry/component",
+        "components.json registries",
+        "реестр shadcn",
+        "именованные реестры shadcn"
+      ],
+      "category": "web-platform",
+      "definition": "shadcn CLI 3.0 turned shadcn/ui from \"copy components from one place\" into a distribution system: `components.json` can declare multiple named registries (`\"@acme\": \"https://acme.com/r/{name}.json\"`, with headers/auth), and you install with `npx shadcn add @acme/button`. It ships an MCP server (`shadcn mcp init`) so agents can search, browse and install components across those registries in natural language. In practice: design-system teams say \"publish it to our shadcn registry\" so both humans and agents can `add @internal/data-table`. По-русски: опубликуй компонент в наш shadcn-реестр, чтобы ставить его как @internal/data-table (since August 2025)",
+      "clarification": "Not a fixed copy-paste catalogue installed with npx shadcn-ui@latest add; namespaced multi-registry distribution exists.",
+      "sources": ["https://ui.shadcn.com/docs/changelog/2025-08-cli-3-mcp"]
+    },
+    {
+      "id": "mera-twe85881ec",
+      "term": "Chrome built-in AI / Prompt API (LanguageModel)",
+      "aliases": [
+        "Chrome built-in AI / Prompt API",
+        "LanguageModel",
+        "Chrome built-in AI",
+        "Prompt API",
+        "LanguageModel.create",
+        "built-in AI Chrome",
+        "Gemini Nano в браузере",
+        "window.ai",
+        "встроенный ИИ в Chrome",
+        "Summarizer API"
+      ],
+      "category": "web-platform",
+      "definition": "Web APIs exposing Chrome's on-device Gemini Nano model to pages and extensions: the **Prompt API** (`LanguageModel.availability()` / `LanguageModel.create()` / `session.prompt()`) plus task-specific siblings - Summarizer, Writer, Rewriter, Translator, Language Detector, Proofreader. Availability is gated on device capability (roughly 22 GB free disk, 4 GB VRAM or 16 GB RAM) and the model downloads on demand, so `availability()` checks are mandatory. Note the API surface moved off the early `window.ai` shape to global `LanguageModel`. In practice: developers say \"use the Prompt API\" for local summarisation with zero inference cost and no server round-trip. По-русски: сделай суммаризацию через Prompt API на Gemini Nano прямо в Chrome, без сервера (since 2024 origin trials → Chrome extensions 138 (2025), web platform 2026)",
+      "clarification": "Not WebLLM, transformers.js or a server API as the only route; not the obsolete window.ai.createTextSession() shape.",
+      "sources": ["https://developer.chrome.com/docs/ai/built-in"]
+    },
+    {
+      "id": "mera-tw05d6b74a",
+      "term": "Baseline \"Newly available\" / \"Widely available\"",
+      "aliases": [
+        "Baseline \"Newly available\"",
+        "\"Widely available\"",
+        "Baseline Widely available",
+        "Baseline Newly available",
+        "Limited availability Baseline",
+        "бейслайн статус",
+        "статус Baseline фичи",
+        "widely available web feature"
+      ],
+      "category": "web-platform",
+      "definition": "The web-platform support vocabulary now printed on MDN, caniuse and web.dev. **Newly available** = the feature is supported in the current release of all core browser engines (Chrome/Edge, Firefox, Safari). **Widely available** = 30 months have passed since that point, the threshold for \"safe by default in production\". Features supported by only some engines are labelled \"Limited availability\". In practice: tech leads say \"is it Baseline Widely available yet?\" as the go/no-go gate instead of reading a caniuse table. По-русски: эта фича уже Baseline Widely available или ещё нет? (since 2023 concept, ubiquitous in docs by 2025-2026)",
+      "clarification": "Not the generic word baseline (performance baseline, typographic baseline); it is a formal status with a 30-month rule.",
+      "sources": ["https://web.dev/baseline"]
+    },
+    {
+      "id": "mera-twa7911120",
+      "term": "Interop 2026",
+      "aliases": ["интероп 2026", "Interop focus areas", "Interop 2024", "фокус-области Interop"],
+      "category": "web-platform",
+      "definition": "The annual cross-browser interoperability project's 2026 edition, whose focus areas define what will actually become reliably cross-browser this year: container style queries, CSS anchor positioning, `attr()`, `contrast-color()`, CSS zoom, custom highlights, dialogs and popovers, fetch uploads/ranges, IndexedDB, Wasm JSPI, media pseudo-classes, Navigation API, scoped custom element registries, scroll-driven animations, scroll snap, `shape()`, view transitions, WebRTC and WebTransport. In practice: developers cite \"it's in Interop 2026\" as evidence a shaky feature will be safe to use by year end. По-русски: эта фича в Interop 2026, значит к концу года будет кроссбраузерной (since February 2026)",
+      "clarification": "Not the Interop 2023/2024 focus list (:has(), container queries, subgrid) as what is being fixed now.",
+      "sources": ["https://github.com/web-platform-tests/interop/tree/main/2026"]
+    },
+    {
+      "id": "mera-tw134fdf1b",
+      "term": "Tailwind v4.1 text-shadow-* and mask-* utilities",
+      "aliases": [
+        "Tailwind v4.1",
+        "text-shadow-sm",
+        "text-shadow-lg",
+        "mask-linear utilities",
+        "тень текста в Tailwind",
+        "маски в Tailwind"
+      ],
+      "category": "web-platform",
+      "definition": "Tailwind CSS v4.1 finally added first-party text-shadow utilities (`text-shadow-2xs` … `text-shadow-lg`, with colour and opacity modifiers) - historically the most-requested missing utility - plus a composable `mask-*` family for linear/radial/conic gradient masks, `pointer-*`/`any-pointer-*` variants for input-device targeting, and safe alignment utilities. In practice: developers write `text-shadow-sm text-shadow-black/30` instead of an arbitrary `[text-shadow:...]` value or custom plugin. По-русски: в Tailwind 4.1 есть text-shadow-sm - не пиши произвольное значение в квадратных скобках (since April 2025)",
+      "clarification": "Do not say Tailwind lacks text-shadow utilities or tell users to write arbitrary values or a custom plugin.",
+      "sources": ["https://tailwindcss.com/blog/tailwindcss-v4-1"]
+    },
+    {
+      "id": "mera-twc4b25888",
+      "term": "Speculation Rules API",
+      "aliases": [
+        "Speculation Rules",
+        "speculationrules",
+        "prerender eagerness",
+        "moderate eagerness",
+        "спекулятивные правила",
+        "instant.page",
+        "quicklink prefetch"
+      ],
+      "category": "web-platform",
+      "definition": "A declarative navigation-performance API: a `<script type=\"speculationrules\">` JSON block (or an HTTP header) tells the browser which URLs to prefetch or fully **prerender**, with document rules (`where`/`selector_matches`/`href_matches`) and an `eagerness` budget (`immediate`, `eager`, `moderate`, `conservative`). Prerendering runs the whole page in the background so navigation is instant. Chromium-only - Firefox and Safari ignore it, so it is pure progressive enhancement. Distinct from `<link rel=prefetch>` (subresource-level, no full prerender). In practice: developers say \"add speculation rules with moderate eagerness\" to get near-instant navigations without an SPA router. По-русски: добавь speculation rules с eagerness moderate, чтобы переходы были мгновенными без SPA (since Chrome 109/121, mainstream advice 2025-2026)",
+      "clarification": "Not link rel=prefetch or the removed rel=prerender, and not JS hover-prefetch libraries like instant.page or quicklink.",
+      "sources": ["https://developer.chrome.com/docs/web-platform/prerender-pages"]
+    }
+  ]
+}

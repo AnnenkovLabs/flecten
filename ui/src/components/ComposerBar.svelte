@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { ACCESS_MODES, type AccessMode, type ActiveAccessMode } from "../../../shared/access-mode";
-  import { accessModeDescription, accessModeLabel } from "../lib/permissions";
   import { t } from "../lib/i18n.svelte";
   import type { SendMode } from "../lib/composer/types";
   import type { ContextView } from "../lib/context-meter.svelte";
@@ -33,9 +31,6 @@
     model: string;
     reasoning: ReasoningChoice;
     variant?: string | undefined;
-    accessMode: ActiveAccessMode;
-    accessChanging: boolean;
-    onAccessModeChange: (mode: AccessMode) => void;
     onSend: (mode: SendMode) => void;
     onAttach: () => void;
     onVoiceStart: () => void;
@@ -45,6 +40,8 @@
     onReasoningChange: (value: ReasoningChoice) => void;
     onVariantChange: (value: string | undefined) => void;
     onStop: () => void;
+    editing?: boolean;
+    editPending?: boolean;
   }
 
   let {
@@ -68,9 +65,6 @@
     model,
     reasoning,
     variant,
-    accessMode,
-    accessChanging,
-    onAccessModeChange,
     onSend,
     onAttach,
     onVoiceStart,
@@ -80,6 +74,8 @@
     onReasoningChange,
     onVariantChange,
     onStop,
+    editing = false,
+    editPending = false,
   }: Props = $props();
 
   const activeModel = $derived(
@@ -109,11 +105,6 @@
     ...variants.map(([id, entry]) => ({ value: id, label: entry.name ?? id })),
   ]);
 
-  const accessOptions = $derived([
-    ...(accessMode === "custom" ? [{ value: "custom" as const, label: accessModeLabel("custom"), description: accessModeDescription("custom") }] : []),
-    ...(Object.keys(ACCESS_MODES) as AccessMode[]).map((value) => ({ value, label: accessModeLabel(value), description: accessModeDescription(value) })),
-  ]);
-
   const stopLabel = $derived(stopping ? t("Force stop") : t("Stop"));
   const voiceTitle = $derived(
     !voiceSupported
@@ -134,6 +125,7 @@
       aria-label={t("Attach files")}
       title={t("Attach files, folders, images, or PDFs")}
       onclick={onAttach}
+      disabled={editPending}
     >
       <Icon name="attachment" size={15} />
     </button>
@@ -141,23 +133,17 @@
       {providers}
       {provider}
       {model}
-      disabled={running}
+      disabled={running || editPending}
       listenOpenRequests
       onSelect={onModelSelect}
     />
-    <div class="composer-access">
-      <span>{t("Access")}</span>
-      <ComposerSelect label={t("Access mode")} value={accessMode} options={accessOptions} disabled={accessChanging}
-        onChange={(value) => { if (value !== "custom") onAccessModeChange(value); }} />
-      <span class="sr-only" role="status">{accessChanging ? t("Applying decision…") : ""}</span>
-    </div>
     {#if variants.length > 0}
       <ComposerSelect label={t("Model variant")} value={variant ?? ""} options={variantOptions}
-        disabled={running} onChange={(value) => onVariantChange(value || undefined)} />
+        disabled={running || editPending} onChange={(value) => onVariantChange(value || undefined)} />
     {/if}
     {#if hasReasoning}
       <ComposerSelect label={t("Model reasoning level")} value={current} options={reasoningOptions}
-        disabled={running} onChange={(value) => onReasoningChange(value as ReasoningChoice)} />
+        disabled={running || editPending} onChange={(value) => onReasoningChange(value as ReasoningChoice)} />
     {/if}
   </div>
   <div class="composer-right">
@@ -175,12 +161,16 @@
       aria-label={voiceListening ? t("Stop voice input") : t("Voice input")}
       aria-pressed={voiceListening}
       title={voiceTitle}
-      disabled={!voiceSupported || running || voicePending}
+      disabled={!voiceSupported || running || voicePending || editPending}
       onclick={voiceListening ? onVoiceStop : onVoiceStart}
     >
       <Icon name="mic" size={14} />
     </button>
-    {#if running}
+    {#if editing}
+      <button class="send" type="submit" aria-label={t("Save & send")} title={editPending ? t("Saving…") : t("Save & send")} disabled={!canSend || editPending}>
+        <span class="send-face"><Icon name="arrow-up" size={16} stroke={2} /></span>
+      </button>
+    {:else if running}
       <div class="composer-actions" class:is-split={hasDraft} role="group" aria-label={t("Agent actions")}>
         <button class="stop" class:is-stopping={stopping} type="button" aria-label={stopLabel}
           title={stopping ? t("Waiting for the current step to finish. Click again to stop immediately") : t("Stop after the current response or command")}

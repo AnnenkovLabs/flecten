@@ -174,7 +174,7 @@ test("pasted media, focused read, accounting, queue, reopen and native vision us
     })) as RunResult;
     expect(continued.stopReason).toBe("done");
     expect(JSON.stringify(requests.at(-1))).toContain("Screenshot: a red permission denied error");
-    await app.setModel({ provider: "test", model: "native" });
+    await app.setModel({ sessionId: first.sessionId, provider: "test", model: "native" });
     const nativeEvents: Event[] = [];
     app.session.subscribeStamped((event) => nativeEvents.push(event));
     const native = (await app.session.send({

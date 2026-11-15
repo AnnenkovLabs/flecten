@@ -132,7 +132,9 @@ function createSingleProvider(
         apiModel: request.apiModel ?? model?.apiId ?? request.model,
         ...(variant?.reasoning ? { reasoning: variant.reasoning } : {}),
         ...(variant?.temperature === undefined ? {} : { temperature: variant.temperature }),
-        ...(variant?.maxOutputTokens === undefined ? {} : { maxTokens: variant.maxOutputTokens }),
+        ...(variant?.maxOutputTokens === undefined
+          ? {}
+          : { maxTokens: Math.min(request.maxTokens, variant.maxOutputTokens) }),
         tools: model?.tools === false ? [] : request.tools,
       };
       return adapterFor(protocol).stream(adapted, signal);

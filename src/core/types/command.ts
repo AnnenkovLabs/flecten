@@ -1,3 +1,4 @@
+import type { AttachmentSnapshot } from "../attachment-reference";
 import type { ContextReference } from "../context-reference";
 import type { QueueItemMode } from "../queue/types";
 import type { ReasoningEffort } from "./reasoning";
@@ -11,6 +12,7 @@ export type Command =
       reasoning?: ReasoningEffort;
       sessionId?: string;
       attachments?: string[];
+      attachmentSnapshot?: AttachmentSnapshot;
       contexts?: ContextReference[];
       /** Id the client picked for this send; the same id twice starts one run. */
       clientId?: string;

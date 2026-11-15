@@ -3,7 +3,8 @@ import type { ModelProvider } from "../../providers/types";
 import type { ToolRegistry } from "../../tools/registry";
 import type { ToolContext } from "../../tools/types";
 import type { LanguageRun } from "../../translation/run";
-import type { AttachmentReference } from "../attachment-reference";
+import type { AttachmentReference, AttachmentSnapshot } from "../attachment-reference";
+import type { ContextReference } from "../context-reference";
 import type { DictionaryRuntime } from "../dictionary/runtime";
 import type { RetryPolicy } from "../goal/retry";
 import type { GoalState } from "../goal/state";
@@ -66,6 +67,8 @@ export type LoopEvent =
       input?: string;
       queueId?: string;
       attachments?: AttachmentReference[];
+      attachmentSnapshot?: AttachmentSnapshot;
+      contexts?: ContextReference[];
     }
   | {
       type: "notice.applied";
@@ -160,6 +163,8 @@ export interface SteeringMessage {
   display?: string;
   attachments?: ImagePart[];
   attachmentRefs?: AttachmentReference[];
+  attachmentSnapshot?: AttachmentSnapshot;
+  contexts?: ContextReference[];
 }
 
 export interface LoopResult {

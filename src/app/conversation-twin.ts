@@ -227,7 +227,8 @@ export class ConversationTwin {
         this.#spent.tokens += decision.usage.input + decision.usage.output;
         this.#spent.cost += decision.usage.costUsd ?? 0;
       }
-      const retired = revision !== this.#revision || signal.aborted;
+      const enabled = (await this.port.get()).enabled;
+      const retired = revision !== this.#revision || signal.aborted || !enabled;
       this.emit({
         type: "twin.activity",
         sessionId: this.options.sessionId ?? "",

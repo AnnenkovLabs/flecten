@@ -81,13 +81,13 @@ export function maxOutputTokens(config: HarnessConfig): number {
   return Math.min(output, Math.max(1, contextWindow(config) - 1));
 }
 
-/** Leave room for the actual response instead of a fixed reserve that can overflow. */
+/** Reserve working reply space; the native output limit is a ceiling, not preallocated context. */
 export function modelContext(config: HarnessConfig): HarnessConfig["context"] {
   const window = contextWindow(config);
   return {
     ...config.context,
     window,
-    reserve: Math.min(window - 1, Math.max(config.context.reserve, maxOutputTokens(config))),
+    reserve: Math.min(window - 1, config.context.reserve),
   };
 }
 
@@ -190,8 +190,12 @@ export async function hydrateActiveModel(config: HarnessConfig, cwd: string): Pr
   const definition = config.providers[config.provider];
   if (!definition) return;
   const current = definition.models[config.model];
-  if (current?.context && current.reasoning !== undefined) return;
-  const known = await findCatalogModel(cwd, config.model);
+  if (current?.context && current.output && current.reasoning !== undefined) return;
+  const known = await findCatalogModel(cwd, config.model, definition.baseUrl);
   if (!known) return;
   definition.models[config.model] = { ...known, ...current, name: current?.name ?? known.name };
+  definition.modelMetadataBaseline = {
+    ...definition.modelMetadataBaseline,
+    [config.model]: structuredClone(known),
+  };
 }

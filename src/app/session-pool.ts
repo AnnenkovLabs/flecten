@@ -53,6 +53,7 @@ export class SessionPool implements SessionHandle {
   readonly #stamped = new Set<StampedListener>();
   readonly #journal: EventJournal;
   readonly #used = new Map<SessionHandle, number>();
+  readonly #editing = new Set<SessionId>();
   #fresh: Promise<SessionHandle> | undefined;
   #focused: SessionHandle | undefined;
   #creating: Promise<unknown> = Promise.resolve();
@@ -84,14 +85,42 @@ export class SessionPool implements SessionHandle {
   }
 
   async send(command: RoutedCommand): Promise<unknown> {
+    const target = command.sessionId ?? this.#focused?.getSessionId();
+    if (target && this.#editing.has(target)) throw new Error("Conversation history is changing");
     if (command.type === "run") return this.#run(command);
     if (command.sessionId === undefined && isApproval(command)) return this.#approve(command);
     const handle = await this.#route(command.sessionId);
+    if (handle.getSessionId() && this.#editing.has(handle.getSessionId() as string))
+      throw new Error("Conversation history is changing");
     const { sessionId: _sessionId, ...rest } = command;
     const result = await handle.send(rest as Command);
     const sessionId = handle.getSessionId();
     if (sessionId) this.#handles.set(sessionId, handle);
     return result;
+  }
+
+  /** Excludes sends while a history change closes both roles and starts its replacement run. */
+  async withIdleHistory<T>(
+    sessionId: SessionId,
+    operation: (
+      start: (command: Extract<Command, { type: "run" }>) => Promise<unknown>,
+    ) => Promise<T>,
+  ): Promise<T> {
+    if (this.#editing.has(sessionId)) throw new Error("Conversation history is changing");
+    this.#editing.add(sessionId);
+    try {
+      const handle = await this.#handleFor(sessionId);
+      const status = handle.peek();
+      if (handle.isBusy() || status.queue > 0 || status.jobs > 0 || status.approvals > 0)
+        throw new Error(
+          "Finish or stop the current work and clear queued messages before editing history",
+        );
+      await handle.flush();
+      await this.close(sessionId);
+      return await operation((command) => this.#run(command, true));
+    } finally {
+      this.#editing.delete(sessionId);
+    }
   }
 
   isBusy(): boolean {
@@ -118,12 +147,32 @@ export class SessionPool implements SessionHandle {
     return this.#focused?.peek() ?? { running: false, turns: 0, queue: 0, approvals: 0, jobs: 0 };
   }
 
-  update(next: Partial<SessionOptions>): void {
-    for (const handle of this.#all()) handle.update(next);
+  update(next: Partial<SessionOptions> | ((sessionId?: string) => Partial<SessionOptions>)): void {
+    for (const handle of this.#all())
+      handle.update(typeof next === "function" ? next(handle.getSessionId()) : next);
   }
 
-  async flush(): Promise<void> {
-    await Promise.all(this.#all().map((handle) => handle.flush()));
+  updateSession(sessionId: string, next: Partial<SessionOptions>): void {
+    this.#handles.get(sessionId)?.update(next);
+  }
+
+  /** App-owned durable controls use the same journal and live event stream as core events. */
+  publish(event: Event): void {
+    for (const item of this.#journal.accept(event)) {
+      this.#bus.emit(item);
+      for (const listener of this.#stamped) {
+        try {
+          listener(item);
+        } catch {}
+      }
+    }
+  }
+
+  async flush(sessionId?: SessionId): Promise<void> {
+    const handle = sessionId ? this.#handles.get(sessionId) : undefined;
+    await Promise.all(
+      (sessionId ? (handle ? [handle] : []) : this.#all()).map((item) => item.flush()),
+    );
   }
 
   /** Closes the handle of a deleted session; the caller makes sure it is not running. */
@@ -145,9 +194,11 @@ export class SessionPool implements SessionHandle {
     this.#handles.clear();
   }
 
-  async #run(command: Extract<Command, { type: "run" }>): Promise<unknown> {
+  async #run(command: Extract<Command, { type: "run" }>, editing = false): Promise<unknown> {
     await this.#options.beforeRun?.();
     const requested = command.sessionId;
+    if (!editing && requested && this.#editing.has(requested))
+      throw new Error("Conversation history is changing");
     const existing = requested === undefined ? undefined : this.#handles.get(requested);
     if (!existing?.isBusy()) {
       const running = [...this.#handles.values()].filter((handle) => handle.isBusy()).length;
@@ -158,6 +209,8 @@ export class SessionPool implements SessionHandle {
       }
     }
     const handle = existing ?? (await this.#handleFor(requested));
+    if (!editing && requested && this.#editing.has(requested))
+      throw new Error("Conversation history is changing");
     this.#focus(handle);
     return handle.send(command);
   }
@@ -227,15 +280,7 @@ export class SessionPool implements SessionHandle {
       if (event.type === "session.started" && !this.#handles.has(event.sessionId)) {
         this.#handles.set(event.sessionId, handle);
       }
-      const stamped = this.#journal.accept(event);
-      for (const item of stamped) {
-        this.#bus.emit(item);
-        for (const listener of this.#stamped) {
-          try {
-            listener(item);
-          } catch {}
-        }
-      }
+      this.publish(event);
     });
     return handle;
   }

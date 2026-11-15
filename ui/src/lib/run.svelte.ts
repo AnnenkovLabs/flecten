@@ -1,4 +1,3 @@
-import type { AccessMode } from "../../../shared/access-mode";
 import type { CustomCommandInfo } from "./agent-protocol";
 import { contextMentions } from "./composer/context-mentions";
 import type { ContextReference } from "./composer/context-types";
@@ -11,28 +10,21 @@ import { t } from "./i18n.svelte";
 import { IdeWorkspace } from "./ide.svelte";
 import { ModuleStore } from "./modules/store.svelte";
 import { applyPreferences, preferences } from "./preferences.svelte";
-import { chooseAccessMode } from "./run/access";
 import { TaskActivity } from "./run/activity.svelte";
 import { afterReplay, attachedEvents, isSessionEvent } from "./run/attach";
+import { backgroundEvent } from "./run/background";
 import { Checkpoints } from "./run/checkpoints.svelte";
 import { RunControls } from "./run/controls.svelte";
 import { listenIntents } from "./run/intents";
-import { chooseModel, chooseVariant, type ModelHost } from "./run/model";
+import { MessageHistory } from "./run/message-history.svelte";
+import { type ModelHost, RunModels } from "./run/model";
 import { Projects } from "./run/projects.svelte";
 import { Reconnect } from "./run/reconnect";
-import { finishedLabel, finishedSessions, startedSessions } from "./run/sessions";
+import { finishedSessions, startedSessions } from "./run/sessions";
 import { TaskCommands } from "./run/task-commands";
-import { hasCheckpoint } from "./run/thread.svelte";
 import { type SessionEvent, TaskView } from "./run/view.svelte";
 import { errorMessage as message } from "./run-errors";
-import {
-  hasStoredReasoning,
-  nextId,
-  nowIso,
-  storedReasoning,
-  storeReasoning,
-  uniqueId,
-} from "./run-helpers";
+import { nextId, nowIso, storedReasoning, uniqueId } from "./run-helpers";
 import { listenTaskEvents, refreshTasks, type TaskHost } from "./run-tasks";
 import { extensions } from "./settings/extensions.svelte";
 import { toast } from "./toast.svelte";
@@ -46,20 +38,25 @@ import type {
   TaskStatusKind,
 } from "./types";
 import { focusComposer, taskStatus } from "./ui-polish";
+import { UserProfile } from "./user-profile.svelte";
 
 type StatusEvent = Extract<AgentEvent, { type: "status" }>;
 export class RunStore implements TaskHost, ModelHost {
+  readonly profile = new UserProfile();
   readonly dictionary = new DictionaryStore();
   readonly directories = new Projects();
   readonly twin = new TwinStore();
   readonly modules = new ModuleStore(() => this.#sessionId);
   readonly ide = new IdeWorkspace();
   info = $state<AgentInfo | null>(null);
-  accessChanging = $state(false);
   connection = $state<"connecting" | "ready" | "offline">("connecting");
   commands = $state<CustomCommandInfo[]>([]);
   reasoning = $state<ReasoningChoice>(storedReasoning());
   variant = $state<string | undefined>(undefined);
+  readonly #models = new RunModels(this);
+  get modelChange(): Promise<void> {
+    return this.#models.ready(this.#sessionId);
+  }
   sessions = $state<AgentSessionSummary[]>([]);
   activeTask = $state("current");
   openingTask = $state<string | null>(null);
@@ -72,6 +69,14 @@ export class RunStore implements TaskHost, ModelHost {
   files = $state<string[]>([]);
   readonly activity = new TaskActivity();
   readonly view = new TaskView({ checkpointSaved: () => void this.checkpoints.refresh() });
+  readonly history = new MessageHistory({
+    view: this.view,
+    sessionId: () => this.#sessionId,
+    connected: () => this.connection === "ready",
+    modelReady: () => this.modelChange,
+    reasoning: () => this.reasoning,
+    reload: (id) => this.#open(id),
+  });
   readonly controls = new RunControls(
     this.view,
     () => this.#sessionId,
@@ -87,8 +92,7 @@ export class RunStore implements TaskHost, ModelHost {
   #buffer: { id: string; events: SessionEvent[] } | null = null;
   #loadSequence = 0;
   #configErrorShown = false;
-  #reasoningTouched = hasStoredReasoning();
-  #variantTouched = false;
+  #projectSequence = 0;
   #filesLoaded = false;
   #attached = false;
   readonly #reconnect = new Reconnect();
@@ -99,7 +103,7 @@ export class RunStore implements TaskHost, ModelHost {
     this.view.title = value;
   }
   get busy(): boolean {
-    return this.view.busy;
+    return this.view.busy || this.history.changing;
   }
   get project(): string {
     return this.info?.projectRoot === null ? "" : this.info?.project || t("project");
@@ -114,7 +118,7 @@ export class RunStore implements TaskHost, ModelHost {
     return this.info?.provider || "";
   }
   get userName(): string {
-    return this.info?.user || t("you");
+    return this.profile.name ?? (this.info?.user || t("you"));
   }
   get contextView(): ContextView {
     return { ...this.view.context.view(this.info?.contextWindow ?? 0), usage: this.view.usage };
@@ -199,6 +203,7 @@ export class RunStore implements TaskHost, ModelHost {
   ): boolean {
     if (text.trim().length === 0 && attachments.length === 0) return false;
     const sessionId = this.#sessionId;
+    if (this.history.changing) return false;
     if (!this.view.busy || !sessionId) return this.start(text, attachments, contexts);
     const id = uniqueId("q");
     const extra = {
@@ -219,28 +224,39 @@ export class RunStore implements TaskHost, ModelHost {
     return true;
   }
   start(text: string, attachments: string[] = [], contexts: ContextReference[] = []): boolean {
-    if (this.view.busy) return false;
+    if (this.busy) return false;
     const sessionId = this.ensureSession();
     this.view.begin(text);
     this.sessions = startedSessions(this.sessions, sessionId, text);
-    const sent = sendAgent({
-      type: "run",
-      prompt: text,
-      sessionId,
-      clientId: uniqueId("c"),
-      ...(this.reasoning === "auto" ? {} : { reasoning: this.reasoning }),
-      ...(attachments.length > 0 ? { attachments } : {}),
-      ...(contexts.length > 0 ? { contexts } : {}),
-    });
-    if (!sent) {
-      this.view.failed(
-        t("The core is only available in the app. Open the Electron window."),
-        "bridge",
-      );
-      return false;
-    }
+    const project = this.#projectSequence;
+    const dispatch = (): boolean => {
+      if (project !== this.#projectSequence) return false;
+      const reasoning = this.#models.reasoningFor(sessionId);
+      const sent = sendAgent({
+        type: "run",
+        prompt: text,
+        sessionId,
+        clientId: uniqueId("c"),
+        ...(reasoning === "auto" ? {} : { reasoning }),
+        ...(attachments.length > 0 ? { attachments } : {}),
+        ...(contexts.length > 0 ? { contexts } : {}),
+      });
+      if (!sent) {
+        this.view.failed(
+          t("The core is only available in the app. Open the Electron window."),
+          "bridge",
+        );
+        return false;
+      }
+      return true;
+    };
+    if (this.#models.pending(sessionId)) void this.modelChange.then(dispatch);
+    else if (!dispatch()) return false;
     focusComposer();
     return true;
+  }
+  sessionId(): string | null {
+    return this.#sessionId;
   }
   ensureSession(): string {
     const sessionId = this.#sessionId ?? uniqueId("s");
@@ -251,6 +267,7 @@ export class RunStore implements TaskHost, ModelHost {
       this.#sessionId = sessionId;
       this.activeTask = sessionId;
       setComposerTask(sessionId);
+      this.#models.focus(sessionId);
     }
     return sessionId;
   }
@@ -305,25 +322,15 @@ export class RunStore implements TaskHost, ModelHost {
   }
 
   setReasoning(value: ReasoningChoice): void {
-    this.reasoning = value;
-    this.#reasoningTouched = true;
-    storeReasoning(value);
-  }
-
-  touchVariant(touched: boolean): void {
-    this.#variantTouched = touched;
+    void this.#models.reasoning(value);
   }
 
   setModel(provider: string, model: string): Promise<void> {
-    return chooseModel(this, provider, model);
-  }
-
-  setAccessMode(mode: AccessMode): Promise<void> {
-    return chooseAccessMode(this, mode);
+    return this.#models.choose(provider, model);
   }
 
   setVariant(value: string | undefined): Promise<void> {
-    return chooseVariant(this, value);
+    return this.#models.variant(value);
   }
 
   #titleOf(id: string): string {
@@ -331,32 +338,38 @@ export class RunStore implements TaskHost, ModelHost {
   }
 
   #show(id: string | null): void {
+    this.history.set([]);
     this.modules.reset();
     this.view.reset(id ? this.#titleOf(id) : "");
     this.#sessionId = id;
     this.activeTask = id ?? "current";
     setComposerTask(this.activeTask);
+    this.#models.focus(id);
   }
 
   /** Opens a task: its stored log, the live part of its run, then events that came meanwhile. */
   async #open(id: string): Promise<void> {
     const ticket = ++this.#loadSequence;
+    const modelRevision = this.#models.revision(id);
     this.#buffer = { id, events: [] };
     this.openingTask = id;
     try {
-      const [stored, replay, state] = await Promise.all([
+      const [stored, replay, status] = await Promise.all([
         requestAgent({ type: "sessions.get", id }),
         requestAgent({ type: "events.replay", sessionId: id })
           .then((response) => response.replay)
           .catch(() => undefined),
-        requestAgent({ type: "status", sessionId: id }).then((response) => response.state),
+        requestAgent({ type: "status", sessionId: id }),
       ]);
       if (ticket !== this.#loadSequence) return;
       const buffered = this.#buffer?.id === id ? this.#buffer.events : [];
       this.#buffer = null;
+      const events = attachedEvents(stored.events ?? [], replay);
+      this.#models.restore(id, [...events, ...buffered], status.info, modelRevision);
       this.#show(id);
-      this.view.restore(attachedEvents(stored.events ?? [], replay));
-      this.view.attach(state);
+      this.history.set(stored.messageVersions);
+      this.view.restore(events);
+      this.view.attach(status.state);
       for (const event of afterReplay(buffered, replay)) this.view.apply(event);
       focusComposer();
     } catch (error) {
@@ -371,43 +384,25 @@ export class RunStore implements TaskHost, ModelHost {
 
   #sessionEvent(event: SessionEvent): void {
     this.activity.apply(event);
+    if (event.type === "model.selected") this.#models.selected(event);
     if (event.type === "session.started" && !event.internal) {
       this.sessions = startedSessions(this.sessions, event.sessionId, event.prompt ?? "");
     } else if (event.type === "session.finished") {
       this.sessions = finishedSessions(this.sessions, event.sessionId, event.result.stopReason);
+      if (event.sessionId === this.#sessionId) void this.history.refresh();
     }
     if (this.#buffer?.id === event.sessionId) this.#buffer.events.push(event);
-    else if (event.sessionId === this.#sessionId) this.view.apply(event);
-    else this.#background(event);
-  }
-
-  /** Events of a task behind the one on screen: only what needs the user's attention. */
-  #background(event: SessionEvent): void {
-    const title = this.#titleOf(event.sessionId);
-    switch (event.type) {
-      case "session.finished":
-        toast.show(`«${title}»: ${finishedLabel(event.result.stopReason)}`);
-        return;
-      case "approval.requested":
-        toast.show(t("“{0}” is waiting for permission: {1}", [title, event.approval.tool]));
-        return;
-      case "job.finished":
-        if (event.notify) toast.show(t("“{0}”: background command finished", [title]));
-        if (event.checkpoint !== undefined) void this.checkpoints.refresh();
-        return;
-      case "tool.finished":
-        if (hasCheckpoint(event.result)) void this.checkpoints.refresh();
-        return;
-    }
+    else if (event.sessionId === this.#sessionId) {
+      if (!this.history.changing) this.view.apply(event);
+    } else
+      backgroundEvent(event, this.#titleOf(event.sessionId), () => void this.checkpoints.refresh());
   }
 
   #status(event: StatusEvent): void {
     applyPreferences(event.ui);
     const { type: _type, ...info } = event;
-    this.info = info;
+    this.#models.status(info);
     this.connection = "ready";
-    if (!this.#reasoningTouched) this.reasoning = event.reasoning ?? "auto";
-    if (!this.#variantTouched) this.variant = event.variant;
     this.activity.sync(event.sessions ?? []);
     if (event.sessionId === this.#sessionId) this.view.attach(event);
     if (event.configError && !this.#configErrorShown) {
@@ -465,6 +460,8 @@ export class RunStore implements TaskHost, ModelHost {
     }
   }
   #projectChanged(): void {
+    this.#projectSequence++;
+    this.#models.reset();
     this.dictionary.reset();
     this.twin.reset();
     this.ide.reset();

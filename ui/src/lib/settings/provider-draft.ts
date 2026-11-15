@@ -1,4 +1,5 @@
 // Edits of the provider list in the settings draft: find by URL, merge models, pick ids.
+import { mergeModelDraft } from "../../../../shared/model-draft";
 import { modelsCount } from "../format";
 import { t } from "../i18n.svelte";
 import { slugify } from "../model-name";
@@ -45,6 +46,7 @@ export function mergeModels(
   fallbackName: string,
 ): string {
   provider.models = { ...provider.models, ...clone(models) };
+  provider.modelMetadataBaseline = { ...provider.modelMetadataBaseline, ...clone(models) };
   return t("Updated {0}: {1}", [
     provider.name ?? fallbackName,
     modelsCount(Object.keys(provider.models).length),
@@ -66,27 +68,5 @@ export function refreshedDraftModels(
   current: Record<string, ModelInfo>,
   baseline: Record<string, ModelInfo>,
 ): Record<string, ModelInfo> {
-  const merged = clone(fresh);
-  for (const id of new Set([...Object.keys(current), ...Object.keys(baseline)])) {
-    const draft = current[id];
-    const saved = baseline[id];
-    if (JSON.stringify(draft) === JSON.stringify(saved)) continue;
-    if (!draft) {
-      delete merged[id];
-      continue;
-    }
-    if (!saved || !merged[id]) {
-      merged[id] = clone(draft);
-      continue;
-    }
-    const target = merged[id] as Record<string, unknown>;
-    for (const key of new Set([...Object.keys(saved), ...Object.keys(draft)])) {
-      const edited = (draft as Record<string, unknown>)[key];
-      if (JSON.stringify(edited) === JSON.stringify((saved as Record<string, unknown>)[key]))
-        continue;
-      if (edited === undefined) delete target[key];
-      else target[key] = clone(edited);
-    }
-  }
-  return merged;
+  return mergeModelDraft(fresh, current, baseline);
 }

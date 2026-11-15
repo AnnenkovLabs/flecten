@@ -66,7 +66,10 @@ test("real queue and approval commands keep UI state on failed IPC and converge 
         ...(sessionId ? { sessionId } : {}),
       }),
   });
-  const handlers = createHandlers({ session: pool } as AppService, () => undefined);
+  const handlers = createHandlers(
+    { session: pool, info: () => ({}) } as AppService,
+    () => undefined,
+  );
   const listeners = new Set<(event: AgentEvent) => void>();
   const fail = new Set<string>();
   globalThis.window = {

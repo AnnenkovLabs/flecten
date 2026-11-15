@@ -5,7 +5,7 @@
   import { ThreadViewport } from "../lib/thread-viewport.svelte";
   import { threadRowKeys } from "../lib/thread-window";
   import type { PendingToolCall, ThreadItem } from "../lib/types";
-  import { focusComposer, relativeTime, searchThread, timeTitle } from "../lib/ui-polish";
+  import { focusComposer, searchThread } from "../lib/ui-polish";
   import { conversationItems, workerMirrors } from "../lib/run/worker-mirrors";
   import RunActionRow from "./RunActionRow.svelte";
   import Answer from "./Answer.svelte";
@@ -26,10 +26,13 @@
     items: ThreadItem[];
     live: boolean;
     busy: boolean;
+    historyDisabled?: boolean | undefined;
     liveLabel: string;
     pendingCalls: PendingToolCall[];
     onOpenChanges: () => void;
     onRepeat: (prompt?: string) => void;
+    onEditMessage?: ((messageId: string, text: string) => void) | undefined;
+    onSelectVersion?: ((messageId: string, variantId: string) => Promise<boolean>) | undefined;
     onNavigateSummary?: (destination: SummaryDestination) => void;
   }
   let {
@@ -37,10 +40,13 @@
     items: entries,
     live,
     busy,
+    historyDisabled = busy,
     liveLabel,
     pendingCalls,
     onOpenChanges,
     onRepeat,
+    onEditMessage,
+    onSelectVersion,
     onNavigateSummary,
   }: Props = $props();
   const NEAR_BOTTOM = 72;
@@ -309,16 +315,9 @@
         data-thread-id={item.id}
       >
         {#if item.kind === "message"}
-          <UserMessage text={item.text} />
-          {#if item.at}
-            <time
-              class="msg-time"
-              datetime={item.at}
-              title={timeTitle(item.at, new Date(now))}
-            >
-              {relativeTime(item.at, new Date(now))}
-            </time>
-          {/if}
+          <UserMessage text={item.text} versions={item.versions} at={item.at} {now} disabled={historyDisabled}
+            onEdit={item.versions && onEditMessage ? (text) => onEditMessage!(item.versions!.messageId, text) : undefined}
+            onSelectVersion={item.versions && onSelectVersion ? (variant) => onSelectVersion!(item.versions!.messageId, variant) : undefined} />
         {:else if item.kind === "run"}
           <RunGroup
             id={item.id}
@@ -422,15 +421,6 @@
   .thread-item.is-search-active {
     background: rgba(240, 239, 237, 0.04);
     outline-color: rgba(240, 239, 237, 0.32);
-  }
-
-  .msg-time {
-    display: block;
-    margin-top: 6px;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.3;
-    text-align: right;
   }
 
   .jump-wrap {

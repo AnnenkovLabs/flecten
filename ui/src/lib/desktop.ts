@@ -26,6 +26,7 @@ export interface PickedFile {
 
 export interface DesktopBridge {
   setLocale?: (locale: string) => void;
+  setInterfaceScale?: (percentage: number) => void;
   control(action: "minimize" | "maximize" | "close"): void;
   chooseProject?: () => Promise<string | null>;
   selectProject?: (path: string | null, sessionId?: string) => Promise<string>;

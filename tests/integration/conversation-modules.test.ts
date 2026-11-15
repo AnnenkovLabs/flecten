@@ -47,7 +47,7 @@ async function computerConversation() {
   let talkerTurn = 0;
   const events: Event[] = [];
   try {
-    await cp(join(import.meta.dir, "../../src/marketplace/modules/computer-use"), f.root, {
+    await cp(join(import.meta.dir, "../fixtures/modules/computer-use"), f.root, {
       recursive: true,
     });
     const source = await readModule(f.root);

@@ -1,5 +1,8 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  Profile: "Perfil",
+  "Change name": "Alterar nome",
+  "Could not save name. Try again.": "Não foi possível salvar o nome. Tente novamente.",
   Deny: "Bloquear",
   "Always block.": "Sempre bloquear.",
   Auto: "Automático",

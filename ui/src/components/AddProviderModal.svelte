@@ -154,17 +154,34 @@
             />
           </label>
 
+          <div class="st-field">
+            <label class="check-connection">
+              <input
+                type="checkbox"
+                bind:checked={settings.custom.checkConnection}
+                disabled={settings.discovering}
+                aria-describedby="provider-check-hint"
+              />
+              <span>{t("Check connection before adding")}</span>
+            </label>
+            <p class="st-hint" id="provider-check-hint">
+              {t("Turn off if your provider blocks checks. Add models manually after adding the provider.")}
+            </p>
+          </div>
+
           <div class="discover">
             <button
               class="st-btn st-btn--primary"
               type="button"
               disabled={settings.discovering || settings.custom.baseUrl.trim().length === 0}
-                    onclick={() => settings.discover()}
+              onclick={() => settings.discover()}
             >
-              <Icon name="refresh" size={14} />
-              {settings.discovering ? t("Scanning API…") : t("Connect and find models")}
+              <Icon name={settings.custom.checkConnection ? "refresh" : "plus"} size={14} />
+              {settings.discovering ? t("Scanning API…") : settings.custom.checkConnection ? t("Connect and find models") : t("Add without checking")}
             </button>
-            <p class="st-hint"> {t("The app will get the model list from the API and fill in context limits and capabilities from the catalog.")} </p>
+            {#if settings.custom.checkConnection}
+              <p class="st-hint"> {t("The app will get the model list from the API and fill in context limits and capabilities from the catalog.")} </p>
+            {/if}
           </div>
         </div>
       {/if}
@@ -390,6 +407,23 @@
     align-items: flex-start;
     gap: 10px;
     margin-top: 2px;
+  }
+
+  .check-connection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    color: var(--text-2);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .check-connection input {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    accent-color: var(--primary);
   }
 
   .discover .st-hint {

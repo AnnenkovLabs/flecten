@@ -1,5 +1,8 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  Profile: "プロフィール",
+  "Change name": "名前を変更",
+  "Could not save name. Try again.": "名前を保存できませんでした。もう一度お試しください。",
   Deny: "拒否",
   "Always block.": "常にブロックします。",
   Auto: "自動",

@@ -67,6 +67,41 @@ test("reopened interrupted tasks offer Continue and reset clears it", () => {
   expect(view.resumable).toBe(false);
 });
 
+test("stopping before Worker starts unlocks the composer live and after replay", () => {
+  const events: SessionEvent[] = [
+    started,
+    {
+      type: "session.state",
+      sessionId: "parent",
+      state: { ...idle, phase: "running", running: true, stopRequested: true },
+    },
+    worker({
+      type: "session.state",
+      sessionId: "child",
+      state: { ...idle, sessionId: "child" },
+    }),
+    {
+      type: "session.finished",
+      sessionId: "parent",
+      result: { ...result, sessionId: "parent" },
+    },
+    {
+      type: "session.state",
+      sessionId: "parent",
+      state: { ...idle, revision: 2, phase: "stopped" },
+    },
+  ];
+  for (const replay of [false, true]) {
+    const view = new TaskView({ checkpointSaved() {} });
+    if (replay) view.restore(events);
+    else for (const event of events) view.apply(event);
+    expect(view.phase).toBe("stopped");
+    expect(view.busy).toBe(false);
+    expect(view.resumable).toBe(true);
+    expect(view.worker.items).toHaveLength(0);
+  }
+});
+
 test("Worker stop or crash offers Continue with an idle Talker and settles on a new user run", () => {
   for (const boundary of [
     worker({ type: "session.finished", sessionId: "child", result }),

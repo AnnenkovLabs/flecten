@@ -1,8 +1,8 @@
 # Computer Use
 
-Computer Use adds a private Linux desktop to a Flecten task. The agent sees real screenshots, sends one grounded action at a time, and returns a screenshot after each input. The Computer surface shows the same evidence and lets you take over.
+The Computer Use SDK fixture adds a private Linux desktop to a Flecten task. The agent sees real screenshots, sends one grounded action at a time, and returns a screenshot after each input. The Computer surface shows the same evidence and lets you take over.
 
-Open Settings, Modules and the bundled marketplace. Install **Computer**, then review and trust its version. Ask the agent to activate `computer-use`; its **Computer** workspace tab appears. You can also install [the package folder](../src/marketplace/modules/computer-use/) through Install from folder.
+This fixture is kept in [tests/fixtures/modules/computer-use](../tests/fixtures/modules/computer-use/) for SDK verification and is absent from the marketplace and installers. To inspect it in a development checkout, open Settings, Modules, Installed and install the fixture folder through Install from folder. Review and trust its version, then ask the agent to activate `computer-use`; its **Computer** workspace tab appears.
 
 ## What you can do
 
@@ -28,6 +28,6 @@ The module currently supports this Linux backend only. It shows screenshots, not
 
 A current observation ID is required for every input. Old IDs and input from the wrong control owner fail before dispatch. Ambiguous failures are never automatically retried. Refresh the screen and inspect the result before deciding to repeat an action.
 
-Implementation, pinned source comparisons and design decisions are kept in internal materials. Package instructions and recovery reference: [guide](../src/marketplace/modules/computer-use/guide.md).
+Implementation, pinned source comparisons and design decisions are kept in internal materials. Package instructions and recovery reference: [guide](../tests/fixtures/modules/computer-use/guide.md).
 
 Product-path checks, inspected interface states and remaining release blockers are tracked internally.

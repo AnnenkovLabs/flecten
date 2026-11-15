@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 1,
+  "category": "ai-agents",
+  "entries": [
+    {
+      "id": "mera-twe601ac39",
+      "term": "Agent Skills / SKILL.md",
+      "aliases": [
+        "Agent Skills",
+        "SKILL.md",
+        "агентские скиллы",
+        "скилл md",
+        "progressive disclosure skill",
+        "скилл для агента"
+      ],
+      "category": "ai-agents",
+      "definition": "Anthropic's open format for packaging procedural knowledge for agents: a folder containing a `SKILL.md` with YAML frontmatter (`name`, `description` up to 1024 chars, optional `allowed-tools`) plus optional scripts and reference files. The key mechanic is progressive disclosure - only the name and description sit in context, and the body plus bundled files load only when the task matches. Works across Claude apps, Claude Code and the Agent SDK; skills are shared as folders/plugins rather than API config. In practice: people say \"write it as a skill\" meaning author a `SKILL.md` folder with a trigger description and helper scripts, rather than stuff instructions into a system prompt. По-русски: оформи это как скилл - папку с SKILL.md и описанием-триггером (since October 2025)",
+      "clarification": "Not Alexa Skills, OpenAI plugins or a plain function-calling tool definition; not instructions stuffed into a system prompt.",
+      "sources": ["https://claude.com/blog/skills"]
+    },
+    {
+      "id": "mera-tw37dd6836",
+      "term": "AGENTS.md",
+      "aliases": [
+        "agents md файл",
+        "CLAUDE.md",
+        ".cursorrules",
+        "copilot-instructions.md",
+        "инструкции для агента в репозитории"
+      ],
+      "category": "ai-agents",
+      "definition": "An open, tool-agnostic Markdown file at a repo root (and nested per-directory, nearest-wins) that tells coding agents how to work in that project: build/test commands, conventions, gotchas. It is deliberately schema-free plain Markdown - a README for agents - and is now stewarded under the Linux Foundation's Agentic AI Foundation with adoption in the tens of thousands of repos and support across Codex, Cursor, Copilot, Jules, Aider, Zed and others. Tool-specific files like `CLAUDE.md` commonly just import it. In practice: developers say \"it's in AGENTS.md\" when an agent runs the wrong test command. По-русски: добавь команды сборки и тестов в AGENTS.md в корне репозитория (since August 2025)",
+      "clarification": "Not a proprietary per-tool config like .cursorrules or .github/copilot-instructions.md as the only option.",
+      "sources": ["https://agents.md/"]
+    },
+    {
+      "id": "mera-tw17843a7e",
+      "term": "A2A (Agent2Agent) protocol / Agent Card",
+      "aliases": [
+        "A2A  protocol",
+        "Agent Card",
+        "A2A protocol",
+        "Agent2Agent",
+        "агент2агент",
+        "протокол A2A",
+        "карточка агента A2A"
+      ],
+      "category": "ai-agents",
+      "definition": "An open protocol, launched by Google in April 2025 and since donated to the Linux Foundation, for agent-to-agent interoperability: independent, opaque agents discover each other and exchange tasks/messages/artifacts over HTTP+JSON-RPC (with SSE and push notifications). Discovery uses an **Agent Card** - a JSON manifest at a well-known URL declaring the agent's identity, skills, endpoints and security requirements. Explicitly complementary to MCP: MCP connects an agent to tools/data, A2A connects agents to each other. In practice: architects say \"expose it over A2A and publish an Agent Card\" when making one team's agent callable by another's. По-русски: выстави агента по A2A и опубликуй Agent Card по well-known URL (since April 2025)",
+      "clarification": "Not MCP and not AutoGen/CrewAI multi-agent frameworks; MCP connects tools, A2A connects agents to each other.",
+      "sources": ["https://a2a-protocol.org/latest/"]
+    },
+    {
+      "id": "mera-tw227b7817",
+      "term": "Context engineering",
+      "aliases": [
+        "context-engineering",
+        "контекст инжиниринг",
+        "инженерия контекста",
+        "just-in-time retrieval",
+        "компакция контекста"
+      ],
+      "category": "ai-agents",
+      "definition": "The discipline of curating the optimal set of tokens in an agent's context at every step of its loop - system prompt, tool definitions, tool results, message history, retrieved data, memory files - rather than optimising a single prompt string. Core techniques: compaction/summarisation, structured note-taking to files, sub-agent delegation, and just-in-time retrieval instead of pre-loading. Framed as the successor/superset of prompt engineering for multi-turn agents. In practice: engineers say \"this is a context-engineering problem, not a prompt problem\" when an agent degrades over a long run. По-русски: это проблема инженерии контекста, а не промпта - нужна компакция и подгрузка по требованию (since mid 2025)",
+      "clarification": "Not a synonym for prompt engineering or RAG; not fixed by rewriting one prompt string.",
+      "sources": [
+        "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents"
+      ]
+    },
+    {
+      "id": "mera-tw5eb01b68",
+      "term": "Context rot",
+      "aliases": [
+        "context-rot",
+        "контекст рот",
+        "гниение контекста",
+        "деградация на длинном контексте",
+        "lost in the middle"
+      ],
+      "category": "ai-agents",
+      "definition": "The empirically measured degradation of LLM output quality as the number of tokens in context grows - attention becomes less reliable long before the nominal window limit is reached, so a 1M-token window does not mean 1M usable tokens. Popularised by Chroma's 2025 technical report and now standard vocabulary in agent design. Not to be confused with \"lost in the middle\" (a narrower positional finding) or with plain context-window overflow/truncation. In practice: engineers say \"we're hitting context rot, compact the history\" rather than simply raising the window size. По-русски: агент деградирует на длинной сессии - это context rot, надо сжимать историю (since July 2025)",
+      "clarification": "Not plain window overflow or 'lost in the middle'; do not assume flat quality up to the advertised limit.",
+      "sources": ["https://research.trychroma.com/context-rot"]
+    },
+    {
+      "id": "mera-tw0b589a9e",
+      "term": "Context editing (Anthropic API) / memory tool",
+      "aliases": [
+        "Context editing",
+        "memory tool",
+        "context editing",
+        "context_management",
+        "clear_tool_uses_20250919",
+        "memory tool Anthropic",
+        "memory_20250818",
+        "редактирование контекста",
+        "инструмент памяти Claude"
+      ],
+      "category": "ai-agents",
+      "definition": "Two server-side context-management primitives in the Claude API. Context editing (`context_management` parameter) automatically clears stale content mid-conversation - `clear_tool_uses_20250919` drops old tool results, and thinking-block clearing prunes extended-thinking traces - so long agent loops stay under the window. The memory tool (`memory_20250818`) is a client-executed file-based store in a `/memories` directory that lets Claude persist notes across sessions. In practice: agent builders say \"turn on context editing and the memory tool\" instead of hand-rolling summarisation and a vector store. По-русски: включи context editing и memory tool, чтобы длинный агентный цикл не переполнял окно (since September 2025)",
+      "clarification": "Not hand-rolled summarisation or a RAG vector store; first-party context_management and a memory tool exist.",
+      "sources": ["https://platform.claude.com/docs/en/build-with-claude/context-editing"]
+    },
+    {
+      "id": "mera-tw60e441d6",
+      "term": "Google Antigravity",
+      "aliases": [
+        "Antigravity",
+        "антигравити",
+        "Agent Manager Antigravity",
+        "антигравитация IDE Google"
+      ],
+      "category": "ai-agents",
+      "definition": "Google's agent-first development platform, released alongside Gemini 3 (Nov 2025). It is a VS-Code-derived IDE plus an \"Agent Manager\" surface where you dispatch multiple autonomous agents that work across editor, terminal and browser, reporting back with verifiable artifacts (plans, screenshots, browser recordings) rather than raw diffs. Not to be confused with the physics term, with Project IDX, or with Gemini Code Assist. In practice: developers say \"I ran it in Antigravity\" meaning they dispatched parallel background coding agents rather than editing in an IDE. По-русски: я запустил задачу в Antigravity - там агенты сами работают в редакторе, терминале и браузере (since November 2025)",
+      "clarification": "Not the Python import antigravity easter egg or physics; not Project IDX or Gemini Code Assist.",
+      "sources": ["https://antigravity.google/"]
+    },
+    {
+      "id": "mera-twc0832242",
+      "term": "Claude Code plugins / subagents / hooks / output styles",
+      "aliases": [
+        "Claude Code plugins",
+        "subagents",
+        "hooks",
+        "output styles",
+        "Claude Code subagents",
+        "Claude Code hooks",
+        "PreToolUse",
+        "PostToolUse",
+        "сабагенты Claude Code",
+        "хуки Claude Code",
+        "плагины для Claude Code"
+      ],
+      "category": "ai-agents",
+      "definition": "The extensibility vocabulary of Claude Code. **Subagents** are named agents that run a task in their own isolated context window and return only a summary; **hooks** are deterministic shell/HTTP callbacks bound to lifecycle events (`PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`, …); **output styles** swap the system prompt to change persona/format; **skills** are on-demand `SKILL.md` instructions; and **plugins** are the packaging layer bundling all of the above plus MCP servers into one installable unit distributed via a marketplace. `CLAUDE.md` remains the always-loaded project memory file. In practice: developers say \"add a hook to block edits to `main`\" or \"spin up three subagents to review in parallel\". По-русски: добавь хук на PreToolUse, чтобы запретить правки в main, и подними трёх сабагентов (since 2025 (subagents & hooks mid-2025; plugins Oct 2025))",
+      "clarification": "Not a 2024 research-preview CLI without plugins, hooks, skills or subagents; a subagent is not a generic framework worker.",
+      "sources": ["https://code.claude.com/docs/en/features-overview"]
+    },
+    {
+      "id": "mera-tw95b2c9ab",
+      "term": "Spec-driven development (SDD) / GitHub Spec Kit",
+      "aliases": [
+        "Spec-driven development",
+        "GitHub Spec Kit",
+        "spec-driven development",
+        "Spec Kit",
+        "спек-дривен разработка",
+        "разработка от спецификации",
+        "/specify /plan /tasks"
+      ],
+      "category": "ai-agents",
+      "definition": "A methodology where a written specification - not the code - is the source of truth, and agents generate/validate/update code from it. GitHub **Spec Kit** is the agent-agnostic open-source CLI implementing it via `/specify`, `/plan`, `/tasks` slash commands producing markdown artifacts; AWS **Kiro** is an agentic IDE that enforces the same loop with EARS-syntax requirements and design docs. SDD is explicitly positioned as the disciplined alternative to vibe coding. In practice: teams say \"we do spec-driven development\" meaning they run `/specify` → `/plan` → `/tasks` and review the spec before any agent writes code. По-русски: у нас spec-driven development: сначала /specify и /plan, потом агент пишет код (since mid 2025)",
+      "clarification": "Not BDD, TDD, OpenAPI-first design or waterfall requirements; it is an agent workflow with named markdown artifacts.",
+      "sources": [
+        "https://github.blog/ai-and-ml/generative-ai/spec-driven-development-with-ai-get-started-with-a-new-open-source-toolkit/"
+      ]
+    },
+    {
+      "id": "mera-tw3c468274",
+      "term": "Kiro (AWS agentic IDE) / Kiro Powers",
+      "aliases": [
+        "Kiro",
+        "Kiro Powers",
+        "Kiro IDE",
+        ".kiro/specs",
+        "AWS Kiro",
+        "киро",
+        "Amazon Q Developer"
+      ],
+      "category": "ai-agents",
+      "definition": "AWS's spec-driven agentic IDE (public preview July 2025, GA later). Instead of chat-to-code it produces a `.kiro/specs` folder - `requirements.md` in EARS syntax, `design.md`, `tasks.md` - plus \"steering\" files and agent hooks that fire on save/commit. \"Kiro Powers\" (re:Invent 2025) bundle MCP servers, steering files and hooks into installable toolsets. Not to be confused with Amazon Q Developer. In practice: developers say \"Kiro generated the spec and task list\" before letting the agent implement. По-русски: Kiro сгенерил requirements.md и tasks.md - дальше пусть агент реализует (since July 2025)",
+      "clarification": "Not Amazon Q Developer or CodeWhisperer, and not an unrelated Japanese product name.",
+      "sources": ["https://kiro.dev/"]
+    },
+    {
+      "id": "mera-twbfd74951",
+      "term": "llms.txt",
+      "aliases": [
+        "llms-full.txt",
+        "llms txt файл",
+        "ллмс txt",
+        "robots.txt для LLM",
+        "карта сайта для LLM"
+      ],
+      "category": "ai-agents",
+      "definition": "A voluntary convention proposed by Jeremy Howard: publish a curated Markdown file at `/llms.txt` giving LLMs a concise map of a site plus links to clean Markdown versions of key pages (often with a fuller `/llms-full.txt`). It is a *context-provision* file, explicitly **not** an access-control file like `robots.txt` and not a ranking signal; adoption is strongest in developer-documentation platforms, while major AI vendors have not committed to fetching it. In practice: docs teams say \"ship an llms.txt\" so agents ingest clean Markdown instead of scraping rendered HTML. По-русски: выложи llms.txt, чтобы агенты читали чистый Markdown, а не рендер HTML (since September 2024, widely adopted 2025)",
+      "clarification": "Not robots.txt or ai.txt, not access control and not a ranking signal; it provides context, not permissions.",
+      "sources": ["https://llmstxt.org/"]
+    },
+    {
+      "id": "mera-twd8863288",
+      "term": "ACP (Agentic Commerce Protocol) / AP2 (Agent Payments Protocol)",
+      "aliases": [
+        "Agentic Commerce Protocol) / AP2 (Agent Payments Protocol",
+        "AP2 (Agent Payments Protocol)",
+        "Agentic Commerce Protocol",
+        "AP2",
+        "Agent Payments Protocol",
+        "Instant Checkout ChatGPT",
+        "shared payment token",
+        "мандаты AP2",
+        "агентные платежи"
+      ],
+      "category": "ai-agents",
+      "definition": "The two competing open specs for agent-initiated purchases. **ACP** (OpenAI + Stripe, later Meta; powers ChatGPT Instant Checkout) uses narrowly-scoped, single-use payment tokens (a \"shared payment token\") and keeps the merchant as merchant of record on their existing PSP. **AP2** (Google, moving to the FIDO Alliance) uses a chain of cryptographically signed \"mandates\" - Intent, Cart, Payment - producing a portable, independently verifiable audit trail of what the user authorised. Both are pre-1.0 and neither replaces card rails. In practice: commerce teams ask \"are we ACP-compatible so ChatGPT can check out?\" or \"do we need AP2 mandates for delegated purchases?\" По-русски: нам нужна поддержка Agentic Commerce Protocol, чтобы ChatGPT мог оформить заказ (since September 2025)",
+      "clarification": "Not generic OAuth or card-on-file flows, and not Zed's Agent Client Protocol; neither spec replaces card rails.",
+      "sources": ["https://docs.stripe.com/agentic-commerce/acp"]
+    },
+    {
+      "id": "mera-tw03103a90",
+      "term": "AI SDK 5 Agent class / stopWhen / prepareStep",
+      "aliases": [
+        "AI SDK 5 Agent class",
+        "stopWhen",
+        "prepareStep",
+        "AI SDK 5",
+        "Agent class AI SDK",
+        "maxSteps",
+        "агент в AI SDK"
+      ],
+      "category": "ai-agents",
+      "definition": "Vercel AI SDK 5 added a first-class `Agent` abstraction that packages model, tools, system prompt and settings into a reusable object, plus explicit agentic loop control: `stopWhen` defines termination conditions (step count, tool called, custom predicate) and `prepareStep` mutates model/tools/messages between steps. AI SDK 5 also reworked chat transport and typed `UIMessage` parts. In practice: developers say \"cap it with `stopWhen: stepCountIs(10)`\" instead of hand-writing a while-loop around `generateText`. По-русски: ограничь цикл через stopWhen: stepCountIs(10) в AI SDK 5, а не своим while (since 2025)",
+      "clarification": "Not AI SDK 3/4 with maxSteps, string-based useChat messages and no Agent class.",
+      "sources": ["https://ai-sdk.dev/docs/agents"]
+    },
+    {
+      "id": "mera-tw3bf84f16",
+      "term": "Cursor Composer / Cursor 2.0 multi-agent",
+      "aliases": [
+        "Cursor Composer",
+        "Cursor 2.0 multi-agent",
+        "Cursor 2.0",
+        "Composer model",
+        "Bugbot",
+        "курсор композер",
+        "мульти-агент в Cursor"
+      ],
+      "category": "ai-agents",
+      "definition": "Cursor 2.0 (29 Oct 2025) shipped **Composer**, Cursor's own in-house frontier coding model - a mixture-of-experts model trained with RL for fast agentic edits - plus a redesigned multi-agent interface running up to eight agents in parallel, each isolated in its own git worktree or remote machine. Important: \"Composer\" is now a *model name*, whereas in 2023-24 \"Composer\" was Cursor's multi-file editing *mode*. Bugbot is Cursor's PR code-review agent, later powered by Composer 2.5 with Autofix. In practice: developers say \"run it on Composer\" meaning Cursor's own fast model, and \"fan out four agents in worktrees\". По-русски: запусти на Composer в Cursor 2.0 и разведи четырёх агентов по отдельным worktree (since October 2025)",
+      "clarification": "Not Cursor's Cmd-I multi-file edit mode; Composer is now Cursor's own trained model, and Bugbot reviews PRs.",
+      "sources": ["https://cursor.com/blog/2-0"]
+    },
+    {
+      "id": "mera-tw7f21a106",
+      "term": "Microsoft Agent Framework",
+      "aliases": [
+        "Semantic Kernel",
+        "AutoGen",
+        "Foundry Local",
+        "Azure AI Foundry",
+        "Azure AI Studio",
+        "агент-фреймворк Microsoft"
+      ],
+      "category": "ai-agents",
+      "definition": "Microsoft's unified open-source agent SDK (.NET and Python) that succeeds **both** Semantic Kernel and AutoGen, merging SK's enterprise concerns (telemetry, state, safety, durability) with AutoGen's multi-agent orchestration, plus MCP and A2A support. It is a successor project, not a rename; the older SDKs remain supported but new work targets Agent Framework. Related: **Foundry Local** is Microsoft's cross-platform on-device model runtime, and **Windows AI Foundry** / **Azure AI Foundry** is the umbrella platform brand that replaced Azure AI Studio. In practice: .NET teams say \"we're migrating from Semantic Kernel to Agent Framework\". По-русски: мы переезжаем с Semantic Kernel на Microsoft Agent Framework (since October 2025)",
+      "clarification": "Not Semantic Kernel or AutoGen as the current Microsoft path, and not 'Azure AI Studio' - that brand is now AI Foundry.",
+      "sources": [
+        "https://devblogs.microsoft.com/foundry/introducing-microsoft-agent-framework-the-open-source-engine-for-agentic-ai-apps/"
+      ]
+    },
+    {
+      "id": "mera-tw3efb78b6",
+      "term": "ACP (Agent Client Protocol) - Zed's editor⇄agent protocol",
+      "aliases": [
+        "ACP  - Zed's editor⇄agent protocol",
+        "Agent Client Protocol",
+        "ACP Zed",
+        "ACP protocol",
+        "LSP for agents",
+        "протокол ACP",
+        "ACP редактор агент",
+        "агент-клиент протокол"
+      ],
+      "category": "ai-agents",
+      "definition": "An open JSON-RPC 2.0 protocol over stdio, created by Zed with Google, that standardises communication between **code editors and coding agents** - the \"LSP for agents\". Any ACP agent (Gemini CLI, Claude Code via adapter, Codex, Goose) plugs into any ACP client (Zed, JetBrains IDEs, Neovim, Emacs, marimo) with streamed session updates, tool-call diffs and permission prompts. Current stable protocol version is 1. **Critical collision: \"ACP\" also means Agentic Commerce Protocol (OpenAI/Stripe payments) and, historically, IBM/BeeAI's Agent Communication Protocol - always disambiguate.** In practice: developers say \"Zed supports it over ACP\" meaning they can swap coding agents without changing editor. По-русски: Zed общается с агентами по ACP - можно менять агента, не меняя редактор (since August 2025)",
+      "clarification": "Not the Agentic Commerce Protocol and not IBM/BeeAI's Agent Communication Protocol; never leave the acronym ambiguous.",
+      "sources": ["https://agentclientprotocol.com/"]
+    },
+    {
+      "id": "mera-tw2dc516f4",
+      "term": "Lethal trifecta",
+      "aliases": [
+        "смертельная триада",
+        "летальная тройка",
+        "MCP tool poisoning",
+        "rug-pull tool mutation",
+        "отравление описаний тулов"
+      ],
+      "category": "ai-agents",
+      "definition": "Simon Willison's framing of the exact conditions under which an agent can be made to exfiltrate data: (1) access to private data, (2) exposure to untrusted content, and (3) the ability to communicate externally. Any agent with all three can be steered by injected instructions into leaking secrets; the mitigation is to break one leg, not to \"prompt harder\". Related coinage of the same era: **MCP tool poisoning** (a malicious server hides a prompt injection in a tool *description*, which the agent reads before any call) and **rug-pull tool mutation**. In practice: security reviewers say \"that agent has the lethal trifecta\" as shorthand for \"this design is exfiltration-prone regardless of the system prompt\". По-русски: у агента смертельная триада: приватные данные, недоверенный контент и выход в сеть (since June 2025)",
+      "clarification": "Not generic prompt injection with input filtering or 'tell the model to ignore instructions'; break one leg structurally.",
+      "sources": ["https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/"]
+    },
+    {
+      "id": "mera-tw33376cbd",
+      "term": "Claude Agent SDK (renamed from Claude Code SDK)",
+      "aliases": [
+        "Claude Agent SDK",
+        "renamed from Claude Code SDK",
+        "claude-agent-sdk",
+        "Claude Code SDK",
+        "@anthropic-ai/claude-agent-sdk",
+        "агент SDK от Anthropic",
+        "SDK агентов Claude"
+      ],
+      "category": "ai-agents",
+      "definition": "Anthropic's Python/TypeScript library exposing the same agent loop, tool execution, permissions, subagents, hooks and context management that power Claude Code - packaged for building general-purpose agents, not only coding ones. It was renamed from \"Claude Code SDK\" to \"Claude Agent SDK\"; packages are `@anthropic-ai/claude-agent-sdk` and `claude-agent-sdk`. Distinct from the raw Messages API, where you must write the tool-calling loop yourself. In practice: engineers say \"build it on the Agent SDK\" to get the harness (file tools, bash, subagents, compaction) for free instead of writing a loop over the Messages API. По-русски: собери агента на Claude Agent SDK, а не на своём цикле поверх Messages API (since September 2025 (rename 29 Sep 2025))",
+      "clarification": "Not the old 'Claude Code SDK' name, and not a hand-rolled tool loop over the Messages API as the only option.",
+      "sources": ["https://claude.com/blog/building-agents-with-the-claude-agent-sdk"]
+    },
+    {
+      "id": "mera-twd098c953",
+      "term": "AgentKit / Apps SDK / ChatGPT Atlas",
+      "aliases": [
+        "AgentKit",
+        "Apps SDK",
+        "ChatGPT Atlas",
+        "Apps SDK OpenAI",
+        "Agent Builder",
+        "ChatKit",
+        "Connector Registry",
+        "приложение для ChatGPT"
+      ],
+      "category": "ai-agents",
+      "definition": "OpenAI's October 2025 platform wave. **AgentKit** (6 Oct 2025) bundled Agent Builder (a visual multi-agent workflow canvas), Connector Registry, ChatKit embeddable chat UI and evals. The **Apps SDK** (same day, built on MCP) lets developers ship apps that render interactive UI *inside* ChatGPT. **ChatGPT Atlas** (21 Oct 2025) was OpenAI's agentic web browser. Current status matters: OpenAI announced it is winding down Agent Builder and Evals (unavailable after 30 Nov 2026), steering developers to the Agents SDK and Workspace Agents, and Atlas has been folded/deprecated in favour of a consolidated desktop app. In practice: teams say \"we shipped a ChatGPT app with the Apps SDK\" (still current) but should no longer start new work in Agent Builder. По-русски: мы сделали приложение для ChatGPT на Apps SDK; в Agent Builder новое уже не начинаем (since October 2025)",
+      "clarification": "Do not start new work in Agent Builder or Evals (being retired) or treat ChatGPT Atlas as current; prefer the Agents SDK.",
+      "sources": ["https://openai.com/index/introducing-agentkit/"]
+    },
+    {
+      "id": "mera-tw37ed8cb3",
+      "term": "Jules (Google's asynchronous coding agent) / Jules Tools",
+      "aliases": [
+        "Jules",
+        "Jules Tools",
+        "Jules Google",
+        "@google/jules",
+        "Jules coding agent",
+        "джулс агент",
+        "асинхронный агент Jules"
+      ],
+      "category": "ai-agents",
+      "definition": "Google Labs' **asynchronous** coding agent: it clones your repo into a Google Cloud VM, installs dependencies, plans, edits across files and opens a pull request while you do something else - as opposed to synchronous in-editor agents (Cursor, Copilot chat) that you watch. Adds audio changelogs, GitHub issue triggers (the `jules` label), a `jules` CLI (\"Jules Tools\", `npm i -g @google/jules`) and a Gemini CLI `/jules` extension. Now runs on Gemini 3 Pro on paid tiers. In practice: developers say \"I threw that at Jules\" meaning they delegated a background task that comes back as a PR. По-русски: закинул задачу в Jules - он сам поднимет VM и принесёт пул-реквест (since May 2025 public beta, GA August 2025)",
+      "clarification": "Not Gemini Code Assist or Gemini CLI, and not a synchronous in-editor agent; Jules works in a VM and opens PRs.",
+      "sources": ["https://jules.google/"]
+    },
+    {
+      "id": "mera-tw48441154",
+      "term": "Gemini CLI",
+      "aliases": [
+        "GEMINI.md",
+        "gemini-cli",
+        "gemini extensions install",
+        "джемини CLI",
+        "терминальный агент Gemini"
+      ],
+      "category": "ai-agents",
+      "definition": "Google's free, open-source (Apache 2.0) terminal agent, released 25 June 2025, bringing Gemini into the shell with built-in Google Search grounding, MCP support, an extensions system, and `GEMINI.md` as its project-instruction file (Google's analogue of `CLAUDE.md`/`AGENTS.md`). It shares technology with Gemini Code Assist and was the first reference implementation of Zed's Agent Client Protocol. In practice: developers say \"run it in Gemini CLI\" for a free high-quota terminal agent, and install capability via `gemini extensions install …`. По-русски: поставь Gemini CLI и положи инструкции проекта в GEMINI.md (since June 2025)",
+      "clarification": "Not Gemini Code Assist or Duet AI in the IDE; Claude Code is not the only terminal coding agent.",
+      "sources": [
+        "https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemini-cli-open-source-ai-agent/"
+      ]
+    },
+    {
+      "id": "mera-twc63b3100",
+      "term": "Extended thinking / interleaved thinking / effort",
+      "aliases": [
+        "Extended thinking",
+        "interleaved thinking",
+        "effort",
+        "extended thinking",
+        "budget_tokens",
+        "interleaved-thinking-2025-05-14",
+        "effort parameter",
+        "расширенное мышление Claude",
+        "бюджет размышлений"
+      ],
+      "category": "ai-agents",
+      "definition": "The current knobs for reasoning depth on Claude. **Extended thinking** is enabled per request with `thinking: {type: \"enabled\", budget_tokens: N}`, producing visible thinking blocks. **Interleaved thinking** lets the model think *between* tool calls in an agent loop, enabled with the `interleaved-thinking-2025-05-14` beta header. The **`effort`** parameter (introduced with Opus 4.5) separately trades thoroughness against token cost and latency. Newer models move toward adaptive thinking rather than manual budgets. OpenAI's analogue is `reasoning_effort`, Google's is \"thinking level\". In practice: engineers say \"drop the effort to low and keep a small thinking budget\" as a cost lever on an agent. По-русски: поставь effort пониже и небольшой budget_tokens, чтобы агент не жёг токены (since 2025)",
+      "clarification": "Not just 'think step by step' chain-of-thought prompting; thinking budgets, interleaved thinking and effort are real parameters.",
+      "sources": ["https://platform.claude.com/docs/en/build-with-claude/extended-thinking"]
+    },
+    {
+      "id": "mera-twb3b2fabd",
+      "term": "Claude Code on the web / Copilot coding agent (cloud async agents)",
+      "aliases": [
+        "Claude Code on the web / Copilot coding agent",
+        "cloud async agents",
+        "Claude Code on the web",
+        "Copilot coding agent",
+        "клод код в браузере",
+        "облачный агент в песочнице",
+        "назначить задачу Copilot",
+        "асинхронный агент с PR"
+      ],
+      "category": "ai-agents",
+      "definition": "The shift of coding agents from your laptop to managed cloud sandboxes. **Claude Code on the web** dispatches tasks from a browser or the Claude mobile app into isolated Anthropic-managed VMs that clone the repo, run setup scripts under configurable network egress rules, and push a branch/PR. **GitHub Copilot coding agent** does the equivalent inside ephemeral GitHub Actions environments, assigned by handing an issue to Copilot. Both are asynchronous and PR-delivering, unlike an in-editor chat agent. In practice: developers say \"I assigned it to the agent\" and review a PR rather than watching a terminal. По-русски: назначь задачу облачному агенту - он сам склонирует репозиторий и откроет PR (since 2025 (Copilot coding agent May 2025; Claude Code on the web Oct 2025))",
+      "clarification": "Not Copilot as inline autocomplete plus chat, and not an assumption that coding agents run only locally.",
+      "sources": ["https://claude.com/blog/claude-code-on-the-web"]
+    }
+  ]
+}

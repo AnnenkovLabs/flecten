@@ -8,9 +8,9 @@
   import ProjectTrust from "./ProjectTrust.svelte";
   import Sidebar from "./Sidebar.svelte";
 
-  let { run, hidden, onSelectTask, onNewTask, onChooseFolder, twinActive, onOpenTwin, onOpenDictionary, onOpenModules }: {
-    run: RunStore; hidden: boolean; onSelectTask: (id: string) => void; onNewTask: () => void; onChooseFolder: () => void;
-    twinActive: boolean; onOpenTwin: () => void; onOpenDictionary: () => void; onOpenModules: () => void;
+  let { run, hidden, onSelectTask, onNewTask, twinActive, onOpenTwin, onOpenDictionary, onOpenModules, onOpenSettings }: {
+    run: RunStore; hidden: boolean; onSelectTask: (id: string) => void; onNewTask: () => void;
+    twinActive: boolean; onOpenTwin: () => void; onOpenDictionary: () => void; onOpenModules: () => void; onOpenSettings: () => void;
   } = $props();
   let requested = $state(false);
   let dismissed = $state<string | null>(null);
@@ -51,10 +51,11 @@
 
 <Sidebar {hidden} projects={run.projects} activeTask={run.activeTask}
   user={{ name: run.userName, initial: run.userName.slice(0, 1).toUpperCase() }}
+  onRenameUser={(name) => run.profile.rename(name)} {onOpenSettings}
   {onSelectTask} {onNewTask}
   onRenameTask={(id, title) => void renameTask(run, { id, title })}
   onDeleteTask={(id) => void deleteTask(run, { id })}
-  onSearch={() => undefined} onAddProject={onChooseFolder}
+  onSearch={() => undefined}
   onSelectProject={(project, taskId) => void select(project, taskId)}
   onRemoveProject={(project) => void remove(project)}
   onProjectTrust={(project) => void select(project, undefined, true)}

@@ -28,8 +28,6 @@ extraResources:
       - "flecten-agent*"
   - from: prompts
     to: prompts
-  - from: dist/module-marketplace
-    to: module-marketplace
   - from: LICENSE
     to: licenses/LICENSE
   - from: THIRD_PARTY_NOTICES.md

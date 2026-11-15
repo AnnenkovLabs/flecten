@@ -51,7 +51,6 @@ if (import.meta.main) {
   await rm("dist/prompts", { recursive: true, force: true });
   await cp("prompts", "dist/prompts", { recursive: true });
   await rm("dist/module-marketplace", { recursive: true, force: true });
-  await cp("src/marketplace/modules", "dist/module-marketplace", { recursive: true });
   console.log(`built ${AGENT_BINARY_PATH} with dist/prompts`);
 
   const size = (await stat(AGENT_BINARY_PATH)).size;

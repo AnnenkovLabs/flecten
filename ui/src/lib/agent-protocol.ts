@@ -6,6 +6,7 @@ import type { AgentMemoryContext, AgentNotice } from "./agent-types";
 import type { ContextReference } from "./composer/context-types";
 import type { ModuleCommand, ModuleResponse } from "./modules/protocol";
 import type { LimitKind } from "./run-errors";
+import type { ModelMetadataResult, ProviderCommand } from "./settings/provider-protocol";
 import type {
   AgentBudget,
   AgentCheckpoint,
@@ -27,8 +28,6 @@ import type {
   HarnessSettings,
   ProbeResult,
   ProviderActualizeResult,
-  ProviderProtocol,
-  ProviderSettings,
   ProviderTestResult,
   ReasoningEffort,
 } from "./types";
@@ -65,6 +64,9 @@ type AgentEventBody =
   | { type: "worker.event"; sessionId: string; event: WorkerSessionEvent };
 type AgentChildEvent = Extract<AgentLeafEvent, { sessionId?: string }>;
 type AgentLeafEvent =
+  | import("../../../shared/model-choice").ModelSelected
+  | import("../../../shared/message-branches").HistoryEdited
+  | import("../../../shared/message-branches").HistorySelected
   | import("../../../shared/twin-activity").TwinActivityEvent
   | { type: "session.state"; sessionId: string; state: SessionState }
   | {
@@ -213,7 +215,13 @@ type AgentLeafEvent =
       providers?: CatalogSummary[];
       provider?: CatalogProviderInfo;
       status?: CatalogStatus;
-      result?: DiscoverResult | ProviderTestResult | ProbeResult | ProviderActualizeResult;
+      result?:
+        | DiscoverResult
+        | ProviderTestResult
+        | ProbeResult
+        | ProviderActualizeResult
+        | { draftToken: string }
+        | ModelMetadataResult;
       files?: string[];
       file?: AgentFilePreview;
       commands?: CustomCommandInfo[];
@@ -227,6 +235,7 @@ type AgentLeafEvent =
       projects?: import("./run/projects.svelte").ProjectSessions[];
       session?: AgentSessionSummary;
       events?: AgentEvent[];
+      messageVersions?: import("../../../shared/message-branches").MessageVersion[];
       replay?: AgentReplay;
       restore?: AgentRestoreResult;
       jobs?: AgentJob[];
@@ -243,6 +252,7 @@ type AgentLeafEvent =
 
 export type AgentCommand =
   | ModuleCommand
+  | ProviderCommand
   | import("../../../shared/twin-protocol").TwinCommand
   | { type: "dictionary.list" | "dictionary.sync"; requestId: string }
   | {
@@ -436,6 +446,18 @@ export type AgentCommand =
       offset?: number;
     }
   | { type: "sessions.get"; requestId: string; id: string }
+  | {
+      type: "sessions.edit";
+      requestId: string;
+      id: string;
+      messageId: string;
+      text: string;
+      reasoning?: ReasoningEffort;
+      attachments?: string[];
+      contexts?: ContextReference[];
+      retainedAttachments?: string[];
+    }
+  | { type: "sessions.branch"; requestId: string; id: string; messageId: string; variantId: string }
   | { type: "sessions.rename"; requestId: string; id: string; title: string }
   | { type: "sessions.delete"; requestId: string; id: string; confirm: true }
   | { type: "sessions.export"; requestId: string; id: string }
@@ -458,38 +480,8 @@ export type AgentCommand =
       type: "settings.save";
       requestId: string;
       config: HarnessSettings;
+      baseline?: HarnessSettings;
       clearApiKeys?: string[];
-    }
-  | { type: "catalog.list"; requestId: string }
-  | { type: "catalog.provider"; requestId: string; id: string }
-  | { type: "catalog.status"; requestId: string }
-  | { type: "catalog.sync"; requestId: string }
-  | { type: "provider.actualize"; requestId: string; id: string }
-  | { type: "provider.reauthorize"; requestId: string; id: string; model: string }
-  | { type: "model.probe"; requestId: string; provider: string; model: string }
-  | {
-      type: "provider.discover";
-      requestId: string;
-      protocol: ProviderProtocol;
-      baseUrl: string;
-      apiKey?: string;
-      headers?: Record<string, string>;
-    }
-  | {
-      type: "provider.test";
-      requestId: string;
-      model: string;
-      providerId?: string;
-      draftToken?: string;
-    }
-  | { type: "provider.draft"; requestId: string; provider: ProviderSettings; providerId?: string }
-  | {
-      type: "model.set";
-      requestId: string;
-      provider: string;
-      model: string;
-      reasoning?: ReasoningEffort;
-      variant?: string;
     };
 
 export type WorkerSessionEvent = AgentChildEvent | SubagentEnvelope<AgentChildEvent>;

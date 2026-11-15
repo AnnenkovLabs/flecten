@@ -2,15 +2,17 @@
 
 Модуль может содержать любую комбинацию инструкций, ленивых знаний, MCP, нативного runtime, hooks, CSS и HTML-интерфейса. Ни один из этих компонентов не обязателен сам по себе. [SDK и manifest](MODULES.md) описывают точный контракт.
 
-## Готовые примеры в репозитории
+## Тестовые примеры SDK
+
+Прежние модули сохранены в `tests/fixtures/modules/` для проверок SDK. Они отсутствуют во встроенном маркетплейсе и не входят в установщики. Из checkout их можно установить по пути через **Install from folder**.
 
 | Модуль | Что уже работает |
 |---|---|
-| [computer-use](../src/marketplace/modules/computer-use/) | Приватный Linux-дисплей, реальные скриншоты, ввод с проверкой актуального observation ID, передача управления человеку и поверхность Computer. [Требования и границы](COMPUTER-USE.md). |
-| [better-trailer](../src/marketplace/modules/better-trailer/) | Инструкции, справочник по темпу, нативный инструмент расчёта кадров и интерактивный таймлайн. Подготовка монтажа, без генерации или рендера видео. |
-| [studio-harness](../src/marketplace/modules/studio-harness/) | Полностью свой интерфейс поверх ядра: чаты, сообщения, запуск и остановка агента, approvals, тема и сохранение брифа в проекте. |
-| [frame-workflow](../src/marketplace/modules/frame-workflow/) + [frame-service](../src/marketplace/modules/frame-service/) | Свой драйвер агента и schema-defined взаимодействие между модулями. Расчёт кадров по локальному брифу. |
-| [sqlite-journal](../src/marketplace/modules/sqlite-journal/) | Собственный backend журнала и индекса сессий на SQLite, включая reopening, fork и recovery. |
+| [computer-use](../tests/fixtures/modules/computer-use/) | Приватный Linux-дисплей, реальные скриншоты, ввод с проверкой актуального observation ID, передача управления человеку и поверхность Computer. [Требования и границы](COMPUTER-USE.md). |
+| [better-trailer](../tests/fixtures/modules/better-trailer/) | Инструкции, справочник по темпу, нативный инструмент расчёта кадров и интерактивный таймлайн. Подготовка монтажа, без генерации или рендера видео. |
+| [studio-harness](../tests/fixtures/modules/studio-harness/) | Полностью свой интерфейс поверх ядра: чаты, сообщения, запуск и остановка агента, approvals, тема и сохранение брифа в проекте. |
+| [frame-workflow](../tests/fixtures/modules/frame-workflow/) + [frame-service](../tests/fixtures/modules/frame-service/) | Свой драйвер агента и schema-defined взаимодействие между модулями. Расчёт кадров по локальному брифу. |
+| [sqlite-journal](../tests/fixtures/modules/sqlite-journal/) | Собственный backend журнала и индекса сессий на SQLite, включая reopening, fork и recovery. |
 
 ## Интерфейс и отдельные продукты
 

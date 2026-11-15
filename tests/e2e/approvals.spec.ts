@@ -18,7 +18,7 @@ async function launchApprovalApp(options: LaunchOptions): Promise<AppHarness> {
       window?.restore();
       window?.hide();
     });
-    await expect(h.page.locator(".composer-access")).toBeVisible();
+    await expect(h.page.locator("#prompt")).toBeVisible();
     const trust = h.page.locator("dialog.project-trust");
     if (await trust.isVisible()) {
       await trust.getByRole("button", { name: "Do not trust", exact: true }).dispatchEvent("click");
@@ -64,16 +64,28 @@ async function capture(h: AppHarness, name: string, locator?: Locator): Promise<
   await writeFile(test.info().outputPath(name), Buffer.from(image, "base64"));
 }
 
+async function openAccessSettings(page: Page): Promise<Locator> {
+  await page.getByRole("button", { name: "Settings", exact: true }).dispatchEvent("click");
+  const dialog = page.locator("dialog.settings-dialog");
+  await dialog.getByRole("button", { name: "Access", exact: true }).dispatchEvent("click");
+  await expect(dialog.locator("#settings-permissions")).toBeVisible();
+  return dialog;
+}
+
 async function chooseAccessMode(page: Page, label: "Agent" | "Full access"): Promise<void> {
-  await page.locator(".composer-access").getByRole("button").dispatchEvent("click");
-  await page
-    .getByRole("listbox", { name: "Access mode", exact: true })
-    .getByRole("option")
-    .filter({ has: page.getByText(label, { exact: true }) })
-    .dispatchEvent("click");
-  await expect(
-    page.getByRole("button", { name: `Access mode: ${label}`, exact: true }),
-  ).toBeVisible();
+  const dialog = await openAccessSettings(page);
+  const choice = dialog
+    .getByRole("group", { name: "Access mode", exact: true })
+    .getByRole("button")
+    .filter({ has: page.getByText(label, { exact: true }) });
+  await choice.dispatchEvent("click");
+  await expect(choice).toHaveAttribute("aria-pressed", "true");
+  const save = dialog.getByRole("button", { name: "Save", exact: true });
+  await expect(save).toBeEnabled();
+  await save.dispatchEvent("click");
+  await expect(dialog.getByText("Saved", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Close", exact: true }).dispatchEvent("click");
+  await expect(dialog).toBeHidden();
 }
 
 test("approval scope, both viewports, persisted rule and revocation", async () => {
@@ -279,7 +291,7 @@ test("mandatory checkpoint and queued denial preserve human feedback", async () 
   }
 });
 
-test("composer access mode persists the approval policy and execution boundary", async () => {
+test("Access settings persist the approval policy and execution boundary without a composer dropdown", async () => {
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
   const h = await launchApprovalApp({ models, locale: "en" });
@@ -287,27 +299,38 @@ test("composer access mode persists the approval policy and execution boundary",
     const { page } = h;
     const config = async () =>
       JSON.parse(await readFile(join(h.cwd, "flecten.config.json"), "utf8"));
+    await expect(page.locator(".composer-access")).toHaveCount(0);
+    let dialog = await openAccessSettings(page);
     await expect(
-      page.getByRole("button", { name: "Access mode: Custom access", exact: true }),
+      dialog.locator(".perm-preset-note").getByText("Custom access.", { exact: true }),
     ).toBeVisible();
+    await dialog.getByRole("button", { name: "Close", exact: true }).dispatchEvent("click");
     await chooseAccessMode(page, "Full access");
     await expect.poll(config).toMatchObject({
       permissions: { externalPath: "allow", destructive: "allow", shell: "allow" },
       sandbox: { enabled: false, allowNetwork: true },
     });
     await page.reload();
+    dialog = await openAccessSettings(page);
     await expect(
-      page.getByRole("button", { name: "Access mode: Full access", exact: true }),
-    ).toBeVisible();
+      dialog
+        .getByRole("group", { name: "Access mode", exact: true })
+        .getByRole("button", { pressed: true }),
+    ).toContainText("Full access");
+    await dialog.getByRole("button", { name: "Close", exact: true }).dispatchEvent("click");
     await chooseAccessMode(page, "Agent");
     await expect.poll(config).toMatchObject({
       permissions: { externalPath: "ask", destructive: "ask", shell: "allow" },
       sandbox: { enabled: true, allowNetwork: true },
     });
     await page.reload();
+    dialog = await openAccessSettings(page);
     await expect(
-      page.getByRole("button", { name: "Access mode: Agent", exact: true }),
-    ).toBeVisible();
+      dialog
+        .getByRole("group", { name: "Access mode", exact: true })
+        .getByRole("button", { pressed: true }),
+    ).toContainText("Agent");
+    await dialog.getByRole("button", { name: "Close", exact: true }).dispatchEvent("click");
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();

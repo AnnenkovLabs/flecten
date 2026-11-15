@@ -1,16 +1,16 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { launchApp, repoRoot } from "./fixtures";
 
 test("context details show real usage, fit both viewports and survive reopening", async () => {
   const harness = await launchApp({
-    usage: { input: 6000, output: 1200, cached: 4000, reasoning: 800 },
+    usage: { input: 90_900, output: 1200, cached: 4000, reasoning: 800 },
     models: {
       "e2e-model": {
         name: "E2E Mock",
-        context: 131072,
-        output: 4096,
+        context: 1_048_576,
+        output: 943_718,
         tools: true,
         reasoning: false,
         cost: { input: 2, output: 10, cacheRead: 0.2 },
@@ -27,7 +27,7 @@ test("context details show real usage, fit both viewports and survive reopening"
     await expect(page.locator(".model-button")).toContainText("E2E Mock");
     const button = page.locator(".lh-context-button");
     await expect(button).toBeVisible();
-    await button.click();
+    await button.click({ force: true });
     const popup = page.locator(".lh-context-pop");
     await expect(popup).toContainText("Автосжатие при 100%");
     await expect(popup).not.toContainText("запросов в этой задаче ещё не было");
@@ -52,36 +52,58 @@ test("context details show real usage, fit both viewports and survive reopening"
         [width, height],
       );
       await page.setViewportSize({ width, height });
-      await button.click();
+      await button.click({ force: true });
       await expect(popup.locator(".lh-context-tokens dd")).toHaveText([
-        "6k",
+        "90.9k",
         "1.2k",
         "800",
         "4k",
         "Нет данных",
       ]);
-      await expect(popup.locator("[role=progressbar]")).toHaveAttribute("aria-valuenow", "6");
+      await expect(popup.locator(".lh-context-head span")).toHaveText("92.1k из 1.0M · 9%");
+      await expect(popup.locator("[role=progressbar]")).toHaveAttribute("aria-valuenow", "9");
       await expect(popup).toContainText("Автосжатие при 100%");
       await expect(popup.locator(".lh-context-models")).toContainText("e2e-model");
-      await expect(popup.locator(".lh-context-costs")).toContainText("$0.02");
+      await expect(popup.locator(".lh-context-costs")).toContainText("$0.19");
       const box = await popup.boundingBox();
       expect(box).not.toBeNull();
       expect(box?.y).toBeGreaterThanOrEqual(7);
       expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(height - 7);
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width - 7);
-      await page.screenshot({ path: join(artifactDir, `context-${width}.png`) });
+      const screenshot = await app.evaluate(
+        async ({ BrowserWindow }, size) => {
+          const window = BrowserWindow.getAllWindows()[0];
+          if (!window) throw new Error("app window missing");
+          // A minimized window needs a paint after resize before its screenshot is current.
+          await window.webContents.capturePage(
+            { x: 0, y: 0, ...size },
+            { stayHidden: true, stayAwake: true },
+          );
+          const image = await window.webContents.capturePage(
+            { x: 0, y: 0, ...size },
+            { stayHidden: true, stayAwake: true },
+          );
+          return image.toPNG().toString("base64");
+        },
+        { width, height },
+      );
+      writeFileSync(join(artifactDir, `context-${width}.png`), Buffer.from(screenshot, "base64"));
       await page.keyboard.press("Escape");
     }
     await page.reload();
-    await task.click();
-    await button.click();
+    await task.click({ force: true });
+    await expect(button).toHaveText("9%");
+    await button.click({ force: true });
     await expect(popup.locator(".lh-context-tokens dd")).toHaveText([
-      "6k",
+      "90.9k",
       "1.2k",
       "800",
       "4k",
       "Нет данных",
     ]);
+    await expect(popup.locator(".lh-context-head span")).toHaveText("92.1k из 1.0M · 9%");
+    await expect(popup.locator("[role=progressbar]")).toHaveAttribute("aria-valuenow", "9");
+    await expect(popup.locator(".lh-context-costs")).toContainText("$0.19");
     expect(harness.consoleErrors).toEqual([]);
   } finally {
     await test.info().attach("console-errors", {

@@ -1,17 +1,15 @@
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { z } from "zod";
 import {
-  FLECTEN_MARKETPLACE_URL,
   MarketplaceCategorySchema,
   type MarketplaceEntry,
   type MarketplaceState,
   MarketplaceUrlSchema,
   ModuleRevisionSchema,
 } from "../../shared/module-marketplace";
+import bundledCatalog from "../marketplace/index.json";
 import { type ModuleManifest, ModuleManifestSchema } from "./manifest";
 import { downloadMarketplaceModule, marketplaceJson } from "./marketplace-download";
-import { type ModulePackage, readModule } from "./package";
+import type { ModulePackage } from "./package";
 
 const MetadataSchema = z.object({
   title: z.string().min(1).max(100),
@@ -34,18 +32,11 @@ const CatalogSchema = z
   })
   .strict();
 
-export const BUNDLED_MODULES = [
-  { name: "computer-use", title: "Computer", category: "workflow" },
-  { name: "better-trailer", title: "Trailer timeline", category: "workflow" },
-  { name: "studio-harness", title: "Studio harness", category: "interface" },
-  { name: "frame-workflow", title: "Frame workflow", category: "workflow" },
-  { name: "frame-service", title: "Frame service", category: "platform" },
-  { name: "sqlite-journal", title: "SQLite journal", category: "platform" },
-] as const;
 type Listing = {
   entry: MarketplaceEntry;
   manifest: ModuleManifest;
-} & ({ folder: string; packageUrl?: never } | { packageUrl: string; folder?: never });
+  packageUrl: string;
+};
 
 function entry(
   source: string,
@@ -79,24 +70,10 @@ export class ModuleMarketplace {
   #catalogs = new Map<string, { name: string; listings: Listing[] }>();
 
   async #load(source: string): Promise<{ name: string; listings: Listing[] }> {
-    if (source === "bundled") {
-      // The repository catalog is the live source once the repo is public; local files keep
-      // the marketplace usable offline and while the repository is still private.
-      try {
-        return await this.#catalog("bundled", FLECTEN_MARKETPLACE_URL, 5_000);
-      } catch {
-        return await this.#bundledFiles();
-      }
-    }
-    return await this.#catalog(source, source, 15_000);
-  }
-
-  async #catalog(
-    source: string,
-    url: string,
-    timeoutMs: number,
-  ): Promise<{ name: string; listings: Listing[] }> {
-    const catalog = CatalogSchema.parse(await marketplaceJson(url, 2 * 1024 * 1024, timeoutMs));
+    // Pin the built-in catalog to this release so an older remote catalog cannot restore removed modules.
+    const catalog = CatalogSchema.parse(
+      source === "bundled" ? bundledCatalog : await marketplaceJson(source, 2 * 1024 * 1024),
+    );
     const names = catalog.modules.map((module) => module.manifest.name);
     if (new Set(names).size !== names.length)
       throw new Error("Duplicate module name in catalog. Ask the publisher to fix the catalog.");
@@ -108,31 +85,6 @@ export class ModuleMarketplace {
         packageUrl: module.packageUrl,
       })),
     };
-  }
-
-  async #bundledFiles(): Promise<{ name: string; listings: Listing[] }> {
-    const root = [
-      join(dirname(process.execPath), "module-marketplace"),
-      join(import.meta.dir, "../marketplace/modules"),
-    ].find((path) => existsSync(join(path, "better-trailer/.flecten-module/module.json")));
-    if (!root) throw new Error("Bundled modules are missing. Rebuild or reinstall Flecten.");
-    const listings = await Promise.all(
-      BUNDLED_MODULES.map(async (metadata) => {
-        const folder = join(root, metadata.name);
-        const module = await readModule(folder);
-        return {
-          entry: entry(
-            "bundled",
-            { ...metadata, publisher: "Flecten" },
-            module.manifest,
-            module.revision,
-          ),
-          manifest: module.manifest,
-          folder,
-        };
-      }),
-    );
-    return { name: "Flecten", listings };
   }
 
   async validateSource(source: string): Promise<void> {
@@ -206,10 +158,7 @@ export class ModuleMarketplace {
     const packages: ModulePackage[] = [];
     let totalBytes = 0;
     for (const listing of ordered.values()) {
-      const module =
-        listing.folder !== undefined
-          ? await readModule(listing.folder)
-          : await downloadMarketplaceModule(listing.packageUrl);
+      const module = await downloadMarketplaceModule(listing.packageUrl);
       for (const bytes of module.files.values()) totalBytes += bytes.byteLength;
       if (totalBytes > 128 * 1024 * 1024)
         throw new Error("Installation exceeds 128 MiB. Install dependencies separately.");

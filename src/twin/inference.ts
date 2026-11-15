@@ -16,6 +16,7 @@ import type { ImagePart, Usage } from "../core/types";
 import type { ModelProvider } from "../providers/types";
 import { markdownData } from "../util/markdown";
 import { TwinInferenceError } from "./inference-error";
+import { twinResponse } from "./response";
 import type { SourceMessage } from "./sources";
 
 const proposed = TwinCandidateSchema.omit({ id: true, evidence: true }).extend({
@@ -50,6 +51,7 @@ async function infer(
   let usage: Usage = { input: 0, output: 0, cached: 0 };
   let observed = false;
   try {
+    signal.throwIfAborted();
     for await (const event of target.provider.stream(
       {
         model: target.model,
@@ -78,10 +80,11 @@ async function infer(
       if (event.type === "tool_call") throw new Error("Twin extraction cannot execute tools");
       if (event.type === "done") complete = event.reason === "end";
     }
+    signal.throwIfAborted();
     if (!complete) throw new Error("Twin response was incomplete. No candidates were saved.");
     const costUsd = observed ? target.price(usage) : undefined;
     return {
-      value: JSON.parse(text) as unknown,
+      value: twinResponse(text),
       usage: { ...usage, ...(costUsd === undefined ? {} : { costUsd }) },
     };
   } catch (error) {

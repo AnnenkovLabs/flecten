@@ -218,7 +218,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
     await h.releaseSummary();
     await expect(scene).toHaveCount(0);
     await expect(
-      panel.getByText("Twin is ready. Learned traits apply immediately and you can edit them.", {
+      panel.getByText("Training finished. No supported traits were found.", {
         exact: false,
       }),
     ).toBeVisible();

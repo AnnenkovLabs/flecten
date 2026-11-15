@@ -122,6 +122,12 @@ export default {
   "optional for a local server": "opcional para servidor local",
   "Scanning API…": "Consultando a API…",
   "Connect and find models": "Conectar e buscar modelos",
+  "Check connection before adding": "Verificar conexão antes de adicionar",
+  "Turn off if your provider blocks checks. Add models manually after adding the provider.":
+    "Desative se o provedor bloquear a verificação. Após adicionar o provedor, adicione os modelos manualmente.",
+  "Add without checking": "Adicionar sem verificar",
   "The app will get the model list from the API and fill in context limits and capabilities from the catalog.":
     "O sistema lerá a lista de modelos da API e completará as informações de contexto e recursos com os dados do catálogo.",
+  "Provider added without checking. Add models manually in the Models tab.":
+    "Provedor adicionado sem verificação. Adicione os modelos manualmente na aba Modelos.",
 } as const;

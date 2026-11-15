@@ -8,6 +8,7 @@ import type {
   StorageRequest,
 } from "../core/services/storage";
 import type { Event } from "../core/types";
+import { projectBranches } from "../store/events/branches";
 import { envelopeSchema, readTolerant } from "../store/events/envelope";
 import {
   assertSessionId,
@@ -81,13 +82,15 @@ export class SessionStorage {
     return value as EventEnvelope[];
   }
   async read(sessionId: string): Promise<(Event & { timestamp?: number })[]> {
-    return (await this.envelopes(sessionId)).flatMap(({ event, ts, schemaVersion }) => {
-      const parsed = eventSchema.safeParse(event);
-      if (!parsed.success) return [];
-      return [
-        { ...parsed.data, ...(schemaVersion > 0 ? { timestamp: Date.parse(ts) } : {}) } as Event,
-      ];
-    });
+    return projectBranches(await this.envelopes(sessionId)).envelopes.flatMap(
+      ({ event, ts, schemaVersion }) => {
+        const parsed = eventSchema.safeParse(event);
+        if (!parsed.success) return [];
+        return [
+          { ...parsed.data, ...(schemaVersion > 0 ? { timestamp: Date.parse(ts) } : {}) } as Event,
+        ];
+      },
+    );
   }
   list(options: SessionListOptions = {}) {
     return this.#call({ operation: "list", options }, z.array(summarySchema));

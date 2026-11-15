@@ -32,6 +32,9 @@ export interface AppendOptions {
  */
 const KNOWN_EVENTS: Record<EventType, true> = {
   "twin.activity": true,
+  "history.edited": true,
+  "history.selected": true,
+  "model.selected": true,
   "session.state": true,
   "session.started": true,
   "input.translated": true,

@@ -38,8 +38,10 @@ export default {
     "Відповідних модулів немає. Очистіть пошук або виберіть іншу категорію.",
   "Clear filters": "Скинути фільтри",
   "Catalog sources": "Джерела каталогів",
-  "The built-in catalog works offline. Add an HTTPS catalog to discover community modules.":
-    "Вбудований каталог працює без мережі. Додайте HTTPS-каталог, щоб знаходити модулі спільноти.",
+  "Add an HTTPS catalog to discover community modules.":
+    "Додайте HTTPS-каталог, щоб знайти модулі спільноти.",
+  "No modules in connected catalogs. Add an HTTPS catalog to get started.":
+    "У підключених каталогах поки немає модулів. Додайте HTTPS-каталог, щоб почати.",
   "Included with Flecten": "У комплекті з Flecten",
   "Disconnect catalog: {0}": ["Відключити каталог: ", 0, ""],
   Disconnect: "Відключити",

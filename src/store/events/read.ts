@@ -1,6 +1,7 @@
 import type { Event } from "../../core/types";
 import { eventSchema } from "../../core/types/event-schema";
 import { sessionPaths } from "../paths";
+import { projectBranches } from "./branches";
 import { readTolerant } from "./envelope";
 import {
   assertSessionId,
@@ -20,7 +21,7 @@ export async function readSession(
   assertSessionId(id);
   const { envelopes } = await readTolerant(sessionPaths(cwd, id).events);
   const events: (Event & { timestamp?: number })[] = [];
-  for (const envelope of envelopes) {
+  for (const envelope of projectBranches(envelopes).envelopes) {
     try {
       events.push({
         ...(eventSchema.parse(envelope.event) as Event),

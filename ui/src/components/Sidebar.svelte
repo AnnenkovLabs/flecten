@@ -4,6 +4,7 @@
   import type { Project } from "../lib/types";
   import Icon from "./Icon.svelte";
   import ProjectGroup from "./ProjectGroup.svelte";
+  import SidebarUser from "./SidebarUser.svelte";
   import TwinCharacter from "./twin/TwinCharacter.svelte";
 
   interface Props {
@@ -11,6 +12,8 @@
     projects: Project[];
     activeTask: string;
     user: { name: string; initial: string };
+    onRenameUser: (name: string) => void;
+    onOpenSettings: () => void;
     onSelectTask: (id: string) => void;
     onNewTask: () => void;
     onRenameTask: (id: string, title: string) => void;
@@ -19,7 +22,6 @@
     onSelectProject?: (project: Project, taskId?: string) => void;
     onRemoveProject?: (project: Project) => void;
     onProjectTrust?: (project: Project) => void;
-    onAddProject?: () => void;
     twinActive?: boolean;
     onOpenTwin?: () => void;
     onOpenDictionary?: () => void;
@@ -31,12 +33,14 @@
     projects,
     activeTask,
     user,
+    onRenameUser,
+    onOpenSettings,
     onSelectTask,
     onNewTask,
     onRenameTask,
     onDeleteTask,
     onSearch,
-    onSelectProject, onRemoveProject, onProjectTrust, onAddProject,
+    onSelectProject, onRemoveProject, onProjectTrust,
     twinActive = false,
     onOpenTwin,
     onOpenDictionary,
@@ -126,7 +130,6 @@
 
 <aside class="sidebar" class:is-hidden={hidden} inert={hidden} aria-label={t("Projects and tasks")}>
   <div class="side-top">
-    <button class="side-action" type="button" onclick={onAddProject}><Icon name="folder-plus" /><span>{t("Add folder")}</span></button>
     <button class="side-action" type="button" title={t("New task")} onclick={onNewTask}>
       <Icon name="plus" />
       <span>{t("New task")}</span>
@@ -183,10 +186,7 @@
     {/each}
   </div>
 
-  <footer class="side-user">
-    <span class="avatar" aria-hidden="true">{user.initial}</span>
-    <strong class="user-name">{user.name}</strong>
-  </footer>
+  {#if !hidden}<SidebarUser {user} onRename={onRenameUser} {onOpenSettings} />{/if}
 </aside>
 
 <style>
@@ -369,36 +369,5 @@
       translate 760ms var(--ease-goo),
       width 760ms var(--ease-goo),
       height 760ms var(--ease-goo);
-  }
-
-  .side-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 48px;
-    flex: none;
-    padding: 0 12px;
-  }
-
-  .avatar {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    flex: none;
-    border-radius: 50%;
-    background: var(--raised-hover);
-    color: var(--text);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .user-name {
-    overflow: hidden;
-    min-width: 0;
-    font-size: 13.5px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 </style>

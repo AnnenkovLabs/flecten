@@ -74,7 +74,7 @@ export interface SessionOptions {
   modalities?: readonly string[] | undefined;
   subagentRunnerFactory?: SubagentRunnerFactory;
   /** Saves compaction pages of a session as pages/N.md. */
-  pages?(sessionId: SessionId): PageSink;
+  pages?(sessionId: SessionId, historySessionId?: SessionId): PageSink;
   /** Expands slash commands; the thread keeps what the user typed. */
   expandPrompt?(prompt: string): Promise<string>;
   logDir(sessionId: string): string;

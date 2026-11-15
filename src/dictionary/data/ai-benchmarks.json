@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "category": "ai-benchmarks",
+  "entries": [
+    {
+      "id": "mera-twac30da7a",
+      "term": "Terminal-Bench (and Harbor)",
+      "aliases": [
+        "Terminal-Bench",
+        "and Harbor",
+        "terminal bench",
+        "Terminal-Bench 2",
+        "Harbor harness",
+        "harbor run",
+        "терминал бенч"
+      ],
+      "category": "ai-benchmarks",
+      "definition": "A benchmark for agents doing real work in a terminal: each task ships an instruction, a containerised Docker sandbox and verifying tests, scoring outcome-based success rather than command-by-command similarity. Created with the Laude Institute, it is run through the Harbor harness (`harbor run -d terminal-bench/...`) and is now a headline number in frontier-model announcements alongside SWE-bench Verified. Terminal-Bench 2.x is the current iteration. In practice: model announcements and internal evals quote \"Terminal-Bench 2.x %\" as the measure of agentic, end-to-end CLI competence. По-русски: какой у модели процент на Terminal-Bench 2, а не только на SWE-bench? (since May 2025)",
+      "clarification": "Not only SWE-bench, HumanEval or MBPP as coding benchmarks; terminal agent work has its own outcome-scored benchmark.",
+      "sources": ["https://www.tbench.ai/"]
+    },
+    {
+      "id": "mera-twf1f1a673",
+      "term": "Humanity's Last Exam (HLE)",
+      "aliases": [
+        "Humanity's Last Exam",
+        "HLE benchmark",
+        "HLE score",
+        "бенчмарк HLE",
+        "последний экзамен человечества"
+      ],
+      "category": "ai-benchmarks",
+      "definition": "A ~2,500-question, multimodal, expert-written closed-ended benchmark spanning 100+ subjects, built by CAIS and Scale AI explicitly as a successor to saturated tests like MMLU. It is now a standard headline number in frontier-model launches. Frontier scores climbed from single digits at launch to roughly half the set by 2026 - the trajectory itself is the point of the benchmark. In practice: model cards and comparison tables quote \"HLE %\" alongside GPQA and ARC-AGI-2. По-русски: какой у модели процент на Humanity's Last Exam, а не на MMLU? (since January 2025)",
+      "clarification": "Not MMLU, HellaSwag or BIG-bench as the frontier knowledge benchmark; HLE is the successor number quoted at launches.",
+      "sources": ["https://lastexam.ai/"]
+    },
+    {
+      "id": "mera-tw0c8c8610",
+      "term": "ARC-AGI-2",
+      "aliases": ["бенчмарк ARC-AGI-2", "ARC-AGI-1", "ARC AGI второй", "АРК-АГИ-2", "ARC Prize 2"],
+      "category": "ai-benchmarks",
+      "definition": "The second-generation Abstraction and Reasoning Corpus benchmark and prize, designed after frontier systems began beating the original ARC-AGI-1: grid puzzles calibrated so that every task is solvable by at least two humans in two attempts while remaining very hard for models, with an explicit efficiency/cost dimension. Distinct from ARC-AGI-1 (2019) - quoting \"ARC-AGI\" without the version is now ambiguous. In practice: labs report \"ARC-AGI-2 score at $X per task\" to claim novel-problem reasoning rather than recall. По-русски: сравни модели по ARC-AGI-2 с ценой за задачу, а не по старому ARC-AGI (since March 2025)",
+      "clarification": "Not the original 2019 ARC-AGI with o3's 2024 result; unversioned 'ARC-AGI' is now ambiguous.",
+      "sources": ["https://arcprize.org/arc-agi/2/"]
+    },
+    {
+      "id": "mera-tw7cdd996c",
+      "term": "SWE-bench Pro / the SWE-bench Verified problem",
+      "aliases": [
+        "SWE-bench Pro",
+        "the SWE-bench Verified problem",
+        "swe-bench-pro",
+        "SWE-bench Verified",
+        "SWE-Lancer",
+        "сатурация SWE-bench",
+        "СВЕ-бенч Про"
+      ],
+      "category": "ai-benchmarks",
+      "definition": "SWE-bench Verified (the human-validated 500-problem subset) became the default agentic-coding metric in 2024-25, but by 2026 practitioners treat it as saturated and contamination-prone. **SWE-bench Pro** is the harder, less-contaminated successor using more difficult repositories with stronger licensing/leakage controls, where frontier scores sit far below Verified's. Terminal-Bench and SWE-Lancer play similar successor roles for CLI and economic-value framing. In practice: engineers now say \"Verified is saturated, what's the Pro number?\" when reading a model announcement. По-русски: Verified уже сатурирован - какой у модели результат на SWE-bench Pro? (since 2025)",
+      "clarification": "Do not treat SWE-bench Verified percentages as the definitive uncontaminated measure of coding ability; it is saturated.",
+      "sources": ["https://scale.com/leaderboard/swe_bench_pro_public"]
+    },
+    {
+      "id": "mera-twa8e0f3db",
+      "term": "METR time horizon (50%-success task length)",
+      "aliases": [
+        "METR time horizon",
+        "50%-success task length",
+        "50% success task length",
+        "временной горизонт METR",
+        "горизонт задач агента",
+        "METR doubling time",
+        "длина задачи по времени"
+      ],
+      "category": "ai-benchmarks",
+      "definition": "METR's metric for agent capability: the length of task - measured as how long a human expert takes - that a model can complete with 50% success probability. Their March 2025 paper found this horizon doubling roughly every 7 months from 2019 to early 2025; later revisions with a harder task suite suggest faster doubling. It reframes progress as \"how long a job can it finish unattended\" rather than as a benchmark percentage. In practice: leaders say \"the time horizon is now a few hours\" to argue about which workflows can be delegated to agents. По-русски: по METR временной горизонт агентов уже часы - что можно делегировать? (since March 2025)",
+      "clarification": "Do not answer with benchmark accuracy percentages; this metric is human task duration completed at 50% success.",
+      "sources": ["https://metr.org/blog/2025-03-19-measuring-ai-ability-to-complete-long-tasks/"]
+    }
+  ]
+}

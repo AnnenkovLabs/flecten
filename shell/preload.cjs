@@ -60,10 +60,14 @@ function validateAgentCommand(command, allowedTypes = null, maxBytes = MAX_COMMA
 const isRenderer = typeof process !== "undefined" && process.type === "renderer";
 
 if (isRenderer) {
-  const { contextBridge, ipcRenderer, webUtils } = require("electron");
+  const { contextBridge, ipcRenderer, webFrame, webUtils } = require("electron");
 
   contextBridge.exposeInMainWorld("desktop", {
     setLocale: (locale) => ipcRenderer.send("window:locale", locale),
+    setInterfaceScale: (percentage) => {
+      if (!Number.isInteger(percentage) || percentage < 75 || percentage > 125 || percentage % 5 !== 0) return;
+      webFrame.setZoomFactor(percentage / 100);
+    },
     control: (action) => ipcRenderer.send("window:control", action),
     chooseProject: () => ipcRenderer.invoke("liquid:choose-project"),
     selectProject: (path, sessionId) => ipcRenderer.invoke("liquid:select-project", path, sessionId),

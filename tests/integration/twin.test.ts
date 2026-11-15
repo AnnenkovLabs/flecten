@@ -54,7 +54,7 @@ async function fixture() {
               emotion: "furious",
             };
       return new Response(
-        `data: ${JSON.stringify({ choices: [{ delta: { content: JSON.stringify(result) }, finish_reason: "stop" }], usage: { prompt_tokens: 120, completion_tokens: 50 } })}\n\ndata: [DONE]\n\n`,
+        `data: ${JSON.stringify({ choices: [{ delta: { content: `\u0060\u0060\u0060json\n${JSON.stringify(result)}\n\u0060\u0060\u0060` }, finish_reason: "stop" }], usage: { prompt_tokens: 120, completion_tokens: 50 } })}\n\ndata: [DONE]\n\n`,
         { headers: { "content-type": "text/event-stream" } },
       );
     },
@@ -222,10 +222,15 @@ test("Twin automatically learns emotional voice from exact reactions plus preced
       appliesWhen: entry.appliesWhen,
       reaction: "like",
       strength: 1,
-      voice: "Так мне нравится",
+      voice: "",
     },
   });
-  expect(edited.entries[0]).toMatchObject({ revision: 2, reaction: "like", strength: 1 });
+  expect(edited.entries[0]).toMatchObject({
+    revision: 2,
+    reaction: "like",
+    strength: 1,
+    voice: "",
+  });
   await f.app.twin.forget({ id: entry.id, expectedRevision: 2 });
   expect((await f.app.twin.get()).entries).toHaveLength(0);
   const disk = await Bun.file(join(f.cwd, ".liquid/twin.json")).json();

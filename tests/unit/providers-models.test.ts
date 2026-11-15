@@ -58,6 +58,7 @@ describe("model depth", () => {
                     headers: { "x-variant": "yes" },
                     temperature: 0.2,
                     reasoning: "low",
+                    maxOutputTokens: 200,
                   },
                 },
               },
@@ -100,6 +101,14 @@ describe("model depth", () => {
     expect(headers?.get("x-model")).toBe("yes");
     expect(headers?.get("x-variant")).toBe("yes");
     expect(body.reasoning_effort).toBe("low");
+    expect(body.max_tokens).toBe(100);
+    await collect(
+      provider.provider.stream(
+        { ...request(), model: "test-model", variant: "fast", maxTokens: 300 },
+        new AbortController().signal,
+      ),
+    );
+    expect(body.max_tokens).toBe(200);
   });
 
   test("routes an individual model to another protocol", async () => {

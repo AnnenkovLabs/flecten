@@ -12,7 +12,7 @@ export const DictionaryEntrySchema = z
   .object({
     id: identifier,
     term: text(160),
-    aliases: z.array(text(160)).max(24).default([]),
+    aliases: z.array(text(160)).max(128).default([]),
     definition: text(4_000),
     category: identifier,
     clarification: text(2_000).optional(),

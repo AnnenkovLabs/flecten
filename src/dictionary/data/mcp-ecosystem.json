@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "category": "mcp-ecosystem",
+  "entries": [
+    {
+      "id": "mera-tw407831cb",
+      "term": "MCP (Model Context Protocol) spec versions - 2025-03-26, 2025-06-18, 2025-11-25",
+      "aliases": [
+        "MCP  spec versions - 2025-03-26, 2025-06-18, 2025-11-25",
+        "MCP-Protocol-Version",
+        "MCP spec version",
+        "2025-06-18",
+        "2025-11-25",
+        "2025-03-26",
+        "версия спеки MCP",
+        "ревизия протокола MCP"
+      ],
+      "category": "mcp-ecosystem",
+      "definition": "MCP is versioned by date string, and the date is load-bearing in conversation. `2025-03-26` replaced the original HTTP+SSE transport with Streamable HTTP and added OAuth 2.1 auth; `2025-06-18` removed the JSON-RPC batching requirement, made the `MCP-Protocol-Version` header mandatory, and added elicitation, structured tool output and resource links; `2025-11-25` added URL-mode elicitation, tasks/async operations and further auth work. Servers/clients negotiate via the `MCP-Protocol-Version` header. In practice: engineers say \"we're on 2025-06-18, so structured output and elicitation are available\" when scoping an MCP server. По-русски: мы на ревизии MCP 2025-06-18 - какие возможности протокола нам доступны? (since November 2024 (protocol); versions through November 2025)",
+      "clarification": "Not only the 2024-11-05 spec with HTTP+SSE and stdio; auth, elicitation and the version header now exist.",
+      "sources": ["https://modelcontextprotocol.io/specification/2025-06-18"]
+    },
+    {
+      "id": "mera-tw05bc7f1d",
+      "term": "Streamable HTTP (MCP transport)",
+      "aliases": [
+        "Streamable HTTP",
+        "MCP transport",
+        "streamable-http",
+        "Mcp-Session-Id",
+        "HTTP+SSE transport",
+        "стримабл HTTP",
+        "транспорт MCP по HTTP"
+      ],
+      "category": "mcp-ecosystem",
+      "definition": "The MCP remote transport that replaced the old two-endpoint HTTP+SSE design. A server exposes a single endpoint (conventionally `/mcp`) accepting POST for JSON-RPC messages and optionally GET for a server-initiated SSE stream; responses may be a plain JSON body or an SSE stream over the same endpoint, and sessions are carried in an `Mcp-Session-Id` header. It supports stateless deployment (serverless/edge), which the old transport did not. In practice: engineers say \"does your server support Streamable HTTP or is it still SSE?\" when debugging MCP client compatibility. По-русски: сервер уже поддерживает Streamable HTTP или там всё ещё старый SSE-транспорт? (since March 2025)",
+      "clarification": "Not the deprecated HTTP+SSE transport with separate /sse and /messages endpoints as the current remote transport.",
+      "sources": ["https://modelcontextprotocol.io/specification/2025-06-18/basic/transports"]
+    },
+    {
+      "id": "mera-twc2954429",
+      "term": "MCP elicitation",
+      "aliases": [
+        "elicitation/create",
+        "элиситация",
+        "запрос данных у пользователя MCP",
+        "MCP sampling",
+        "элиситация MCP сервера"
+      ],
+      "category": "mcp-ecosystem",
+      "definition": "An MCP feature (added in `2025-06-18`) that lets a *server* ask the user for additional input mid-tool-call, via an `elicitation/create` request the client renders as a form with a JSON schema. The `2025-11-25` spec added URL-mode elicitation, where the server hands back a URL for the user to complete a sensitive step (payment, OAuth) out of band. Distinct from MCP \"sampling\", which is a server asking the client's *model* for a completion. In practice: MCP authors say \"elicit the missing field\" instead of failing the tool call with a validation error. По-русски: пусть MCP-сервер запросит недостающее поле через элиситацию, а не падает с ошибкой (since June 2025)",
+      "clarification": "Not an error return because servers supposedly cannot prompt the user; not sampling, which asks the client's model.",
+      "sources": ["https://modelcontextprotocol.io/specification/2025-06-18/client/elicitation"]
+    },
+    {
+      "id": "mera-tw6d248324",
+      "term": "Code Mode (MCP)",
+      "aliases": [
+        "Code Mode",
+        "Code Mode MCP",
+        "code execution with MCP",
+        "код-мод MCP",
+        "код мод Cloudflare",
+        "typed TypeScript API for tools",
+        "тулы через код в песочнице"
+      ],
+      "category": "mcp-ecosystem",
+      "definition": "The pattern - named and popularised by Cloudflare - of not exposing MCP tools to the model as many tool definitions, but instead handing the model a **typed TypeScript API** for those tools and letting it write code that calls them inside a sandbox (a Worker/isolate). This keeps hundreds of tools out of the context window, lets the model compose/loop/filter results in code, and plays to models' strength at writing code over emitting long tool-call chains. Related, more general term: \"code execution with MCP\". In practice: agent engineers say \"put those 200 tools behind Code Mode\" instead of registering them all as individual tools. По-русски: спрячь двести тулов за Code Mode - пусть модель пишет код в песочнице (since September 2025)",
+      "clarification": "Do not assume every tool must be a JSON schema in the request; a typed API called from sandboxed code is the alternative.",
+      "sources": ["https://blog.cloudflare.com/code-mode/"]
+    },
+    {
+      "id": "mera-tw8c31b995",
+      "term": "MCP Apps (SEP-1865) / MCP-UI / ui://",
+      "aliases": [
+        "MCP Apps",
+        "MCP-UI",
+        "ui://",
+        "SEP-1865",
+        "ui:// scheme",
+        "@mcp-ui/client",
+        "интерактивный UI в MCP",
+        "виджеты MCP"
+      ],
+      "category": "mcp-ecosystem",
+      "definition": "The official MCP extension standardising interactive UI returned by servers. A server declares a UI resource under the `ui://` URI scheme and links it from a tool's `_meta.ui`; the host renders it in a sandboxed iframe and the UI talks back over bidirectional, auditable JSON-RPC. It grew out of the community **MCP-UI** project (`@mcp-ui/server`, `@mcp-ui/client`), which remains the main SDK, and is related to OpenAI's Apps SDK approach of rendering widgets in the chat surface. In practice: MCP authors say \"return an MCP App\" to render a chart or form inline instead of dumping JSON text into the conversation. По-русски: верни график как MCP App через ui://, а не JSON-простыню в чат (since November 2025)",
+      "clarification": "Do not say MCP servers return only text, image or resource content and cannot render interactive UI.",
+      "sources": ["https://blog.modelcontextprotocol.io/posts/2025-11-21-mcp-apps/"]
+    },
+    {
+      "id": "mera-tw1aca85d0",
+      "term": "MCP Registry (registry.modelcontextprotocol.io)",
+      "aliases": [
+        "MCP Registry",
+        "registry.modelcontextprotocol.io",
+        "реестр MCP серверов",
+        "публикация MCP сервера",
+        "официальный реестр MCP",
+        "каталог MCP серверов"
+      ],
+      "category": "mcp-ecosystem",
+      "definition": "The official, community-owned metadata registry for publicly available MCP servers, launched in preview 8 Sep 2025, with a REST API and open OpenAPI spec so marketplaces and clients can build sub-registries on top. It is explicitly a source of truth for aggregators rather than something host apps query directly, and remains in preview under a v0.1 API freeze. Distinct from vendor marketplaces (Claude's plugin/connector directory, VS Code's MCP gallery, Smithery). In practice: server authors say \"publish it to the MCP Registry\" so downstream directories pick it up automatically. По-русски: опубликуй сервер в MCP Registry, чтобы его подхватили каталоги (since September 2025)",
+      "clarification": "Do not say MCP servers are discovered only by hand-editing a JSON config; an official preview registry exists.",
+      "sources": ["https://blog.modelcontextprotocol.io/posts/2025-09-08-mcp-registry-preview/"]
+    },
+    {
+      "id": "mera-tw02da7822",
+      "term": "Playwright MCP / Chrome DevTools MCP",
+      "aliases": [
+        "Playwright MCP",
+        "Chrome DevTools MCP",
+        "плейрайт MCP",
+        "девтулс MCP",
+        "accessibility snapshot агента",
+        "браузер агенту через MCP"
+      ],
+      "category": "mcp-ecosystem",
+      "definition": "The two standard MCP servers that give coding agents a real browser. **Playwright MCP** (Microsoft) drives Chromium/Firefox/WebKit deterministically using structured *accessibility snapshots* rather than screenshots and pixel coordinates - so the agent acts on the semantic tree, not vision. **Chrome DevTools MCP** (Google) exposes DevTools itself: network payloads, console, performance traces, live inspection of a Chrome session. They are complementary: Playwright for repeatable automation and testing, DevTools MCP for debugging and performance work. In practice: developers say \"give it Playwright MCP so it can verify the fix in the browser\" instead of pasting screenshots. По-русски: дай агенту Playwright MCP, чтобы он сам проверил фикс в браузере (since 2025)",
+      "clarification": "Not a bespoke Puppeteer/Selenium script or a vision-based computer-use loop clicking pixel coordinates on screenshots.",
+      "sources": ["https://github.com/microsoft/playwright-mcp"]
+    }
+  ]
+}

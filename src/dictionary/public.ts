@@ -8,8 +8,18 @@ import {
   type DictionarySnapshot,
 } from "../../shared/dictionary";
 import { atomicWrite } from "../util/atomic";
+import aiAgents from "./data/ai-agents.json";
+import aiBenchmarks from "./data/ai-benchmarks.json";
 import aiDevelopment from "./data/ai-development.json";
+import aiModels from "./data/ai-models.json";
+import cssPlatform from "./data/css-platform.json";
 import design from "./data/design.json";
+import developerTools from "./data/developer-tools.json";
+import infrastructure from "./data/infrastructure.json";
+import mcpEcosystem from "./data/mcp-ecosystem.json";
+import mobilePlatforms from "./data/mobile-platforms.json";
+import productBusiness from "./data/product-business.json";
+import webPlatform from "./data/web-platform.json";
 
 export const DICTIONARY_PUBLIC_SOURCE =
   "https://github.com/AnnenkovLabs/flecten/tree/main/src/dictionary/data";
@@ -37,13 +47,28 @@ function validateCategories(categories: DictionaryCategory[]): DictionaryCategor
   return categories;
 }
 
+const bundledCategories = validateCategories(
+  [
+    design,
+    aiDevelopment,
+    aiAgents,
+    aiBenchmarks,
+    aiModels,
+    cssPlatform,
+    developerTools,
+    infrastructure,
+    mcpEcosystem,
+    mobilePlatforms,
+    productBusiness,
+    webPlatform,
+  ].map((value) => DictionaryCategorySchema.parse(value)),
+);
+
 /** A complete validated snapshot is published only after every category succeeds. */
 export class PublicDictionary {
   readonly #path: string;
   readonly #fetch: typeof fetch;
-  #categories = validateCategories(
-    [design, aiDevelopment].map((value) => DictionaryCategorySchema.parse(value)),
-  );
+  #categories = bundledCategories;
   #syncedAt: string | undefined;
   #error: string | undefined;
   #pending: Promise<DictionarySnapshot> | undefined;
@@ -55,10 +80,15 @@ export class PublicDictionary {
   }
 
   snapshot(): DictionarySnapshot {
-    return {
-      entries: this.#categories.flatMap((category) =>
-        category.entries.map((entry) => ({ ...entry, source: "public" as const })),
+    const entries = new Map(
+      [...bundledCategories, ...this.#categories].flatMap((category) =>
+        category.entries.map(
+          (entry) => [entry.id, { ...entry, source: "public" as const }] as const,
+        ),
       ),
+    );
+    return {
+      entries: [...entries.values()],
       publicSource: DICTIONARY_PUBLIC_SOURCE,
       ...(this.#syncedAt ? { syncedAt: this.#syncedAt } : {}),
       ...(this.#error ? { error: this.#error } : {}),

@@ -10,6 +10,7 @@ import { requestAgent } from "./desktop";
 
 /** One project-scoped projection. Only the sidecar reads history or calls a model. */
 export class TwinStore {
+  projectEpoch = $state(0);
   snapshot = $state<TwinSnapshot | null>(null);
   busy = $state(false);
   error = $state("");
@@ -19,6 +20,7 @@ export class TwinStore {
   tab = $state<"sources" | "profile" | "ask">("sources");
   editing = $state<TwinCandidate | null>(null);
   #generation = 0;
+  #pollFailed = false;
   #poll: ReturnType<typeof setTimeout> | undefined;
 
   get training(): boolean {
@@ -28,6 +30,7 @@ export class TwinStore {
   }
 
   reset(): void {
+    this.projectEpoch += 1;
     this.#generation += 1;
     clearTimeout(this.#poll);
     this.snapshot = null;
@@ -37,6 +40,7 @@ export class TwinStore {
     this.question = "";
     this.selected = [];
     this.editing = null;
+    this.tab = "sources";
   }
 
   dispose(): void {
@@ -46,10 +50,13 @@ export class TwinStore {
 
   async load(scan = false): Promise<void> {
     if (this.busy) return;
+    const selection = this.snapshot ? [...this.selected] : undefined;
     const loaded = await this.#request({ type: scan ? "twin.scan" : "twin.get" });
     if (loaded)
       this.selected =
-        this.snapshot?.sources.filter((source) => source.selected).map((source) => source.id) ?? [];
+        this.snapshot?.sources
+          .filter((source) => (selection ? selection.includes(source.id) : source.selected))
+          .map((source) => source.id) ?? [];
   }
 
   toggleSource(id: TwinSourceId, checked: boolean): void {
@@ -59,11 +66,12 @@ export class TwinStore {
   }
 
   async train(): Promise<void> {
-    if (this.busy || this.training) return;
+    if (this.busy || this.training || !this.selected.length) return;
     await this.#request({ type: "twin.train", sourceIds: this.selected });
   }
 
   async cancel(): Promise<void> {
+    if (this.busy || !this.training) return;
     await this.#request({ type: "twin.cancel" });
   }
 
@@ -131,29 +139,37 @@ export class TwinStore {
   }
 
   async #request(command: Parameters<typeof requestAgent>[0], poll = false): Promise<boolean> {
-    const generation = this.#generation;
     if (!poll) {
+      // A foreground action supersedes every older background snapshot, including errors.
+      this.#generation += 1;
+      clearTimeout(this.#poll);
       this.busy = true;
       this.error = "";
+      this.#pollFailed = false;
     }
+    const generation = this.#generation;
     try {
       const response = await requestAgent(command, 120_000);
       const snapshot = TwinSnapshotSchema.parse(response.twin);
       const answer =
         response.answer === undefined ? undefined : TwinAnswerSchema.parse(response.answer);
       if (generation !== this.#generation) return false;
+      if (this.#pollFailed) this.error = "";
+      this.#pollFailed = false;
       this.snapshot = snapshot;
       if (answer) this.answer = answer;
-      this.#schedule();
       return true;
     } catch (cause) {
       if (generation === this.#generation) {
         this.error = cause instanceof Error ? cause.message : String(cause);
-        if (poll) this.#schedule();
+        this.#pollFailed = poll;
       }
       return false;
     } finally {
-      if (!poll && generation === this.#generation) this.busy = false;
+      if (generation === this.#generation) {
+        if (!poll) this.busy = false;
+        this.#schedule();
+      }
     }
   }
 

@@ -13,6 +13,8 @@ const summaryReleased = new Promise((resolve) => {
 });
 /** Final answer for previews (scripts/ui-preview.mjs `mockEnv`); without it, the README summary. */
 const replyOverride = process.env.E2E_MOCK_REPLY;
+let twinResponseOverride = replyOverride;
+let twinRequests = 0;
 const usage = process.env.E2E_MOCK_USAGE ? JSON.parse(process.env.E2E_MOCK_USAGE) : undefined;
 /** First-turn tool calls for previews, JSON `[{"name":"read","arguments":{"path":"a.ts"}}]`. */
 const firstCalls =
@@ -75,6 +77,13 @@ const server = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/health") return new Response("ok");
+    if (twinLearning && url.pathname === "/control/twin") {
+      if (request.method === "POST") {
+        const value = await request.json();
+        twinResponseOverride = value.response;
+      }
+      return Response.json({ requests: twinRequests });
+    }
     if (request.method === "POST" && url.pathname === "/control/summary/continue") {
       releaseSummary();
       return new Response("ok");
@@ -98,11 +107,24 @@ const server = Bun.serve({
       );
     if (delayMs > 0) await Bun.sleep(delayMs);
     if (twinLearning && (!body.tools || body.tools.length === 0)) {
+      twinRequests += 1;
       await summaryReleased;
+      const system = body.messages?.find((message) => message.role === "system")?.content ?? "";
+      if (system.startsWith("# Twin: consult")) {
+        const data = body.messages.at(-1)?.content ?? "";
+        const profile = JSON.parse(
+          data.split("## Confirmed profile")[1].split("```text\n")[1].split("\n```")[0],
+        );
+        return sse(
+          `${event({ content: `\`\`\`json\n${JSON.stringify({ answer: profile[0]?.content ?? "Unknown preference", abstained: !profile.length, entryIds: profile.slice(0, 1).map((entry) => entry.id) })}\n\`\`\`` }, "stop")}data: [DONE]\n\n`,
+        );
+      }
       return sse(
-        `${event({ content: JSON.stringify({ candidates: [] }) }, "stop")}data: [DONE]\n\n`,
+        `${event({ content: twinResponseOverride ?? JSON.stringify({ candidates: [] }) }, "stop")}data: [DONE]\n\n`,
       );
     }
+    if (replyOverride !== undefined && firstCalls.length === 0)
+      return sse(`${event({ content: replyOverride }, "stop")}data: [DONE]\n\n`);
     const conversation =
       (await subagentReply(
         body,

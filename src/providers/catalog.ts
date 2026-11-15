@@ -9,7 +9,7 @@ import {
 } from "../config/schema";
 import { isReasoningEffort, type ReasoningEffort } from "../core/types";
 import { formatModelName } from "../util/model-name";
-import { alphanumericLower, isIPv4, trimTrailingSlashes, withoutPrefix } from "../util/text";
+import { isIPv4, trimTrailingSlashes, withoutPrefix } from "../util/text";
 import { loadAgentOne } from "./agent-one";
 import {
   CACHE_TTL_MS,
@@ -20,6 +20,7 @@ import {
   loadSource,
   type SourceSpec,
 } from "./catalog-source";
+import { findFallbackModel, findProviderModel } from "./model-identity";
 
 export { formatModelName } from "../util/model-name";
 export { loadAgentOne } from "./agent-one";
@@ -395,43 +396,24 @@ export async function catalogProviders(cwd: string): Promise<CatalogProvider[]> 
   return Object.values(catalog).sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function normalized(id: string): string {
-  const last = withoutPrefix(id, "~").split("/").filter(Boolean).at(-1) ?? id;
-  return alphanumericLower(last);
-}
-
 export function findModel(
   catalog: Record<string, CatalogProvider>,
   modelId: string,
+  baseUrl?: string,
 ): ModelConfig | undefined {
-  const target = normalized(modelId);
-  let contains: ModelConfig | undefined;
-  for (const provider of Object.values(catalog)) {
-    for (const [id, model] of Object.entries(provider.models)) {
-      const candidate = normalized(id);
-      if (candidate === target) return model;
-      if (!contains && (candidate.includes(target) || target.includes(candidate))) contains = model;
-    }
-  }
-  return contains;
+  return findProviderModel(Object.values(catalog), modelId, baseUrl);
 }
 
 export async function findCatalogModel(
   cwd: string,
   modelId: string,
+  baseUrl?: string,
 ): Promise<ModelConfig | undefined> {
   const catalog = await loadModelsDev(cwd);
-  const found = findModel(catalog, modelId);
+  const found = findModel(catalog, modelId, baseUrl);
   if (found) return found;
   const fallback = await loadAgentOne(cwd);
-  const target = normalized(modelId);
-  for (const [id, model] of Object.entries(fallback)) {
-    if (normalized(id) === target) return model;
-  }
-  for (const [id, model] of Object.entries(fallback)) {
-    if (normalized(id).includes(target) || target.includes(normalized(id))) return model;
-  }
-  return undefined;
+  return findFallbackModel(fallback, modelId);
 }
 
 export function providerFromCatalog(provider: CatalogProvider): ProviderConfig {
@@ -441,6 +423,7 @@ export function providerFromCatalog(provider: CatalogProvider): ProviderConfig {
     ...(provider.apiKeyEnv ? { apiKeyEnv: provider.apiKeyEnv } : {}),
     name: provider.name,
     models: provider.models,
+    modelMetadataBaseline: structuredClone(provider.models),
   });
 }
 

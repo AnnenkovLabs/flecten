@@ -249,7 +249,7 @@ export async function discoverProvider(cwd: string, input: DiscoverInput): Promi
       );
     }
     seen.add(key);
-    const known = await findCatalogModel(cwd, id);
+    const known = await findCatalogModel(cwd, id, result.baseUrl);
     const parsed = ModelConfigSchema.safeParse(mergeModel(model, known));
     if (!parsed.success) {
       const issue = parsed.error.issues[0];

@@ -8,6 +8,7 @@ import type { Event, ReasoningEffort } from "../core/types";
 import type { McpServerStatus } from "../mcp/session";
 import type { CatalogProvider, CatalogStatus } from "../providers/catalog";
 import type { DiscoverResult } from "../providers/discovery";
+import type { ModelMetadata } from "../providers/model-metadata";
 import type { ProbeResult } from "../providers/probe";
 import type { SandboxDetection } from "../security/os-sandbox";
 import type { SkillDiagnostic } from "../skills/schema";
@@ -16,6 +17,7 @@ import type { ProviderView } from "./provider-state";
 import type { SessionPool } from "./session-pool";
 
 export interface AppInfo {
+  sessionId?: string;
   configPath?: string;
   cwd: string;
   projectRoot?: string | null;
@@ -85,10 +87,12 @@ export interface CatalogSummary {
 
 export interface SaveSettingsInput {
   config: unknown;
+  baseline?: unknown;
   clearApiKeys?: string[];
 }
 
 export interface ModelChoiceInput {
+  sessionId?: string;
   provider: string;
   model: string;
   reasoning?: ReasoningEffort;
@@ -106,7 +110,7 @@ export interface AppService {
   voice: ReturnType<typeof import("./voice").voiceService>;
   /** Every task has its own handle; commands name their session or go to the focused one. */
   session: SessionPool;
-  info(): AppInfo;
+  info(sessionId?: string): AppInfo;
   /** Custom slash commands and skills for the composer menu. */
   listCommands(): Promise<SlashEntry[]>;
   settings(): SettingsPayload;
@@ -119,6 +123,19 @@ export interface AppService {
     options?: Omit<SessionListOptions, "query">,
   ): Promise<SessionSummary[]>;
   readSession(id: string): Promise<Event[]>;
+  readMessageHistory(id: string): Promise<import("./message-branches").MessageHistory>;
+  editMessage(
+    id: string,
+    messageId: string,
+    text: string,
+    reasoning?: ReasoningEffort,
+    input?: import("./message-branches").MessageEditOptions,
+  ): Promise<import("./message-branches").MessageHistory>;
+  selectMessageBranch(
+    id: string,
+    messageId: string,
+    variantId: string,
+  ): Promise<import("./message-branches").MessageHistory>;
   renameSession(id: string, title: string): Promise<SessionSummary>;
   deleteSession(
     id: string,
@@ -136,6 +153,12 @@ export interface AppService {
     message: string;
     latencyMs: number;
   }>;
+  modelMetadata(input: {
+    model: string;
+    providerId?: string;
+    draftToken?: string;
+    refresh?: boolean;
+  }): Promise<ModelMetadata>;
   registerDraft(input: { provider: unknown; providerId?: string }): { draftToken: string };
   acceptTrust(): Promise<AppInfo>;
   rejectTrust(): Promise<AppInfo>;
@@ -145,6 +168,7 @@ export interface AppService {
   catalogSync(): Promise<CatalogStatus>;
   actualizeProvider(id: string): Promise<{
     providerId: string;
+    modelMetadataBaseline: ProviderConfig["models"];
     info: AppInfo;
     models: number;
     added: string[];

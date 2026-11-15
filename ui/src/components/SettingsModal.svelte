@@ -124,6 +124,7 @@
 
 {#if settings.open}
   <dialog
+    aria-busy={settings.loading}
     class="settings-dialog st-dialog"
     bind:this={dialogEl}
     use:modal={() => dialogEl}
@@ -278,6 +279,7 @@
       <div class="settings-main">
         <div
           class="main-scroll"
+          inert={settings.loading}
           bind:this={scrollEl}
           use:settingsSection={section === "providers" ? `${section}:${settings.selected ?? ""}` : section}
         >

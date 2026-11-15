@@ -11,7 +11,6 @@
   <button class="preview-button" type="button" onclick={() => manager.selected = entry} aria-label={t("View module: {0}", [entry.title])}>
     <ModuleProductPreview {entry} />
     {#if manager.installed(entry)}<span class="installed-badge"><Icon name="check" size={13} />{t("Installed")}</span>{/if}
-    {#if entry.source === "bundled"}<span class="free-badge">{t("Free")}</span>{/if}
   </button>
   <div class="product-copy">
     <h4><button type="button" onclick={() => manager.selected = entry}>{entry.title}</button></h4>
@@ -29,7 +28,6 @@
   .market-entry { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
   .preview-button { position: relative; width: 100%; text-align: start; border-radius: 10px; }
   .installed-badge { display: inline-flex; align-items: center; gap: var(--space-1); position: absolute; inset-inline-start: var(--space-2); inset-block-start: var(--space-2); max-width: calc(100% - var(--space-4)); padding: var(--space-1) var(--space-2); background: var(--raised); color: var(--text); border-radius: 5px; font-size: 11px; }
-  .free-badge { position: absolute; inset-inline-end: var(--space-2); inset-block-end: var(--space-2); padding: 3px 7px; border-radius: 5px; background: color-mix(in srgb, var(--add) 14%, var(--surface)); color: var(--add); font-size: 10px; font-weight: 500; line-height: 1.4; }
   .product-copy { display: grid; gap: var(--space-1); padding-inline: var(--space-1); }
   h4, p { margin: 0; overflow-wrap: anywhere; }
   h4 { color: var(--text); font-size: 16px; font-weight: 650; line-height: 1.4; }

@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "category": "infrastructure",
+  "entries": [
+    {
+      "id": "mera-tw0f6302a1",
+      "term": "DRA (Dynamic Resource Allocation) GA",
+      "aliases": [
+        "DRA  GA",
+        "Dynamic Resource Allocation",
+        "DRA Kubernetes",
+        "ResourceClaim",
+        "DeviceClass",
+        "ResourceSlice",
+        "динамическое выделение ресурсов",
+        "nvidia.com/gpu device plugin"
+      ],
+      "category": "infrastructure",
+      "definition": "The Kubernetes framework for requesting and sharing specialised hardware (GPUs, FPGAs, accelerators) through claim-based, scheduler-aware APIs - `ResourceClaim`, `DeviceClass`, `ResourceSlice` - instead of the opaque counting of the old device-plugin model. DRA reached **GA and default-on in Kubernetes 1.34** with stable `resource.k8s.io/v1` APIs; related extensions (device taints, partitionable/consumable capacity, prioritised alternatives) followed in 1.34/1.35. In practice: platform engineers say \"we request GPUs via DRA ResourceClaims now\" instead of `nvidia.com/gpu: 1` limits and a device plugin. По-русски: запрашивай GPU через DRA и ResourceClaim, а не лимитом nvidia.com/gpu (since August 2025 (Kubernetes 1.34))",
+      "clarification": "Not alpha or experimental, and not the NVIDIA device plugin with nvidia.com/gpu extended-resource limits.",
+      "sources": ["https://kubernetes.io/blog/2025/09/01/kubernetes-v1-34-dra-updates/"]
+    },
+    {
+      "id": "mera-tw7bbbc58f",
+      "term": "In-place Pod resize (resize subresource)",
+      "aliases": [
+        "In-place Pod resize",
+        "resize subresource",
+        "in-place pod resize",
+        "resizePolicy",
+        "изменение ресурсов пода на ходу",
+        "ресайз пода без перезапуска",
+        "VPA eviction"
+      ],
+      "category": "infrastructure",
+      "definition": "The ability to change a running container's CPU/memory requests and limits without recreating the Pod, via the dedicated `resize` subresource (`kubectl patch pod ... --subresource resize`) and per-resource `resizePolicy` controlling whether a restart is needed. It went beta and enabled-by-default in Kubernetes 1.33 after years as alpha, which is why vertical autoscaling advice from 2024 is now outdated. In practice: SREs say \"just resize it in place\" instead of letting VPA evict and recreate the Pod. По-русски: поменяй лимиты у работающего пода через resize-субресурс, без пересоздания (since May 2025 (Kubernetes 1.33 beta))",
+      "clarification": "Do not say Pod resources are immutable or that a change needs Pod recreation or VPA eviction.",
+      "sources": [
+        "https://kubernetes.io/blog/2025/05/16/kubernetes-v1-33-in-place-pod-resize-beta/"
+      ]
+    },
+    {
+      "id": "mera-tw0cf0cbe7",
+      "term": "WebGPU shipped in all major browsers",
+      "aliases": ["WebGPU", "вебгпу", "вебджипью", "WGSL", "WebGPU в Safari", "WebGL fallback"],
+      "category": "infrastructure",
+      "definition": "The status change that matters: WebGPU - the modern GPU API with WGSL shaders, compute pipelines and render bundles, meant to supersede WebGL - became enabled by default in Safari 26 (macOS Tahoe 26, iOS/iPadOS 26, visionOS 26) in September 2025, and in Firefox on Windows (141) and Apple-silicon macOS (145). By November 2025 Google declared it supported across Chrome, Edge, Firefox and Safari, though Linux/Android Firefox and some Chromium platforms were still in progress. In practice: teams say \"we can target WebGPU directly now\" for in-browser ML inference (ONNX Runtime, Transformers.js) and 3D without a WebGL fallback path for most users. По-русски: можно уже целиться прямо в WebGPU - он включён во всех основных браузерах (since September 2025 (Safari 26) / November 2025 (declared cross-browser))",
+      "clarification": "Do not say WebGPU is Chrome-only or flagged in Safari and Firefox, or recommend WebGL as the production choice.",
+      "sources": ["https://web.dev/blog/webgpu-supported-major-browsers"]
+    },
+    {
+      "id": "mera-twa3412857",
+      "term": "PostgreSQL 18 async I/O (io_method, pg_aios) / native uuidv7()",
+      "aliases": [
+        "PostgreSQL 18 async I/O",
+        "io_method",
+        "pg_aios) / native uuidv7(",
+        "native uuidv7()",
+        "PostgreSQL 18",
+        "pg_aios",
+        "uuidv7()",
+        "нативный uuidv7",
+        "pg_uuidv7",
+        "асинхронный ввод-вывод в Postgres"
+      ],
+      "category": "infrastructure",
+      "definition": "PostgreSQL 18 (25 Sep 2025) added a real asynchronous I/O subsystem - configured with `io_method` (`worker` default, `io_uring` on Linux, `sync` for legacy behaviour) and observable through the `pg_aios` view - speeding sequential scans, bitmap heap scans and VACUUM. It also added built-in `uuidv7()` (time-ordered UUIDs with much better B-tree locality than random `uuidv4()`), `uuidv4()`, and B-tree skip scan. In practice: DBAs say \"turn on io_uring in PG18\" and application devs switch primary keys to `DEFAULT uuidv7()` instead of installing `pg_uuidv7`. По-русски: включи io_uring в PostgreSQL 18 и переведи ключи на DEFAULT uuidv7() (since September 2025)",
+      "clarification": "Do not say Postgres has only synchronous buffered I/O, or that UUIDv7 needs an extension or app-side generation.",
+      "sources": ["https://www.postgresql.org/docs/18/release-18.html"]
+    },
+    {
+      "id": "mera-tw86545b2e",
+      "term": "Amazon Bedrock AgentCore",
+      "aliases": [
+        "Bedrock AgentCore",
+        "AgentCore Runtime",
+        "AgentCore Gateway",
+        "AgentCore Memory",
+        "агенткор",
+        "Agents for Amazon Bedrock"
+      ],
+      "category": "infrastructure",
+      "definition": "AWS's managed runtime and services for production AI agents, framework-agnostic and model-agnostic. Components include AgentCore Runtime (serverless, session-isolated agent execution), Gateway (turn APIs/Lambdas into MCP tools), Memory (short-term plus episodic/long-term), Identity, Browser and Code Interpreter tools, Observability, and - added at re:Invent 2025 - Policy for fine-grained boundaries and Evaluations for continuous quality monitoring. In practice: architects say \"deploy it on AgentCore\" meaning run the agent in AWS's managed sandboxed runtime with Gateway-exposed MCP tools rather than self-hosting on ECS. По-русски: разверни агента на Bedrock AgentCore, а тулы отдай через AgentCore Gateway (since July 2025 (preview) / GA + expansion at re:Invent 2025)",
+      "clarification": "Not 'Agents for Amazon Bedrock' with action groups and knowledge bases - that is a different, older, narrower product.",
+      "sources": ["https://aws.amazon.com/bedrock/agentcore/"]
+    },
+    {
+      "id": "mera-tw05db0c55",
+      "term": "Amazon S3 Vectors",
+      "aliases": [
+        "S3 Vectors",
+        "vector buckets",
+        "векторные бакеты",
+        "векторный поиск в S3",
+        "vector index S3",
+        "эс3 вектора"
+      ],
+      "category": "infrastructure",
+      "definition": "Native vector storage and similarity search inside Amazon S3 - a new bucket type (\"vector buckets\") with vector indexes queried via API, priced like object storage rather than a running database, and scaling to billions of vectors per index. Positioned for infrequently-queried, cost-sensitive embedding workloads, with integration into Bedrock Knowledge Bases and OpenSearch for hot tiers. In practice: teams say \"keep the cold embeddings in S3 Vectors\" instead of paying for an always-on vector DB cluster. По-русски: храни холодные эмбеддинги в S3 Vectors, а не в постоянно включённой векторной БД (since July 2025 (preview), GA 2025)",
+      "clarification": "Do not say S3 has no vector capability or that OpenSearch, pgvector and Pinecone are the only options.",
+      "sources": ["https://aws.amazon.com/s3/features/vectors/"]
+    },
+    {
+      "id": "mera-tw1657da9b",
+      "term": "Fluid compute / Active CPU pricing",
+      "aliases": [
+        "Fluid compute",
+        "Active CPU pricing",
+        "флюид компьют",
+        "оплата за активный CPU",
+        "Vercel Fluid",
+        "активный процессор биллинг"
+      ],
+      "category": "infrastructure",
+      "definition": "Vercel's serverless execution model that lets one instance serve multiple concurrent invocations and bills on **Active CPU** - vCPU-milliseconds actually spent executing - plus a much cheaper provisioned-memory rate and invocation count. It exists because AI/agent workloads are I/O-bound: with classic per-GB-second serverless you pay full price while waiting on a model to stream tokens. Fluid compute is now the default for Vercel Functions. In practice: teams say \"Fluid compute means we don't pay for the model's thinking time\". По-русски: на Fluid compute мы не платим за время, пока модель думает (since February 2025)",
+      "clarification": "Not classic per-invocation GB-second serverless with one request per instance and billed idle wait time.",
+      "sources": ["https://vercel.com/docs/fluid-compute"]
+    },
+    {
+      "id": "mera-tw3c9c2486",
+      "term": "Vera Rubin / NVL72 (and GB200/GB300 NVL72)",
+      "aliases": [
+        "Vera Rubin / NVL72",
+        "and GB200/GB300 NVL72",
+        "Vera Rubin",
+        "NVL72",
+        "GB200 NVL72",
+        "GB300 NVL72",
+        "Rubin GPU",
+        "вера рубин NVL72",
+        "стойка как один GPU"
+      ],
+      "category": "infrastructure",
+      "definition": "NVIDIA's rack-scale AI systems named as one unit. **GB200 NVL72** (Blackwell) is a liquid-cooled rack of 72 GPUs + 36 Grace CPUs on NVLink acting as a single accelerator; GB300 NVL72 is the Blackwell Ultra refresh; **Vera Rubin NVL72** is the 2026 successor pairing 72 Rubin GPUs with 36 Vera CPUs over sixth-gen NVLink. \"NVL72\" is now a unit of capacity planning in the way \"a DGX box\" once was. In practice: infra teams talk about capacity in \"racks of NVL72\" rather than in individual GPUs. По-русски: считаем ёмкость стойками NVL72, а дальше будет Vera Rubin (since 2024 (GB200 NVL72) → Rubin announced 2025, production 2026)",
+      "clarification": "Not H100/HGX or 'Blackwell announced' as the frontier; do not ignore Rubin/Vera or rack-as-one-accelerator planning.",
+      "sources": [
+        "https://developer.nvidia.com/blog/inside-the-nvidia-rubin-platform-six-new-chips-one-ai-supercomputer/"
+      ]
+    },
+    {
+      "id": "mera-twd82264c3",
+      "term": "Durable Objects with SQLite / Cloudflare Agents SDK",
+      "aliases": [
+        "Durable Objects with SQLite",
+        "Cloudflare Agents SDK",
+        "Durable Objects SQLite",
+        "DO SQLite backend",
+        "агенты Cloudflare SDK",
+        "дюрабл обджектс SQLite",
+        "WebSocket hibernation"
+      ],
+      "category": "infrastructure",
+      "definition": "Cloudflare made the **SQLite storage backend for Durable Objects** GA and available on the Workers free plan in April 2025 - each Durable Object now gets a real embedded SQL database with a synchronous zero-latency API, superseding the older key-value DO storage. This underpins the **Cloudflare Agents SDK** (`agents` package), where each agent is a stateful Durable Object with built-in SQL state, WebSocket hibernation, scheduling, and durable-execution primitives for long-running agent work. In practice: developers say \"one Durable Object per agent session, state in its SQLite\" instead of an external Redis/Postgres for agent memory. По-русски: держи состояние агента в SQLite внутри Durable Object, без внешнего Redis (since April 2025)",
+      "clarification": "Do not describe Durable Objects as key-value only, or SQLite-in-DO as beta or paid-plan only.",
+      "sources": [
+        "https://developers.cloudflare.com/changelog/post/2025-04-07-sqlite-in-durable-objects-ga/"
+      ]
+    },
+    {
+      "id": "mera-tw475c4889",
+      "term": "Apache Iceberg v3 (deletion vectors, row lineage, VARIANT)",
+      "aliases": [
+        "Apache Iceberg v3",
+        "deletion vectors",
+        "row lineage",
+        "VARIANT",
+        "Iceberg v3",
+        "VARIANT type Iceberg",
+        "айсберг v3",
+        "Puffin sidecar"
+      ],
+      "category": "infrastructure",
+      "definition": "Version 3 of the Iceberg table spec. It replaces positional delete files with **deletion vectors** - compact Roaring bitmaps stored in Puffin sidecar files - dramatically cutting read overhead for row-level deletes; adds **row lineage** (`_row_id`, `_last_updated_sequence_number`) for cheap CDC and incremental processing; and adds new types including `VARIANT` for semi-structured data. Engines including DuckDB 1.4 can create and read v3 tables via `'format-version' = 3`. In practice: data engineers say \"we're on Iceberg v3 with deletion vectors\" when explaining why merge-on-read got fast. По-русски: мы на Iceberg v3 с deletion vectors - поэтому merge-on-read стал быстрым (since 2025)",
+      "clarification": "Not Iceberg v2 positional and equality delete files as the current mechanism; deletion vectors and row lineage exist.",
+      "sources": ["https://iceberg.apache.org/spec/"]
+    },
+    {
+      "id": "mera-twdc1dbf7b",
+      "term": "Gateway API Inference Extension / InferencePool / Endpoint Picker (EPP)",
+      "aliases": [
+        "Gateway API Inference Extension / InferencePool / Endpoint Picker",
+        "Gateway API Inference Extension",
+        "InferencePool",
+        "Endpoint Picker",
+        "Inference Gateway",
+        "EPP ext-proc",
+        "инференс-гейтвей",
+        "KV-cache aware routing"
+      ],
+      "category": "infrastructure",
+      "definition": "A Kubernetes SIG project that turns an ordinary L7 gateway (Envoy Gateway, GKE Gateway) into an **Inference Gateway** for self-hosted LLM serving. It adds an `InferencePool` CRD replacing the plain Service backend, and an **Endpoint Picker (EPP)** called over Envoy ext-proc that chooses the target pod per request using live metrics - KV-cache utilisation, queue depth, LoRA adapter availability - instead of round-robin. Also supports model-name-based routing from OpenAI-compatible payloads. In practice: platform teams say \"route through the InferencePool so requests land on the pod that already has the KV cache warm\". По-русски: заверни vLLM в InferencePool, чтобы запрос попадал на под с горячим KV-кэшем (since 2025 (GA))",
+      "clarification": "Not a plain Service with round-robin or a generic Ingress in front of vLLM; cache-aware inference routing is standard now.",
+      "sources": ["https://gateway-api-inference-extension.sigs.k8s.io/"]
+    },
+    {
+      "id": "mera-twf38a9448",
+      "term": "OpenTelemetry GenAI semantic conventions (gen_ai.*)",
+      "aliases": [
+        "OpenTelemetry GenAI semantic conventions",
+        "gen_ai.*",
+        "gen_ai атрибуты",
+        "GenAI semantic conventions",
+        "OpenTelemetry GenAI",
+        "семантические конвенции gen_ai",
+        "LLM трейсинг OTel"
+      ],
+      "category": "infrastructure",
+      "definition": "The OpenTelemetry conventions for instrumenting LLM and agent calls - `gen_ai.*` attributes plus spans/metrics/events for model requests, tool calls and agent invocations - which unify LLM tracing across vendors and tools. Status is the load-bearing detail: they were split into a dedicated `semantic-conventions-genai` repository in June 2026 and remain **Development / not stable**, so `gen_ai.*` attribute names can change without a deprecation cycle even though core attributes like `server.address` are stable. In practice: observability teams say \"emit `gen_ai.*` spans\" so Langfuse/Grafana/Datadog can read agent traces from any framework - while pinning versions because the names still move. По-русски: шли спаны с атрибутами gen_ai.*, но пинуй версию конвенций - имена ещё меняются (since 2024-2025, still Development status in 2026)",
+      "clarification": "Do not invent ad-hoc span attributes or reach for a vendor SDK, and do not claim gen_ai.* is stable - it is Development.",
+      "sources": ["https://github.com/open-telemetry/semantic-conventions-genai"]
+    },
+    {
+      "id": "mera-twa216b499",
+      "term": "WebAssembly 3.0 / WASI 0.3",
+      "aliases": [
+        "WebAssembly 3.0",
+        "WASI 0.3",
+        "Wasm 3.0",
+        "WASI Preview 2",
+        "Memory64",
+        "Wasm GC",
+        "васм 3.0"
+      ],
+      "category": "infrastructure",
+      "definition": "WebAssembly 3.0 was released 17 Sep 2025, folding into the core standard the features that had been long-pending proposals: **garbage collection** (managed `struct`/`array`/`any` reference types, so GC languages compile without shipping their own collector), **Memory64** (64-bit address spaces indexed by `i64`), tail calls, exception handling and multiple memories. **WASI 0.3** superseded WASI 0.2/Preview 2, adding native async - futures and streams built into the Component Model - instead of 0.2's poll-based pattern. In practice: engineers say \"Wasm 3.0 has GC so Kotlin/Dart/Java compile straight to Wasm\" and \"we target WASI 0.3 components\". По-русски: в Wasm 3.0 есть GC, так что Kotlin и Dart компилируются напрямую; целимся в WASI 0.3 (since September 2025 (Wasm 3.0) / 2026 (WASI 0.3))",
+      "clarification": "Not Wasm MVP/2.0 with GC and Memory64 still as proposals, and not WASI Preview 2 as the current target.",
+      "sources": ["https://webassembly.org/news/2025-09-17-wasm-3.0/"]
+    },
+    {
+      "id": "mera-tw0aa67b14",
+      "term": "Lakebase / Neon acquisition / Snowflake + Crunchy Data",
+      "aliases": [
+        "Lakebase",
+        "Neon acquisition",
+        "Snowflake + Crunchy Data",
+        "Neon Databricks",
+        "лейкбейс",
+        "Crunchy Data Snowflake",
+        "serverless Postgres Databricks",
+        "бранчуемый Postgres для агентов"
+      ],
+      "category": "infrastructure",
+      "definition": "The 2025 collapse of the OLTP/analytics boundary around Postgres for agents. Databricks acquired serverless-Postgres company **Neon** (May 2025, ~$1B) and launched **Lakebase** (June 2025) - a managed serverless Postgres operational database fused into the lakehouse, with separated compute/storage, branching, and the explicit pitch that AI agents spin up database instances on demand. Snowflake made the parallel move by acquiring Crunchy Data for its own Postgres offering. In practice: data teams say \"put the agent's state in Lakebase\" meaning a branchable Postgres sitting next to the lakehouse. По-русски: положи состояние агента в Lakebase - это бранчуемый Postgres рядом с лейкхаусом (since May-June 2025)",
+      "clarification": "Do not treat Neon as an independent startup, or Databricks as Spark/Delta analytics with no OLTP Postgres product.",
+      "sources": ["https://www.databricks.com/blog/what-is-a-lakebase"]
+    }
+  ]
+}
