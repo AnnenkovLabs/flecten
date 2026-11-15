@@ -73,6 +73,10 @@
     "parse5": "^8.1.1",
     "zod": "^4.6.7"
   },
+  "overrides": {
+    "app-builder-lib>minimatch": "11.0.8",
+    "@electron/universal>minimatch": "11.0.8"
+  },
   "description": "Харнесс для агентной работы: контекст, проверки и доказательства.",
   "license": "AGPL-3.0-only",
   "author": "Flecten contributors",
