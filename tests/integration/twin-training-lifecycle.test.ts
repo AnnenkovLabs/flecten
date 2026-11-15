@@ -85,7 +85,10 @@ async function fixture() {
       );
     },
     async settled() {
-      for (let attempt = 0; attempt < 200; attempt++) {
+      // A failed atomic replacement on Windows retries for one second per save.
+      // Wait beyond that recovery window before asserting the final training state.
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline) {
         const snapshot = await twin.get();
         if (!["reading", "learning"].includes(snapshot.training.state)) return snapshot;
         await Bun.sleep(5);
@@ -168,7 +171,7 @@ test("A failed final save never publishes traits or consumes source messages", a
   expect(retried.training.state).toBe("ready");
   expect(retried.training.messages).toBe(1);
   expect(retried.entries).toHaveLength(1);
-});
+}, 15_000);
 
 test("An interrupted on-disk import reopens as cancelled without losing existing traits", async () => {
   const f = await fixture();
