@@ -129,7 +129,7 @@ test("custom providers can skip discovery and persist manual models after a 401"
     expect(requests.every((entry) => entry.method === "GET" && entry.url.endsWith("/models"))).toBe(
       true,
     );
-    const checkedRequests = requests.length;
+    let checkedRequests = requests.length;
 
     await auditAddDialog(h, dialog, checkbox);
     await expect(checkbox).not.toBeChecked();
@@ -155,6 +155,10 @@ test("custom providers can skip discovery and persist manual models after a 401"
       .getByPlaceholder("ID модели, например deepseek-chat", { exact: true })
       .fill("manual-model");
     await models.getByRole("button", { name: "Добавить модель", exact: true }).click();
+    // Adding a model explicitly fetches its metadata, without running a generation.
+    expect(requests).toHaveLength(checkedRequests + 1);
+    expect(requests.at(-1)).toMatchObject({ method: "GET", url: "/v1/models" });
+    checkedRequests = requests.length;
     await page.getByRole("button", { name: "Закрыть модель", exact: true }).click();
     await settings.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(settings.getByText("Сохранено", { exact: true })).toBeVisible();

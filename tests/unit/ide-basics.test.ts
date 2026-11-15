@@ -169,7 +169,7 @@ test("Git UI stages only explicit paths, shows real diffs, unstages and commits 
       workspaceGit(join(cwd, "nested"), { action: "commit", message: "nested" }),
     ).rejects.toThrow("вне открытого проекта");
   });
-});
+}, 20_000); // Native Windows Git starts a new process for each operation in this lifecycle.
 
 test("project replace previews exact files and refuses to overwrite changes made after preview", async () => {
   await project(async (cwd, handlers) => {

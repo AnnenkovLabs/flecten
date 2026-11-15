@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import type { AgentEvent } from "../../ui/src/lib/agent-protocol";
 import { launchApp } from "./fixtures";
+import { hiddenScreenshot } from "./hidden-screenshot";
 
 const models = {
   "e2e-model": {
@@ -70,7 +71,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
       await page.setViewportSize({ width, height });
       await prompt.fill("");
       const empty = await aligned(page);
-      await page.screenshot({ path: `.liquid/composer-review/stop-empty-${width}.png` });
+      await hiddenScreenshot(h, test.info().outputPath(`stop-empty-${width}.png`));
       await prompt.fill("Следующая инструкция агенту");
       await expect(actions.getByRole("button")).toHaveCount(3);
       const draft = await aligned(page);
@@ -84,7 +85,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
       );
       expect(buttons[1]?.x).toBe((buttons[0]?.x ?? 0) + (buttons[0]?.width ?? 0));
       expect(buttons[2]?.x).toBe((buttons[1]?.x ?? 0) + (buttons[1]?.width ?? 0));
-      await page.screenshot({ path: `.liquid/composer-review/stop-draft-${width}.png` });
+      await hiddenScreenshot(h, test.info().outputPath(`stop-draft-${width}.png`));
     }
     await actions.getByRole("button", { name: "Добавить в очередь", exact: true }).click();
     await expect(prompt).toHaveText("");
@@ -117,7 +118,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
       await force.hover();
       await force.focus();
       await aligned(page);
-      await page.screenshot({ path: `.liquid/composer-review/stop-requested-${width}.png` });
+      await hiddenScreenshot(h, test.info().outputPath(`stop-requested-${width}.png`));
     }
     await page.reload();
     await expect(force).toBeEnabled();
@@ -127,7 +128,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
     await expect(actions).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Отправить", exact: true })).toBeEnabled();
     await expect(prompt).toHaveText("Черновик сохраняется при остановке");
-    await page.screenshot({ path: ".liquid/composer-review/stopped-1180.png" });
+    await hiddenScreenshot(h, test.info().outputPath("stopped-1180.png"));
     await prompt.fill("");
     const resume = page
       .locator(".composer-bar")
@@ -151,7 +152,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
       expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
         false,
       );
-      await page.screenshot({ path: test.info().outputPath(`continue-${width}.png`) });
+      await hiddenScreenshot(h, test.info().outputPath(`continue-${width}.png`));
     }
     await page.getByRole("button", { name: "IDE", exact: true }).click();
     await expect(resume).toBeEnabled();
@@ -223,12 +224,12 @@ test("three-part composer stays available with an idle Talker and a running Work
         await expect(actions.getByRole("button", { name, exact: true })).toBeEnabled();
       }
       await aligned(page);
-      await page.screenshot({ path: test.info().outputPath(`worker-actions-${width}.png`) });
+      await hiddenScreenshot(h, test.info().outputPath(`worker-actions-${width}.png`));
       await page.getByRole("button", { name: "IDE", exact: true }).click();
       await expect(page.locator("#ide-agent")).toBeVisible();
       await expect(actions.getByRole("button")).toHaveCount(3);
       await expect(prompt).toHaveText("Черновик для работающего агента");
-      await page.screenshot({ path: test.info().outputPath(`ide-worker-actions-${width}.png`) });
+      await hiddenScreenshot(h, test.info().outputPath(`ide-worker-actions-${width}.png`));
       await page
         .locator(".mode-switch")
         .getByRole("button", { name: "Агент", exact: true })
@@ -326,9 +327,10 @@ for (const mode of ["graceful", "force"] as const) {
         );
         await page.setViewportSize({ width, height });
         await aligned(page, ".continue");
-        await page.screenshot({
-          path: test.info().outputPath(`unstarted-worker-${mode}-${width}x${height}.png`),
-        });
+        await hiddenScreenshot(
+          h,
+          test.info().outputPath(`unstarted-worker-${mode}-${width}x${height}.png`),
+        );
       }
       await resume.click();
       await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeEnabled();

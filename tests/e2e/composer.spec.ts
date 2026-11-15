@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import type { ModelInfo } from "../../ui/src/lib/types";
 import { launchApp } from "./fixtures";
+import { hiddenScreenshot } from "./hidden-screenshot";
 
 async function withinViewport(page: Page, menu: Locator): Promise<void> {
   const bounds = await menu.boundingBox();
@@ -55,7 +56,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
       await picker.getByRole("combobox").fill("Модель с длинным названием 29");
       await expect(picker.getByRole("option")).toHaveCount(1);
       await picker.getByRole("combobox").fill("");
-      await page.screenshot({ path: test.info().outputPath(`models-${width}.png`) });
+      await hiddenScreenshot(harness, test.info().outputPath(`models-${width}.png`));
       await page.keyboard.press("Escape");
       await expect(page.locator(".model-button")).toBeFocused();
 
@@ -63,7 +64,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
       await effort.click();
       const reasoning = page.getByRole("dialog", { name: "Уровень рассуждений модели" });
       await withinViewport(page, reasoning);
-      await page.screenshot({ path: test.info().outputPath(`reasoning-${width}.png`) });
+      await hiddenScreenshot(harness, test.info().outputPath(`reasoning-${width}.png`));
       await page.keyboard.press("End");
       await page.keyboard.press("Enter");
       await expect(effort).toHaveText("очень высокий");
@@ -105,8 +106,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
     await prompt.press("ControlOrMeta+v");
     await expect(chip).toHaveCount(1);
     await prompt.press("End");
-    await page.getByRole("button", { name: "Новая задача", exact: true }).click();
-    // The unsent new-task draft stays on the new-task surface.
+    // Reasoning already belongs to this chat; submit its draft before testing navigation below.
     await expect(chip).toHaveCount(1);
 
     await app.evaluate(
@@ -126,7 +126,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
     const send = await page.getByRole("button", { name: "Отправить", exact: true }).boundingBox();
     expect(voice?.y).toBe(send?.y);
     expect((send?.x ?? 0) - (voice?.x ?? 0)).toBeLessThanOrEqual(44);
-    await page.screenshot({ path: test.info().outputPath("composer-1180.png") });
+    await hiddenScreenshot(harness, test.info().outputPath("composer-1180.png"));
 
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
     await expect(prompt).toBeFocused();
@@ -160,10 +160,10 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
     await page.locator(".model-button").click();
     const dockPicker = page.getByRole("dialog", { name: "Выбор модели" });
     await withinViewport(page, dockPicker);
-    await page.screenshot({ path: test.info().outputPath("dock-models-1180.png") });
+    await hiddenScreenshot(harness, test.info().outputPath("dock-models-1180.png"));
     await page.keyboard.press("Escape");
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.screenshot({ path: test.info().outputPath("dock-composer-1180.png") });
+    await hiddenScreenshot(harness, test.info().outputPath("dock-composer-1180.png"));
     await prompt.fill("");
     await prompt.evaluate((element) => {
       const data = new DataTransfer();

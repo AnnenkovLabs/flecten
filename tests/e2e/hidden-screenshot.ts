@@ -11,6 +11,7 @@ export async function hiddenScreenshot(h: AppHarness, path: string): Promise<voi
   const image = await h.app.evaluate(async ({ BrowserWindow }, dimensions) => {
     const window = BrowserWindow.getAllWindows()[0];
     if (!window) throw new Error("The test window is unavailable");
+    const wasVisible = window.isVisible() && !window.isMinimized();
     const rect = { x: 0, y: 0, ...dimensions };
     // Painting a minimized window requires mapping it only inside the private Xvfb display.
     window.restore();
@@ -33,7 +34,7 @@ export async function hiddenScreenshot(h: AppHarness, path: string): Promise<voi
         );
       return snapshot.toPNG().toString("base64");
     } finally {
-      window.hide();
+      if (!wasVisible) window.hide();
     }
   }, size);
   await writeFile(path, Buffer.from(image, "base64"));

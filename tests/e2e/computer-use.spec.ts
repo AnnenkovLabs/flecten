@@ -1,9 +1,10 @@
 import { createServer } from "node:http";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { launchApp } from "./fixtures";
 
 // The compiled module host controls its own authenticated display. Electron itself stays hidden.
-test("bundled Computer installs, receives real desktop pixels and hands input to the human", async () => {
+test("Computer installs from a folder, receives real desktop pixels and hands input to the human", async () => {
   test.skip(process.platform !== "linux", "The bundled desktop backend requires Linux");
   let requests = 0;
   let typed = "";
@@ -63,9 +64,11 @@ test("bundled Computer installs, receives real desktop pixels and hands input to
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     const dialog = page.locator("dialog.settings-dialog");
     await dialog.getByRole("button", { name: "Modules", exact: true }).click();
-    await dialog.getByRole("button", { name: "View module: Computer", exact: true }).click();
-    await dialog.getByRole("button", { name: "Install module", exact: true }).click();
-    await dialog.getByRole("button", { name: "Manage installed modules", exact: true }).click();
+    await dialog.getByRole("button", { name: "Installed", exact: false }).click();
+    await dialog
+      .getByLabel("Module folder", { exact: true })
+      .fill(join(import.meta.dirname, "../fixtures/modules/computer-use"));
+    await dialog.getByRole("button", { name: "Install from folder", exact: true }).click();
     await dialog.getByRole("button", { name: "Trust this version", exact: true }).click();
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
     await page.locator("#prompt").fill("Activate computer-use for this task");

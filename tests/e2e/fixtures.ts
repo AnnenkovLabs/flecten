@@ -321,6 +321,8 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
 
     let executablePath = executable;
     if (process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+      // Only this wrapper owns a private display; it never maps windows on the user's desktop.
+      process.env.FLECTEN_E2E_PRIVATE_DISPLAY = "1";
       const wrapper = join(cwd, owned ? "xvfb-electron.sh" : "xvfb-electron-2.sh");
       writeFileSync(
         wrapper,
@@ -385,6 +387,13 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
 
     const page = app.windows()[0] ?? (await app.firstWindow());
     await page.waitForLoadState("domcontentloaded");
+    if (process.env.FLECTEN_E2E_PRIVATE_DISPLAY === "1") {
+      await app.evaluate(({ BrowserWindow }) => {
+        const window = BrowserWindow.getAllWindows()[0];
+        window?.restore();
+        window?.showInactive();
+      });
+    }
     if (options.locale !== null) {
       await page.evaluate(
         (locale) => localStorage.setItem("flecten.locale", locale),
