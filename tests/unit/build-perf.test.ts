@@ -3,7 +3,11 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AGENT_SIZE_BUDGET_BYTES, checkAgentSize } from "../../scripts/build-agent";
+import {
+  AGENT_SIZE_BUDGET_BYTES,
+  agentSizeBudget,
+  checkAgentSize,
+} from "../../scripts/build-agent";
 
 const require = createRequire(import.meta.url);
 const { checkArtifactSize, INSTALLER_BUDGET_BYTES } =
@@ -51,16 +55,29 @@ afterEach(() => {
 });
 
 describe("agent size budget", () => {
+  test("the Windows runtime has a measured budget without raising Linux or macOS caps", () => {
+    const windowsBytes = 89_201_152;
+    expect(checkAgentSize(windowsBytes, agentSizeBudget("win32")).ok).toBe(true);
+    for (const platform of ["linux", "darwin"] as const) {
+      expect(agentSizeBudget(platform)).toBe(85 * 1024 * 1024);
+      expect(checkAgentSize(windowsBytes, agentSizeBudget(platform)).ok).toBe(false);
+    }
+  });
+
   test("accepts a binary at the budget", () => {
     const check = checkAgentSize(AGENT_SIZE_BUDGET_BYTES);
     expect(check.ok).toBe(true);
-    expect(check.message).toContain("within the 85.0 MiB budget");
+    expect(check.message).toContain(
+      `within the ${(AGENT_SIZE_BUDGET_BYTES / 1024 / 1024).toFixed(1)} MiB budget`,
+    );
   });
 
   test("rejects a binary over the budget with a clear message", () => {
     const check = checkAgentSize(AGENT_SIZE_BUDGET_BYTES + 1);
     expect(check.ok).toBe(false);
-    expect(check.message).toContain("over the 85.0 MiB budget");
+    expect(check.message).toContain(
+      `over the ${(AGENT_SIZE_BUDGET_BYTES / 1024 / 1024).toFixed(1)} MiB budget`,
+    );
     expect(check.message).toContain("Remove build inputs");
   });
 });

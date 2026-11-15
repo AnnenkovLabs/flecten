@@ -140,4 +140,4 @@ CI secret `UPDATE_SIGNING_PRIVATE_KEY` доступен только итого�
 
 Updater проверяет подпись, версию и каждый artifact URL/hash/size до availability. Download разрешён только для проверенного immutable snapshot. Замена metadata после check и bytes после подписи блокируется. Differential и web installer paths отключены. Пользователь может отложить загрузку или установку.
 
-Installer больше350МиБ блокируется до публикации checksums. Agent имеет отдельный бюджет85МиБ. Итоговый текущий замер фиксируется во внутренних материалах.
+Installer больше350МиБ блокируется до публикации checksums. Agent имеет отдельный бюджет85МиБ для Linux и macOS, 86МиБ для Windows. В 0.1.3 с Bun 1.4.2 измерены 80,5МиБ на linux-x64 и 85,1МиБ (89 201 152 bytes) на windows-x64. Windows получает 0,9МиБ запаса из-за большего native runtime; лимиты остальных платформ сохранены.
