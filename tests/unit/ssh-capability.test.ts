@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,7 +31,7 @@ afterEach(async () => {
   );
 });
 async function fixture() {
-  const cwd = await mkdtemp(join(tmpdir(), "flecten-ssh-capability-"));
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), "flecten-ssh-")));
   directories.push(cwd);
   const context: ToolContext = {
     cwd,
@@ -66,7 +66,6 @@ test.skipIf(process.platform === "win32")(
       sshAdd: add,
       knownHostsFile: known,
     });
-    expect(prepared.ok).toBe(true);
     if (!prepared.ok) throw new Error(prepared.error);
     expect(prepared.context.env?.SSH_AUTH_SOCK).toBe(socket);
     expect(prepared.context.osSandbox?.envAllowlist).toContain("SSH_AUTH_SOCK");

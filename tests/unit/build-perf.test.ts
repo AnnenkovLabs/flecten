@@ -124,10 +124,11 @@ describe("startup measurement", () => {
     writeFileSync(
       fake,
       [
-        'import { existsSync } from "node:fs";',
+        'import { realpathSync } from "node:fs";',
         'import { join } from "node:path";',
         'const config = join(process.cwd(), "flecten.config.json");',
-        'if (process.env.FLECTEN_CONFIG !== config || !existsSync(config)) throw new Error("startup config is not isolated");',
+        "const selected = process.env.FLECTEN_CONFIG;",
+        'if (!selected || realpathSync.native(selected) !== realpathSync.native(config)) throw new Error("startup config is not isolated");',
         'setTimeout(() => process.stdout.write(\'{"type":"status"}\\n\'), 25);',
       ].join("\n"),
     );

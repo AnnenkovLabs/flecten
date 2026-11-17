@@ -91,7 +91,11 @@ test("unavailable remembered projects do not block startup and selected roots st
   expect(result.roots.sort()).toEqual(
     [directory, profile, join(profile, "projectless"), remembered].sort(),
   );
-  expect(result.selectedErrors).toEqual(["EACCES", "EPERM", "ENOTDIR"]);
+  expect(result.selectedErrors).toEqual([
+    "EACCES",
+    "EPERM",
+    process.platform === "win32" ? "ENOENT" : "ENOTDIR",
+  ]);
 });
 
 test("migration preserves rebuildable originals by rename without walking, hashing or copying them", async () => {

@@ -1,5 +1,5 @@
-import { mkdir, open } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { mkdir, open, stat } from "node:fs/promises";
+import { dirname } from "node:path";
 
 /** Sync directory entries after create, replace or unlink; IO failures must reach the caller. */
 export async function syncDirectory(path: string): Promise<void> {
@@ -32,13 +32,16 @@ export async function syncDirectory(path: string): Promise<void> {
 
 /** Publish every newly-created directory before acknowledging a file stored inside it. */
 export async function durableMkdir(path: string): Promise<void> {
-  const firstCreated = await mkdir(path, { recursive: true });
-  if (!firstCreated) return;
-  const boundary = dirname(resolve(firstCreated));
-  let current = resolve(path);
-  for (;;) {
-    await syncDirectory(current);
-    if (current === boundary) return;
-    current = dirname(current);
+  const parent = dirname(path);
+  try {
+    await mkdir(path);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "EEXIST" && (await stat(path)).isDirectory()) return;
+    if (code !== "ENOENT" || parent === path) throw error;
+    await durableMkdir(parent);
+    return durableMkdir(path);
   }
+  await syncDirectory(path);
+  await syncDirectory(parent);
 }

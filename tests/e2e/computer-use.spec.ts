@@ -70,6 +70,8 @@ test("Computer installs from a folder, receives real desktop pixels and hands in
       .fill(join(import.meta.dirname, "../fixtures/modules/computer-use"));
     await dialog.getByRole("button", { name: "Install from folder", exact: true }).click();
     await dialog.getByRole("button", { name: "Trust this version", exact: true }).click();
+    // Wait for the persisted trust response and settings reload before starting model work.
+    await expect(dialog.getByRole("button", { name: "Disable", exact: true })).toBeEnabled();
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
     await page.locator("#prompt").fill("Activate computer-use for this task");
     await page.locator("#prompt").press("Enter");

@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { sessionModelHistory } from "../../src/app/session-replay";
@@ -28,7 +28,7 @@ afterEach(async () => {
   );
 });
 async function fixture() {
-  const cwd = await mkdtemp(join(tmpdir(), "flecten-harness-contract-"));
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), "flecten-harness-contract-")));
   directories.push(cwd);
   const terminals = new TerminalManager({ timeouts: { jobMs: 2000 } });
   managers.push(terminals);

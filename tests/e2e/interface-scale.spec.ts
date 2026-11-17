@@ -81,6 +81,7 @@ test("interface scale resizes the chat and persists with the window profile", as
       );
 
       await page.getByRole("button", { name: "Settings", exact: true }).click();
+      await expect(dialog).toHaveAttribute("aria-busy", "false");
       await slider.focus();
       await slider.press("Home");
       await expect(slider).toHaveValue("75");
@@ -116,6 +117,7 @@ test("interface scale resizes the chat and persists with the window profile", as
     }
 
     await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await expect(dialog).toHaveAttribute("aria-busy", "false");
     await slider.focus();
     await slider.press("Home");
     await slider.press("ArrowRight");

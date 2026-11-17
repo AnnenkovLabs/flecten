@@ -46,14 +46,7 @@ function readProjectIndex(profile) {
 
 function saveProjectIndex(profile, index) {
   const parsed = indexSchema.parse(index);
-  const created = mkdirSync(profile, { recursive: true, mode: 0o700 });
-  if (created) {
-    const boundary = dirname(resolve(created));
-    for (let directory = resolve(profile); ; directory = dirname(directory)) {
-      syncPath(directory, true);
-      if (directory === boundary) break;
-    }
-  }
+  ensureProfileDirectory(profile);
   const path = join(profile, "projects.json");
   const temp = `${path}.${randomUUID()}.tmp`;
   try {
@@ -66,6 +59,21 @@ function saveProjectIndex(profile, index) {
     throw error;
   }
   return parsed;
+}
+
+function ensureProfileDirectory(path) {
+  const parent = dirname(path);
+  try {
+    mkdirSync(path, { mode: 0o700 });
+  } catch (error) {
+    if (error.code === "EEXIST" && statSync(path).isDirectory()) return;
+    if (error.code !== "ENOENT" || parent === path) throw error;
+    ensureProfileDirectory(parent);
+    ensureProfileDirectory(path);
+    return;
+  }
+  syncPath(path, true);
+  syncPath(parent, true);
 }
 
 function syncPath(path, directory) {

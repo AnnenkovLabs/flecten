@@ -10,7 +10,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { withEnvelope } from "../../src/store/events/envelope";
 import { listSessions } from "../../src/store/events/index";
 import { manifest } from "../../src/store/storage-migration/fs";
@@ -257,7 +257,7 @@ test.each(["ENOSPC", "EACCES"])(
     mock.module("node:fs/promises", () => ({ ...actual,
       open: async (path, flags, ...rest) => {
         const handle = await actual.open(path, flags, ...rest);
-        if (fault === "ENOSPC" && String(path).includes("/originals/") && typeof flags === "string" && flags.startsWith("wx")) {
+        if (fault === "ENOSPC" && String(path).startsWith(${JSON.stringify(p.originals + sep)}) && typeof flags === "string" && flags.startsWith("wx")) {
           handle.sync = async () => { throw Object.assign(new Error("disk full"), { code: fault }); };
         }
         return handle;
