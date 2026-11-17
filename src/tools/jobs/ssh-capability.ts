@@ -1,8 +1,9 @@
-import { realpath, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ToolResult } from "../../core/types";
 import { atomicWrite } from "../../util/atomic";
+import { canonicalExistingPath } from "../../util/canonical-path";
 import type { ToolContext } from "../types";
 import { prepareScratch } from "../util/scratch";
 
@@ -16,6 +17,11 @@ export type SshCapabilityDependencies = {
   sshAdd?: string;
   sshKeygen?: string;
 };
+
+async function resolveAgentSocket(path: string): Promise<string | undefined> {
+  const canonical = canonicalExistingPath(path);
+  return (await stat(canonical)).isSocket() ? canonical : undefined;
+}
 
 async function probe(
   command: string[],
@@ -75,10 +81,9 @@ export async function prepareSshCapability(
   });
   const requestedSocket = dependencies.agentSocket ?? process.env.SSH_AUTH_SOCK;
   const socket = requestedSocket
-    ? await realpath(requestedSocket).catch(() => undefined)
+    ? await resolveAgentSocket(requestedSocket).catch(() => undefined)
     : undefined;
-  const info = socket ? await stat(socket).catch(() => undefined) : undefined;
-  if (!socket || !info?.isSocket())
+  if (!socket)
     return failure(
       "auth_unavailable",
       "No live SSH agent socket is available to the app. Unlock the SSH agent before submitting a remote job.",

@@ -16,6 +16,7 @@ test("the summary frame replaces same-length, growing and shorter final HTML", a
     await page.locator("#prompt").fill("Read README.md");
     await page.locator("#prompt").press("Enter");
     await expect(page.locator(".answer").last()).toContainText("Ready.");
+    await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeHidden();
     const sessions = await readdir(join(h.cwd, ".flecten/sessions"), { withFileTypes: true });
     const sessionId = sessions.find((entry) => entry.isDirectory())?.name;
     if (!sessionId) throw new Error("session missing");

@@ -1,4 +1,5 @@
-import { existsSync, lstatSync, realpathSync, statSync } from "node:fs";
+import { existsSync, lstatSync, statSync } from "node:fs";
+import { canonicalExistingPath } from "../util/canonical-path";
 import { permissionPath } from "./permission-request-key";
 import { DEFAULT_PROTECTED_READ_PREFIXES, DEFAULT_PROTECTED_WRITE_PREFIXES } from "./sandbox";
 
@@ -14,7 +15,7 @@ function resources(paths: readonly string[], root: string): string[] {
   for (const path of paths) {
     const full = permissionPath(path, root);
     result.add(full);
-    if (existsSync(full)) result.add(realpathSync(full));
+    if (existsSync(full)) result.add(canonicalExistingPath(full));
   }
   return [...result];
 }

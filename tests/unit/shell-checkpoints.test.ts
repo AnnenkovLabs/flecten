@@ -175,6 +175,9 @@ describe("shell checkpoints", () => {
       }
     }
     await Promise.all(writes);
+    // Seed a real tracked baseline. The timed behavior here is the next, one-file change.
+    await git(cwd, "add", "src");
+    expect((await git(cwd, "ls-files", "src")).trim().split("\n")).toHaveLength(10_000);
     const { shell } = await service(cwd);
 
     const started = performance.now();

@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { chmod, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +8,7 @@ import { defaultConfig } from "../../src/config/defaults";
 import { PermissionsConfigSchema } from "../../src/config/schema";
 import { executeCalls } from "../../src/core/loop/tools";
 import type { ToolResult } from "../../src/core/types";
+import { buildSeatbeltProfile } from "../../src/security/os-sandbox";
 import { PermissionEngine } from "../../src/security/permissions";
 import { SandboxPolicy } from "../../src/security/sandbox";
 import { runJobs } from "../../src/tools/jobs/run";
@@ -53,6 +54,8 @@ test.skipIf(process.platform === "win32")(
     const server = createServer((connection) => connection.end());
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(socket, resolve));
+    const socketAlias = join(cwd, "agent.link");
+    await symlink("agent.sock", socketAlias);
     const add = join(cwd, "ssh-add");
     await writeFile(add, "#!/bin/sh\nexit 0\n");
     await chmod(add, 0o700);
@@ -62,7 +65,7 @@ test.skipIf(process.platform === "win32")(
       "fixture ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPUBLIC\nunrelated ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOTHER\n",
     );
     const prepared = await prepareSshCapability({ host: "fixture", port: 22 }, context, {
-      agentSocket: socket,
+      agentSocket: socketAlias,
       sshAdd: add,
       knownHostsFile: known,
     });
@@ -70,6 +73,9 @@ test.skipIf(process.platform === "win32")(
     expect(prepared.context.env?.SSH_AUTH_SOCK).toBe(socket);
     expect(prepared.context.osSandbox?.envAllowlist).toContain("SSH_AUTH_SOCK");
     expect(prepared.context.osSandbox?.readOnlyPaths).toContain(socket);
+    const sandbox = prepared.context.osSandbox;
+    if (!sandbox) throw new Error("SSH sandbox policy is missing");
+    expect(buildSeatbeltProfile({ ...sandbox, cwd })).toContain(JSON.stringify(socket));
     expect(prepared.arguments).toContain("StrictHostKeyChecking=yes");
     expect(prepared.arguments).toContain("ForwardAgent=no");
     const hosts =

@@ -24,6 +24,7 @@ test("module screenshot reaches the model as media and reopens without base64 in
     const last = JSON.stringify(f.requests.at(-1));
     expect(last).toContain('"type":"image_url"');
     expect(last).toContain("data:image/png;base64,iVBORw0KGgo");
+    await f.app.session.flush("vision");
     const events = await f.app.readSession("vision");
     expect(JSON.stringify(events)).not.toContain("iVBORw0KGgo");
     expect(

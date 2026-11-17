@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { EOL, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { sessionModelHistory } from "../../src/app/session-replay";
 import { withExternalAccess } from "../../src/core/loop/external-access";
@@ -8,6 +8,7 @@ import { ApprovalWaiters } from "../../src/core/session/approvals";
 import type { Event } from "../../src/core/types";
 import { eventSchema } from "../../src/core/types/event-schema";
 import { buildBubblewrapArgs } from "../../src/security/os-sandbox";
+import { permissionPath } from "../../src/security/permission-request-key";
 import { PermissionEngine } from "../../src/security/permissions";
 import { shellPaths } from "../../src/security/shell-paths";
 import type { PermissionRequest, PermissionRule } from "../../src/security/types";
@@ -43,6 +44,12 @@ async function fixture() {
     scratchDir: join(cwd, ".flecten-scratch", "chat"),
   };
   return { cwd, context, terminals };
+}
+
+function writeScratch(name: string, text: string): string {
+  return process.platform === "win32"
+    ? `> "%FLECTEN_SCRATCH%\\${name}" echo ${text}`
+    : `echo ${text} > "$FLECTEN_SCRATCH/${name}"`;
 }
 
 test("read advances through a 116386-character line and preserves Unicode across slices", async () => {
@@ -129,34 +136,37 @@ test("project overview and recursive file pages expose a real cursor and exclude
 
 test("scratch survives foreground and background calls and output verification rejects false success", async () => {
   const { cwd, context, terminals } = await fixture();
+  expect(await runBashTool({ command: writeScratch("corpus", "corpus") }, context)).toMatchObject({
+    ok: true,
+  });
+  const read = process.platform === "win32" ? 'type "%TMPDIR%\\corpus"' : 'cat "$TMPDIR/corpus"';
+  expect(await runBashTool({ command: read }, context)).toMatchObject({
+    ok: true,
+    output: "corpus",
+  });
   expect(
-    (await runBashTool({ command: 'printf corpus > "$FLECTEN_SCRATCH/corpus"' }, context)).ok,
-  ).toBe(true);
-  expect((await runBashTool({ command: 'cat "$TMPDIR/corpus"' }, context)).output).toBe("corpus");
+    await runBashTool({ command: writeScratch("job", "job"), background: true }, context),
+  ).toMatchObject({ ok: true });
+  expect(await terminals.waitJob("job-1", 2000)).toMatchObject({ exitCode: 0 });
+  expect(await readFile(join(context.scratchDir ?? "", "job"), "utf8")).toBe(`job${EOL}`);
   expect(
-    (
-      await runBashTool(
-        { command: 'printf job > "$FLECTEN_SCRATCH/job"', background: true },
-        context,
-      )
-    ).ok,
-  ).toBe(true);
-  await terminals.waitJob("job-1", 2000);
-  expect(await readFile(join(context.scratchDir ?? "", "job"), "utf8")).toBe("job");
-  expect(
-    (await runBashTool({ command: "true", expectedOutputs: [{ path: "missing.tar" }] }, context))
-      .ok,
-  ).toBe(false);
+    await runBashTool(
+      { command: "echo success", expectedOutputs: [{ path: "missing.tar" }] },
+      context,
+    ),
+  ).toMatchObject({ ok: false, data: { exitCode: 0, outputVerification: "failed" } });
   const verified = await runBashTool(
     {
-      command: "printf archive > archive.tar",
+      command: "> archive.tar echo archive",
       expectedOutputs: [{ path: "archive.tar", minBytes: 7 }],
     },
     context,
   );
   expect(verified.ok).toBe(true);
   expect(verified.data).toMatchObject({
-    verifiedOutputs: [{ path: join(cwd, "archive.tar"), bytes: 7 }],
+    verifiedOutputs: [
+      { path: join(cwd, "archive.tar"), bytes: Buffer.byteLength(`archive${EOL}`) },
+    ],
   });
   const args = buildBubblewrapArgs({
     workspaceRoot: cwd,
@@ -185,11 +195,11 @@ test("deleting a chat moves its scratch into recoverable trash", async () => {
     prompt: "fixture",
   });
   await mkdir(join(cwd, ".flecten", "sessions", "chat"), { recursive: true });
-  expect(
-    (await runBashTool({ command: 'printf corpus > "$FLECTEN_SCRATCH/corpus"' }, context)).ok,
-  ).toBe(true);
+  expect(await runBashTool({ command: writeScratch("corpus", "corpus") }, context)).toMatchObject({
+    ok: true,
+  });
   const deleted = await deleteSession(cwd, "chat");
-  expect(await readFile(join(deleted.trash, "scratch", "corpus"), "utf8")).toBe("corpus");
+  expect(await readFile(join(deleted.trash, "scratch", "corpus"), "utf8")).toBe(`corpus${EOL}`);
   expect(await Bun.file(join(context.scratchDir ?? "", "corpus")).exists()).toBe(false);
 });
 
@@ -197,6 +207,7 @@ test("human session grants survive journal replay, keep the owner, and refresh O
   const { cwd, context } = await fixture();
   const external = join(cwd, "external");
   await mkdir(external);
+  const normalizedExternal = permissionPath(external, cwd);
   const rules: PermissionRule[] = [
     { action: "external_path", policy: "ask" },
     { action: "shell", policy: "ask" },
@@ -240,12 +251,12 @@ test("human session grants survive journal replay, keep the owner, and refresh O
       permissions: restored,
       osSandbox: { enabled: true, workspaceRoot: cwd, allowNetwork: false, envAllowlist: [] },
     }).osSandbox?.writablePaths,
-  ).toContain(external);
+  ).toContain(normalizedExternal);
   const grant = events.find((event) => event.type === "approval.resolved");
   expect(grant?.type === "approval.resolved" && grant.sessionGrant).toMatchObject({
     owner: "chat",
     kind: "directory",
-    path: external,
+    path: normalizedExternal,
   });
   expect(
     restored.restoreSessionGrant(
