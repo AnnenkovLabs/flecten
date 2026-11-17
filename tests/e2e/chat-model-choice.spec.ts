@@ -67,6 +67,7 @@ for (const conversation of [false, true]) {
         BrowserWindow.getAllWindows()[0]?.showInactive();
       });
       await page.emulateMedia({ reducedMotion: "reduce" });
+      await expect(page.locator(".model-button")).toHaveText("Default model");
       await send(page, "First chat original message");
       await selectModel(page, "Chat A model");
       await send(page, "First chat changed model");
@@ -81,7 +82,11 @@ for (const conversation of [false, true]) {
       await page.reload();
       await page.locator(".task-row").filter({ hasText: "Second chat message" }).click();
       await expect(page.locator(".model-button")).toHaveText("Chat B model");
-      await page.locator(".task-row").filter({ hasText: "First chat original message" }).click();
+      // The selectable tooltip from the previous row can cover this button.
+      await page
+        .locator(".task-row")
+        .filter({ hasText: "First chat original message" })
+        .press("Enter");
       await expect(page.locator(".model-button")).toHaveText("Chat A model");
       for (const [width, height] of [
         [1480, 940],

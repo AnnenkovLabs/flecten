@@ -99,6 +99,8 @@ const server = Bun.serve({
     if (request.method !== "POST" || !url.pathname.endsWith("/chat/completions")) {
       return new Response("not found", { status: 404 });
     }
+    // Explicitly held fixtures advance only when the test releases them.
+    if (holdSummary || twinLearning) server.timeout(request, 0);
 
     const body = await request.json();
     if (body.model === "eyes")

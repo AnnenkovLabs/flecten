@@ -121,9 +121,16 @@ test("Computer installs from a folder, receives real desktop pixels and hands in
       timeout: 30_000,
     });
     await expect(frame.locator("#image")).toBeVisible();
-    await expect(frame.locator("#notice")).toBeHidden();
+    const notice = frame.locator("#notice");
+    if (await notice.isVisible())
+      await expect(notice).toContainText(
+        "Navigation may have been delivered. Observe before retrying.",
+      );
+    // Confirm actual delivery, then take a fresh observation without resending input.
     await expect.poll(() => requests).toBeGreaterThan(0);
     await frame.getByRole("button", { name: "Refresh", exact: true }).first().press("Enter");
+    await expect(frame.locator("#workspace")).toHaveAttribute("aria-busy", "false");
+    await expect(notice).toBeHidden();
     await frame.getByLabel("Type on desktop", { exact: true }).fill("Verified human input");
     await frame.getByRole("button", { name: "Type text", exact: true }).press("Enter");
     await expect.poll(() => typed).toBe("Verified human input");

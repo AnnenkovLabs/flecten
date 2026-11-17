@@ -40,10 +40,14 @@ async function userRepo(): Promise<string> {
   return cwd;
 }
 
-async function service(cwd: string, limits: { maxFiles?: number } = {}) {
+async function service(cwd: string, limits: { maxFiles?: number } = {}, setupMs?: number) {
   const store = new CheckpointStore({ cwd });
   await store.init();
-  const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".flecten", "shadow"));
+  const snapshots = new WorkspaceSnapshots(
+    cwd,
+    join(cwd, ".flecten", "shadow"),
+    setupMs === undefined ? {} : { setupMs },
+  );
   const shell = new ShellCheckpointService(snapshots, store, limits);
   expect(await shell.ready()).toBeUndefined();
   return { store, shell };
@@ -178,7 +182,7 @@ describe("shell checkpoints", () => {
     // Seed a real tracked baseline. The timed behavior here is the next, one-file change.
     await git(cwd, "add", "src");
     expect((await git(cwd, "ls-files", "src")).trim().split("\n")).toHaveLength(10_000);
-    const { shell } = await service(cwd);
+    const { shell } = await service(cwd, {}, 30_000);
 
     const started = performance.now();
     const handle = await shell.begin(request);
@@ -186,6 +190,8 @@ describe("shell checkpoints", () => {
     const summary = await handle.finish();
     const elapsed = performance.now() - started;
 
+    expect(summary.unavailable).toBeUndefined();
+    expect(summary.id).toBeDefined();
     expect(summary.files).toBe(1);
     expect(elapsed).toBeLessThan(5000);
   }, 60_000);

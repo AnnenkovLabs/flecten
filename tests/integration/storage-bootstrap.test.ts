@@ -52,6 +52,7 @@ function core(cwd: string, options: { profile?: string; script?: string } = {}) 
       FLECTEN_CWD: cwd,
       FLECTEN_CONFIG: options.profile ? "" : join(cwd, "flecten.config.json"),
       FLECTEN_PROFILE: options.profile ?? "",
+      FLECTEN_SECRET_BACKEND: "file",
     },
     stdin: "pipe",
     stdout: "pipe",
