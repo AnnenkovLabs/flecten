@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
@@ -19,7 +19,7 @@ afterEach(async () => {
   }
 });
 async function root() {
-  const path = await mkdtemp(join(tmpdir(), "flecten-migration-review-"));
+  const path = await realpath(await mkdtemp(join(tmpdir(), "flecten-migration-review-")));
   directories.push(path);
   return path;
 }

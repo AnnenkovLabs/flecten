@@ -28,7 +28,7 @@ const indexSchema = z.object({
 function canonicalProjectPath(path) {
   if (typeof path !== "string" || !isAbsolute(path))
     throw new Error("Project path must be absolute");
-  const canonical = realpathSync(resolve(path));
+  const canonical = realpathSync.native(resolve(path));
   if (!statSync(canonical).isDirectory()) throw new Error("Project path must be a directory");
   return canonical;
 }
@@ -70,7 +70,8 @@ function saveProjectIndex(profile, index) {
 
 function syncPath(path, directory) {
   try {
-    const handle = openSync(path, "r");
+    // FlushFileBuffers requires a writable file handle on Windows.
+    const handle = openSync(path, directory ? "r" : "r+");
     try {
       try {
         fsyncSync(handle);

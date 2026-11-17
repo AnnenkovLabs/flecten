@@ -1,5 +1,6 @@
-import { lstatSync, mkdirSync, realpathSync, renameSync, symlinkSync } from "node:fs";
+import { lstatSync, mkdirSync, renameSync, symlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { canonicalPath } from "../util/canonical-path";
 
 function present(path: string): boolean {
   try {
@@ -24,13 +25,13 @@ export function migrateDataDirectory(root: string): void {
       // Keep read-only startup working, just as lockProject's unlocked fallback does.
       // ponytail: legacy access needs symlinks; add versioned discovery if unsupported filesystems need it.
       if (["EACCES", "EPERM", "EROFS", "ENOTSUP", "ENOSYS"].includes(code ?? "")) return;
-      if (code === "EEXIST" && realpathSync(legacy) === realpathSync(current)) return;
+      if (code === "EEXIST" && canonicalPath(legacy) === canonicalPath(current)) return;
       throw error;
     }
     return;
   }
   if (present(current)) {
-    if (realpathSync(legacy) === realpathSync(current)) return;
+    if (canonicalPath(legacy) === canonicalPath(current)) return;
     throw new Error(
       `Both ${current} and ${legacy} contain data. Resolve the storage conflict before opening this project.`,
     );

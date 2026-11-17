@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { manifest } from "../../src/store/storage-migration/fs";
@@ -16,7 +16,7 @@ afterEach(async () => {
 });
 
 async function root() {
-  const directory = await mkdtemp(join(tmpdir(), "flecten-migration-scope-"));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "flecten-migration-scope-")));
   directories.push(directory);
   return directory;
 }

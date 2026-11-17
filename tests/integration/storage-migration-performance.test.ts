@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { acceptStorageMigration, migrateStorageRoots } from "../../src/store/storage-migration";
@@ -14,7 +14,7 @@ afterEach(async () => {
 });
 
 async function fixture() {
-  const root = await mkdtemp(join(tmpdir(), "flecten-migration-performance-"));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "flecten-migration-performance-")));
   directories.push(root);
   const payload = join(root, ".flecten", "payload");
   await mkdir(payload, { recursive: true });

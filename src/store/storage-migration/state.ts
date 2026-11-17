@@ -1,6 +1,7 @@
 import { readlink, realpath, symlink } from "node:fs/promises";
 import { isAbsolute, join, resolve, toNamespacedPath } from "node:path";
 import { z } from "zod";
+import { canonicalPath } from "../../util/canonical-path";
 import { ContentScopeSchema } from "./content";
 import { durableWrite, EntrySchema, ensureDirectory, info, readJson, syncDirectory } from "./fs";
 import { withFileLock } from "./lock";
@@ -88,13 +89,14 @@ export async function readTransaction(root: string): Promise<Transaction | undef
   const raw = await readJson(paths(root).state);
   if (raw === undefined) return undefined;
   const parsed = TransactionSchema.parse(raw);
-  if (parsed.root !== root)
+  if (!sameStoragePath(parsed.root, root))
     throw new Error(`Migration belongs to a different root: ${parsed.root}`);
   return parsed;
 }
 
 export async function accepted(root: string): Promise<boolean> {
-  return (await readAcceptance(root))?.root === root;
+  const previous = await readAcceptance(root);
+  return !!previous && sameStoragePath(previous.root, root);
 }
 
 export async function readAcceptance(root: string) {
@@ -104,11 +106,11 @@ export async function readAcceptance(root: string) {
 
 export async function relocationSource(root: string): Promise<string | undefined> {
   const previous = await readAcceptance(root);
-  return previous && previous.root !== root ? previous.root : undefined;
+  return previous && !sameStoragePath(previous.root, root) ? previous.root : undefined;
 }
 
 export function sameStoragePath(left: string, right: string): boolean {
-  return toNamespacedPath(resolve(left)) === toNamespacedPath(resolve(right));
+  return toNamespacedPath(canonicalPath(left)) === toNamespacedPath(canonicalPath(right));
 }
 
 export async function saveTransaction(state: Transaction): Promise<void> {

@@ -30,7 +30,7 @@ afterEach(async () => {
   );
 });
 async function root() {
-  const directory = await mkdtemp(join(tmpdir(), "flecten-storage-migration-"));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "flecten-storage-migration-")));
   directories.push(directory);
   return directory;
 }
