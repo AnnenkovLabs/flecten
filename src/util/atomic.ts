@@ -38,21 +38,28 @@ export async function atomicWrite(
 ): Promise<void> {
   signal?.throwIfAborted();
   const directory = dirname(path);
+  process.stderr.write("[WINPROBE] src/util/atomic.ts 0\n");
   await durableMkdir(directory);
+  process.stderr.write("[WINPROBE] src/util/atomic.ts 1\n");
   const temp = join(directory, `.${basename(path)}.${crypto.randomUUID()}.tmp`);
   try {
     signal?.throwIfAborted();
-    const handle = await open(temp, "wx", mode);
+    process.stderr.write("[WINPROBE] src/util/atomic.ts 2\n");
+  const handle = await open(temp, "wx", mode);
     try {
-      await handle.writeFile(data, signal ? { signal } : {});
+      process.stderr.write("[WINPROBE] src/util/atomic.ts 3\n");
+  await handle.writeFile(data, signal ? { signal } : {});
       if (mode !== undefined) await handle.chmod(mode);
-      await handle.sync();
+      process.stderr.write("[WINPROBE] src/util/atomic.ts 4\n");
+  await handle.sync();
     } finally {
       await handle.close();
     }
     signal?.throwIfAborted();
-    await replaceFile(temp, path, signal);
-    await syncDirectory(directory);
+    process.stderr.write("[WINPROBE] src/util/atomic.ts 5\n");
+  await replaceFile(temp, path, signal);
+    process.stderr.write("[WINPROBE] src/util/atomic.ts 6\n");
+  await syncDirectory(directory);
   } catch (error) {
     await rm(temp, { force: true }).catch(() => undefined);
     throw error;

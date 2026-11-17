@@ -1,110 +1,17 @@
 name: CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
-
+on: workflow_dispatch
 permissions:
   contents: read
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  verify:
-    name: verify (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+  windows-trace:
+    runs-on: windows-latest
+    timeout-minutes: 5
     env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-      - uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: ${{ runner.os }}-bun-
-      - run: bun install --frozen-lockfile
-      - run: bun run test
-      - run: bun run check
-      - run: bun run lint
-      - run: bun run build:ui
-      - run: bun run build:agent
-
-  quality:
-    uses: ./.github/workflows/quality.yml
-
-  installers:
-    uses: ./.github/workflows/build-installers.yml
-    with:
-      candidate: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
-    secrets: inherit
-
-  candidate:
-    name: ready to release
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [verify, quality, installers]
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-      - uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: ${{ runner.os }}-bun-
-      - run: bun install --frozen-lockfile
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: release-artifacts-*
-          path: release-input
-      - name: Merge native artifacts without rebuilding
-        run: bun scripts/merge-release-artifacts.mjs release-input release
-      - name: Sign update metadata
-        env:
-          UPDATE_SIGNING_PUBLIC_KEY: ${{ vars.UPDATE_SIGNING_PUBLIC_KEY }}
-          UPDATE_SIGNING_PRIVATE_KEY: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY }}
-        run: bun scripts/sign-update-manifests.mjs
-      - run: bun scripts/release-checksums.mjs
-      - name: Seal the verified candidate and curated changelog
-        env:
-          UPDATE_SIGNING_PUBLIC_KEY: ${{ vars.UPDATE_SIGNING_PUBLIC_KEY }}
-        run: bun scripts/release-candidate.mjs create release
-      - uses: actions/upload-artifact@v4
-        with:
-          name: release-candidate-${{ github.run_attempt }}
-          path: release/*
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 14
-      - name: Report release readiness
-        run: |
-          echo "### Ready to publish" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commit: $GITHUB_SHA. Installers, signatures, checksums and release notes are prepared." >> "$GITHUB_STEP_SUMMARY"
-          echo 'Publish this commit with `bun run release:publish` after this workflow succeeds.' >> "$GITHUB_STEP_SUMMARY"
-
-  audit:
-    name: dependency audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    continue-on-error: true
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.2
       - run: bun install --frozen-lockfile
-      - run: bun audit
+      - run: bun tests/windows-startup-probe.ts

@@ -70,23 +70,28 @@ export async function createAppService(
   projectRoot: string | null = cwd,
   onRefresh?: () => void,
 ): Promise<AppService> {
-  let config: HarnessConfig = await loadConfig(cwd, productEnv("CONFIG"));
+process.stderr.write("[WINPROBE] src/app/service.ts 0\n");
+    let config: HarnessConfig = await loadConfig(cwd, productEnv("CONFIG"));
   const voice = voiceService(() => config);
   const ideTerminal = new IdeTerminal(cwd, () => terminalSettings(config));
   const language = translationOptions();
   try {
     await hydrateActiveModel(config, cwd);
   } catch {}
-  const memory = projectMemory(cwd, () => configSecrets(config));
+process.stderr.write("[WINPROBE] src/app/service.ts 1\n");
+    const memory = projectMemory(cwd, () => configSecrets(config));
   await memory.port.list().catch(() => undefined);
-  const dictionary = await projectDictionary(cwd, memory.port, () => configSecrets(config));
+process.stderr.write("[WINPROBE] src/app/service.ts 2\n");
+    const dictionary = await projectDictionary(cwd, memory.port, () => configSecrets(config));
 
-  const skills = await discoverSkills(cwd, {
+process.stderr.write("[WINPROBE] src/app/service.ts 3\n");
+    const skills = await discoverSkills(cwd, {
     projectRoot,
     sources: config.skills?.sources,
     trust: config.skills?.trust,
   });
-  const trustRequired = projectRoot !== null;
+process.stderr.write("[WINPROBE] src/app/service.ts 4\n");
+    const trustRequired = projectRoot !== null;
   let trustState = projectTrust(cwd, projectRoot);
   let trusted = trustState === "trusted";
   const skillActivations: SkillActivations = new Map();
@@ -102,7 +107,8 @@ export async function createAppService(
       projectRoot,
     );
   let mcpConfiguration = trusted ? JSON.stringify(config.mcp) : undefined;
-  const modules = moduleService(
+process.stderr.write("[WINPROBE] src/app/service.ts 5\n");
+    const modules = moduleService(
     cwd,
     () => config,
     () => trusted,
@@ -116,9 +122,11 @@ export async function createAppService(
     () => modules.runtime.project.prepare(new AbortController().signal),
   );
   const models = sessionModels(logs);
-  await modules.runtime.project.prepare(new AbortController().signal);
+process.stderr.write("[WINPROBE] src/app/service.ts 6\n");
+    await modules.runtime.project.prepare(new AbortController().signal);
   let tools = registryFor(() => extensions, config, modules.runtime.tool);
-  let prompt = await systemPrompt(cwd, config, extensions.sections, tools, undefined, projectRoot);
+process.stderr.write("[WINPROBE] src/app/service.ts 7\n");
+    let prompt = await systemPrompt(cwd, config, extensions.sections, tools, undefined, projectRoot);
 
   let writes: Promise<unknown> = Promise.resolve();
   function serialized<T>(task: () => Promise<T>): Promise<T> {
@@ -136,22 +144,27 @@ export async function createAppService(
     });
   }
 
-  const permissions = new PermissionEngine({
+process.stderr.write("[WINPROBE] src/app/service.ts 8\n");
+    const permissions = new PermissionEngine({
     ...(await permissionAuthority(cwd, config)),
     onRemember: rememberRule,
   });
-  let sandbox = sandboxFor(config, cwd);
+process.stderr.write("[WINPROBE] src/app/service.ts 9\n");
+    let sandbox = sandboxFor(config, cwd);
   let osSandbox = osSandboxFor(config, cwd);
 
-  const checkpoints = new CheckpointStore({ cwd });
+process.stderr.write("[WINPROBE] src/app/service.ts 10\n");
+    const checkpoints = new CheckpointStore({ cwd });
   await checkpoints.init().catch(() => undefined);
   const pruning = pruneCheckpoints(checkpoints, config).catch(() => undefined);
   const shell = new ShellSnapshots(cwd, checkpoints, projectRoot !== null);
   shell.configure(config);
 
   let { provider, configError } = configuredProvider(config);
-  const twin = await createTwin(cwd, { config: () => config, provider: () => provider });
-  const runChild = subagentChildRunner({
+process.stderr.write("[WINPROBE] src/app/service.ts 11\n");
+    const twin = await createTwin(cwd, { config: () => config, provider: () => provider });
+process.stderr.write("[WINPROBE] src/app/service.ts 12\n");
+    const runChild = subagentChildRunner({
     modules: modules.runtime,
     memory: memory.port,
     dictionary: { list: async () => (await dictionary.list()).entries },
@@ -177,7 +190,8 @@ export async function createAppService(
   let subagents = subagentsFor();
   subagentToolCatalog(tools, subagents);
   prompt = await systemPrompt(cwd, config, extensions.sections, tools, undefined, projectRoot);
-  const commands = slashCommands(
+process.stderr.write("[WINPROBE] src/app/service.ts 13\n");
+    const commands = slashCommands(
     cwd,
     () => extensions.skills.skills,
     () => config.commands?.dirs ?? [],
@@ -266,7 +280,8 @@ export async function createAppService(
     saveQueue: (sessionId, queue) => saveQueue(cwd, sessionId, queue),
     onEvent: (event) => logs.persist(event),
   });
-  const pool = new SessionPool({
+process.stderr.write("[WINPROBE] src/app/service.ts 14\n");
+    const pool = new SessionPool({
     maxActive: () => config.sessions?.maxConcurrent ?? 4,
     beforeRun: async () => {
       await refreshExtensions();

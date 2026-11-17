@@ -87,15 +87,19 @@ async function main(): Promise<void> {
   lines.once("close", closeBootstrap);
   process.once("SIGTERM", closeBootstrap);
   process.once("SIGINT", closeBootstrap);
-  await initialized;
+process.stderr.write("[WINPROBE] src/app/server.ts 0\n");
+    await initialized;
   await migration.ready;
   // One core per project: a second window or app on the same folder waits, then gets project_locked.
-  const lock = await lockProject(cwd);
+process.stderr.write("[WINPROBE] src/app/server.ts 1\n");
+    const lock = await lockProject(cwd);
   process.once("exit", () => lock.release());
-  const app = await createAppService(cwd, productEnv("PROJECTLESS") === "1" ? null : cwd, () => {
+process.stderr.write("[WINPROBE] src/app/server.ts 2\n");
+    const app = await createAppService(cwd, productEnv("PROJECTLESS") === "1" ? null : cwd, () => {
     void ready().catch(fail(undefined));
   });
-  const diagnostics = new DiagnosticsRuntime(cwd);
+process.stderr.write("[WINPROBE] src/app/server.ts 3\n");
+    const diagnostics = new DiagnosticsRuntime(cwd);
   app.session.subscribe((event) => diagnostics.record(event));
   process.on("uncaughtExceptionMonitor", (error) => {
     void diagnostics.crash(error);
@@ -150,7 +154,8 @@ async function main(): Promise<void> {
   process.on("SIGTERM", () => void shutdown());
   process.on("SIGINT", () => void shutdown());
   releaseRuntime();
-  await ready();
+process.stderr.write("[WINPROBE] src/app/server.ts 4\n");
+    await ready();
   void app
     .resumeInterrupted()
     .then((result) => {
