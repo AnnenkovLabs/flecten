@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { compileModule } from "svelte/compiler";
 
-test("composer observes Worker starts, restarts, stops and task reset through client reactivity", async () => {
+test("Worker conversation observes transcript, phases, recovery and reset through client reactivity", async () => {
   const outdir = await mkdtemp(join(tmpdir(), "flecten-worker-client-"));
   try {
     // The regular test preload compiles runes for SSR, where render subscriptions do not run.
@@ -29,10 +29,11 @@ test("composer observes Worker starts, restarts, stops and task reset through cl
       ],
     });
     if (!result.success) throw new AggregateError(result.logs);
-    const { verifyWorkerReactivity } = await import(
+    const { verifyWorkerReactivity, verifyWorkerTranscript } = await import(
       join(outdir, "worker-reactivity-client.svelte.js")
     );
     verifyWorkerReactivity();
+    verifyWorkerTranscript();
   } finally {
     await rm(outdir, { recursive: true, force: true });
   }

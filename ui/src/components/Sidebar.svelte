@@ -130,7 +130,7 @@
 
 <aside class="sidebar" class:is-hidden={hidden} inert={hidden} aria-label={t("Projects and tasks")}>
   <div class="side-top">
-    <button class="side-action" type="button" title={t("New task")} onclick={onNewTask}>
+    <button class="side-action" type="button" data-tooltip={t("New task")} onclick={onNewTask}>
       <Icon name="plus" />
       <span>{t("New task")}</span>
     </button>
@@ -148,7 +148,7 @@
           class="search-clear"
           type="button"
           aria-label={t("Clear search")}
-          title={t("Clear search")}
+          data-tooltip={t("Clear search")}
           onclick={clearSearch}
         >
           <Icon name="x" size={13} />

@@ -266,7 +266,7 @@ async function readExisting(path: string, input: string): Promise<string | null>
 
 async function stageFile(path: string, content: string): Promise<string> {
   await mkdir(dirname(path), { recursive: true });
-  const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.liquid-tmp`);
+  const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.flecten-tmp`);
   const info = await lstat(path).catch(() => undefined);
   const mode = info?.isFile() ? info.mode & 0o777 : undefined;
   await writeFile(temp, content, mode === undefined ? undefined : { mode });

@@ -60,7 +60,7 @@ test("one upward gesture releases following through every response phase", async
     await page.locator("#prompt").press("Enter");
     await expect(page.locator(".answer").last()).toContainText("Record 35");
     await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeHidden();
-    const sessions = await readdir(join(h.cwd, ".liquid/sessions"), { withFileTypes: true });
+    const sessions = await readdir(join(h.cwd, ".flecten/sessions"), { withFileTypes: true });
     const sessionId = sessions.find((entry) => entry.isDirectory())?.name;
     if (!sessionId) throw new Error("The fixture did not create a session");
     const task = page.locator("button.task-row").filter({ hasText: "Keep the reading position" });

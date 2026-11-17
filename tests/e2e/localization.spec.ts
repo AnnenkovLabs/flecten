@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { catalogs, type MessageKey } from "../../ui/src/lib/i18n/catalogs";
 import { type Locale, locales } from "../../ui/src/lib/i18n/locales";
+import { chooseSelect } from "./custom-select";
 import { environmentProblem, launchApp } from "./fixtures";
 
 function label(locale: Locale, key: MessageKey): string {
@@ -27,16 +28,17 @@ test("fresh English default, seven live languages, drafts and saved preference",
     const dialog = page.locator("dialog.settings-dialog");
     let current: Locale = "en";
     for (const locale of locales) {
-      await dialog
-        .getByLabel(label(current, "Interface language"), { exact: true })
-        .selectOption(locale.id);
+      await chooseSelect(
+        dialog.getByLabel(label(current, "Interface language"), { exact: true }),
+        locale.id,
+      );
       current = locale.id;
       await expect(page.locator("html")).toHaveAttribute("lang", current);
       await expect(dialog.locator("#settings-title")).toHaveText(label(current, "Settings"));
       await expect(dialog.locator("#settings-general")).toHaveText(label(current, "General"));
       await expect(
         dialog.getByLabel(label(current, "Interface language"), { exact: true }),
-      ).toHaveValue(current);
+      ).toHaveAttribute("value", current);
       await dialog
         .locator(".rail")
         .getByRole("button", { name: label(current, "Access"), exact: true })

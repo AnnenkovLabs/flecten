@@ -17,7 +17,7 @@
     actions?: boolean;
   }
 
-  const TASK_FORK_EVENT = "liquid:task-fork";
+  const TASK_FORK_EVENT = "flecten:task-fork";
 
   let { task, active, onSelect, onRename, onDelete, actions = true }: Props = $props();
 
@@ -152,10 +152,10 @@
       type="button"
       aria-current={active ? "page" : undefined}
       aria-label={`${task.title}, ${meta.label}`}
-      title={rowTitle}
+      data-tooltip={rowTitle}
       onclick={() => onSelect(task.id)}
     >
-      <span class="task-status {task.status}" title={meta.label}>
+      <span class="task-status {task.status}" data-tooltip={meta.label}>
         <MorphIcon name={meta.icon} size={12} stroke={2} />
       </span>
       <span class="task-title">{task.title}</span>
@@ -164,7 +164,7 @@
       class="task-more"
       type="button"
       aria-label={t("Actions: {0}", [task.title])}
-      title={t("Actions")}
+      data-tooltip={t("Actions")}
       aria-haspopup="menu"
       aria-expanded={menuOpen}
       onclick={() => (menuOpen = !menuOpen)}

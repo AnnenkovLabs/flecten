@@ -77,11 +77,11 @@ async function noOverflow(page: Page): Promise<void> {
 }
 
 async function savedEvents(h: AppHarness): Promise<Event[]> {
-  const entries = await readdir(join(h.cwd, ".liquid/sessions"), { withFileTypes: true });
+  const entries = await readdir(join(h.cwd, ".flecten/sessions"), { withFileTypes: true });
   const session = entries.find((entry) => entry.isDirectory());
   if (!session) throw new Error("No saved conversation");
   const text = await readFile(
-    join(h.cwd, ".liquid/sessions", session.name, "events.jsonl"),
+    join(h.cwd, ".flecten/sessions", session.name, "events.jsonl"),
     "utf8",
   );
   return text

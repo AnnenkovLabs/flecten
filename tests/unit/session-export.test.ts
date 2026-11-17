@@ -10,10 +10,10 @@ afterEach(async () => {
   for (const path of directories.splice(0)) await rm(path, { recursive: true, force: true });
 });
 test("session export copies the durable history through the sidecar command without changing it", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-export-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-export-"));
   directories.push(cwd);
-  const source = join(cwd, ".liquid", "sessions", "s_export", "events.jsonl");
-  await mkdir(join(cwd, ".liquid", "sessions", "s_export"), { recursive: true });
+  const source = join(cwd, ".flecten", "sessions", "s_export", "events.jsonl");
+  await mkdir(join(cwd, ".flecten", "sessions", "s_export"), { recursive: true });
   const media = join(dirname(source), "attachments");
   await mkdir(media);
   const bytes = new Uint8Array([0, 1, 2, 3, 255]);
@@ -41,7 +41,7 @@ test("session export copies the durable history through the sidecar command with
       exported: { path: string };
     };
     expect(await Bun.file(result.exported.path).text()).toBe(await Bun.file(source).text());
-    expect(result.exported.path.startsWith(join(cwd, ".liquid", "exports"))).toBe(true);
+    expect(result.exported.path.startsWith(join(cwd, ".flecten", "exports"))).toBe(true);
     expect((await stat(source)).size).toBeGreaterThan(0);
     const exportedDirectory = dirname(result.exported.path);
     expect(await Bun.file(join(exportedDirectory, "attachments", "saved.bin")).bytes()).toEqual(
@@ -63,7 +63,7 @@ test("session export copies the durable history through the sidecar command with
     await expect(handler({ type: "sessions.export", id: "s_export" })).rejects.toThrow(
       "non-regular attachments",
     );
-    expect(await readdir(join(cwd, ".liquid", "exports"))).toEqual([basename(exportedDirectory)]);
+    expect(await readdir(join(cwd, ".flecten", "exports"))).toEqual([basename(exportedDirectory)]);
     await expect(handler({ type: "sessions.export", id: "../escape" })).rejects.toThrow();
   } finally {
     await app.dispose();

@@ -44,6 +44,26 @@ function file(text: string): AgentFilePreview {
   return { path: "src/a.ts", text, size: text.length, hash: text, truncated: false, binary: false };
 }
 
+test("IDE uses validated partial-index metadata and clears it for another project", async () => {
+  let limited: boolean | undefined = true;
+  let files = ["src/a.ts"];
+  bridge(async () => ({
+    ok: true,
+    files,
+    ...(limited === undefined ? {} : { limited }),
+  }));
+  const ide = new IdeWorkspace();
+  await ide.requestRefresh();
+  expect(ide.filesLimited).toBe(true);
+  ide.reset();
+  expect(ide.filesLimited).toBe(false);
+  limited = undefined;
+  files = Array.from({ length: 5_000 }, (_, index) => `${index}.txt`);
+  await ide.requestRefresh();
+  expect(ide.files).toHaveLength(5_000);
+  expect(ide.filesLimited).toBe(false);
+});
+
 test("IDE keeps drafts through refresh, conflicts and dirty-close cancellation", async () => {
   let disk = "initial";
   bridge(async (command) => {

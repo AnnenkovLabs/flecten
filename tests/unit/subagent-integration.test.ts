@@ -43,7 +43,7 @@ function context(subagentRunnerFactory?: SubagentRunnerFactory): TaskToolContext
     sessionId: "s_subagent_integration",
     cwd: process.cwd(),
     signal: new AbortController().signal,
-    logDir: "/tmp/liquid-subagent-integration",
+    logDir: "/tmp/flecten-subagent-integration",
     limits,
     reads: new ReadTracker(),
   };
@@ -57,7 +57,7 @@ afterEach(async () => {
 });
 
 function definitionDir(name = "reviewer", maxTokens = 400): Promise<string> {
-  return mkdtemp(join(tmpdir(), "liquid-subagent-child-")).then(async (dir) => {
+  return mkdtemp(join(tmpdir(), "flecten-subagent-child-")).then(async (dir) => {
     dirs.push(dir);
     await writeFile(
       join(dir, `${name}.md`),

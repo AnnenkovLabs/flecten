@@ -29,8 +29,44 @@ import type { LoopOptions, LoopResult } from "./types";
 
 const PAGE_COMPLETION_REQUIRED = pageCompletionRequired.trim();
 
+/** Publish the already checkpointed deliverable without asking the model to reconstruct it. */
+function pageResult(
+  text: string | undefined,
+  messages: Message[],
+  options: LoopOptions,
+): LoopResult["done"] {
+  if (!text) return undefined;
+  const remaining = options.goal?.remainingCriteria() ?? [];
+  const issue =
+    options.completionGuard?.() ??
+    (remaining.length ? `Cannot finish while work remains:\n${remaining.join("\n")}` : undefined);
+  if (issue) {
+    messages.push({ role: "user", content: issue });
+    return undefined;
+  }
+  const done = { summary: text, evidence: [] };
+  messages.push({
+    role: "assistant",
+    content: `<summary>${text}</summary>`,
+    reasoning: "",
+    toolCalls: [],
+  });
+  markGoalDone(options.goal, done);
+  options.emit({ type: "message.started" });
+  options.emit({
+    type: "message.finished",
+    text,
+    reasoning: "",
+    toolCalls: [],
+    summary: text,
+    complete: true,
+  });
+  return done;
+}
+
 export async function runLoop(prompt: string, options: LoopOptions): Promise<LoopResult> {
   const messages: Message[] = options.messages ?? [];
+  options = { ...options, tools: options.tools.forSession(messages) };
   messages.push({
     role: "user",
     content: prompt,
@@ -50,7 +86,16 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
   const goal = options.goal;
   const pages =
     options.role === "worker" && options.tools.get("context")
-      ? new PageRuntime(messages, options.pageWriter?.archive)
+      ? new PageRuntime(
+          messages,
+          options.pageWriter?.archive,
+          new Set(
+            options.tools
+              .list()
+              .filter((tool) => !tool.mutating)
+              .map((tool) => tool.name),
+          ),
+        )
       : undefined;
   const execution = pages
     ? { ...options, toolContext: { ...options.toolContext, contextPages: pages } }
@@ -76,6 +121,7 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
 
     await takeSteering(messages, options);
     const pendingPage = pages?.pending();
+    const pendingResult = pages?.finalResult();
     const checkpoint = await compactContextIfNeeded(
       messages,
       pendingPage
@@ -87,6 +133,17 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
         throw new Error(`Logical page checkpoint failed: ${checkpoint.reason ?? "no checkpoint"}`);
       }
       pages.checkpointed();
+      const completed = pageResult(pendingResult, messages, options);
+      if (completed)
+        return {
+          stopReason: "done",
+          summary: completed.summary,
+          turns,
+          usage,
+          done: completed,
+          lastText: completed.summary,
+          messages,
+        };
     }
     await deliverModules(messages, options);
     if (options.stopSignal?.aborted) {
@@ -109,12 +166,21 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
       options.responseFormat === "structured"
         ? undefined
         : parseTurnCompletion(message, streamed.stopReason);
+    const completionIssue = completion?.complete ? options.completionGuard?.() : undefined;
     const acceptedCompletion =
       completion?.complete &&
+      !completionIssue &&
       (goal?.remainingCriteria().length ?? 0) === 0 &&
       (!pages || pages.canFinish());
-    const display =
-      acceptedCompletion && completion ? completion.text || completion.summary : message.content;
+    const display = completionIssue
+      ? ""
+      : acceptedCompletion && completion
+        ? completion.text || completion.summary
+        : message.content;
+    if (completionIssue) {
+      message.content = completionIssue;
+      options.emit({ type: "message.reset", reason: "completion_deferred" });
+    }
     if (acceptedCompletion && completion) {
       done = { summary: completion.summary || display, evidence: [] };
       markGoalDone(goal, done);
@@ -126,7 +192,7 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
       text: display,
       reasoning: message.reasoning,
       toolCalls: message.toolCalls,
-      ...(streamed.display
+      ...(streamed.display && !completionIssue
         ? {
             display: {
               text:
@@ -172,6 +238,7 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
 
       await deliverToolMedia(messages, message.toolCalls, results, options);
       const blocked = pages?.blocked();
+      const finalResult = pages?.finalResult();
       if (pages?.pending()) {
         const compacted = await compactContextIfNeeded(messages, {
           ...options,
@@ -181,6 +248,11 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
           throw new Error(`Logical page checkpoint failed: ${compacted.reason ?? "no checkpoint"}`);
         }
         pages.checkpointed();
+      }
+      const completed = pageResult(finalResult, messages, options);
+      if (completed) {
+        done = completed;
+        lastText = completed.summary;
       }
       if (options.stopSignal?.aborted) {
         options.emit({ type: "turn.finished", turn: turns, reason: "stopped" });
@@ -243,6 +315,10 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
 
     const visible = display.trim().length > 0;
     if (visible) lastText = display;
+    if (completionIssue) {
+      options.emit({ type: "turn.finished", turn: turns, reason: "completion_deferred" });
+      return { stopReason: "end", summary: "", turns, usage, lastText, messages };
+    }
 
     if (options.stopSignal?.aborted) {
       options.emit({ type: "turn.finished", turn: turns, reason: "stopped" });

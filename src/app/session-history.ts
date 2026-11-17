@@ -27,7 +27,7 @@ export async function maintainSessionHistory(
       await (storage ? storage.delete(session.id) : deleteSession(cwd, session.id));
   }
 
-  const trashRoot = join(cwd, ".liquid", "trash");
+  const trashRoot = join(cwd, ".flecten", "trash");
   const trashCutoff = now - policy.trashDays * DAY_MS;
   const trash = await readdir(trashRoot, { withFileTypes: true }).catch((error: unknown) => {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];

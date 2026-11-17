@@ -95,9 +95,24 @@ export async function dispatch(
       const sessionId = runtime.sessionId();
       const history = runtime.history();
       if (sessionId === undefined || history.length === 0) return { compacted: false };
-      const outcome = await compaction.compactIdle(sessionId, history, request, (event) =>
-        runtime.emit(mapLoopEvent(event, sessionId)),
-      );
+      const outcome = await compaction.compactIdle(sessionId, history, request, (event) => {
+        runtime.emit(mapLoopEvent(event, sessionId));
+        if (event.type === "usage") {
+          const provider = event.provider ?? options.providerId;
+          const model = event.model ?? options.model;
+          const price =
+            event.purpose === "translation"
+              ? options.language?.price
+              : (options.priceFor?.(provider, model) ??
+                (provider === options.providerId && model === options.model
+                  ? options.price
+                  : undefined));
+          options.taskBudget?.add(event.usage, price);
+        }
+        if (event.type === "usage.unavailable") options.taskBudget?.unavailable();
+        if ((event.type === "usage" || event.type === "usage.unavailable") && options.taskBudget)
+          runtime.emit({ type: "task.budget", sessionId, budget: options.taskBudget.view() });
+      });
       return {
         compacted: outcome.compacted,
         ...(outcome.reason ? { reason: outcome.reason } : {}),
@@ -127,6 +142,7 @@ function status(runtime: SessionRuntime): Record<string, unknown> {
     turns: active?.turns ?? 0,
     usage: active?.usage ?? { input: 0, output: 0, cached: 0 },
     ...(active ? { budget: active.budget.view() } : {}),
+    ...(options.taskBudget ? { taskBudget: options.taskBudget.view() } : {}),
     provider: options.providerId,
     model: options.model,
     cwd: options.cwd,

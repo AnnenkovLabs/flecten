@@ -16,7 +16,18 @@ export function runLanguage(
   return new LanguageRun(
     selected,
     state.controller.signal,
-    ({ usage, durationMs }) => {
+    ({ usage, durationMs, reported }) => {
+      if (reported === false) {
+        emit({
+          type: "usage.unavailable",
+          sessionId: state.sessionId,
+          purpose: "translation",
+          provider: selected.providerId,
+          model: selected.client.provider.model,
+        });
+        emit({ type: "budget", sessionId: state.sessionId, budget: state.budget.unavailable() });
+        return;
+      }
       state.usage = addUsage(state.usage, usage);
       emit({
         type: "usage",

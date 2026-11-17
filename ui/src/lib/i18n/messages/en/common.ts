@@ -1,5 +1,6 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Cost unavailable": "Cost unavailable",
   Profile: "Profile",
   "Change name": "Change name",
   "Could not save name. Try again.": "Could not save name. Try again.",

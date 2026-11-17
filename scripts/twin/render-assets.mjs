@@ -7,7 +7,9 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
 
-const trailer = resolve(process.argv[2] ?? "/home/oleksandr/workspace/liquid-harness-trailer-v12");
+if (!process.argv[2])
+  throw new Error("Usage: bun scripts/twin/render-assets.mjs /path/to/trailer-source");
+const trailer = resolve(process.argv[2]);
 const { twinPose } = await import(pathToFileURL(resolve(trailer, "src/v10/twin10.ts")));
 const original = await readFile(
   new URL("../../ui/src/lib/twin/twin.frag", import.meta.url),

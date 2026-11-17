@@ -15,7 +15,7 @@
     at?: string | undefined;
     now?: number;
     prompt?: string | undefined;
-    onRepeat?: (prompt?: string) => void;
+    onRepeat?: ((prompt?: string) => void) | undefined;
     children?: Snippet;
   }
 
@@ -48,7 +48,7 @@
             class="st-icon-btn"
             type="button"
             aria-label={t("Retry")}
-            title={t("Retry")}
+            data-tooltip={t("Retry")}
             onclick={() => onRepeat(prompt)}
           >
             <Icon name="refresh" size={15} />
@@ -56,7 +56,7 @@
         {/if}
       </div>
       {#if at && relative}
-        <time class="answer-time" datetime={at} title={title}>{relative}</time>
+        <time class="answer-time" datetime={at} data-tooltip={title}>{relative}</time>
       {/if}
     </div>
   {/if}

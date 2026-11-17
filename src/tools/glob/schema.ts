@@ -3,10 +3,24 @@ import { z } from "zod";
 export const globSpec = {
   name: "glob",
   description:
-    "Find files by path pattern, not file contents. Returns sorted paths relative to the project and respects .gitignore. Patterns without a slash match at any depth. Set hidden=true to include dotfiles and hidden directories; .git and generated/internal directories remain excluded. Use grep to search contents and read to inspect a result.",
+    "Discover the project with mode=entries first: lists immediate files and directories without recursion. mode=files searches a scoped path by pattern, respects .gitignore, and returns a sorted page with nextOffset. Patterns without a slash match at any depth. Generated dependencies and caches are excluded unless includeGenerated=true; internal metadata stays excluded. Use docs and source directories from the overview before a recursive search. Use grep for contents and read for a result.",
   schema: z
     .object({
-      pattern: z.string().min(1).describe("Glob pattern, for example **/*.ts"),
+      pattern: z.string().min(1).default("*").describe("Glob pattern, for example **/*.ts"),
+      mode: z
+        .enum(["entries", "files"])
+        .optional()
+        .describe("entries lists immediate children; files searches recursively"),
+      includeGenerated: z
+        .boolean()
+        .optional()
+        .describe("Explicitly include dependency, build and cache directories"),
+      offset: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .describe("Result cursor returned as nextOffset"),
       path: z.string().optional().describe("Directory to search; default project root"),
       hidden: z.boolean().optional().describe("Include dotfiles and hidden directories"),
       maxResults: z

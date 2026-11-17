@@ -43,12 +43,12 @@ async function fixture() {
       },
     }),
   );
-  await mkdir(join(cwd, ".liquid/dictionary"), { recursive: true });
+  await mkdir(join(cwd, ".flecten/dictionary"), { recursive: true });
   const category = await Bun.file(
     new URL("../../src/dictionary/data/design.json", import.meta.url),
   ).json();
   await Bun.write(
-    join(cwd, ".liquid/dictionary/public.json"),
+    join(cwd, ".flecten/dictionary/public.json"),
     JSON.stringify({
       schemaVersion: 1,
       syncedAt: new Date().toISOString(),
@@ -96,7 +96,7 @@ test("dictionary commands persist a local override, deliver it to the real provi
   off();
   expect(events.find((event) => event.type === "session.started")?.prompt).toBe(prompt);
   expect(JSON.stringify(f.requests[0])).toContain("LOCAL_MEANING");
-  const disk = await Bun.file(join(f.cwd, ".liquid/memory.json")).json();
+  const disk = await Bun.file(join(f.cwd, ".flecten/memory.json")).json();
   expect(disk.records[0].dictionary).toEqual(entry);
   await expect(
     f.handlers["dictionary.save"]({
@@ -128,7 +128,7 @@ test("dictionary rejects malformed IPC payloads without replacing project memory
       entry: { id: "../escape", term: "bad" },
     }),
   ).rejects.toThrow();
-  expect(await Bun.file(join(f.cwd, ".liquid/memory.json")).exists()).toBe(false);
+  expect(await Bun.file(join(f.cwd, ".flecten/memory.json")).exists()).toBe(false);
   await expect(
     f.handlers["dictionary.forget"]({
       type: "dictionary.forget",
@@ -176,6 +176,6 @@ test("local definitions preserve valid categories longer than memory topic label
     )?.dictionary,
   );
   expect(saved.entries.find((record) => record.id === "long-category")?.category).toBe(category);
-  const disk = await Bun.file(join(f.cwd, ".liquid/memory.json")).json();
+  const disk = await Bun.file(join(f.cwd, ".flecten/memory.json")).json();
   expect(disk.records[0].dictionary.category).toBe(category);
 });

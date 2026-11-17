@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import type { DictionaryStore } from "../../lib/dictionary.svelte";
   import { t } from "../../lib/i18n.svelte";
   let { dictionary }: { dictionary: DictionaryStore } = $props();
@@ -11,7 +12,7 @@
     <fieldset disabled={dictionary.busy}>
       <div class="dictionary-fields">
         <label class="st-field"><span class="st-label">{t("Term")}</span><input class="st-input" bind:value={dictionary.draft.term} required maxlength="160" /></label>
-        <label class="st-field"><span class="st-label">{t("Category")}</span><select class="st-select" bind:value={dictionary.draft.category}>{#each dictionary.categories as category}<option value={category}>{category}</option>{/each}</select></label>
+        <label class="st-field"><span class="st-label">{t("Category")}</span><Select class="st-select" bind:value={dictionary.draft.category} options={dictionary.categories.map((category) => ({ value: category, label: category }))} /></label>
       </div>
       <label class="st-field"><span class="st-label">{t("Definition")}</span><textarea class="st-textarea dictionary-prose" bind:value={dictionary.draft.definition} required maxlength="4000" rows="4"></textarea></label>
       <label class="st-field"><span class="st-label">{t("Common confusion")}</span><textarea class="st-textarea dictionary-prose" bind:value={dictionary.draft.clarification} maxlength="2000" rows="2" placeholder={t("Explain which older or similar meaning to avoid.")}></textarea></label>

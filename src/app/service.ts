@@ -1,9 +1,10 @@
 import { productEnv } from "../../shared/environment.cjs";
 import { loadConfig, saveConfig } from "../config/load";
 import type { HarnessConfig } from "../config/schema";
-import { createSession, type SessionOptions } from "../core/session/session";
+import type { SessionOptions } from "../core/session/session";
 import { catalogStatus, providerFromCatalog, syncCatalog } from "../providers/catalog";
 import { discoverProvider } from "../providers/discovery";
+import { inspectProviderGateway } from "../providers/gateway-detection";
 import { PermissionEngine } from "../security/permissions";
 import type { PermissionRule } from "../security/types";
 import { discoverSkills } from "../skills/discover";
@@ -28,6 +29,7 @@ import { IdeTerminal } from "./ide-terminal";
 import { projectMemory } from "./memory";
 import { messageBranches } from "./message-branches";
 import { moduleService } from "./modules";
+import { permissionAuthority } from "./permission-authority";
 import { configWithRememberedRules } from "./permission-persistence";
 import { projectTrust, saveProjectTrust } from "./project-trust";
 import { providerAutoRefresh } from "./provider-auto-refresh";
@@ -37,16 +39,10 @@ import { hydrateActiveModel } from "./provider-state";
 import { autoResumable, markInterrupted } from "./recovery";
 import { RunSpend } from "./run-spend";
 import { RESUME_PROMPT, slashCommands } from "./service-commands";
-import { osSandboxFor, permissionRules, sandboxFor } from "./service-policy";
+import { osSandboxFor, sandboxFor } from "./service-policy";
 import { settingsActions } from "./service-settings";
 import type { AppInfo, AppService } from "./service-types";
-import {
-  approvalTimeout,
-  destructivePolicy,
-  runBudgets,
-  systemPrompt,
-  terminalSettings,
-} from "./session-config";
+import { approvalTimeout, runBudgets, systemPrompt, terminalSettings } from "./session-config";
 import { sessionRetention } from "./session-history";
 import {
   configuredProvider,
@@ -60,7 +56,9 @@ import { sessionModelHistory } from "./session-replay";
 import { restoredSession } from "./session-restore";
 import { SessionStorage } from "./session-storage";
 import { CheckpointStore, pruneCheckpoints, ShellSnapshots } from "./shell-checkpoints";
+import { createSingleSession } from "./single-session";
 import { subagentChildRunner } from "./subagent-child";
+import { subagentModelFactory } from "./subagent-models";
 import { appSubagents, subagentToolCatalog } from "./subagents";
 import { translationOptions } from "./translation";
 import { createTwin } from "./twin";
@@ -138,13 +136,10 @@ export async function createAppService(
     });
   }
 
-  const permissionsFor = () =>
-    new PermissionEngine({
-      rules: permissionRules(config),
-      destructive: destructivePolicy(config),
-      onRemember: rememberRule,
-    });
-  const permissions = permissionsFor();
+  const permissions = new PermissionEngine({
+    ...(await permissionAuthority(cwd, config)),
+    onRemember: rememberRule,
+  });
   let sandbox = sandboxFor(config, cwd);
   let osSandbox = osSandboxFor(config, cwd);
 
@@ -225,7 +220,7 @@ export async function createAppService(
       systemParts: prompt.systemParts,
       promptStamp: prompt.stamp,
       hooks: trusted ? config.hooks : {},
-      subagentRunnerFactory: subagents.factory,
+      subagentRunnerFactory: subagentModelFactory(subagents.factory, models.config(config, id)),
     }));
   }
 
@@ -234,7 +229,8 @@ export async function createAppService(
     return {
       ...sessionModelOptions(current, current === config ? provider : undefined),
       modules: modules.runtime,
-      language: config.conversation?.enabled ? undefined : language(current),
+      language: models.conversation(config, sessionId) ? undefined : language(current),
+      subagentRunnerFactory: subagentModelFactory(subagents.factory, current),
       secrets: () => configSecrets(config),
       tools: sessionModelTools(current, tools),
       system: prompt.system,
@@ -260,11 +256,11 @@ export async function createAppService(
     cwd,
     ...liveOptions(sessionId),
     checkpoints,
-    subagentRunnerFactory: subagents.factory,
     pages: sessionPages(cwd, logs, () => configSecrets(config)),
     expandPrompt: commands.expand,
     logDir: (sessionId) => sessionPaths(cwd, sessionId).logs,
-    loadHistory: (sessionId) => sessionModelHistory(cwd, sessionId, skillActivations, logs),
+    loadHistory: (sessionId) =>
+      sessionModelHistory(cwd, sessionId, skillActivations, logs, permissions),
     saveMedia: (sessionId, parts) => saveSessionMedia(cwd, sessionId, parts),
     loadMedia: (sessionId, refs) => loadSessionMedia(cwd, sessionId, refs),
     saveQueue: (sessionId, queue) => saveQueue(cwd, sessionId, queue),
@@ -284,30 +280,23 @@ export async function createAppService(
         ...(await restoredSession(cwd, sessionId, logs)),
       };
       const events = sessionId ? await logs.read(sessionId) : [];
-      if (
-        (config.conversation?.enabled &&
-          !events.some((event) => event.type === "session.started")) ||
-        events.some(
-          (event) =>
-            event.type === "worker.event" ||
-            (event.type === "session.started" && event.role === "talker"),
-        )
-      ) {
+      if (models.conversation(config, sessionId)) {
         return createConversation(options, {
           events,
           twin,
           configure: (current, execute, answer) =>
             conversationOptions(
               current,
-              models.config(config, sessionId),
+              config,
               extensions.sections,
               execute,
               answer,
               projectRoot,
+              models.choice(current.sessionId ?? sessionId),
             ),
         });
       }
-      return createSession(options);
+      return createSingleSession(options, events);
     },
   });
 
@@ -346,10 +335,7 @@ export async function createAppService(
 
   async function apply(): Promise<void> {
     ({ provider, configError } = configuredProvider(config));
-    permissions.replaceRules({
-      rules: permissionRules(config),
-      destructive: destructivePolicy(config),
-    });
+    permissions.replaceRules(await permissionAuthority(cwd, config));
     sandbox = sandboxFor(config, cwd);
     osSandbox = osSandboxFor(config, cwd);
     tools.setLimits(config.tools);
@@ -431,7 +417,10 @@ export async function createAppService(
         pool.publish(event);
         return info(input.sessionId);
       },
+      () =>
+        subagents.registry.list().map(({ id, name, description }) => ({ id, name, description })),
     ),
+    inspectProvider: (baseUrl) => inspectProviderGateway(baseUrl),
     discover: (input) => discoverProvider(cwd, input),
     listSessions: async (options) => {
       await retention.maintain();

@@ -56,7 +56,7 @@ const complete = {
 };
 
 async function fixture(scripts: ModelEvent[][]) {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-worker-pages-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-worker-pages-"));
   directories.push(cwd);
   const requests: ModelRequest[] = [];
   let index = 0;
@@ -218,7 +218,8 @@ test("archive failure preserves pending history, and a resumed Worker checkpoint
   ).toBe(true);
   const prior = f.requests.length;
   await runLoop("Resume", { ...f.options, messages });
-  expect(f.requests[prior]?.tools).toEqual([]);
+  expect(f.requests[prior]?.tools.length).toBeGreaterThan(0);
+  expect(f.requests[prior]?.messages[0]?.content).toContain("Implement authentication");
   expect(new PageRuntime(messages).pending()).toBe(false);
   expect(new PageRuntime(messages).active()).toBeUndefined();
 });
@@ -348,4 +349,58 @@ test("emergency compaction carries the active page, while Talker never receives 
   expect(roles.worker.system).toContain(
     "Never postpone this checkpoint until a context percentage",
   );
+});
+
+test("complete publishes a saved final result on the last allowed turn and replay agrees with live history", async () => {
+  const finalResult = "The exact author quotation and the verified conclusion.";
+  const f = await fixture([
+    call("begin", "context", begin("Explain the PR")),
+    call("complete", "context", {
+      ...complete,
+      findings: ["comment#17: exact quotation"],
+      openRisks: [],
+      finalResult,
+    }),
+  ]);
+  const events: Event[] = [];
+  const messages: Message[] = [];
+  const result = await runLoop("Explain the PR", {
+    ...f.options,
+    messages,
+    maxTurns: 2,
+    emit: (event) => events.push({ ...event, sessionId: "s_worker" } as Event),
+  });
+  expect(result).toMatchObject({ stopReason: "done", summary: finalResult, turns: 2 });
+  expect(f.requests.filter((request) => request.tools.length > 0)).toHaveLength(2);
+  expect(f.requests.filter((request) => request.tools.length === 0)).toHaveLength(0);
+  expect(messages.at(-1)).toMatchObject({
+    role: "assistant",
+    content: `<summary>${finalResult}</summary>`,
+    toolCalls: [],
+  });
+  const replayed = replayMessages(
+    events.map((event, index) => ({ seq: index + 1, event })),
+  ).messages;
+  expect(replayed.at(-1)).toEqual(messages.at(-1));
+  expect(await readFile(join(f.paths.pages, "1.md"), "utf8")).toContain(finalResult);
+});
+
+test("atomic final result cannot bypass acceptance or goal criteria", async () => {
+  const f = await fixture([
+    call("begin", "context", begin("Authentication")),
+    call("complete", "context", { ...complete, finalResult: "Claimed final" }),
+  ]);
+  const messages: Message[] = [];
+  const events: LoopEvent[] = [];
+  const result = await runLoop("Verify authentication", {
+    ...f.options,
+    messages,
+    maxTurns: 2,
+    completionGuard: () => "The required artifact is still missing",
+    emit: (event) => events.push(event),
+  });
+  expect(result.stopReason).toBe("max_turns");
+  expect(result.done).toBeUndefined();
+  expect(events.some((event) => event.type === "message.finished" && event.complete)).toBe(false);
+  expect(messages.at(-1)?.content).toBe("The required artifact is still missing");
 });

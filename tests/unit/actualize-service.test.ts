@@ -1,9 +1,10 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAppService } from "../../src/app/service";
 import { setSecretBackend } from "../../src/config/secrets";
+import { resetCatalogCache } from "../../src/providers/catalog-source";
 
 const dirs: string[] = [];
 const servers: Array<{ stop(force?: boolean): void }> = [];
@@ -40,7 +41,7 @@ function modelsServer(ids: string[]): string {
 
 describe("provider actualize through the app service", () => {
   test("keeps user overrides, reports the diff and never drops the active model silently", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "liquid-actualize-"));
+    const dir = await mkdtemp(join(tmpdir(), "flecten-actualize-"));
     dirs.push(dir);
     const baseUrl = modelsServer(["kept-model", "new-model"]);
     await writeFile(
@@ -63,8 +64,21 @@ describe("provider actualize through the app service", () => {
         },
       }),
     );
-    const service = await createAppService(dir);
+    const nativeFetch = globalThis.fetch;
+    const fetcher = spyOn(globalThis, "fetch").mockImplementation(
+      Object.assign(
+        async (...args: Parameters<typeof fetch>) => {
+          const url = new URL(String(args[0]));
+          if (url.origin === new URL(baseUrl).origin) return nativeFetch(...args);
+          return Response.json({});
+        },
+        { preconnect: nativeFetch.preconnect },
+      ),
+    );
+    resetCatalogCache();
+    let service: Awaited<ReturnType<typeof createAppService>> | undefined;
     try {
+      service = await createAppService(dir);
       const result = await service.actualizeProvider("local");
 
       expect(result.added).toEqual(["new-model"]);
@@ -81,7 +95,9 @@ describe("provider actualize through the app service", () => {
       expect(models["stale-model"]).toBeUndefined();
       expect(models["new-model"]).toBeDefined();
     } finally {
-      await service.dispose();
+      await service?.dispose();
+      fetcher.mockRestore();
+      resetCatalogCache();
     }
   });
 });

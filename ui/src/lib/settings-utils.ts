@@ -339,7 +339,7 @@ export function diagnosticsPath(cwd: string | undefined): string {
   let base = cwd;
   while (base.endsWith("/") || base.endsWith("\\")) base = base.slice(0, -1);
   const separator = base.includes("\\") && !base.includes("/") ? "\\" : "/";
-  return `${base}${separator}.liquid`;
+  return `${base}${separator}.flecten`;
 }
 
 export function linesToArray(value: string): string[] {

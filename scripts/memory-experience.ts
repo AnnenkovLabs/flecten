@@ -123,7 +123,7 @@ for (let repetition = start; repetition < start + runs; repetition += 1) {
                 { action: "write", policy: "auto" },
               ],
             }),
-            logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+            logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
             secrets: () => secrets,
           });
           session.subscribe((event) => events.push(event));

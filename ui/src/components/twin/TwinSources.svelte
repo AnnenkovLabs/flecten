@@ -30,7 +30,7 @@
         <div class="twin-source">
           <label class="twin-source-choice">
             <span class={`twin-source-mark source-${source.id}`} aria-hidden="true"><img src={`./twin/logos/${source.id}.${source.id === "opencode" ? "png" : "svg"}`} alt="" width="24" height="24" /></span>
-            <span class="twin-source-name"><strong>{source.name}</strong><span title={source.path}>{source.path}</span></span>
+            <span class="twin-source-name"><strong>{source.name}</strong><span data-tooltip={source.path}>{source.path}</span></span>
             <span class="twin-source-count">{source.status === "not-scanned" ? t("Scan first") : source.status === "missing" ? t("Not found") : source.status === "unsupported" ? t("Export needed") : source.sessions.toLocaleString(i18n.locale)}</span>
             <input type="checkbox" checked={twin.selected.includes(source.id)} disabled={twin.busy || twin.training || !source.available || source.sessions === 0} onchange={(event) => twin.toggleSource(source.id, event.currentTarget.checked)} aria-label={t("Learn from {0}", [source.name])} />
           </label>

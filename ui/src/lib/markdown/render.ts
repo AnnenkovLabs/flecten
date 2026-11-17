@@ -40,13 +40,13 @@ const parser = new Marked({
       const label = this.parser.parseInline(tokens);
       const url = isSafeUrl(href ?? "", "link");
       if (!url) return label;
-      const titleAttribute = title ? ` title="${escapeHtml(title)}"` : "";
+      const titleAttribute = title ? ` data-tooltip="${escapeHtml(title)}"` : "";
       return `<a href="${escapeHtml(url)}"${titleAttribute} rel="noreferrer noopener" target="_blank">${label}</a>`;
     },
     image({ href, title, text }) {
       const url = isSafeUrl(href ?? "", "image");
       if (!url) return escapeHtml(text);
-      const titleAttribute = title ? ` title="${escapeHtml(title)}"` : "";
+      const titleAttribute = title ? ` data-tooltip="${escapeHtml(title)}"` : "";
       return `<img src="${escapeHtml(url)}" alt="${escapeHtml(text)}"${titleAttribute}>`;
     },
     code({ text, lang }) {

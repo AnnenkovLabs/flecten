@@ -21,7 +21,7 @@ export class SessionLogs {
   async persist(event: Event): Promise<void> {
     const log = await this.#open(event.sessionId ?? "system");
     const safe = JSON.parse(redactSecrets(JSON.stringify(event), this.#secrets())) as Event;
-    await log.append(safe);
+    await log.append(safe, { fsync: true });
     await recordSessionEvent(this.#cwd, safe);
   }
 
@@ -30,7 +30,7 @@ export class SessionLogs {
     const pending = this.#logs.get(sessionId);
     if (!pending) return;
     this.#logs.delete(sessionId);
-    await pending.then((log) => log.close()).catch(() => undefined);
+    await (await pending).close();
   }
 
   async closeAll(): Promise<void> {

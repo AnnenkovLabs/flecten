@@ -17,6 +17,12 @@ export interface BudgetView {
   spent: { tokens: number; costUsd?: number; wallClockMs: number };
   remaining: BudgetAmounts;
   exceeded?: BudgetKind;
+  accounting?: {
+    status: "reported" | "unavailable";
+    missingRequests: number;
+    unpricedRequests: number;
+    knownCostUsd?: number;
+  };
 }
 
 export interface RunResult {

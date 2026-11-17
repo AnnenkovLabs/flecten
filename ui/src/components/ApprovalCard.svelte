@@ -79,7 +79,7 @@
     {#if approval.arguments?.length}<details><summary>{t("Arguments")}</summary>{#each approval.arguments as argument}<strong>{argument.name}</strong><code class="approval-target">{argument.value}</code>{/each}</details>{/if}
     {#if approval.paths?.length}<details><summary>{t("Affected paths")}</summary>{#each approval.paths as path}<div><code>{path}</code></div>{/each}</details>{/if}
     {#each approval.risks ?? [] as risk}{#if risk.id !== "project-trust"}<p>{risk.label}: {risk.detail}</p>{/if}{/each}
-    {#if pending}<p title={t("Without a response, the call will be denied")}>{leftLabel}</p>{/if}
+    {#if pending}<p data-tooltip={t("Without a response, the call will be denied")}>{leftLabel}</p>{/if}
   </details>
   <div role="status" aria-live="polite" class="approval-reason">
     {#if item.resolving}{t("Applying decision…")}{:else if pending && disabled}{t("Expired: waiting for confirmation")}{/if}

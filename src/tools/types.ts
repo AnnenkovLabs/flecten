@@ -59,6 +59,9 @@ export interface OsSandboxContext {
 }
 
 export interface ToolContext {
+  /** Runtime-only credential references for the provider that produced this call. */
+  providerProtection?: import("../security/provider-protection").ProviderProtection | undefined;
+  taskBudget?: import("../core/session/budget").RunBudget;
   inspectImage?: import("../core/vision").InspectImage | undefined;
   /** Set by the guarded surface executor, never read from model tool arguments. */
   invocationOrigin?: "module-surface";
@@ -98,6 +101,7 @@ export interface ToolContext {
   permissionIntent?: () => string | undefined;
   terminals?: TerminalManager;
   env?: Record<string, string>;
+  scratchDir?: string;
   secrets?: readonly string[];
 }
 

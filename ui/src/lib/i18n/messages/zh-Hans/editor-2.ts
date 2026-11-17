@@ -1,5 +1,7 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Only part of this folder is shown. Open a project folder to see its files.":
+    "仅显示此文件夹的部分内容。请打开项目文件夹以查看其中的文件。",
   "Reopen closed file": "重新打开已关闭的文件",
   "Replace in file": "在文件中替换",
   "Find in project": "在项目中查找",

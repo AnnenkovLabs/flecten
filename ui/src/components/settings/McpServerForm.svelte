@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { t } from "../../lib/i18n.svelte";
   import type { McpServerSettings } from "../../lib/types";
   import { linesToArray } from "../../lib/settings-utils";
@@ -9,7 +10,7 @@
 </script>
 
 <div class="st-grid">
-  <label class="st-field"><span class="st-label">{t("Connection")}</span><select class="st-select" value={"url" in server ? "http" : "stdio"} onchange={(event) => ontransport(event.currentTarget.value === "http")}><option value="stdio">{t("Command (stdio)")}</option><option value="http">Streamable HTTP</option></select></label>
+  <label class="st-field"><span class="st-label">{t("Connection")}</span><Select class="st-select" value={"url" in server ? "http" : "stdio"} onchange={(value) => ontransport(value === "http")} options={[{ value: "stdio", label: t("Command (stdio)") }, { value: "http", label: "Streamable HTTP" }]} /></label>
   <label class="st-field"><span class="st-label">{t("Timeout, ms")}</span><input class="st-input" type="number" min="1000" max="300000" bind:value={server.timeoutMs} />{#if numberIssue(server.timeoutMs, 1000, 300_000)}<span class="st-error" role="alert">{numberIssue(server.timeoutMs, 1000, 300_000)}</span>{/if}</label>
   {#if "url" in server}
     <label class="st-field span-2"><span class="st-label">{t("MCP URL")}</span><input class="st-input" type="url" bind:value={server.url} placeholder="https://example.com/mcp" spellcheck="false" />{#if !server.url.trim()}<span class="st-error" role="alert">{t("Enter the server URL.")}</span>{/if}</label>
@@ -21,7 +22,7 @@
     {#if Object.keys(server.headers).length > 0}<p class="st-hint span-2">{t("Saved headers: {0}. Values are hidden.", [Object.keys(server.headers).length])}</p>{/if}
   {:else}
     <label class="st-field"><span class="st-label">{t("Command")}</span><input class="st-input" bind:value={server.command} spellcheck="false" />{#if !server.command.trim()}<span class="st-error" role="alert">{t("Enter the startup command.")}</span>{/if}</label>
-    <label class="st-field"><span class="st-label">{t("Protocol")}</span><select class="st-select" bind:value={server.protocol}><option value="auto">{t("Auto")}</option><option value="legacy">{t("Legacy")}</option><option value="2026-07-28">2026-07-28</option></select></label>
+    <label class="st-field"><span class="st-label">{t("Protocol")}</span><Select class="st-select" bind:value={server.protocol} options={[{ value: "auto", label: t("Auto") }, { value: "legacy", label: t("Legacy") }, { value: "2026-07-28", label: "2026-07-28" }]} /></label>
     <label class="st-field span-2"><span class="st-label">{t("Arguments, one per line")}</span><textarea class="st-textarea" rows="3" value={server.args.join("\n")} oninput={(event) => { if ("command" in server) server.args = linesToArray(event.currentTarget.value); }} spellcheck="false"></textarea></label>
     <label class="st-field span-2"><span class="st-label">{t("Working directory")}</span><input class="st-input" bind:value={server.cwd} spellcheck="false" /></label>
     {#if Object.keys(server.env).length > 0}<p class="st-hint span-2">{t("Environment variables: {0}. Values are hidden.", [Object.keys(server.env).length])}</p>{/if}

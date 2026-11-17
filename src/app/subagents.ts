@@ -16,8 +16,8 @@ export function appSubagents(
     runChild,
     directories: [
       ...extra,
-      join(homedir(), ".liquid", "agents"),
-      ...(trusted ? [join(cwd, ".liquid", "agents")] : []),
+      join(homedir(), ".flecten", "agents"),
+      ...(trusted ? [join(cwd, ".flecten", "agents")] : []),
     ],
   });
 }

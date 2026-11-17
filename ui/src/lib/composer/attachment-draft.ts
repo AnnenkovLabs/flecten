@@ -1,5 +1,5 @@
 import { addAttachments, type PickedFile } from "./attachments";
-import { composerDrafts, writeComposerAttachments } from "./drafts.svelte";
+import { composerDrafts, writeComposerAttachments, writeComposerDraft } from "./drafts.svelte";
 import { appendImageMentions, imageMentions } from "./images";
 import type { PromptSnapshot } from "./prompt-document";
 import type { Attachment, MentionItem } from "./types";
@@ -19,8 +19,7 @@ export function attachDraftFiles(
   if (current) current.insertImages(images);
   else if (images.length) {
     const updated = appendImageMentions(snapshot, images);
-    composerDrafts.documents[task] = updated;
-    composerDrafts.values[task] = updated.text;
+    writeComposerDraft(updated.text, updated.mentions, task);
   }
   const next = addAttachments(
     existing,

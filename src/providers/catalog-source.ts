@@ -44,7 +44,7 @@ async function writeCache(path: string, value: unknown): Promise<void> {
 }
 
 export function cachePath(cwd: string, name: string): string {
-  return join(cwd, ".liquid", "cache", name);
+  return join(cwd, ".flecten", "cache", name);
 }
 
 export interface CatalogLoadOptions {

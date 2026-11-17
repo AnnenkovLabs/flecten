@@ -26,8 +26,8 @@ async function fixture() {
       await beforeResponse(signal);
       const messages = request.messages[0]?.content ?? "";
       const sourceMessageId = messages.slice(
-        messages.indexOf("source-liquid-"),
-        messages.indexOf("source-liquid-") + 38,
+        messages.indexOf("source-flecten-"),
+        messages.indexOf("source-flecten-") + 39,
       );
       const candidate = {
         kind: "preference",
@@ -77,7 +77,7 @@ async function fixture() {
       return requests;
     },
     async source(name = "source", prompt = "Keep it inline.") {
-      const directory = join(cwd, ".liquid/sessions", name);
+      const directory = join(cwd, ".flecten/sessions", name);
       await mkdir(directory, { recursive: true });
       await Bun.write(
         join(directory, "events.jsonl"),
@@ -102,10 +102,10 @@ test("A missing model never leaves an import locked and the next attempt can lea
   const f = await fixture();
   await f.source();
   f.setTargetFailure(true);
-  await expect(f.twin.train({ sourceIds: ["liquid"] })).rejects.toThrow("Choose a provider");
+  await expect(f.twin.train({ sourceIds: ["flecten"] })).rejects.toThrow("Choose a provider");
   expect((await f.twin.get()).training.state).not.toBe("learning");
   f.setTargetFailure(false);
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   expect((await f.settled()).training.state).toBe("ready");
   expect(f.requests).toBe(1);
 });
@@ -113,14 +113,14 @@ test("A missing model never leaves an import locked and the next attempt can lea
 test("Repeated imports advance past 100 processed files without rerequesting their messages", async () => {
   const f = await fixture();
   for (let index = 0; index < 101; index++) await f.source(`source-${index}`, `Decision ${index}`);
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   const first = await f.settled();
   expect(first.training.messages).toBe(100);
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   const second = await f.settled();
   expect(second.training.messages).toBe(1);
   expect(f.requests).toBe(2);
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   const third = await f.settled();
   expect(third.training.messages).toBe(0);
   expect(f.requests).toBe(2);
@@ -130,14 +130,14 @@ test("Duplicate proposed traits are saved once and remain deduplicated after res
   const f = await fixture();
   await f.source();
   f.setDuplicate();
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   const trained = await f.settled();
   expect(trained.training.state).toBe("ready");
   expect(trained.entries).toHaveLength(1);
   const reopened = await projectTwin(f.options);
   try {
     expect((await reopened.get()).entries).toHaveLength(1);
-    await reopened.train({ sourceIds: ["liquid"] });
+    await reopened.train({ sourceIds: ["flecten"] });
     await reopened.cancel();
     expect(f.requests).toBe(1);
   } finally {
@@ -155,9 +155,9 @@ test("A failed final save never publishes traits or consumes source messages", a
     entered.resolve();
     await release.promise;
   });
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   await entered.promise;
-  const path = join(f.cwd, ".liquid/twin.json");
+  const path = join(f.cwd, ".flecten/twin.json");
   await rm(path);
   await mkdir(path);
   release.resolve();
@@ -166,7 +166,7 @@ test("A failed final save never publishes traits or consumes source messages", a
   expect(failed.entries).toHaveLength(0);
   expect(failed.training.usage).toMatchObject({ input: 20, output: 10, costUsd: 0.01 });
   await rm(path, { recursive: true });
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   const retried = await f.settled();
   expect(retried.training.state).toBe("ready");
   expect(retried.training.messages).toBe(1);
@@ -204,11 +204,14 @@ test("Cancel aborts the real learning request and keeps it retryable without rep
       else signal.addEventListener("abort", () => resolve(), { once: true });
     });
   });
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   const signal = await entered.promise;
-  await expect(f.twin.train({ sourceIds: ["liquid"] })).rejects.toThrow("already learning");
+  await expect(f.twin.train({ sourceIds: ["flecten"] })).rejects.toThrow("already learning");
   await expect(f.twin.scan()).rejects.toThrow("finish or cancel");
-  await f.twin.configure({ enabled: false });
+  const disabled = await f.twin.configure({ enabled: false });
+  expect(signal.aborted).toBe(true);
+  expect(disabled.training.state).toBe("cancelled");
+  expect(disabled.enabled).toBe(false);
   const cancelled = await f.twin.cancel();
   expect(signal.aborted).toBe(true);
   expect(cancelled.training).toMatchObject({
@@ -219,7 +222,7 @@ test("Cancel aborts the real learning request and keeps it retryable without rep
   expect(cancelled.enabled).toBe(false);
   expect(cancelled.training.samples).toBeUndefined();
   f.beforeResponse(async () => {});
-  await f.twin.train({ sourceIds: ["liquid"] });
+  await f.twin.train({ sourceIds: ["flecten"] });
   const retried = await f.settled();
   expect(retried.training).toMatchObject({ state: "ready", messages: 1 });
   expect(retried.entries).toHaveLength(2);

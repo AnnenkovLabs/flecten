@@ -30,6 +30,7 @@ export function permissionRequestKey(request: PermissionRequest): string {
       JSON.stringify(
         canonical({
           action: request.action,
+          humanOnly: request.humanOnly === true,
           tool: request.tool,
           actor: request.actor ?? "",
           cwd: permissionPath(request.cwd, request.cwd),
@@ -46,6 +47,12 @@ export function permissionRequestKey(request: PermissionRequest): string {
         }),
       ),
     )
+    .digest("hex");
+}
+
+export function permissionPolicyKey(value: unknown): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonical(value)))
     .digest("hex");
 }
 

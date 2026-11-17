@@ -8,13 +8,13 @@
   const dels = $derived(files.reduce((sum, file) => sum + (file.del ?? 0), 0));
 </script>
 <aside class="agent-changes" aria-label={t("Agent changes")}>
-  <header><h2>{t("Changes")} <span>{files.length}</span></h2><button type="button" title={t("Hide changes")} aria-label={t("Hide changes")} onclick={onClose}><Icon name="x" size={15} /></button></header>
+  <header><h2>{t("Changes")} <span>{files.length}</span></h2><button type="button" data-tooltip={t("Hide changes")} aria-label={t("Hide changes")} onclick={onClose}><Icon name="x" size={15} /></button></header>
   {#if files.length}
     <p class="totals"><span class="add">+{adds}</span><span class="del">−{dels}</span><span>{t("in this task")}</span></p>
     <div class="files">
       {#each files as file (file.path)}
         {@const parts = splitPath(file.path)}
-        <button class="change" class:active={selected === file.path} title={file.path} type="button" aria-pressed={selected === file.path} onclick={() => onSelect(file.path)}>
+        <button class="change" class:active={selected === file.path} data-tooltip={file.path} type="button" aria-pressed={selected === file.path} onclick={() => onSelect(file.path)}>
           <Icon name="file" size={15} /><span class="path"><strong>{parts.name}</strong>{#if parts.dir}<small>{parts.dir.slice(0, -1)}</small>{/if}</span>
           <span class="stat"><span class="add">+{file.add}</span>{#if file.del}<span class="del">−{file.del}</span>{/if}</span><span class="state">{file.state}</span>
         </button>

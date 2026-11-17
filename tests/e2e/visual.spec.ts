@@ -69,7 +69,7 @@ async function sendPrompt(page: Page, prompt = PROMPT): Promise<void> {
 async function expectSummary(page: Page): Promise<void> {
   const frame = page.locator("iframe.summary");
   await expect(frame).toBeVisible();
-  await expect(frame).toHaveAttribute("src", /^liquid-summary:\/\//);
+  await expect(frame).toHaveAttribute("src", /^flecten-summary:\/\//);
   await expect(
     page.frameLocator("iframe.summary").getByRole("heading", { name: "README прочитан" }),
   ).toBeVisible();
@@ -98,7 +98,7 @@ function dynamicMasks(root: Page | Locator): Locator[] {
 
 test("main thread with a tool call and HTML summary", async () => {
   skipIfUnavailable();
-  const harness = await launchApp({ directory: "liquid-e2e-visual-thread", user: "e2e" });
+  const harness = await launchApp({ directory: "flecten-e2e-visual-thread", user: "e2e" });
 
   try {
     const { page } = harness;
@@ -147,7 +147,7 @@ test("main thread with a tool call and HTML summary", async () => {
 
 test("settings surface", async () => {
   skipIfUnavailable();
-  const harness = await launchApp({ directory: "liquid-e2e-visual-settings", user: "e2e" });
+  const harness = await launchApp({ directory: "flecten-e2e-visual-settings", user: "e2e" });
 
   try {
     const { page } = harness;
@@ -175,7 +175,7 @@ test("settings surface", async () => {
 
 test("new session screen and empty state", async () => {
   skipIfUnavailable();
-  const harness = await launchApp({ directory: "liquid-e2e-visual-new-session", user: "e2e" });
+  const harness = await launchApp({ directory: "flecten-e2e-visual-new-session", user: "e2e" });
 
   try {
     const { page } = harness;
@@ -184,7 +184,7 @@ test("new session screen and empty state", async () => {
       "Здесь появятся задачи этого проекта.",
     );
     await expect(page.locator(".project-row.is-current")).toContainText(
-      "liquid-e2e-visual-new-session",
+      "flecten-e2e-visual-new-session",
     );
 
     for (const [width, height] of SIZES) {
@@ -206,7 +206,7 @@ test("reduced motion keeps the live run static", async () => {
   const harness = await launchApp({
     delayMs: 3000,
     holdSummary: true,
-    directory: "liquid-e2e-visual-motion",
+    directory: "flecten-e2e-visual-motion",
     user: "e2e",
   });
 

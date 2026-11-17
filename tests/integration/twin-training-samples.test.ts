@@ -8,7 +8,7 @@ import type { ModelProvider } from "../../src/providers/types";
 
 test("Twin previews bounded real source quotes only during training and never persists them", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "twin-training-samples-"));
-  const source = join(cwd, ".liquid/sessions/source/events.jsonl");
+  const source = join(cwd, ".flecten/sessions/source/events.jsonl");
   const secret = "private-training-credential-do-not-display";
   const quotes = Array.from({ length: 18 }, (_, index) =>
     index === 0 ? "Keep this exact reaction. ".repeat(180) : `Real user decision ${index}.`,
@@ -41,9 +41,9 @@ test("Twin previews bounded real source quotes only during training and never pe
     target: () => ({ provider, providerId: "test", model: "test", price: () => 0 }),
   });
   try {
-    await mkdir(join(cwd, ".liquid/sessions/source"), { recursive: true });
+    await mkdir(join(cwd, ".flecten/sessions/source"), { recursive: true });
     await Bun.write(source, original);
-    await twin.train({ sourceIds: ["liquid"] });
+    await twin.train({ sourceIds: ["flecten"] });
     await entered.promise;
     const learning = await twin.get();
     const samples = learning.training.samples;
@@ -54,11 +54,11 @@ test("Twin previews bounded real source quotes only during training and never pe
     expect(samples.map((sample) => sample.quote)).toEqual(
       quotes.slice(0, 16).map((quote) => quote.slice(0, 4000)),
     );
-    expect(samples.every((sample) => sample.sourceId === "liquid")).toBe(true);
+    expect(samples.every((sample) => sample.sourceId === "flecten")).toBe(true);
     expect(samples.every((sample) => sample.sessionId.length === 32)).toBe(true);
     expect(JSON.stringify(samples)).not.toContain(secret);
     expect(await Bun.file(source).text()).toBe(original);
-    const stored = await Bun.file(join(cwd, ".liquid/twin.json")).json();
+    const stored = await Bun.file(join(cwd, ".flecten/twin.json")).json();
     expect(stored.training.samples).toBeUndefined();
     expect(
       TwinSnapshotSchema.safeParse({
@@ -86,7 +86,7 @@ test("Twin previews bounded real source quotes only during training and never pe
     entered = Promise.withResolvers<void>();
     release = Promise.withResolvers<void>();
     await Bun.write(source, `${original}\n${event("A fresh decision for the next import.")}`);
-    const restarted = await twin.train({ sourceIds: ["liquid"] });
+    const restarted = await twin.train({ sourceIds: ["flecten"] });
     expect(restarted.training.samples).toBeUndefined();
     await entered.promise;
     expect((await twin.get()).training.samples?.map((sample) => sample.quote)).toEqual([

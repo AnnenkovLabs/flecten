@@ -28,6 +28,7 @@ export interface ModelMetadataResult {
 }
 
 export type ProviderCommand =
+  | { type: "provider.inspect"; requestId: string; baseUrl: string }
   | { type: "catalog.list"; requestId: string }
   | { type: "catalog.provider"; requestId: string; id: string }
   | { type: "catalog.status"; requestId: string }

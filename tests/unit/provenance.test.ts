@@ -64,7 +64,7 @@ describe("untrusted data", () => {
   });
 
   test("the model reads a file with an injection attempt as wrapped data", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-provenance-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-provenance-"));
     try {
       await writeFile(
         join(cwd, "notes.md"),
@@ -91,7 +91,7 @@ describe("untrusted data", () => {
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
       });
       await session.send({ type: "run", prompt: "read notes" });
 

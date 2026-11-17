@@ -21,7 +21,7 @@ function rpc(id: unknown, result: unknown) {
 }
 
 async function setup() {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-extension-runtime-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-extension-runtime-"));
   dirs.push(cwd);
   const server = Bun.serve({
     port: 0,
@@ -60,7 +60,7 @@ async function setup() {
   const config = defaultConfig();
   config.conversation = { enabled: false };
   config.catalog.autoRefresh = false;
-  config.skills = { sources: ["project-liquid"] };
+  config.skills = { sources: ["project-flecten"] };
   config.mcp.servers = {
     docs: {
       ...McpHttpServerConfigSchema.parse({ url: server.url.href, timeoutMs: 1000 }),
@@ -116,7 +116,7 @@ test("skills added on disk appear in the command menu and model prefix without r
   try {
     await service.acceptTrust();
     const before = service.info().system.hash;
-    const path = join(cwd, ".liquid/skills/live");
+    const path = join(cwd, ".flecten/skills/live");
     await mkdir(path, { recursive: true });
     await Bun.write(
       join(path, "SKILL.md"),
@@ -257,7 +257,7 @@ test("HTTP server elicitation reaches UI commands and validates the answer befor
     },
   });
   servers.push(server);
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-elicitation-path-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-elicitation-path-"));
   dirs.push(cwd);
   const { connectMcpServers } = await import("../../src/mcp/session");
   const { McpElicitationBroker } = await import("../../src/mcp/elicitation");
@@ -309,9 +309,9 @@ test("HTTP server elicitation reaches UI commands and validates the answer befor
 });
 
 test("project subagent definitions require trust and appear in real model tool metadata", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-subagents-product-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-subagents-product-"));
   dirs.push(cwd);
-  const agents = join(cwd, ".liquid/agents");
+  const agents = join(cwd, ".flecten/agents");
   await mkdir(agents, { recursive: true });
   await Bun.write(
     join(agents, "auditor.json"),

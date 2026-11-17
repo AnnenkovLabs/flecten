@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { selectOptions } from "./custom-select";
 import { type AppHarness, environmentProblem, launchApp } from "./fixtures";
 
 async function snapshot(h: AppHarness, name: string): Promise<void> {
@@ -59,9 +60,11 @@ test("MCP and hooks settings expose typed controls at both viewport sizes", asyn
     await expect(page.locator(".server-card")).toBeVisible();
     await snapshot(h, "mcp-settings");
     await page.getByRole("button", { name: "Автоматические действия", exact: true }).click();
-    await expect(page.getByLabel("Когда")).toHaveValue("preToolUse");
-    await expect(page.getByLabel("Когда").locator('option[value="permission"]')).toHaveCount(1);
-    await expect(page.getByLabel("Когда").locator('option[value="toolBatch"]')).toHaveCount(1);
+    await expect(page.getByLabel("Когда")).toHaveAttribute("value", "preToolUse");
+    const events = await selectOptions(page.getByLabel("Когда"));
+    await expect(events.and(page.locator('[data-value="permission"]'))).toHaveCount(1);
+    await expect(events.and(page.locator('[data-value="toolBatch"]'))).toHaveCount(1);
+    await page.keyboard.press("Escape");
     await snapshot(h, "hook-settings");
     expect(h.consoleErrors).toEqual([]);
   } finally {

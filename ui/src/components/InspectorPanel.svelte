@@ -1,7 +1,7 @@
 <script module lang="ts">
   export const PANEL_MIN_WIDTH = 320;
   export const PANEL_MAX_WIDTH = 760;
-  export const PANEL_WIDTH_KEY = "liquid.inspector-width";
+  export const PANEL_WIDTH_KEY = "flecten.inspector-width";
 
   export function panelMaxWidth(viewport: number): number {
     const available = Math.floor(viewport) - 270 - 360;
@@ -23,7 +23,10 @@
   import { t } from "../lib/i18n.svelte";
   import { onDestroy, onMount, tick } from "svelte";
   import { enterPane } from "../lib/motion";
-  import type { AgentCheckpoint, AgentInfo, DiffFile, TabId, TerminalLine, WorkerItem } from "../lib/types";
+  import { readPreference } from "../lib/preference-storage";
+  import type { WorkerView } from "../lib/run/worker.svelte";
+  import type { SummaryDestination } from "../lib/markdown/summary-navigation";
+  import type { AgentCheckpoint, AgentInfo, DiffFile, TabId, TerminalLine } from "../lib/types";
   import ChangesPane from "./ChangesPane.svelte";
   import HistoryPane from "./HistoryPane.svelte";
   import TerminalPane from "./TerminalPane.svelte";
@@ -35,7 +38,10 @@
     split: boolean;
     files: DiffFile[];
     terminal: TerminalLine[];
-    workers?: WorkerItem[];
+    taskId: string;
+    worker: WorkerView;
+    onOpenChanges: () => void;
+    onNavigateSummary: (destination: SummaryDestination) => void;
     checkpoints: AgentCheckpoint[];
     shellCheckpoints?: AgentInfo["shellCheckpoints"];
     onRestoreCheckpoint: (id: string, target: "before" | "after") => void;
@@ -48,7 +54,10 @@
     split,
     files,
     terminal,
-    workers = [],
+    taskId,
+    worker,
+    onOpenChanges,
+    onNavigateSummary,
     checkpoints,
     shellCheckpoints,
     onRestoreCheckpoint,
@@ -161,7 +170,7 @@
   onMount(() => {
     viewportWidth = window.innerWidth;
     if (typeof localStorage !== "undefined") {
-      const stored = localStorage.getItem(PANEL_WIDTH_KEY);
+      const stored = readPreference(PANEL_WIDTH_KEY, "liquid.inspector-width");
       if (stored !== null) {
         const value = Number(stored);
         if (Number.isFinite(value)) paintWidth(value);
@@ -214,7 +223,7 @@
     aria-valuenow={currentWidth}
     aria-valuetext={t("{0} pixels", [currentWidth])}
     tabindex={hidden || !split ? -1 : 0}
-    title={t("Drag to resize. Double-click to reset.")}
+    data-tooltip={t("Drag to resize. Double-click to reset.")}
     onpointerdown={onResizePointerDown}
     onkeydown={onResizeKeydown}
     ondblclick={resetWidth}
@@ -259,15 +268,14 @@
       <TerminalPane lines={terminal} />
     </div>
     <div
-      class="panel-pane"
+      class="panel-pane worker-pane"
       id="pane-worker"
       role="tabpanel"
       aria-labelledby="tab-worker"
       hidden={activeTab !== "worker"}
       bind:this={workerPane}
-      onscroll={(event) => onPaneScroll("worker", event)}
     >
-      <WorkerPane items={workers} />
+      <WorkerPane {taskId} {worker} {onOpenChanges} {onNavigateSummary} />
     </div>
   </div>
 </aside>
@@ -345,5 +353,7 @@
     flex-direction: column;
     overflow: hidden;
   }
+
+  .worker-pane { display: flex; flex-direction: column; overflow: hidden; padding-top: 0; }
 
 </style>

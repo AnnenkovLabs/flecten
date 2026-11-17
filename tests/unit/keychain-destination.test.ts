@@ -6,7 +6,7 @@ import { join } from "node:path";
 test.skipIf(process.platform !== "linux")(
   "config loading never reuses a keychain credential for another project or destination",
   async () => {
-    const directory = await mkdtemp(join(tmpdir(), "liquid-keychain-scope-"));
+    const directory = await mkdtemp(join(tmpdir(), "flecten-keychain-scope-"));
     try {
       const vault = join(directory, "vault.json");
       const program = join(directory, "secret-tool");

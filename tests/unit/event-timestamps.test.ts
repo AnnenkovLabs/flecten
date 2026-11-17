@@ -48,7 +48,7 @@ describe("event timing metadata", () => {
   });
 
   test("both durable read paths retain envelope times without inventing legacy times", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-event-times-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-event-times-"));
     const storage = new SessionStorage(
       cwd,
       () => [],

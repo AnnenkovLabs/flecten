@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { t } from "../../lib/i18n.svelte";
   import { settings } from "../../lib/settings.svelte";
   import { localVoiceDefaults } from "../../lib/voice-settings";
@@ -27,20 +28,16 @@
     <h3 class="st-group-title">{t("Voice input")}</h3>
     <div class="st-card">
       <SettingsRow title={t("Speech recognition")} stacked>
-        <select class="st-input" style="width: min(100%, 400px)" aria-label={t("Recognition engine")} value={engine}
-          onchange={(event) => update("engine", event.currentTarget.value)}>
-          <option value="api">{t("Via provider")}</option>
-          <option value="faster-whisper">{t("On this computer · Whisper")}</option>
-          <option value="vosk">{t("On this computer · Vosk")}</option>
-        </select>
+        <Select class="st-input" style="width: min(100%, 400px)" aria-label={t("Recognition engine")} value={engine}
+          options={[{ value: "api", label: t("Via provider") }, { value: "faster-whisper", label: t("On this computer · Whisper") }, { value: "vosk", label: t("On this computer · Vosk") }]}
+          onchange={(value) => update("engine", value)} />
       </SettingsRow>
       {#if engine === "api"}
         <SettingsRow title={t("Speech recognition provider")} description={t("Audio is sent to the selected provider.")}>
-          <select class="st-input" aria-label={t("Speech recognition provider")}
-            value={config.voice?.provider ?? ""} onchange={(event) => update("provider", event.currentTarget.value)}>
-            <option value="">{t("Current provider")}</option>
-            {#each providers as [id, entry]}<option value={id}>{entry.name ?? id}</option>{/each}
-          </select>
+          <Select class="st-input" aria-label={t("Speech recognition provider")}
+            value={config.voice?.provider ?? ""}
+            options={[{ value: "", label: t("Current provider") }, ...providers.map(([id, entry]) => ({ value: id, label: entry.name ?? id }))]}
+            onchange={(value) => update("provider", value)} />
         </SettingsRow>
         <SettingsRow title={t("Speech recognition model")}>
           <input class="st-input" aria-label={t("Speech recognition model")} value={config.voice?.model ?? "whisper-1"}
@@ -51,11 +48,9 @@
       {/if}
       {#if engine !== "vosk"}
         <SettingsRow title={t("Speech language")}>
-          <select class="st-input" aria-label={t("Speech language")} value={config.voice?.language ?? "auto"}
-            onchange={(event) => update("language", event.currentTarget.value)}>
-            <option value="auto">{t("Auto")}</option><option value="ru">{t("Russian")}</option>
-            <option value="uk">{t("Ukrainian")}</option><option value="en">English</option>
-          </select>
+          <Select class="st-input" aria-label={t("Speech language")} value={config.voice?.language ?? "auto"}
+            options={[{ value: "auto", label: t("Auto") }, { value: "ru", label: t("Russian") }, { value: "uk", label: t("Ukrainian") }, { value: "en", label: "English" }]}
+            onchange={(value) => update("language", value)} />
         </SettingsRow>
       {/if}
     </div>

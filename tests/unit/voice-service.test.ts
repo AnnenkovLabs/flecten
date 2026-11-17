@@ -13,7 +13,7 @@ afterEach(async () => {
 async function appFor(handler: (request: Request) => Response | Promise<Response>) {
   const server = Bun.serve({ port: 0, fetch: handler });
   cleanups.push(async () => server.stop(true));
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-voice-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-voice-"));
   cleanups.push(() => rm(cwd, { recursive: true, force: true }));
   await Bun.write(
     join(cwd, "flecten.config.json"),
@@ -135,7 +135,7 @@ test("local engines validate setup, keep audio off the provider and cancel the w
   if (process.platform === "win32") return; // Executable fixture uses a POSIX shebang.
   const { chmod, mkdir, readFile } = await import("node:fs/promises");
   const { resolve } = await import("node:path");
-  const home = await mkdtemp(join(tmpdir(), "liquid-local-voice-"));
+  const home = await mkdtemp(join(tmpdir(), "flecten-local-voice-"));
   const previous = process.env.FLECTEN_VOICE_HOME;
   process.env.FLECTEN_VOICE_HOME = home;
   cleanups.push(async () => {

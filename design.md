@@ -23,6 +23,7 @@ These rules supersede older animation recipes below where they conflict.
 - Button press is native CSS active feedback at scale0.96, no global pointer handler, no forced layout. Routine color feedback is150ms. The existing liquid selection and live-state treatment remain isolated from text.
 - Composer icons have matching visible geometry. Attachment and microphone are secondary controls; send stays the primary action. Menus should fit their content and the available viewport.
 - Desktop navigation and shared controls use a compact 32px height; small actions use 28px. Keep labels readable, align section icons beside their labels, and use 44px controls with coarse pointers. These density rules supersede the older 40px desktop minimum below.
+- Form controls share the application styling. Select menus use the existing floating layer with keyboard navigation, disabled options and focus restoration. Checkboxes, sliders and progress use custom paint while retaining platform semantics. Tooltips use `data-tooltip`, appear after 500ms on hover and immediately on keyboard focus, and support Escape and selectable text. Native frame titles remain accessible frame names.
 - Routine state updates preserve control positions and readable text. Dictation keeps the editor size and microphone glyph; its status and destination are available to assistive technology and in the microphone tooltip. Queue messages sit above the input as a separate block. Context, send mode and stop controls keep stable slots. Focus changes the ring, never the input shape. Counters and status labels update in place without entrance animations.
 - Composer actions share the send position: idle shows send, an active run shows stop, and a nonempty draft during a run shows one rectangle divided into stop, queue and steer. The first stop waits for the complete model response or running command; its red state remains clickable for immediate cancellation. No separate send-mode selector or empty stop slot. Composer inset is 12px; editor and toolbar use the same inset in hero and dock layouts.
 - Temporary notices expire, including errors after6s. Pointer and keyboard focus pause expiry. A run failure remains available in its transcript card.
@@ -472,7 +473,7 @@ Before shipping, answer:
 
 **Курсив.** Не используйте фальшивый курсив. У Manrope нет истинного italic, а `font-synthesis: none` уже стоит. Для акцента есть вес, размер и прозрачность.
 
-**Строка.** Для чтения держите 60–75ch, для интерфейсного текста 35–50ch. При 16px это примерно 520–620px в зависимости от шрифта. В `liquidharness` центр занимает около 510px на 1180 и 660px на 1480. На 1480 ограничьте сам текст до 65ch, а не растягивайте его на всю колонку.
+**Строка.** Для чтения держите 60–75ch, для интерфейсного текста 35–50ch. При 16px это примерно 520–620px в зависимости от шрифта. В `Flecten` центр занимает около 510px на 1180 и 660px на 1480. На 1480 ограничьте сам текст до 65ch, а не растягивайте его на всю колонку.
 
 **Интерлиньяж.** `line-height` без единиц. Тело 1.5–1.65, заголовки 1.15–1.3, UI 1.25–1.35. Чем длиннее строка, тем больше воздуха: добавляйте около 0.1 к line-height на каждые 10ch выше 65.
 
@@ -561,7 +562,7 @@ Before shipping, answer:
 
 **Одна ось чтения.** Левое выравнивание, один левый край, один правый. Длинный текст не центрировать. Действия держите рядом с объектом, к которому они относятся. Порядок чтения: sidebar, контент, inspector.
 
-**Ширина контента.** 60–75ch. В `liquidharness` центр на 1180 даёт около 510px, на 1480 около 660px. Это рабочий диапазон, но текст внутри всё равно ограничьте 65ch и отдайте остаток воздуху.
+**Ширина контента.** 60–75ch. В `Flecten` центр на 1180 даёт около 510px, на 1480 около 660px. Это рабочий диапазон, но текст внутри всё равно ограничьте 65ch и отдайте остаток воздуху.
 
 **Сетка и intrinsic sizing.** Grid для страницы, flex для компонентов. `minmax(0, 1fr)` обязателен, иначе длинный текст распирает колонку. `subgrid` помогает выровнять строки между карточками. Container queries позволяют компоненту перестраиваться в узком sidebar, а не по ширине окна.
 
@@ -581,7 +582,7 @@ Before shipping, answer:
 
 **Чек-лист.** Один главный регион и один фокус. Не больше двух швов. Текст не шире 75ch. Все панели имеют минимумы. Один владелец скролла на регион. На 1180×640 и при 200% zoom ничего не перекрывается.
 
-## Практические выводы для liquidharness
+## Практические выводы для Flecten
 
 - База 15px и тело треда 16px уже в хорошем диапазоне. Не опускайте UI ниже 13px, мету ниже 11px, а для кириллицы держите мету на 12px.
 - Заголовок 30px с tracking −0.03em уже настроен. Добавьте `text-wrap: balance` для заголовков и `pretty` для абзацев.

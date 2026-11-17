@@ -32,7 +32,7 @@ const dirs: string[] = [];
 const servers: Array<ReturnType<typeof Bun.serve>> = [];
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-mcp-oauth-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-mcp-oauth-"));
   dirs.push(dir);
   return dir;
 }

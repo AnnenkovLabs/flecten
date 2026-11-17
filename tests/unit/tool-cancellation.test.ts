@@ -45,7 +45,7 @@ for (const [name, args] of [
       cwd,
       sessionId: "cancel-session",
       signal: controller.signal,
-      logDir: join(cwd, ".liquid", "logs"),
+      logDir: join(cwd, ".flecten", "logs"),
       reads,
       limits: {
         maxOutputBytes: 50_000,

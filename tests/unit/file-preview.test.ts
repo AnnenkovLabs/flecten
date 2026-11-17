@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { PREVIEW_BYTES, previewFile } from "../../src/app/file-preview";
 
 async function withProject(run: (cwd: string, outside: string) => Promise<void>): Promise<void> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-preview-"));
-  const outside = await mkdtemp(join(tmpdir(), "liquid-outside-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-preview-"));
+  const outside = await mkdtemp(join(tmpdir(), "flecten-outside-"));
   try {
     await run(cwd, outside);
   } finally {
@@ -18,11 +18,11 @@ async function withProject(run: (cwd: string, outside: string) => Promise<void>)
 describe("file preview", () => {
   test("shows a project file and a tool log with secrets masked", async () => {
     await withProject(async (cwd) => {
-      await mkdir(join(cwd, ".liquid/sessions/s1/logs"), { recursive: true });
-      const log = join(cwd, ".liquid/sessions/s1/logs/bash-1.log");
+      await mkdir(join(cwd, ".flecten/sessions/s1/logs"), { recursive: true });
+      const log = join(cwd, ".flecten/sessions/s1/logs/bash-1.log");
       await writeFile(log, "token ghp_abcdefghijklmnopqrstuvwxyz0123456789\nok\n");
       const file = await previewFile(cwd, log);
-      expect(file.path).toBe(".liquid/sessions/s1/logs/bash-1.log");
+      expect(file.path).toBe(".flecten/sessions/s1/logs/bash-1.log");
       expect(file.text).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz0123456789");
       expect(file.text).toContain("ok");
       expect(file.truncated).toBe(false);

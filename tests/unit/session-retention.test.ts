@@ -13,10 +13,10 @@ afterEach(async () => {
 });
 
 test("retention archives only inactive completed tasks and expires old trash", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-retention-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-retention-"));
   dirs.push(cwd);
   for (const id of ["s_old", "s_recent", "s_running", "s_queue", "s_busy"]) {
-    await mkdir(join(cwd, ".liquid", "sessions", id), { recursive: true });
+    await mkdir(join(cwd, ".flecten", "sessions", id), { recursive: true });
     await recordSessionEvent(cwd, {
       type: "session.started",
       sessionId: id,
@@ -47,7 +47,7 @@ test("retention archives only inactive completed tasks and expires old trash", a
     version: 1,
     items: [{ id: "q_1", text: "queued", createdAt: 1, mode: "queue", state: "pending" }],
   });
-  const oldTrash = join(cwd, ".liquid", "trash", "s_expired");
+  const oldTrash = join(cwd, ".flecten", "trash", "s_expired");
   await mkdir(oldTrash, { recursive: true });
   await utimes(oldTrash, new Date("2000-01-01"), new Date("2000-01-01"));
   const closed: string[] = [];
@@ -61,7 +61,7 @@ test("retention archives only inactive completed tasks and expires old trash", a
   );
   expect(closed).toEqual(["s_old"]);
   expect((await listSessions(cwd)).map((session) => session.id)).not.toContain("s_old");
-  await expect(stat(join(cwd, ".liquid", "trash", "s_old"))).resolves.toBeDefined();
+  await expect(stat(join(cwd, ".flecten", "trash", "s_old"))).resolves.toBeDefined();
   await expect(stat(oldTrash)).rejects.toMatchObject({
     code: "ENOENT",
   });

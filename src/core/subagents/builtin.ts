@@ -42,7 +42,7 @@ const reviewResult = z
 export const exploreSubagent: SubagentSpec = {
   id: "explore",
   name: "Explore",
-  description: "Read-only reconnaissance: maps files, traces code and collects external facts.",
+  description: "Read-only investigation of questions, sources and existing work, including code.",
   systemPrompt: explorePrompt.trim(),
   allowedTools: ["read", "grep", "glob", "web_fetch"],
   permissions: [
@@ -58,7 +58,8 @@ export const exploreSubagent: SubagentSpec = {
 export const implementSubagent: SubagentSpec = {
   id: "implement",
   name: "Implement",
-  description: "Changes code, runs checks and reports exactly what changed.",
+  description:
+    "Executes research, writing, analysis, artifact or coding tasks and verifies the outcome.",
   systemPrompt: implementPrompt.trim(),
   allowedTools: [
     "read",
@@ -87,7 +88,8 @@ export const implementSubagent: SubagentSpec = {
 export const reviewSubagent: SubagentSpec = {
   id: "review",
   name: "Review",
-  description: "Read-only review of a diff or change with a pass or fail verdict.",
+  description:
+    "Read-only review of a result, artifact or change against its requirements and evidence.",
   systemPrompt: reviewPrompt.trim(),
   allowedTools: ["read", "grep", "glob"],
   permissions: [

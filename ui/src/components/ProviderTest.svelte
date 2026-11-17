@@ -3,6 +3,7 @@
   import { settings } from "../lib/settings.svelte";
   import type { ProviderTestResult } from "../lib/types";
   import Icon from "./Icon.svelte";
+  import Select from "./controls/Select.svelte";
 
   interface Props {
     providerId: string;
@@ -54,7 +55,9 @@
 </script>
 
 <div class="test-row">
-  {#if models.length > 0}<select class="st-select test-model" aria-label={t("Model to test")} value={model} disabled={settings.testing} onchange={(event) => modelChoice[providerId] = event.currentTarget.value}>{#each models as [id, definition] (id)}<option value={id}>{definition.name || id}</option>{/each}</select>{/if}
+  {#if models.length > 0}<Select class="st-select test-model" aria-label={t("Model to test")} value={model} disabled={settings.testing}
+    options={models.map(([id, definition]) => ({ value: id, label: definition.name || id }))}
+    onchange={(value) => { if (value !== undefined) modelChoice[providerId] = value; }} />{/if}
   <button
     class="st-btn st-btn--quiet"
     type="button"
@@ -75,7 +78,7 @@
       class="test-result"
       class:is-error={testState.status === "error"}
       role="status"
-      title={testState.message ?? ""}
+      data-tooltip={testState.message ?? ""}
     >
       <Icon name={testState.status === "ok" ? "check" : "x"} size={13} />
       <span class="test-copy">
@@ -99,7 +102,7 @@
     gap: 12px;
     flex-wrap: wrap;
   }
-  .test-model { width: min(260px, 100%); }
+  .test-row :global(.test-model) { width: min(260px, 100%); }
 
   .test-result {
     display: inline-flex;

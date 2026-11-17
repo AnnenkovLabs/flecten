@@ -53,7 +53,7 @@ bun run build:ui
 
 ## 提交
 
-一个提交即一处语义变更。消息用祈使句：`add spec parsing`、`fix page boundary`。秘密和 `.liquid/` 绝不提交。
+一个提交即一处语义变更。消息用祈使句：`add spec parsing`、`fix page boundary`。秘密和 `.flecten/` 绝不提交。
 
 ## 行为
 

@@ -8,7 +8,7 @@ import { createHandlers } from "../../src/app/server-handlers";
 import type { AppService } from "../../src/app/service";
 
 async function project(run: (cwd: string) => Promise<void>): Promise<void> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-ide-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-ide-"));
   try {
     await run(cwd);
   } finally {
@@ -68,14 +68,14 @@ describe("IDE file saves", () => {
 
   test("never saves redacted, binary, truncated, invalid UTF-8 or internal files", async () => {
     await project(async (cwd) => {
-      await mkdir(join(cwd, ".liquid"));
+      await mkdir(join(cwd, ".flecten"));
       const cases: Array<[string, string | Uint8Array]> = [
         ["secret.txt", "token ghp_abcdefghijklmnopqrstuvwxyz0123456789\n"],
         ["binary.dat", new Uint8Array([1, 0, 2])],
         ["invalid.txt", new Uint8Array([0xff, 0xfa])],
         ["utf16.txt", new Uint8Array([0xff, 0xfe, 65, 0])],
         ["large.txt", "x".repeat(PREVIEW_BYTES + 1)],
-        [".liquid/log.txt", "internal\n"],
+        [".flecten/log.txt", "internal\n"],
       ];
       for (const [path, text] of cases) {
         await writeFile(join(cwd, path), text);

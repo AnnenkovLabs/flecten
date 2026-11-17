@@ -44,6 +44,7 @@ export class IdeWorkspace {
   tabs = $state<IdeDocument[]>([]);
   activePath = $state<string | null>(null);
   files = $state<string[]>([]);
+  filesLimited = $state(false);
   loadingFiles = $state(false);
   filesError = $state<string | null>(null);
   pending = $state<Pending | null>(null);
@@ -296,6 +297,7 @@ export class IdeWorkspace {
     this.tabs = [];
     this.activePath = null;
     this.files = [];
+    this.filesLimited = false;
     this.loadingFiles = false;
     this.filesError = null;
     this.pending = null;
@@ -309,6 +311,7 @@ export class IdeWorkspace {
       if (generation !== this.#generation) return;
       this.files = z.array(z.string()).parse(response.files);
       this.directories = z.array(z.string()).parse(response.directories ?? []);
+      this.filesLimited = z.boolean().default(false).parse(response.limited);
       await Promise.all(
         this.tabs
           .filter((document) => !document.loading && !document.saving)

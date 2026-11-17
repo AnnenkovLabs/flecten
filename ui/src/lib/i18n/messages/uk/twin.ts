@@ -1,4 +1,11 @@
 export default {
+  "Twin is on": "Twin увімкнений",
+  "Twin is off": "Twin вимкнений",
+  "Twin is saying goodbye…": "Twin прощається…",
+  "Twin is back with you": "Twin знову з вами",
+  "Represents you while you work.": "Представляє вас, поки ви працюєте.",
+  "Your character stays saved. Turn Twin on whenever you want.":
+    "Ваш характер збережено. Twin можна увімкнути будь-коли.",
   "No new supported user messages were found. No model request was made.":
     "Нових підтримуваних повідомлень користувача не знайдено. Запит до моделі не надсилався.",
   "Training finished. No supported traits were found.":

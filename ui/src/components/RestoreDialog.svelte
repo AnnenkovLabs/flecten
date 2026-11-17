@@ -28,7 +28,7 @@
 {#snippet paths(list: string[])}
   <ul class="paths">
     {#each list.slice(0, SHOWN) as path (path)}
-      <li><code title={path}>{path}</code></li>
+      <li><code data-tooltip={path}>{path}</code></li>
     {/each}
     {#if list.length > SHOWN}
       <li class="more">{t("and {0} more", [files(list.length - SHOWN)])}</li>
@@ -41,7 +41,7 @@
   description={t("Restoring does not overwrite other changes or settings without asking. Select what to restore anyway.")}
   {onDismiss}
 >
-  <code class="label" title={prompt.label}>{prompt.label}</code>
+  <code class="label" data-tooltip={prompt.label}>{prompt.label}</code>
 
   {#if prompt.conflicts.length > 0}
     <div>

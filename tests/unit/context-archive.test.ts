@@ -20,7 +20,7 @@ afterEach(async () => {
 });
 
 async function workspace(): Promise<string> {
-  const path = await mkdtemp(join(tmpdir(), "liquid-context-archive-"));
+  const path = await mkdtemp(join(tmpdir(), "flecten-context-archive-"));
   directories.push(path);
   return path;
 }

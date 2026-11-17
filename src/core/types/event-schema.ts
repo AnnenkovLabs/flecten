@@ -6,6 +6,9 @@ import { ModuleReferencesSchema } from "../../../shared/modules";
 import { SessionStateSchema } from "../../../shared/session-state";
 import { SubagentInfoSchema, SubagentResultSchema } from "../../../shared/subagents";
 import { TwinActivitySchema } from "../../../shared/twin-activity";
+import { WorkerAcceptanceSchema } from "../../../shared/worker-assignment";
+import { ProviderResponseSchema } from "../../providers/response";
+import { SessionGrantSchema } from "../../security/session-grant";
 import { AttachmentReferencesSchema, AttachmentSnapshotSchema } from "../attachment-reference";
 import { ContextReferencesSchema } from "../context-reference";
 import { MemoryReferencesSchema } from "../memory/command";
@@ -62,9 +65,19 @@ const resultSchema = z.object({
 });
 
 const sessionEventSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("provider.response"),
+    sessionId: z.string(),
+    response: ProviderResponseSchema,
+  }),
   HistoryEditedSchema,
   HistorySelectedSchema,
   ModelSelectedSchema,
+  z.object({
+    type: z.literal("worker.acceptance"),
+    sessionId: z.string(),
+    acceptance: WorkerAcceptanceSchema,
+  }),
   z.object({
     type: z.literal("twin.activity"),
     sessionId: z.string(),
@@ -76,6 +89,7 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     kind: z.enum([
       "rate_limit",
       "quota_5h",
+      "model_quota",
       "quota_weekly",
       "billing",
       "network",
@@ -104,6 +118,12 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     system: z.unknown().optional(),
   }),
   z.object({ type: z.literal("translation.failed"), sessionId: z.string(), message: z.string() }),
+  z.object({
+    type: z.literal("context.summary.failed"),
+    sessionId: z.string(),
+    stage: z.enum(["provider", "schema", "disabled"]),
+    reason: z.string(),
+  }),
   z.object({ type: z.literal("session.state"), sessionId: z.string(), state: SessionStateSchema }),
   z.object({
     type: z.literal("session.started"),
@@ -207,6 +227,7 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     choice: z.enum(["allow_once", "allow_session", "allow_always", "deny"]),
     by: z.enum(["user", "timeout", "aborted", "policy", "persistence"]),
     feedback: z.string().optional(),
+    sessionGrant: SessionGrantSchema.optional(),
   }),
   z.object({
     type: z.literal("context.compacted"),
@@ -238,11 +259,19 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     model: z.string(),
     reason: z.string(),
   }),
+  z.object({ type: z.literal("task.budget"), sessionId: z.string(), budget: z.unknown() }),
+  z.object({
+    type: z.literal("usage.unavailable"),
+    sessionId: z.string(),
+    purpose: z.enum(["translation", "vision", "compaction"]).optional(),
+    provider: z.string().optional(),
+    model: z.string().optional(),
+  }),
   z.object({
     type: z.literal("usage"),
     sessionId: z.string(),
     usage: usageSchema,
-    purpose: z.enum(["translation", "vision"]).optional(),
+    purpose: z.enum(["translation", "vision", "compaction"]).optional(),
     provider: z.string().optional(),
     model: z.string().optional(),
     durationMs: z.number().optional(),
@@ -264,7 +293,7 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     sessionId: z.string().optional(),
     code: z.string(),
     message: z.string(),
-    limit: z.enum(["rate", "five_hour", "weekly", "billing"]).optional(),
+    limit: z.enum(["rate", "five_hour", "weekly", "billing", "model_quota"]).optional(),
     resetAt: z.number().optional(),
   }),
 ]);

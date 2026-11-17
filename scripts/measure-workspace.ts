@@ -12,7 +12,7 @@ import { runGrep } from "../src/tools/grep/run";
 // Explicit acceptance fixture, outside the default unit suite: creation is not command overhead.
 const files = Number(process.argv[2] ?? 100_000);
 assert(Number.isInteger(files) && files >= 1000 && files <= 300_000, "Use 1000..300000 files");
-const cwd = await mkdtemp(join(tmpdir(), "liquid-workspace-perf-"));
+const cwd = await mkdtemp(join(tmpdir(), "flecten-workspace-perf-"));
 const metrics: Record<string, number> = { files, budgetMs: 5000 };
 async function measure<T>(name: string, action: () => Promise<T>, bounded = true): Promise<T> {
   const start = performance.now();
@@ -37,13 +37,13 @@ try {
         }
       }
       await writeFile(join(cwd, "target.ts"), "WORKSPACE_MEASURE_UNIQUE\n");
-      await writeFile(join(cwd, ".gitignore"), ".liquid/\n");
+      await writeFile(join(cwd, ".gitignore"), ".flecten/\n");
     },
     false,
   );
   const store = new CheckpointStore({ cwd });
   await store.init();
-  const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".liquid", "shadow"));
+  const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".flecten", "shadow"));
   const shell = new ShellCheckpointService(snapshots, store);
   assert.equal(await measure("warmMs", () => shell.ready(), false), undefined);
   const search = await measure("searchMs", () =>

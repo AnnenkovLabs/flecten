@@ -60,16 +60,19 @@
   });
 </script>
 <aside class="explorer" aria-label={t("Project files")}>
-  <header><span>{t("Explorer")}</span><button type="button" aria-label={t("Open project folder")} title={t("Open project folder")} onclick={onChooseProject}><Icon name="folder" size={15} /></button></header>
+  <header><span>{t("Explorer")}</span><button type="button" aria-label={t("Open project folder")} data-tooltip={t("Open project folder")} onclick={onChooseProject}><Icon name="folder" size={15} /></button></header>
   {#if ide.tabs.length}<details class="open-editors" open><summary>{t("Open editors")} <span>{ide.tabs.length}</span></summary>
-    {#each ide.tabs as tab (tab.path)}<div class="open-editor" class:active={ide.activePath === tab.path}><button type="button" title={tab.path} onclick={() => onOpen(tab.path)}><Icon name="file" size={13} /><span>{splitPath(tab.path).name}</span>{#if isDirty(tab)}<small aria-label={t("Unsaved")}>●</small>{/if}</button><button type="button" aria-label={t("Close editor {0}", [tab.path])} onclick={() => ide.close(tab.path)}><Icon name="x" size={12} /></button></div>{/each}
+    {#each ide.tabs as tab (tab.path)}<div class="open-editor" class:active={ide.activePath === tab.path}><button type="button" data-tooltip={tab.path} onclick={() => onOpen(tab.path)}><Icon name="file" size={13} /><span>{splitPath(tab.path).name}</span>{#if isDirty(tab)}<small aria-label={t("Unsaved")}>●</small>{/if}</button><button type="button" aria-label={t("Close editor {0}", [tab.path])} onclick={() => ide.close(tab.path)}><Icon name="x" size={12} /></button></div>{/each}
   </details>{/if}
-  <div class="project-head"><strong title={project}>{project}</strong><div><button type="button" aria-label={t("New file")} title={t("New file")} onclick={() => onOperation("create-file", parent)}><Icon name="plus" size={15} /></button><button type="button" aria-label={t("New folder")} title={t("New folder")} onclick={() => onOperation("create-folder", parent)}><Icon name="folder-plus" size={15} /></button><button type="button" aria-label={t("Refresh files")} title={t("Refresh files")} onclick={() => void ide.requestRefresh()}><Icon name="refresh" size={14} /></button><button type="button" aria-label={t("Collapse folders")} title={t("Collapse folders")} onclick={() => expanded = []}><Icon name="layers" size={14} /></button></div></div>
+  <div class="project-head"><strong data-tooltip={project}>{project}</strong><div><button type="button" aria-label={t("New file")} data-tooltip={t("New file")} onclick={() => onOperation("create-file", parent)}><Icon name="plus" size={15} /></button><button type="button" aria-label={t("New folder")} data-tooltip={t("New folder")} onclick={() => onOperation("create-folder", parent)}><Icon name="folder-plus" size={15} /></button><button type="button" aria-label={t("Refresh files")} data-tooltip={t("Refresh files")} onclick={() => void ide.requestRefresh()}><Icon name="refresh" size={14} /></button><button type="button" aria-label={t("Collapse folders")} data-tooltip={t("Collapse folders")} onclick={() => expanded = []}><Icon name="layers" size={14} /></button></div></div>
   <label class="filter"><Icon name="search" size={13} /><input aria-label={t("Filter files")} placeholder={t("Filter files")} bind:value={query} /></label>
+  {#if ide.filesLimited && !ide.filesError}
+    <div class="file-limit" role="status"><p>{t("Only part of this folder is shown. Open a project folder to see its files.")}</p><button class="retry" type="button" onclick={onChooseProject}>{t("Open project folder")}</button></div>
+  {/if}
   <div class="tree">
     {#if ide.filesError}<p role="alert">{ide.filesError}</p><button class="retry" type="button" onclick={() => void ide.requestRefresh()}>{t("Retry")}</button>
     {:else if ide.loadingFiles && ide.files.length === 0}<p role="status">{t("Loading files…")}</p>
-    {:else if nodes.length === 0}<p>{query ? t("No files found. Change the filter.") : t("This project has no files yet. Create your first file with the + button.")}</p>
+    {:else if nodes.length === 0}{#if !ide.filesLimited}<p>{query ? t("No files found. Change the filter.") : t("This project has no files yet. Create your first file with the + button.")}</p>{/if}
     {:else}{@render entries(nodes, 0)}{/if}
   </div>
 </aside>
@@ -83,14 +86,14 @@
 {#snippet entries(nodes: FileNode[], depth: number)}
   {#each nodes as node (node.path)}
     <div class="tree-row" class:active={!node.directory && node.path === ide.activePath}>
-      <button class="entry" type="button" style:padding-left={`${12 + depth * 14}px`} title={node.path}
+      <button class="entry" type="button" style:padding-left={`${12 + depth * 14}px`} data-tooltip={node.path}
         aria-expanded={node.directory ? query.length > 0 || expanded.includes(node.path) : undefined}
         aria-current={!node.directory && node.path === ide.activePath ? "page" : undefined}
         onfocus={() => { selected = node.path; directory = node.directory; }}
         onclick={() => node.directory ? toggle(node.path) : onOpen(node.path)} onkeydown={(event) => treeKey(event, node)} oncontextmenu={(event) => context(event, node)}>
         {#if node.directory}<Icon name={!expanded.includes(node.path) && !query ? "chevron-right" : "chevron-down"} size={12} /><Icon name="folder" size={14} />{:else}<span class="file-indent"></span><Icon name="file" size={14} />{/if}<span>{node.name}</span>
       </button>
-      <button class="row-actions" type="button" aria-label={t("Actions for {0}", [node.path])} title={t("Actions for {0}", [node.path])} onclick={(event) => context(event, node)}><Icon name="more" size={14} /></button>
+      <button class="row-actions" type="button" aria-label={t("Actions for {0}", [node.path])} data-tooltip={t("Actions for {0}", [node.path])} onclick={(event) => context(event, node)}><Icon name="more" size={14} /></button>
     </div>
     {#if node.directory && (query || expanded.includes(node.path))}{@render entries(node.children, depth + 1)}{/if}
   {/each}
@@ -106,6 +109,7 @@
   .row-actions { width: 26px; height: 28px; flex: none; opacity: 0; } .tree-row:hover .row-actions, .tree-row:focus-within .row-actions { opacity: 1; } .tree-row:hover, header button:hover, .project-head button:hover { background: var(--surface); color: var(--text); } .tree-row.active { background: var(--raised); box-shadow: inset 2px 0 var(--primary); } .tree-row.active .entry { color: var(--text); }
   .open-editors { max-height: 170px; overflow: auto; flex: none; margin-bottom: 4px; } summary { padding: 4px 12px; min-height: 28px; font-size: 12px; color: var(--text-2); cursor: pointer; } summary span { margin-inline-start: 6px; color: var(--muted); } .open-editor { display: flex; min-width: 0; } .open-editor.active { background: var(--surface); } .open-editor button:first-child { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; padding-inline: 24px 4px; min-height: 28px; font-size: 12px; } .open-editor span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .open-editor button:last-child { width: 28px; height: 28px; flex: none; }
   p { padding: 12px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; } .retry { margin-inline: 12px; text-decoration: underline; }
+  .file-limit { flex: none; padding-bottom: var(--space-2); } .file-limit p { padding-block: var(--space-2); } .file-limit button { min-height: 32px; text-align: start; }
   .file-menu { position: fixed; margin: 0; padding: 4px; min-width: 210px; max-width: calc(100vw - 16px); background: var(--raised); color: var(--text-2); border: 1px solid var(--line-strong); border-radius: 6px; box-shadow: 0 8px 24px #0005; } .file-menu button { display: flex; gap: 8px; align-items: center; width: 100%; min-height: 30px; padding: 4px 8px; border-radius: 3px; font-size: 12px; color: var(--text-2); } .file-menu button:hover { background: var(--raised-hover); } .file-menu kbd { margin-inline-start: auto; font-size: 11px; color: var(--muted); } .file-menu .danger { color: var(--error); }
-  @media (pointer: coarse) { .entry, .row-actions, .open-editor button:first-child, .open-editor button:last-child, .project-head button, header button { min-height: 44px; } .row-actions { opacity: 1; } }
+  @media (pointer: coarse) { .entry, .row-actions, .open-editor button:first-child, .open-editor button:last-child, .project-head button, header button, .file-limit button { min-height: 44px; } .row-actions { opacity: 1; } }
 </style>

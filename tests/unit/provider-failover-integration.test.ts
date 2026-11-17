@@ -26,9 +26,15 @@ function sse(...events: string[]): string {
 }
 
 function textResponse(text: string): Response {
-  return new Response(sse(JSON.stringify({ choices: [{ delta: { content: text } }] }), "[DONE]"), {
-    headers: { "content-type": "text/event-stream" },
-  });
+  return new Response(
+    sse(
+      JSON.stringify({ choices: [{ delta: { content: text }, finish_reason: "stop" }] }),
+      "[DONE]",
+    ),
+    {
+      headers: { "content-type": "text/event-stream" },
+    },
+  );
 }
 
 function toolResponse(): Response {
@@ -164,13 +170,17 @@ describe("provider failover integration", () => {
     const events = await collect(active.provider.stream(request(), new AbortController().signal));
 
     expect(events).toContainEqual({ type: "text", delta: "fallback ok" });
-    expect(events.at(-1)).toEqual({ type: "done", reason: "end" });
+    expect(events.at(-1)).toMatchObject({ type: "done", reason: "end" });
     // The window learns which model answered, and why, before the fallback's first token.
-    expect(events[0]).toEqual({
+    expect(events.find((event) => event.type === "route")).toEqual({
       type: "route",
       provider: "backup",
       model: "b-model",
       reason: "rate_limit",
+    });
+    expect(events[0]).toMatchObject({
+      type: "response",
+      response: { provider: "primary", model: "p-model", status: "failed" },
     });
     expect(primaryCalls).toBe(1);
     expect(backupModel).toBe("b-model");
@@ -308,7 +318,7 @@ describe("provider failover integration", () => {
       name: "read",
       args: { path: "a.ts" },
     });
-    expect(events.at(-1)).toEqual({ type: "done", reason: "tool_use" });
+    expect(events.at(-1)).toMatchObject({ type: "done", reason: "tool_use" });
     expect(backupBody.model).toBe("b-model");
     expect(backupBody.reasoning_effort).toBe("high");
     expect(Array.isArray(backupBody.tools)).toBe(true);

@@ -25,7 +25,7 @@ afterEach(async () => {
 });
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-config-save-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-config-save-"));
   dirs.push(dir);
   return dir;
 }
@@ -36,7 +36,7 @@ describe("config and secret writes", () => {
   test("a symlinked config keeps its link and the target gets the new content", async () => {
     const cwd = await tempDir();
     const dotfiles = await tempDir();
-    const target = join(dotfiles, "liquid.json");
+    const target = join(dotfiles, "flecten.json");
     const link = join(cwd, "flecten.config.json");
     const config = await loadConfig(cwd);
     await writeFile(target, `${JSON.stringify(config)}\n`);

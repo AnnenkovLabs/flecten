@@ -4,6 +4,7 @@ import { t } from "../i18n.svelte";
 import { contextIssue } from "../settings-utils";
 import type { HarnessSettings, ModelInfo, ProviderSettings } from "../types";
 import { hookEventLabel, hookIssue } from "./hooks";
+import { agentModelIssue } from "./model-defaults";
 
 export function numberIssue(
   value: number | undefined,
@@ -26,11 +27,21 @@ export function numberIssue(
 
 /** Same field constraints as the saved config, including fields inside disclosures. */
 export function settingsIssue(config: HarnessSettings): string {
+  for (const [role, choice] of [
+    [t("Talker model"), config.conversation?.talker],
+    [t("Worker model"), config.conversation?.worker],
+    ...Object.entries(config.subagents?.models ?? {}),
+  ] as const) {
+    const issue = agentModelIssue(config, choice);
+    if (issue) return `${role}: ${issue}`;
+  }
   if (config.vision?.model) {
     const model =
       config.providers[config.vision.provider || config.provider]?.models[config.vision.model];
     if (!model || model.disabled || !canDescribeImages(model))
       return t("Choose a model with image input.");
+    if (config.vision.variant && !model.variants?.[config.vision.variant])
+      return t("Choose a variant available for this model.");
   }
   const translation = config.translation;
   if (translation?.enabled && config.conversation?.enabled === false) {

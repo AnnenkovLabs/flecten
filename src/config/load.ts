@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { productEnv } from "../../shared/environment.cjs";
 import { HarnessError } from "../errors";
 import { atomicWrite } from "../util/atomic";
+import { migrateDataDirectory } from "./data-directory";
 import { defaultConfig } from "./defaults";
 import { migrateConfig } from "./migrate";
 import { profilePath } from "./profile";
@@ -82,9 +83,11 @@ export function inferProvider(model: string): string | undefined {
 }
 
 export async function loadConfig(cwd: string, explicitPath?: string): Promise<HarnessConfig> {
+  migrateDataDirectory(cwd);
   const profile = profilePath(explicitPath);
   if (!profile) return loadConfigFile(cwd, explicitPath);
   const directory = dirname(profile);
+  migrateDataDirectory(directory);
   if (!existsSync(profile)) {
     // Import existing settings once. Project files never override the global profile afterward.
     const existing = await loadConfigFile(cwd, undefined, false);

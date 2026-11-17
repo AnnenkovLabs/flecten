@@ -3,6 +3,7 @@ import { readFileSync, rmSync } from "node:fs";
 import { link, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import { z } from "zod";
+import { migrateDataDirectory } from "../config/data-directory";
 import { ProjectLockedError } from "../errors";
 import { projectPaths } from "../store/paths";
 import { isObject } from "../util/json";
@@ -117,7 +118,8 @@ function held(path: string, token: string): ProjectLock {
  * loses the lock at once. A read-only project runs unlocked.
  */
 export async function lockProject(root: string, waitMs = LOCK_WAIT_MS): Promise<ProjectLock> {
-  const { liquid, lock: path } = projectPaths(root);
+  migrateDataDirectory(root);
+  const { flecten, lock: path } = projectPaths(root);
   const self: Holder = {
     pid: process.pid,
     token: randomUUID(),
@@ -125,7 +127,7 @@ export async function lockProject(root: string, waitMs = LOCK_WAIT_MS): Promise<
   };
   const deadline = Date.now() + waitMs;
   try {
-    await mkdir(liquid, { recursive: true });
+    await mkdir(flecten, { recursive: true });
     for (;;) {
       if (await create(path, self)) return held(path, self.token);
       const text = await readFile(path, "utf8").catch(() => null);

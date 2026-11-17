@@ -58,7 +58,7 @@ test("provider disclosure persists across restarts, search reveals matches and m
     await expect(page.locator("#prompt")).toBeVisible();
     // Malformed persisted data must not break opening or navigation.
     await page.evaluate(() =>
-      localStorage.setItem("liquid.models.collapsedProviders", "[null, 3]"),
+      localStorage.setItem("flecten.models.collapsedProviders", "[null, 3]"),
     );
     for (const [width, height] of [
       [1480, 940],
@@ -84,11 +84,11 @@ test("provider disclosure persists across restarts, search reveals matches and m
         "Reasoner",
       );
       const reasoning = picker.getByRole("option").filter({ hasText: "Reasoner" });
-      await expect(reasoning.locator('[title="Рассуждения"]')).toBeVisible();
-      await expect(reasoning.locator('[title="Изображения"]')).toBeVisible();
+      await expect(reasoning.locator('[data-tooltip="Рассуждения"]')).toBeVisible();
+      await expect(reasoning.locator('[data-tooltip="Изображения"]')).toBeVisible();
       const media = picker.getByRole("option").filter({ hasText: "Media" });
-      await expect(media.locator('[title="PDF"]')).toBeVisible();
-      await expect(media.locator('[title="Аудио"]')).toBeVisible();
+      await expect(media.locator('[data-tooltip="PDF"]')).toBeVisible();
+      await expect(media.locator('[data-tooltip="Аудио"]')).toBeVisible();
       await expect(picker.locator(".row-context")).toHaveCount(0);
       await page.screenshot({ path: test.info().outputPath(`expanded-${width}.png`) });
 

@@ -46,7 +46,7 @@ export function sourceDefinitions(cwd: string, home = homedir()): TwinSource[] {
     ["deepseek", "DeepSeek Harness", join(home, ".dsh/sessions")],
     ["opencode", "OpenCode", join(home, ".local/share/opencode")],
     ["hermes", "Hermes Agent", join(home, ".hermes/sessions")],
-    ["liquid", "Liquid Harness", join(cwd, ".liquid/sessions")],
+    ["flecten", "Flecten", join(cwd, ".flecten/sessions")],
   ];
   return values.map(([id, name, path]) => ({
     id,
@@ -62,7 +62,7 @@ export function sourceDefinitions(cwd: string, home = homedir()): TwinSource[] {
 
 function sessionFile(id: TwinSourceId, file: string): boolean {
   const name = basename(file);
-  if (id === "liquid") return name === "events.jsonl";
+  if (id === "flecten") return name === "events.jsonl";
   if (id === "kilo") return name === "api_conversation_history.json";
   if (id === "opencode") return false;
   if (id === "cursor") return name === "messages.json" || name === "conversation.json";

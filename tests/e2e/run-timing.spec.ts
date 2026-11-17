@@ -49,7 +49,7 @@ test("chat navigation preserves elapsed work, idle streams keep ticking and comp
     const pendingSummary = page.getByRole("status", { name: "Preparing summary", exact: true });
     await expect(pendingSummary).toBeVisible();
 
-    const sessions = await readdir(join(h.cwd, ".liquid/sessions"), { withFileTypes: true });
+    const sessions = await readdir(join(h.cwd, ".flecten/sessions"), { withFileTypes: true });
     const sessionId = sessions.find((entry) => entry.isDirectory())?.name;
     if (!sessionId) throw new Error("The live run did not create a session");
     const initial = await replay(page, sessionId);

@@ -10,7 +10,7 @@ if (!executablePath)
 const samples = [];
 
 for (let run = 0; run < ITERATIONS; run += 1) {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-desktop-startup-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-desktop-startup-"));
   const configPath = join(cwd, "flecten.config.json");
   const model = "startup-ready";
   await writeFile(

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { fileKind, partialArgsPreview, toolAction, toolIcon } from "../../ui/src/lib/agent";
-import { settingsSection, shouldAnimate } from "../../ui/src/lib/motion";
+import { expandable, settingsSection, shouldAnimate } from "../../ui/src/lib/motion";
 import { oneLine, streamingField } from "../../ui/src/lib/partial-json";
 import type { AgentToolCall, AgentToolResult, DiffHunk } from "../../ui/src/lib/types";
 
@@ -53,6 +53,21 @@ describe("agent UI helpers", () => {
 });
 
 describe("expandable decision", () => {
+  test("mounting closed history does not query browser animations or layout", () => {
+    const node = {
+      hidden: false,
+      style: { overflow: "", height: "" },
+      getAnimations() {
+        throw new Error("Closed history must not flush browser animation state");
+      },
+      getBoundingClientRect() {
+        throw new Error("Closed history must not measure layout");
+      },
+    } as unknown as HTMLElement;
+    expandable(node, false);
+    expect(node.hidden).toBe(true);
+  });
+
   test("does not animate when the state did not change", () => {
     expect(shouldAnimate(false, false)).toBe(false);
     expect(shouldAnimate(true, true)).toBe(false);

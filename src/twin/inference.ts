@@ -13,6 +13,8 @@ import {
 } from "../../shared/twin";
 import { memoryDigest, safeMemoryText } from "../core/memory/sources";
 import type { ImagePart, Usage } from "../core/types";
+import { addUsage } from "../core/types/message";
+import { type ProviderResponse, responseOfError } from "../providers/response";
 import type { ModelProvider } from "../providers/types";
 import { markdownData } from "../util/markdown";
 import { TwinInferenceError } from "./inference-error";
@@ -37,6 +39,7 @@ export interface InferenceTarget {
   providerId: string;
   modalities?: readonly string[] | undefined;
   price(usage: Usage): number | undefined;
+  priceFor?(provider: string, model: string): ((usage: Usage) => number | undefined) | undefined;
 }
 
 async function infer(
@@ -50,8 +53,34 @@ async function infer(
   let complete = false;
   let usage: Usage = { input: 0, output: 0, cached: 0 };
   let observed = false;
+  let requested = false;
+  let route = { provider: target.providerId, model: target.model };
+  const receipts = new Set<string>();
+  const charges: Array<Usage & { costUsd?: number }> = [];
+  let missingRequests = 0;
+  const recordResponse = (response: ProviderResponse): void => {
+    const id = response.attemptId ?? response.requestId ?? "unidentified";
+    if (receipts.has(id)) return;
+    if (!receipts.size) requested = false;
+    receipts.add(id);
+    requested ||= response.requested !== false;
+    if (response.usage === "missing" && response.requested !== false) missingRequests++;
+  };
+  const measured = (): TwinSnapshot["training"]["usage"] => {
+    const missing = missingRequests || Number(!receipts.size && requested && !observed);
+    const priced = observed && !missing && charges.every((charge) => charge.costUsd !== undefined);
+    return {
+      ...usage,
+      ...(priced
+        ? { costUsd: charges.reduce((total, charge) => total + (charge.costUsd ?? 0), 0) }
+        : {}),
+      ...(receipts.size ? { charges, missingRequests: missing } : {}),
+      ...(!requested && !observed ? { requested: false } : {}),
+    };
+  };
   try {
     signal.throwIfAborted();
+    requested = true;
     for await (const event of target.provider.stream(
       {
         model: target.model,
@@ -69,32 +98,29 @@ async function infer(
       }
       if (event.type === "usage") {
         observed = true;
-        usage = {
-          input: event.input,
-          output: event.output,
-          cached: event.cached,
-          ...(event.reasoning ? { reasoning: event.reasoning } : {}),
-        };
+        usage = addUsage(usage, event);
+        const provider = event.provider ?? route.provider;
+        const model = event.model ?? route.model;
+        const price =
+          target.priceFor?.(provider, model) ??
+          (provider === target.providerId && model === target.model ? target.price : undefined);
+        const costUsd = price?.(event);
+        charges.push({ ...event, ...(costUsd === undefined ? {} : { costUsd }) });
       }
+      if (event.type === "route") route = { provider: event.provider, model: event.model };
+      if (event.type === "response") recordResponse(event.response);
+      if (event.type === "done" && event.response) recordResponse(event.response);
       signal.throwIfAborted();
       if (event.type === "tool_call") throw new Error("Twin extraction cannot execute tools");
       if (event.type === "done") complete = event.reason === "end";
     }
     signal.throwIfAborted();
     if (!complete) throw new Error("Twin response was incomplete. No candidates were saved.");
-    const costUsd = observed ? target.price(usage) : undefined;
-    return {
-      value: twinResponse(text),
-      usage: { ...usage, ...(costUsd === undefined ? {} : { costUsd }) },
-    };
+    return { value: twinResponse(text), usage: measured() };
   } catch (error) {
-    const costUsd = observed ? target.price(usage) : undefined;
-    throw new TwinInferenceError(
-      error,
-      { ...usage, ...(costUsd === undefined ? {} : { costUsd }) },
-      target.providerId,
-      target.model,
-    );
+    const response = responseOfError(error);
+    if (response && !receipts.size) recordResponse(response);
+    throw new TwinInferenceError(error, measured(), target.providerId, target.model);
   }
 }
 

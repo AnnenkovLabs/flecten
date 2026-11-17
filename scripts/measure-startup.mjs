@@ -138,7 +138,7 @@ export async function measureStartup(
   } catch {
     throw new Error(`${binary} is not runnable. Run bun run build:agent first.`);
   }
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-startup-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-startup-"));
   try {
     const samples = [];
     for (let run = 0; run < iterations; run += 1) {

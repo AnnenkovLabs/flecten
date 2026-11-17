@@ -64,7 +64,7 @@ export interface RestoreOptions {
   signal?: AbortSignal;
   /** Overwrite files that were edited after the checkpoint. */
   force?: boolean;
-  /** Also restore settings and secrets: flecten.config.json, .liquid/, .env files. */
+  /** Also restore settings and secrets: flecten.config.json, .flecten/, .env files. */
   includeProtected?: boolean;
   /** Restore only these checkpoint paths. */
   paths?: string[];

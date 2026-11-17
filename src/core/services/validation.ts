@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ProviderResponseSchema } from "../../providers/response";
 import type { ModelEvent } from "../../providers/types";
 import { abortable } from "../../util/abort";
 import { toolResultSchema } from "../types/event-schema";
@@ -54,14 +55,25 @@ const modelEvent = z.discriminatedUnion("type", [
     name: z.string().optional(),
     delta: z.string().optional(),
   }),
-  z.object({ type: z.literal("usage"), ...usage }),
+  z.object({
+    type: z.literal("usage"),
+    ...usage,
+    provider: z.string().optional(),
+    model: z.string().optional(),
+    attemptId: z.string().optional(),
+  }),
   z.object({
     type: z.literal("route"),
     provider: z.string(),
     model: z.string(),
     reason: z.string(),
   }),
-  z.object({ type: z.literal("done"), reason: z.enum(["end", "tool_use", "max_tokens"]) }),
+  z.object({ type: z.literal("response"), response: ProviderResponseSchema }),
+  z.object({
+    type: z.literal("done"),
+    reason: z.enum(["end", "tool_use", "max_tokens"]),
+    response: ProviderResponseSchema.optional(),
+  }),
 ]);
 export async function* checkedModelEvents(
   source: AsyncIterable<ModelEvent>,

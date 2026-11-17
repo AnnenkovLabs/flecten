@@ -56,15 +56,15 @@
   >
     <span class="model-copy">
       <span class="model-title">
-        <span class="model-name" title={`${name} · ${modelId}`}>{name}</span>
+        <span class="model-name" data-tooltip={`${name} · ${modelId}`}>{name}</span>
       </span>
       <span class="model-badges">
         {#each badges as badge (badge.label)}
-          <span class="st-badge" title={badge.title}>{badge.label}</span>
+          <span class="st-badge" data-tooltip={badge.title}>{badge.label}</span>
         {/each}
       </span>
       {#if current}
-        <span class="current" title={t("Current model")}><Icon name="check" size={12} /></span>
+        <span class="current" data-tooltip={t("Current model")}><Icon name="check" size={12} /></span>
       {/if}
     </span>
     <span class="row-chevron"><Icon name="chevron-right" size={15} /></span>

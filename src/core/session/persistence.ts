@@ -6,7 +6,6 @@ const TRANSIENT: ReadonlySet<Event["type"]> = new Set([
   "message.delta",
   "reasoning.delta",
   "tool_call.progress",
-  "provider.retry",
 ]);
 
 export function isPersistentEvent(event: Event): boolean {

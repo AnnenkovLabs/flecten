@@ -14,9 +14,9 @@
   {#each calls as call, index (call.index)}
     <div class="call">
       <Icon name={toolIcon(call.name)} size={13} />
-      <span class="name" title={toolName(call.name, { agent: streamingField(call.args, ["agent"]), operation: streamingField(call.args, ["operation", "op"]) })}>{toolName(call.name, { agent: streamingField(call.args, ["agent"]), operation: streamingField(call.args, ["operation", "op"]) })}</span>
+      <span class="name" data-tooltip={toolName(call.name, { agent: streamingField(call.args, ["agent"]), operation: streamingField(call.args, ["operation", "op"]) })}>{toolName(call.name, { agent: streamingField(call.args, ["agent"]), operation: streamingField(call.args, ["operation", "op"]) })}</span>
       {#if call.args}
-        <span class="args" title={partialArgsPreview(call.args)}>{partialArgsPreview(call.args)}</span>
+        <span class="args" data-tooltip={partialArgsPreview(call.args)}>{partialArgsPreview(call.args)}</span>
       {/if}
       {#if index === calls.length - 1}
         <span class="caret" aria-hidden="true"></span>

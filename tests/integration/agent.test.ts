@@ -54,7 +54,7 @@ describe("agent loop over a real provider adapter", () => {
                           name: "write",
                           arguments: JSON.stringify({
                             path: "hello.txt",
-                            content: "hello from liquid\n",
+                            content: "hello from flecten\n",
                           }),
                         },
                       },
@@ -109,7 +109,7 @@ describe("agent loop over a real provider adapter", () => {
       maxOutputTokens: 1000,
       context: { window: 100_000, reserve: 1000 },
       loop: { maxTurns: 8, continuations: 1, parallelTools: true },
-      logDir: (sessionId) => join(cwd, ".liquid", "sessions", sessionId, "logs"),
+      logDir: (sessionId) => join(cwd, ".flecten", "sessions", sessionId, "logs"),
     });
 
     const result = (await session.send({ type: "run", prompt: "create hello.txt" })) as {
@@ -119,6 +119,6 @@ describe("agent loop over a real provider adapter", () => {
     };
 
     expect(result).toMatchObject({ pass: true, stopReason: "done", turns: 2 });
-    expect(await readFile(join(cwd, "hello.txt"), "utf8")).toBe("hello from liquid\n");
+    expect(await readFile(join(cwd, "hello.txt"), "utf8")).toBe("hello from flecten\n");
   });
 });

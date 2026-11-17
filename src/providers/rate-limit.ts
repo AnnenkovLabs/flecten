@@ -16,6 +16,7 @@ export type { LimitKind } from "./limit-windows";
 export interface RateLimitState {
   limited: boolean;
   kind?: LimitKind;
+  providerCode?: string;
   resetAt?: number;
   retryAfterMs?: number;
   remaining?: number;
@@ -186,8 +187,10 @@ function bodyRateLimit(
   if (!error) return undefined;
   const markers = markersOf(error);
   const billing = markers.some((marker) => BILLING_MARKERS.has(marker));
+  const modelQuota = markers.includes("model_quota_exhausted");
   const usage = markers.some((marker) => USAGE_MARKERS.has(marker));
-  const limited = billing || usage || markers.some((marker) => LIMITED_MARKERS.has(marker));
+  const limited =
+    billing || usage || modelQuota || markers.some((marker) => LIMITED_MARKERS.has(marker));
 
   let resetAt: number | undefined;
   const resetsIn = error.resets_in_seconds;
@@ -223,13 +226,15 @@ function bodyRateLimit(
   }
 
   if (!limited && resetAt === undefined) return undefined;
-  const kind: LimitKind | undefined = billing
-    ? "billing"
-    : usage
-      ? resetAt !== undefined && resetAt - now > DAY_MS
-        ? "weekly"
-        : "five_hour"
-      : undefined;
+  const kind: LimitKind | undefined = modelQuota
+    ? "model_quota"
+    : billing
+      ? "billing"
+      : usage
+        ? resetAt !== undefined && resetAt - now > DAY_MS
+          ? "weekly"
+          : "five_hour"
+        : undefined;
   return {
     limited,
     ...(kind ? { kind } : {}),
@@ -273,8 +278,10 @@ export function parseRateLimit(input: RateLimitInput): RateLimitState | undefine
   }
   const source: RateLimitSource =
     headerReset.source || window ? "headers" : body?.source ? "body" : "status";
+  const providerCode = providerErrorCode(input.body);
   return {
     limited,
+    ...(providerCode ? { providerCode } : {}),
     ...(kind ? { kind } : {}),
     ...(resetAt === undefined ? {} : { resetAt, retryAfterMs: Math.max(0, resetAt - now) }),
     ...(remaining === undefined ? {} : { remaining }),
@@ -285,13 +292,43 @@ export function parseRateLimit(input: RateLimitInput): RateLimitState | undefine
   };
 }
 
-export function recordRateLimit(providerId: string, state: RateLimitState | undefined): void {
-  if (!state) return;
-  states.set(providerId, state);
+function stateKey(providerId: string, model?: string, quotaGroup?: string): string {
+  return JSON.stringify([
+    providerId,
+    quotaGroup ? "group" : model ? "model" : "provider",
+    quotaGroup ?? model ?? null,
+  ]);
 }
 
-export function rateLimitState(providerId: string, now = Date.now()): RateLimitState | undefined {
-  const state = states.get(providerId);
+export function recordRateLimit(
+  providerId: string,
+  state: RateLimitState | undefined,
+  model?: string,
+  quotaGroup?: string,
+): void {
+  if (!state) return;
+  states.set(
+    stateKey(
+      providerId,
+      state.kind === "model_quota" ? model : undefined,
+      state.kind === "model_quota" ? quotaGroup : undefined,
+    ),
+    state,
+  );
+}
+
+export function rateLimitState(
+  providerId: string,
+  now = Date.now(),
+  model?: string,
+  quotaGroup?: string,
+): RateLimitState | undefined {
+  const state =
+    (quotaGroup === undefined
+      ? undefined
+      : states.get(stateKey(providerId, undefined, quotaGroup))) ??
+    (model === undefined ? undefined : states.get(stateKey(providerId, model))) ??
+    states.get(stateKey(providerId));
   if (!state) return undefined;
   if (state.limited && state.resetAt !== undefined && state.resetAt <= now) {
     return { ...state, limited: false, retryAfterMs: 0 };
@@ -299,12 +336,22 @@ export function rateLimitState(providerId: string, now = Date.now()): RateLimitS
   return state;
 }
 
-export function rateLimitDelayMs(providerId: string, now = Date.now()): number {
-  const state = rateLimitState(providerId, now);
+export function rateLimitDelayMs(
+  providerId: string,
+  now = Date.now(),
+  model?: string,
+  quotaGroup?: string,
+): number {
+  const state = rateLimitState(providerId, now, model, quotaGroup);
   if (!state?.limited || state.resetAt === undefined) return 0;
   return Math.max(0, state.resetAt - now);
 }
 
 export function resetRateLimits(): void {
   states.clear();
+}
+
+export function clearProviderRateLimits(providerId: string): void {
+  for (const key of states.keys())
+    if ((JSON.parse(key) as unknown[])[0] === providerId) states.delete(key);
 }

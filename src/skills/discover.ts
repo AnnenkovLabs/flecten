@@ -36,10 +36,10 @@ export function skillScopes(cwd: string, home: string): SkillScope[] {
   return [
     { id: "user-claude", directory: join(home, ".claude", "skills"), source: "user" },
     { id: "user-agents", directory: join(home, ".agents", "skills"), source: "user" },
-    { id: "user-liquid", directory: join(home, ".liquid", "skills"), source: "user" },
+    { id: "user-flecten", directory: join(home, ".flecten", "skills"), source: "user" },
     { id: "project-claude", directory: join(cwd, ".claude", "skills"), source: "project" },
     { id: "project-agents", directory: join(cwd, ".agents", "skills"), source: "project" },
-    { id: "project-liquid", directory: join(cwd, ".liquid", "skills"), source: "project" },
+    { id: "project-flecten", directory: join(cwd, ".flecten", "skills"), source: "project" },
   ];
 }
 

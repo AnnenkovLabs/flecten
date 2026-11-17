@@ -10,6 +10,7 @@
 
   const running = $derived(jobs.filter((job) => job.status === "running"));
   const meters = $derived(budget ? budgetMeters(budget) : []);
+  const unknownCost = $derived(budget?.accounting?.status === "unavailable");
   const tone = $derived(budget ? budgetTone(budget, meters) : "ok");
   const warningMeters = $derived(meters.filter((meter) => meter.ratio >= 0.8 || meter.kind === budget?.exceeded));
   let now = $state(Date.now());
@@ -22,10 +23,10 @@
   });
 </script>
 
-{#if running.length > 0 || tone !== "ok"}
+{#if running.length > 0 || tone !== "ok" || unknownCost}
   <div class="strip" role="group" aria-label={t("Background commands and run budget")}>
     {#each running as job (job.id)}
-      <div class="job" title={`${job.command}\n${job.cwd}`}>
+      <div class="job" data-tooltip={`${job.command}\n${job.cwd}`}>
         <span class="job-dot" aria-hidden="true"></span>
         <code class="job-command">{job.command}</code>
         <span class="job-time">{formatDuration(Math.max(0, now - job.startedAt))}</span>
@@ -33,13 +34,14 @@
           class="job-stop"
           type="button"
           aria-label={t("Stop background command {0}", [job.command])}
-          title={t("Stop")}
+          data-tooltip={t("Stop")}
           onclick={() => stopJob(job.id)}
         >
           <Icon name="stop" size={12} />
         </button>
       </div>
     {/each}
+    {#if unknownCost}<span class="budget">{t("Cost unavailable")}</span>{/if}
     {#if tone !== "ok"}
       <details
         class="budget"
@@ -64,6 +66,8 @@
 
 <style>
   .strip {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -139,6 +143,10 @@
     display: block;
     padding-right: 12px;
     color: var(--muted);
+  }
+
+  span.budget {
+    display: inline-flex;
   }
 
   .budget[open] { border-radius: 12px; }

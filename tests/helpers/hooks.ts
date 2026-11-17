@@ -32,7 +32,7 @@ export const limits = {
 };
 
 export async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-hooks-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-hooks-"));
   dirs.push(dir);
   return dir;
 }
@@ -127,7 +127,7 @@ export function buildSession(
     context: { window: 100_000, reserve: 1000 },
     loop: { maxTurns: 8, continuations: 0, parallelTools: true },
     hooks,
-    logDir: (sessionId) => join(cwd, ".liquid/sessions", sessionId, "logs"),
+    logDir: (sessionId) => join(cwd, ".flecten/sessions", sessionId, "logs"),
   });
 }
 

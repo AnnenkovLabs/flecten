@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { ACCESS_MODES, activeAccessMode, applyAccessMode, type AccessMode } from "../../../../shared/access-mode";
   import { t } from "../../lib/i18n.svelte";
   import { accessModeDescription, accessModeLabel, POLICY_OPTIONS, type ApprovalDecision } from "../../lib/permissions";
@@ -57,9 +58,7 @@
             <div class="perm-section">
               <label class="perm-section-title" for="destructive-access">{t("Destructive actions")}</label>
               <p class="perm-preset-note">{t("A separate checkpoint for irreversible operations, even when ordinary actions are allowed.")}</p>
-              <select id="destructive-access" class="st-input" bind:value={config.permissions.destructive}>
-                {#each POLICY_OPTIONS as option}<option value={option.value}>{option.label}</option>{/each}
-              </select>
+              <Select id="destructive-access" class="st-input" bind:value={config.permissions.destructive} options={POLICY_OPTIONS} />
             </div>
             <SavedRules rules={config.permissions.rules} onRemove={(index) => { if (config.permissions) config.permissions.rules = config.permissions.rules.filter((_, at) => at !== index); }} />
           {/if}

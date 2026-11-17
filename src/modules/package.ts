@@ -93,7 +93,7 @@ async function writeModuleFiles(root: string, module: ModulePackage): Promise<vo
 
 /** Private immutable source generation; a source edit cannot change an in-flight process. */
 export async function materializeModule(cwd: string, module: ModulePackage) {
-  const parent = join(cwd, ".liquid", "module-runtime");
+  const parent = join(cwd, ".flecten", "module-runtime");
   await mkdir(parent, { recursive: true });
   const root = await mkdtemp(join(parent, `${module.manifest.name}-`));
   try {
@@ -107,7 +107,7 @@ export async function materializeModule(cwd: string, module: ModulePackage) {
 
 export async function installModule(cwd: string, source: string): Promise<string> {
   const module = await readModule(resolve(cwd, source));
-  const target = join(cwd, ".liquid", "modules", module.manifest.name);
+  const target = join(cwd, ".flecten", "modules", module.manifest.name);
   const origin = await realpath(module.path);
   if (target === origin || target.startsWith(`${origin}${sep}`))
     throw new Error("Install destination is inside its source");
@@ -115,7 +115,7 @@ export async function installModule(cwd: string, source: string): Promise<string
 }
 
 export async function publishModule(cwd: string, module: ModulePackage): Promise<string> {
-  const target = join(cwd, ".liquid", "modules", module.manifest.name);
+  const target = join(cwd, ".flecten", "modules", module.manifest.name);
   await mkdir(dirname(target), { recursive: true });
   await mkdir(target, { mode: 0o700 });
   try {

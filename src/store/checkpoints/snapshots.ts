@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { lstat, rm } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import { join } from "node:path";
 import { abortable } from "../../util/abort";
 import { Mutex } from "../../util/mutex";
@@ -11,16 +11,27 @@ export interface SnapshotLimits {
   maxFileBytes: number;
   /** Paths per update-index call, so one call never holds the index lock for long. */
   chunkPaths: number;
-  /** Loose objects above this size make the next warm-up rebuild the shadow repository. */
+  /** Oversized existing shadow storage is preserved and reported as unavailable. */
   maxShadowBytes: number;
+  /** Initial indexing and each subsequent capture reject larger workspaces before hashing. */
+  maxPaths: number;
+  maxCaptureBytes: number;
+  /** A background warm-up owns processes too; it cannot outlive this budget. */
+  setupMs: number;
 }
 
 const LSTAT_BATCH = 256;
+const MAX_SCAN_BYTES = 16 * 1024 * 1024;
+const WORKSPACE_LIMIT = "рабочая папка превышает лимит снимков shell: выберите папку проекта";
+const TIME_LIMIT = "не уложились во время на проверку файлов";
 
 export const DEFAULT_SNAPSHOT_LIMITS: SnapshotLimits = {
   maxFileBytes: 16 * 1024 * 1024,
   chunkPaths: 2000,
   maxShadowBytes: 1024 * 1024 * 1024,
+  maxPaths: 50_000,
+  maxCaptureBytes: 256 * 1024 * 1024,
+  setupMs: 5000,
 };
 
 /** One captured state of the workspace. */
@@ -100,8 +111,9 @@ export class WorkspaceSnapshots {
           ? await this.#ignoredUnder(request.include, request.deadline)
           : [];
         const scan = await this.#scan(request.deadline);
-        if (scan === undefined) return failure("не уложились во время на проверку файлов");
+        if (typeof scan === "string") return failure(scan);
         const stale = await this.#update([...new Set([...scan, ...forced])], request.deadline);
+        if (typeof stale === "string") return failure(stale);
         const tree = await this.#writeTree(request.deadline);
         if (tree === undefined) return failure("не удалось записать снимок");
         return {
@@ -134,14 +146,18 @@ export class WorkspaceSnapshots {
   }
 
   async #setup(): Promise<string | undefined> {
-    if (!(await this.#git.ensure())) return "git недоступен, снимки shell-команд выключены";
-    if (await this.#oversized()) {
-      await rm(this.#git.gitDir, { recursive: true, force: true });
-      if (!(await this.#git.ensure())) return "не удалось пересоздать теневой репозиторий";
-    }
-    const user = await findUserRepo(this.#git.workTree);
+    const deadline = Date.now() + this.#limits.setupMs;
+    if (Date.now() >= deadline) return TIME_LIMIT;
+    if (!(await this.#git.ensure(deadline))) return "git недоступен, снимки shell-команд выключены";
+    if (await this.#oversized(deadline)) return WORKSPACE_LIMIT;
+    const user = await findUserRepo(this.#git.workTree, "git", deadline);
     await this.#git.linkObjects(user ? join(user.commonDir, "objects") : undefined);
-    await this.#git.writeExcludes(user?.commonDir, ["/.liquid/"]);
+    await this.#git.writeExcludes(user?.commonDir, [
+      "/.flecten/",
+      "/.liquid/",
+      "/.flecten-migration/",
+      "/.flecten-scratch/",
+    ]);
     await this.#git.clearLock();
     const userIndex = user ? join(user.gitDir, "index") : undefined;
     if (
@@ -149,20 +165,22 @@ export class WorkspaceSnapshots {
       user &&
       !user.converts &&
       userIndex &&
-      existsSync(userIndex)
+      existsSync(userIndex) &&
+      (await lstat(userIndex)).size <= MAX_SCAN_BYTES
     ) {
       await this.#git.seedIndex(userIndex);
-      await this.#dropConverted(user.gitDir);
+      await this.#dropConverted(user.gitDir, deadline);
     }
-    const scan = await this.#scan(undefined);
-    if (scan === undefined) return "не удалось прочитать список файлов рабочей папки";
-    await this.#update(scan, undefined);
-    const tree = await this.#writeTree(undefined);
+    const scan = await this.#scan(deadline, true);
+    if (typeof scan === "string") return scan;
+    const updated = await this.#update(scan, deadline);
+    if (typeof updated === "string") return updated;
+    const tree = await this.#writeTree(deadline);
     return tree === undefined ? "не удалось записать первый снимок" : undefined;
   }
 
-  async #oversized(): Promise<boolean> {
-    const out = await this.#git.run(["count-objects", "-v"]);
+  async #oversized(deadline: number): Promise<boolean> {
+    const out = await this.#git.run(["count-objects", "-v"], { deadline });
     if (out.code !== 0) return false;
     for (const line of out.stdout.toString("utf8").split("\n")) {
       const [key, value] = line.split(": ");
@@ -175,9 +193,12 @@ export class WorkspaceSnapshots {
    * A copied index entry is a valid cache only when git stored the file byte for byte. Entries
    * the user's attributes convert (line endings, LFS and other filters) are dropped and hashed raw.
    */
-  async #dropConverted(userGitDir: string): Promise<void> {
-    const listed = await this.#git.run(["ls-files", "-z"]);
-    if (listed.code !== 0) return;
+  async #dropConverted(userGitDir: string, deadline: number): Promise<void> {
+    const listed = await this.#git.run(["ls-files", "-z"], {
+      deadline,
+      maxOutputBytes: MAX_SCAN_BYTES,
+    });
+    if (listed.code !== 0 || listed.truncated) return;
     const attrs = await this.#git.run(
       [
         "--git-dir",
@@ -191,24 +212,29 @@ export class WorkspaceSnapshots {
         "ident",
         "working-tree-encoding",
       ],
-      { input: listed.stdout },
+      { input: listed.stdout, deadline, maxOutputBytes: MAX_SCAN_BYTES },
     );
     const converted =
       attrs.code === 0 ? [...attributedPaths(attrs.stdout)] : nulList(listed.stdout);
     if (converted.length === 0) return;
     await this.#git.run(["update-index", "--force-remove", "-z", "--stdin"], {
       input: nulInput(converted),
+      deadline,
     });
     this.#dirty = true;
   }
 
   /** Changed, deleted and new files relative to the private index, honoring .gitignore. */
-  async #scan(deadline: number | undefined): Promise<string[] | undefined> {
-    const out = await this.#git.run(["ls-files", "-z", "-m", "-d", "-o", "--exclude-standard"], {
-      ...(deadline === undefined ? {} : { deadline }),
-    });
-    if (out.code !== 0 || out.timedOut) return undefined;
-    return [...new Set(nulList(out.stdout))];
+  async #scan(deadline: number, cached = false): Promise<string[] | string> {
+    const out = await this.#git.run(
+      ["ls-files", "-z", ...(cached ? ["-c"] : []), "-m", "-d", "-o", "--exclude-standard"],
+      { deadline, maxOutputBytes: MAX_SCAN_BYTES },
+    );
+    if (out.timedOut) return TIME_LIMIT;
+    if (out.truncated) return WORKSPACE_LIMIT;
+    if (out.code !== 0) return "не удалось прочитать список файлов рабочей папки";
+    const paths = [...new Set(nulList(out.stdout))];
+    return paths.length > this.#limits.maxPaths ? WORKSPACE_LIMIT : paths;
   }
 
   async #ignoredUnder(
@@ -225,14 +251,14 @@ export class WorkspaceSnapshots {
   }
 
   /** Hashes the listed paths into the index; returns the paths left stale. */
-  async #update(
-    paths: readonly string[],
-    deadline: number | undefined,
-  ): Promise<Map<string, string>> {
+  async #update(paths: readonly string[], deadline: number): Promise<Map<string, string> | string> {
+    if (paths.length > this.#limits.maxPaths) return WORKSPACE_LIMIT;
     const stale = new Map<string, string>();
     const ready: string[] = [];
     const stamps = new Map<string, string>();
+    let bytes = 0;
     for (let start = 0; start < paths.length; start += LSTAT_BATCH) {
+      if (Date.now() >= deadline) return TIME_LIMIT;
       const batch = paths.slice(start, start + LSTAT_BATCH);
       const infos = await Promise.all(
         batch.map((path) =>
@@ -241,6 +267,8 @@ export class WorkspaceSnapshots {
       );
       for (const [index, path] of batch.entries()) {
         const info = infos[index];
+        if (info?.isFile()) bytes += info.size;
+        if (bytes > this.#limits.maxCaptureBytes) return WORKSPACE_LIMIT;
         const stamp = info ? `${info.size}:${info.mtimeMs}` : "missing";
         stamps.set(path, stamp);
         if (path.endsWith("/")) stale.set(path, stamp);
@@ -251,13 +279,13 @@ export class WorkspaceSnapshots {
     }
     for (let start = 0; start < ready.length; start += this.#limits.chunkPaths) {
       const chunk = ready.slice(start, start + this.#limits.chunkPaths);
-      if (deadline !== undefined && Date.now() >= deadline) {
+      if (Date.now() >= deadline) {
         for (const path of ready.slice(start)) stale.set(path, stamps.get(path) ?? "missing");
         break;
       }
       const out = await this.#git.run(["update-index", "--add", "--remove", "-z", "--stdin"], {
         input: nulInput(chunk),
-        ...(deadline === undefined ? {} : { deadline }),
+        deadline,
       });
       if (out.code !== 0 || out.timedOut) {
         await this.#git.clearLock();
@@ -269,11 +297,9 @@ export class WorkspaceSnapshots {
     return stale;
   }
 
-  async #writeTree(deadline: number | undefined): Promise<string | undefined> {
+  async #writeTree(deadline: number): Promise<string | undefined> {
     if (!this.#dirty && this.#tree !== undefined) return this.#tree;
-    const out = await this.#git.run(["write-tree", "--missing-ok"], {
-      ...(deadline === undefined ? {} : { deadline }),
-    });
+    const out = await this.#git.run(["write-tree", "--missing-ok"], { deadline });
     if (out.code !== 0 || out.timedOut) return undefined;
     this.#tree = out.stdout.toString("utf8").trim();
     this.#dirty = false;

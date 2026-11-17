@@ -1,7 +1,7 @@
 import { i18n, t } from "./i18n.svelte";
 /** Error cards and retry status: user-facing reasons, reset times and the continue rule. */
 
-export type LimitKind = "rate" | "five_hour" | "weekly" | "billing";
+export type LimitKind = "rate" | "five_hour" | "weekly" | "billing" | "model_quota";
 
 export interface ErrorItem {
   kind: "error";
@@ -53,6 +53,9 @@ const ERROR_REASONS: Record<string, string> = {
 };
 
 const LIMIT_REASONS: Record<LimitKind, string> = {
+  get model_quota() {
+    return t("The provider reached its limit.");
+  },
   get rate() {
     return t("The provider rate-limited requests.");
   },
@@ -95,6 +98,9 @@ export function canContinue(item: ErrorItem): boolean {
 }
 
 const RETRY_LABELS: Record<string, string> = {
+  get model_quota() {
+    return t("The provider reached its limit.");
+  },
   get rate_limit() {
     return t("Rate limit");
   },

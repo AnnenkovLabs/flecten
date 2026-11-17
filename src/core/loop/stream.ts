@@ -1,4 +1,5 @@
 import { estimateMessages, PROFILE_4 } from "../../context";
+import { responseOfError } from "../../providers/response";
 import { TranslationStream } from "../../translation/stream";
 import { serviceModelStream } from "../services/model";
 import type { AssistantMessage, Message, ToolCall, Usage } from "../types";
@@ -101,9 +102,13 @@ export async function streamAssistant(
   let providerData: unknown;
   const toolCalls: ToolCall[] = [];
   let stopReason = "end";
+  let responseReported = false;
+  const receipts = new Set<string>();
   let currentUsage = usage;
   let route: { provider?: string; model: string } = { model: options.provider.model };
   let requestTokens = 0;
+  let usageReported = false;
+  let missingReported = false;
   let textStarted = false;
   const emitText = (text: string): void => {
     if (text.length === 0) return;
@@ -122,6 +127,22 @@ export async function streamAssistant(
         })
       : undefined;
   let display: StreamedTurn["display"];
+  const recordResponse = (response: import("../../providers/response").ProviderResponse): void => {
+    const key = response.attemptId ?? response.requestId ?? "unidentified";
+    if (receipts.has(key)) return;
+    receipts.add(key);
+    responseReported = true;
+    emit({ type: "provider.response", response });
+    if (response.usage === "missing" && response.requested !== false) {
+      const provider = response.provider ?? route.provider;
+      emit({
+        type: "usage.unavailable",
+        ...(provider ? { provider } : {}),
+        model: response.model ?? route.model,
+      });
+      missingReported = true;
+    }
+  };
 
   try {
     for await (const event of serviceModelStream(
@@ -130,7 +151,9 @@ export async function streamAssistant(
       guard.signal,
       options.toolContext.services,
     )) {
-      if (event.type === "text") {
+      if (event.type === "response") {
+        recordResponse(event.response);
+      } else if (event.type === "text") {
         text += event.delta;
         if (presentation) presentation.push("text", event.delta);
         else emitText(event.delta);
@@ -155,6 +178,7 @@ export async function streamAssistant(
           ...(event.delta ? { delta: event.delta } : {}),
         });
       } else if (event.type === "usage") {
+        usageReported = true;
         requestTokens += event.input + event.output;
         currentUsage = addUsage(currentUsage, {
           input: event.input,
@@ -165,7 +189,12 @@ export async function streamAssistant(
         });
         emit({
           type: "usage",
-          ...route,
+          ...(event.provider
+            ? { provider: event.provider }
+            : route.provider
+              ? { provider: route.provider }
+              : {}),
+          model: event.model ?? route.model,
           usage: {
             input: event.input,
             output: event.output,
@@ -184,6 +213,7 @@ export async function streamAssistant(
         });
       } else if (event.type === "done") {
         stopReason = event.reason;
+        if (event.response) recordResponse(event.response);
       }
     }
     try {
@@ -195,7 +225,13 @@ export async function streamAssistant(
       emitText(text);
       display = { text, reasoning };
     }
+  } catch (error) {
+    const response = responseOfError(error);
+    if (response && !responseReported) recordResponse(response);
+    throw error;
   } finally {
+    if (!usageReported && !missingReported && !responseReported)
+      emit({ type: "usage.unavailable", ...route });
     await presentation?.cancel();
     guard.done();
   }

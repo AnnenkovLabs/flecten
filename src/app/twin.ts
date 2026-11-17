@@ -29,9 +29,11 @@ import {
 } from "../twin/sources";
 import { emptyTwinState, idleTraining, type TwinState, TwinStateStore } from "../twin/state";
 import { Mutex } from "../util/mutex";
+import { redactKnown } from "../util/redact";
 import { configSecrets } from "./provider-secrets";
 import { inputModalities } from "./service-policy";
 import { usagePrice } from "./session-config";
+import { sessionModelOptions } from "./session-model-options";
 
 interface TwinOptions {
   cwd: string;
@@ -39,7 +41,6 @@ interface TwinOptions {
   target(): InferenceTarget;
   home?: string;
 }
-
 /** The learned persona owns taste and voice. It is never injected as project memory. */
 export async function projectTwin(options: TwinOptions) {
   const store = new TwinStateStore(options.cwd);
@@ -339,6 +340,10 @@ export async function projectTwin(options: TwinOptions) {
     },
     async configure(input: unknown) {
       const parsed = TwinConfigureSchema.parse(input);
+      if (parsed.enabled === false) {
+        operation?.abort(new Error("Twin disabled by the user."));
+        await pending;
+      }
       return mutex.run(async () => {
         writable();
         await save({
@@ -415,7 +420,7 @@ export async function projectTwin(options: TwinOptions) {
         appliesWhen: parsed.appliesWhen,
         evidence: [
           {
-            sourceId: "liquid",
+            sourceId: "flecten",
             sessionId: "twin-editor",
             reference: parsed.path ?? "Twin profile editor",
             digest: memoryDigest(quote),
@@ -454,9 +459,8 @@ export async function projectTwin(options: TwinOptions) {
       return { ...answer, answer: safeMemoryText(answer.answer, options.secrets()) };
     },
     async delegate(input: TwinDelegateInput, signal: AbortSignal) {
-      const parsed = TwinDelegateInputSchema.parse(
-        JSON.parse(safeMemoryText(JSON.stringify(input), options.secrets())),
-      );
+      // Redact values so masking cannot corrupt serialized JSON quotes or escapes.
+      const parsed = TwinDelegateInputSchema.parse(redactKnown(input, options.secrets()));
       if (!state.enabled) throw new Error("Twin is disabled");
       const decision = await delegate(
         options.target(),
@@ -490,6 +494,7 @@ export function createTwin(
       providerId: access.config().provider,
       modalities: inputModalities(access.config()),
       price: usagePrice(access.config()),
+      priceFor: sessionModelOptions(access.config(), access.provider()).priceFor,
     }),
   });
 }

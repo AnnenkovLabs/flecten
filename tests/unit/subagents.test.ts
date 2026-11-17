@@ -26,7 +26,7 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-async function tempDir(prefix = "liquid-subagents-"): Promise<string> {
+async function tempDir(prefix = "flecten-subagents-"): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), prefix));
   dirs.push(dir);
   return dir;
@@ -101,7 +101,7 @@ function toolContext(): ToolContext {
     sessionId: "s_test",
     cwd: process.cwd(),
     signal: new AbortController().signal,
-    logDir: "/tmp/liquid-task",
+    logDir: "/tmp/flecten-task",
     limits: {
       maxOutputBytes: 50_000,
       maxOutputLines: 2000,

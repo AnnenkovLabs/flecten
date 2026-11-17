@@ -39,7 +39,7 @@
   >
     <header class="head">
       <Icon name="file" size={15} />
-      <h2 id="viewer-title" title={shown}>
+      <h2 id="viewer-title" data-tooltip={shown}>
         <span class="dir">{parts.dir}</span><span class="name">{parts.name}</span>
       </h2>
       {#if view.file && !view.file.binary}
@@ -48,7 +48,7 @@
           class="wrap"
           type="button"
           aria-pressed={wrap}
-          title={t("Long lines wrap instead of scrolling horizontally")}
+          data-tooltip={t("Long lines wrap instead of scrolling horizontally")}
           onclick={() => (wrap = !wrap)}
         >
           {#if wrap}<Icon name="check" size={13} />{/if} {t("Word wrap")} </button>
@@ -57,7 +57,7 @@
       <button
         class="icon-btn"
         type="button"
-        title={t("Close")}
+        data-tooltip={t("Close")}
         aria-label={t("Close preview")}
         onclick={() => fileViewer.close()}
       >

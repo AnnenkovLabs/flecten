@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { onMount } from "svelte";
   import type { DictionaryStore } from "../../lib/dictionary.svelte";
   import { i18n, t } from "../../lib/i18n.svelte";
@@ -38,7 +39,8 @@
     {/if}
     <div class="dictionary-filters">
       <label class="st-search"><Icon name="search" size={14} /><input bind:value={dictionary.query} aria-label={t("Search dictionary")} placeholder={t("Search dictionary")} /></label>
-      <select class="st-select" bind:value={dictionary.category} aria-label={t("Term category")}><option value="">{t("All categories")}</option>{#each dictionary.categories as category}<option value={category}>{category}</option>{/each}</select>
+      <Select class="st-select" bind:value={dictionary.category} aria-label={t("Term category")}
+        options={[{ value: "", label: t("All categories") }, ...dictionary.categories.map((category) => ({ value: category, label: category }))]} />
     </div>
     {#if dictionary.loading}<p class="st-hint" role="status">{t("Loading dictionary…")}</p>
     {:else if dictionary.snapshot}
@@ -50,7 +52,7 @@
             <p class="dictionary-definition">{entry.definition}</p>
             {#if entry.clarification}<p class="dictionary-clarification"><strong>{t("Common confusion")}</strong> {entry.clarification}</p>{/if}
             {#if entry.aliases.length}<p class="st-hint dictionary-aliases">{entry.aliases.join(" · ")}</p>{/if}
-            {#if entry.sources.length}<div class="dictionary-links">{#each entry.sources as source}<a href={source} target="_blank" rel="noreferrer" title={source}>{new URL(source).hostname}</a>{/each}</div>{/if}
+            {#if entry.sources.length}<div class="dictionary-links">{#each entry.sources as source}<a href={source} target="_blank" rel="noreferrer" data-tooltip={source}>{new URL(source).hostname}</a>{/each}</div>{/if}
             <div class="dictionary-actions">
               <button class="st-btn st-btn--quiet st-btn--sm" type="button" disabled={dictionary.busy} onclick={() => dictionary.edit(entry)}>{entry.source === "public" ? t("Customize locally") : t("Edit")}</button>
               {#if entry.source === "local"}<button class="st-btn st-btn--danger st-btn--sm" type="button" disabled={dictionary.busy} onclick={() => dictionary.deleting = entry}>{t("Delete")}</button>{/if}

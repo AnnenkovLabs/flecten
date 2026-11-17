@@ -15,7 +15,6 @@ import type { QueueItem } from "../queue/types";
 import { runAgent } from "../services/agent";
 import { SubagentTasks } from "../subagents/tasks";
 import type { Command, Event, Message, ReasoningEffort, RunResult, SessionId } from "../types";
-import { addUsage } from "../types/message";
 import { ApprovalWaiters } from "./approvals";
 import { BUDGET_ABORT, RunBudget } from "./budget";
 import { dispatch } from "./commands";
@@ -26,12 +25,12 @@ import type { SessionHandle, SessionPeek } from "./handle";
 import { notifyJobHook, sessionHookRunner } from "./hooks";
 import { JobNotices } from "./jobs";
 import { runLanguage, translatedRunInput } from "./language";
-import { mapLoopEvent } from "./loop-events";
 import { assertHistoryMedia, sessionAttachments, toolMediaOptions } from "./media";
 import { sessionMemory } from "./memory";
 import type { SessionOptions } from "./options";
 import { SessionPermissionIntent } from "./permission-intent";
 import { isPersistentEvent, SessionPersistence } from "./persistence";
+import { accountingChanged, runAccounting, taskBudgetEvent } from "./run-accounting";
 import { promptWithHookContext } from "./run-input";
 import type { ActiveRun, RunExtras, SessionRuntime } from "./runtime";
 import { SessionStatePublisher } from "./state";
@@ -108,6 +107,14 @@ export function createSession(options: SessionOptions): SessionHandle {
     const changed = statePublisher.note(event);
     bus.emit(event);
     persist(event);
+    if (options.taskBudget && accountingChanged(event)) {
+      const snapshot = taskBudgetEvent(
+        event.sessionId ?? currentSessionId ?? "",
+        options.taskBudget,
+      );
+      bus.emit(snapshot);
+      persist(snapshot);
+    }
     notifyJobHook(options.hooks, options.cwd, event, emit, options.modules);
     if ((event.type === "session.started" || event.type === "steer.applied") && event.queueId) {
       delivered(event.queueId);
@@ -205,7 +212,12 @@ export function createSession(options: SessionOptions): SessionHandle {
     });
     goalState = goal;
     preparing = undefined;
-    const budget = new RunBudget(options.budgets ?? {}, options.price);
+    const budget = new RunBudget(
+      options.budgets ?? {},
+      options.price,
+      Date.now,
+      options.taskBudget,
+    );
     const state: ActiveRun = {
       sessionId,
       controller,
@@ -249,6 +261,7 @@ export function createSession(options: SessionOptions): SessionHandle {
       if (controller.signal.reason !== BUDGET_ABORT) return undefined;
       return budget.reason(budget.exhausted() ?? "wall_clock");
     };
+    const loopEvent = runAccounting(options, state, compaction, emit);
     let result: RunResult;
     const language = runLanguage(options, state, emit);
     try {
@@ -295,10 +308,11 @@ export function createSession(options: SessionOptions): SessionHandle {
         tools: options.tools,
         system,
         ...(options.responseFormat ? { responseFormat: options.responseFormat } : {}),
+        ...(options.completionGuard ? { completionGuard: options.completionGuard } : {}),
         messages: history,
         ...(attached.parts.length > 0 ? { attachments: attached.parts } : {}),
         compactionState: compaction.state,
-        pageWriter: await compaction.writer(sessionId, memory?.checkpoint()),
+        pageWriter: await compaction.writer(sessionId, memory?.checkpoint(), loopEvent),
         takeCompactionRequest: compaction.take,
         retryPolicy,
         goal,
@@ -307,26 +321,14 @@ export function createSession(options: SessionOptions): SessionHandle {
         calls,
         signal: controller.signal,
         stopSignal: state.stop.signal,
-        emit: (event) => {
-          if (event.type === "turn.started") state.turns = event.turn;
-          compaction.note(sessionId, event);
-          emit(
-            mapLoopEvent(
-              event.type === "usage" && event.provider === undefined
-                ? { ...event, provider: options.providerId }
-                : event,
-              sessionId,
-            ),
-          );
-          if (event.type === "usage") {
-            state.usage = addUsage(state.usage, event.usage);
-            emit({ type: "budget", sessionId, budget: budget.add(event.usage) });
-          }
-        },
+        emit: loopEvent,
         maxTurns: options.loop.maxTurns,
         maxTokens: options.maxOutputTokens,
         contextWindow: options.context.window,
         reserveTokens: options.context.reserve,
+        ...(options.context.workingSetTokens
+          ? { workingSetTokens: options.context.workingSetTokens }
+          : {}),
         continuations: options.loop.continuations,
         parallelTools: options.loop.parallelTools,
         ...(hooks ? { hooks } : {}),

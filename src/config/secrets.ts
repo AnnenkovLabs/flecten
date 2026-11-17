@@ -44,7 +44,7 @@ export function secretBackend(): SecretBackend {
 }
 
 export function secretsPath(cwd: string): string {
-  return join(cwd, ".liquid", "secrets.json");
+  return join(cwd, ".flecten", "secrets.json");
 }
 
 function account(cwd: string, name: string): string {

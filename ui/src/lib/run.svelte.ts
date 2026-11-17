@@ -1,7 +1,15 @@
 import type { CustomCommandInfo } from "./agent-protocol";
 import { contextMentions } from "./composer/context-mentions";
 import type { ContextReference } from "./composer/context-types";
-import { composerDrafts, moveComposerDraft, setComposerTask } from "./composer/drafts.svelte";
+import {
+  composerDrafts,
+  composerTaskKey,
+  listenComposerDrafts,
+  moveComposerDraft,
+  savedComposerTask,
+  setComposerProject,
+  setComposerTask,
+} from "./composer/drafts.svelte";
 import type { SendMode } from "./composer/types";
 import type { ContextView } from "./context-meter.svelte";
 import { onAgentEvent, requestAgent, sendAgent } from "./desktop";
@@ -21,6 +29,7 @@ import { type ModelHost, RunModels } from "./run/model";
 import { Projects } from "./run/projects.svelte";
 import { Reconnect } from "./run/reconnect";
 import { finishedSessions, startedSessions } from "./run/sessions";
+import { StorageMigration } from "./run/storage-migration.svelte";
 import { TaskCommands } from "./run/task-commands";
 import { type SessionEvent, TaskView } from "./run/view.svelte";
 import { errorMessage as message } from "./run-errors";
@@ -40,10 +49,10 @@ import type {
 import { focusComposer, taskStatus } from "./ui-polish";
 import { UserProfile } from "./user-profile.svelte";
 
-type StatusEvent = Extract<AgentEvent, { type: "status" }>;
 export class RunStore implements TaskHost, ModelHost {
   readonly profile = new UserProfile();
   readonly dictionary = new DictionaryStore();
+  readonly migration = new StorageMigration();
   readonly directories = new Projects();
   readonly twin = new TwinStore();
   readonly modules = new ModuleStore(() => this.#sessionId);
@@ -145,17 +154,16 @@ export class RunStore implements TaskHost, ModelHost {
       stopWorker: () => void this.task.stopWorker(),
     });
     const stopModules = this.modules.watch(() => this.connection === "ready");
+    const stopDrafts = listenComposerDrafts();
     if (!sendAgent({ type: "hello" })) {
       this.connection = "offline";
-    } else {
-      void this.refreshSessions();
-      void this.checkpoints.refresh();
     }
     return () => {
       stopTasks();
       stopIntents();
       unsubscribe();
       stopModules();
+      stopDrafts();
       this.controls.dispose();
       this.#reconnect.dispose();
       this.twin.dispose();
@@ -168,6 +176,9 @@ export class RunStore implements TaskHost, ModelHost {
       return;
     }
     switch (event.type) {
+      case "storage.migration":
+        this.migration.handle(event);
+        return;
       case "projects.changed":
         void this.directories.refresh();
         return;
@@ -188,7 +199,7 @@ export class RunStore implements TaskHost, ModelHost {
         this.#exit(event.message);
         return;
       case "project.changed":
-        this.#projectChanged();
+        this.#projectChanged(event.cwd);
         return;
       case "sessions.interrupted":
         this.#interrupted(event.interrupted, event.resumed);
@@ -224,7 +235,7 @@ export class RunStore implements TaskHost, ModelHost {
     return true;
   }
   start(text: string, attachments: string[] = [], contexts: ContextReference[] = []): boolean {
-    if (this.busy) return false;
+    if (this.busy || this.migration.snapshot) return false;
     const sessionId = this.ensureSession();
     this.view.begin(text);
     this.sessions = startedSessions(this.sessions, sessionId, text);
@@ -261,9 +272,7 @@ export class RunStore implements TaskHost, ModelHost {
   ensureSession(): string {
     const sessionId = this.#sessionId ?? uniqueId("s");
     if (this.#sessionId === null) {
-      if (composerDrafts.task === "current") {
-        moveComposerDraft("current", sessionId);
-      }
+      moveComposerDraft(composerDrafts.task, composerTaskKey(sessionId));
       this.#sessionId = sessionId;
       this.activeTask = sessionId;
       setComposerTask(sessionId);
@@ -278,7 +287,6 @@ export class RunStore implements TaskHost, ModelHost {
     // A locked project with nothing to repeat: the core tries the project again.
     else if (this.#reconnect.held) sendAgent({ type: "hello" });
   }
-  /** A clean screen for a new task; tasks already running go on behind it. */
   newTask(): void {
     this.#loadSequence += 1;
     this.#buffer = null;
@@ -295,9 +303,11 @@ export class RunStore implements TaskHost, ModelHost {
     await this.#open(id);
   }
   refreshSessions(): Promise<void> {
+    if (this.connection !== "ready" || this.migration.snapshot) return Promise.resolve();
     return Promise.all([refreshTasks(this), this.directories.refresh()]).then(() => undefined);
   }
   async loadCommands(): Promise<void> {
+    if (this.connection !== "ready" || this.migration.snapshot) return;
     try {
       const response = await requestAgent({ type: "commands.list" }, 15_000);
       this.commands = response.commands ?? [];
@@ -305,7 +315,6 @@ export class RunStore implements TaskHost, ModelHost {
       this.commands = [];
     }
   }
-
   async loadFiles(): Promise<void> {
     if (this.#filesLoaded && this.files.length > 0) return;
     try {
@@ -316,27 +325,21 @@ export class RunStore implements TaskHost, ModelHost {
       // The picker simply stays empty; typing a path still works.
     }
   }
-
   setSendMode(mode: SendMode): void {
     preferences.followUpBehavior = mode;
   }
-
   setReasoning(value: ReasoningChoice): void {
     void this.#models.reasoning(value);
   }
-
   setModel(provider: string, model: string): Promise<void> {
     return this.#models.choose(provider, model);
   }
-
   setVariant(value: string | undefined): Promise<void> {
     return this.#models.variant(value);
   }
-
   #titleOf(id: string): string {
     return this.sessions.find((session) => session.id === id)?.title || t("task");
   }
-
   #show(id: string | null): void {
     this.history.set([]);
     this.modules.reset();
@@ -346,8 +349,6 @@ export class RunStore implements TaskHost, ModelHost {
     setComposerTask(this.activeTask);
     this.#models.focus(id);
   }
-
-  /** Opens a task: its stored log, the live part of its run, then events that came meanwhile. */
   async #open(id: string): Promise<void> {
     const ticket = ++this.#loadSequence;
     const modelRevision = this.#models.revision(id);
@@ -381,7 +382,6 @@ export class RunStore implements TaskHost, ModelHost {
       if (ticket === this.#loadSequence) this.openingTask = null;
     }
   }
-
   #sessionEvent(event: SessionEvent): void {
     this.activity.apply(event);
     if (event.type === "model.selected") this.#models.selected(event);
@@ -397,12 +397,18 @@ export class RunStore implements TaskHost, ModelHost {
     } else
       backgroundEvent(event, this.#titleOf(event.sessionId), () => void this.checkpoints.refresh());
   }
-
-  #status(event: StatusEvent): void {
+  #status(event: Extract<AgentEvent, { type: "status" }>): void {
+    setComposerProject(event.cwd);
     applyPreferences(event.ui);
     const { type: _type, ...info } = event;
     this.#models.status(info);
     this.connection = "ready";
+    if (this.migration.runtimeReady()) {
+      void this.refreshSessions();
+      void this.checkpoints.refresh();
+      void this.loadCommands();
+    }
+    if (!this.twin.snapshot && !this.twin.busy) void this.twin.load();
     this.activity.sync(event.sessions ?? []);
     if (event.sessionId === this.#sessionId) this.view.attach(event);
     if (event.configError && !this.#configErrorShown) {
@@ -416,26 +422,24 @@ export class RunStore implements TaskHost, ModelHost {
       });
     }
     if (this.#reconnect.ready()) {
-      void this.refreshSessions();
-      void this.checkpoints.refresh();
       if (this.#sessionId) void this.#open(this.#sessionId);
       return;
     }
     const first = !this.#attached;
     this.#attached = true;
     if (!first || this.#sessionId !== null || this.view.thread.items.length > 0) return;
-    // A reloaded window opens the task the core is running instead of an empty screen.
     const running =
       event.running && event.sessionId
         ? event.sessionId
         : (event.sessions ?? []).find((entry) => entry.running)?.sessionId;
-    if (running) void this.#open(running);
+    const restore = running ?? savedComposerTask();
+    if (restore) void this.#open(restore);
   }
-
   #exit(reason: string | undefined): void {
     const wasBusy = this.view.busy;
     const first = !this.#reconnect.pending;
     this.connection = "offline";
+    this.migration.interrupted();
     this.view.coreLost();
     this.activity.sync([]);
     this.#attached = true;
@@ -445,7 +449,7 @@ export class RunStore implements TaskHost, ModelHost {
     const scheduled = this.#reconnect.schedule(() => {
       if (!sendAgent({ type: "hello" })) this.connection = "offline";
     });
-    if (!scheduled) {
+    if (!scheduled && !this.migration.snapshot) {
       this.view.thread.push({
         kind: "error",
         id: nextId("err"),
@@ -459,7 +463,8 @@ export class RunStore implements TaskHost, ModelHost {
       toast.show(wasBusy ? t("The core stopped during the run. Restarting") : t("Restarting core"));
     }
   }
-  #projectChanged(): void {
+  #projectChanged(cwd: string): void {
+    setComposerProject(cwd);
     this.#projectSequence++;
     this.#models.reset();
     this.dictionary.reset();
@@ -475,11 +480,9 @@ export class RunStore implements TaskHost, ModelHost {
     this.checkpoints.reset();
     this.#show(null);
     this.info = null;
-    void this.refreshSessions();
-    void this.checkpoints.refresh();
+    this.connection = "connecting";
+    this.migration.waitForRuntime();
   }
-
-  /** A restarted core found runs it did not finish; some of them resume on their own. */
   #interrupted(interrupted: string[], resumed: string[]): void {
     this.activity.markInterrupted(interrupted, resumed);
     void this.refreshSessions();

@@ -5,6 +5,7 @@ import type { ModelProvider } from "../providers/types";
 import { readTool } from "../tools/read/tool";
 import { ToolRegistry } from "../tools/registry";
 import {
+  costOf,
   describeProviderError,
   maxOutputTokens,
   modelContext,
@@ -25,6 +26,17 @@ export function sessionModelOptions(config: HarnessConfig, provider?: ModelProvi
     variant: config.variant,
     context: modelContext(config),
     price: usagePrice(config),
+    priceFor: (provider: string, model: string) => {
+      const definition = config.providers[provider]?.models[model];
+      return definition
+        ? (usage: import("../core/types").Usage) =>
+            costOf(
+              usage,
+              definition,
+              provider === config.provider && model === config.model ? config.variant : undefined,
+            )
+        : undefined;
+    },
     modalities: inputModalities(config),
     vision: visionOptions(config),
   };
@@ -51,6 +63,10 @@ export function sessionModelTools(config: HarnessConfig, tools: ToolRegistry): T
           ? readTool(!acceptsImages(inputModalities(config)))
           : tool,
       ),
-    { limits: config.tools, authorize: (tool, context) => tools.authorize(tool.name, context) },
+    {
+      limits: config.tools,
+      deferredMcp: tools.deferredMcp,
+      authorize: (tool, context) => tools.authorize(tool.name, context),
+    },
   );
 }

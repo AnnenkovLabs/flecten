@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { HOOK_NAMES } from "../../../../shared/hooks";
   import { t } from "../../lib/i18n.svelte";
   import { settings } from "../../lib/settings.svelte";
@@ -22,8 +23,8 @@
   <fieldset disabled={settings.saving}>
     <div class="st-grid">
       <label class="st-field"><span class="st-label">{t("Name")}</span><input class="st-input" bind:value={hook.name} maxlength="120" placeholder={t("A name you will recognize")} /></label>
-      <div class="st-field"><label class="st-label" for={`${uid}-event`}>{t("When")}</label><select id={`${uid}-event`} data-hook-event class="st-select" value={event} onchange={(e) => onchangeevent(e.currentTarget.value as HookEvent)}>{#each HOOK_NAMES as name (name)}<option value={name} disabled={name !== event && (settings.settings?.hooks?.[name].length ?? 0) >= hookLimit()}>{hookEventLabel(name)}</option>{/each}</select></div>
-      <div class="st-field span-2"><label class="st-label" for={`${uid}-action`}>{t("Action")}</label><select id={`${uid}-action`} class="st-select" value={hook.type ?? "command"} onchange={(e) => { hook.type = e.currentTarget.value === "http" ? "http" : "command"; }}><option value="command">{t("Run a command")}</option><option value="http">{t("Send an HTTP request")}</option></select></div>
+      <div class="st-field"><label class="st-label" for={`${uid}-event`}>{t("When")}</label><Select id={`${uid}-event`} data-hook-event class="st-select" value={event} onchange={(value) => onchangeevent(value as HookEvent)} options={HOOK_NAMES.map((name) => ({ value: name, label: hookEventLabel(name), disabled: name !== event && (settings.settings?.hooks?.[name].length ?? 0) >= hookLimit() }))} /></div>
+      <div class="st-field span-2"><label class="st-label" for={`${uid}-action`}>{t("Action")}</label><Select id={`${uid}-action`} class="st-select" value={hook.type ?? "command"} onchange={(value) => { hook.type = value === "http" ? "http" : "command"; }} options={[{ value: "command", label: t("Run a command") }, { value: "http", label: t("Send an HTTP request") }]} /></div>
       {#if hook.type === "http"}
         <label class="st-field span-2"><span class="st-label">{t("HTTP URL")}</span><input class="st-input" type="url" bind:value={hook.url} placeholder="https://example.com/hooks/agent" spellcheck="false" aria-describedby={validation?.field === "url" ? `${uid}-issue` : undefined} aria-invalid={validation?.field === "url" ? "true" : undefined} /></label>
         <p class="st-hint span-2">{t("Sends a POST request containing the event data. Your endpoint can return a decision and additional context.")}</p>
@@ -35,7 +36,7 @@
     </div>
     {#if issue && validation?.field !== "timeout"}<p id={`${uid}-issue`} class="st-error" role="alert">{issue}</p>{/if}
     <HookConditions {hook} {event} />
-    <div class="st-field"><label class="st-label" for={`${uid}-response`}>{t("Response format")}</label><select id={`${uid}-response`} aria-describedby={`${uid}-response-hint`} class="st-select" value={hook.responseFormat ?? "json"} onchange={(e) => hook.responseFormat = e.currentTarget.value === "text" ? "text" : "json"}><option value="text">{t("Text output")}</option><option value="json">{t("JSON decision and context")}</option></select><span id={`${uid}-response-hint`} class="st-hint">{hook.responseFormat === "text" ? t("Use ordinary scripts and formatters. Output is a log; exit code 2 can still block an action.") : t("Return a JSON object with decision, reason, or additionalContext. Empty output is accepted.")}</span></div>
+    <div class="st-field"><label class="st-label" for={`${uid}-response`}>{t("Response format")}</label><Select id={`${uid}-response`} aria-describedby={`${uid}-response-hint`} class="st-select" value={hook.responseFormat ?? "json"} onchange={(value) => hook.responseFormat = value === "text" ? "text" : "json"} options={[{ value: "text", label: t("Text output") }, { value: "json", label: t("JSON decision and context") }]} /><span id={`${uid}-response-hint`} class="st-hint">{hook.responseFormat === "text" ? t("Use ordinary scripts and formatters. Output is a log; exit code 2 can still block an action.") : t("Return a JSON object with decision, reason, or additionalContext. Empty output is accepted.")}</span></div>
     <details class="st-details">
       <summary>{t("Execution")}<Icon name="chevron-down" size={14} class="st-chevron" /></summary>
       <div class="st-details-body">

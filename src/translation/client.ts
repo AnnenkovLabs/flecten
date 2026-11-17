@@ -18,6 +18,7 @@ const TOOL = "translation_result";
 export interface TranslationUsage {
   usage: Usage;
   durationMs: number;
+  reported?: boolean;
 }
 
 export class TranslationClient {
@@ -86,6 +87,8 @@ export class TranslationClient {
     const started = performance.now();
     let response: z.infer<typeof ResultSchema> | undefined;
     let complete = false;
+    let reported = false;
+    let requested = true;
     let usage: Usage = { input: 0, output: 0, cached: 0 };
     try {
       for await (const event of this.provider.stream(
@@ -119,8 +122,10 @@ export class TranslationClient {
           if (event.name !== TOOL || response) throw new Error("Unexpected translation tool call");
           response = ResultSchema.parse(event.args);
         } else if (event.type === "usage") {
+          reported = true;
           usage = addUsage(usage, event);
-        } else if (event.type === "done") complete = event.reason !== "max_tokens";
+        } else if (event.type === "response") requested = event.response.requested !== false;
+        else if (event.type === "done") complete = event.reason !== "max_tokens";
       }
     } catch (error) {
       if (combined.aborted && !signal.aborted) {
@@ -132,7 +137,8 @@ export class TranslationClient {
       }
       throw error;
     } finally {
-      onUsage({ usage, durationMs: performance.now() - started });
+      if (requested || reported)
+        onUsage({ usage, reported, durationMs: performance.now() - started });
     }
     combined.throwIfAborted();
     if (!complete || !response) throw new Error("Translation was incomplete");

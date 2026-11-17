@@ -16,7 +16,7 @@ const limits = {
 };
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-tools-search-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-tools-search-"));
   dirs.push(dir);
   return dir;
 }
@@ -26,7 +26,7 @@ function context(cwd: string): ToolContext {
     sessionId: "s_test",
     cwd,
     signal: new AbortController().signal,
-    logDir: join(cwd, ".liquid/logs"),
+    logDir: join(cwd, ".flecten/logs"),
     limits,
     reads: new ReadTracker(),
   };
@@ -43,6 +43,21 @@ afterEach(async () => {
 });
 
 describe("grep flags", () => {
+  test("hidden searches keep immutable migration originals out of model results", async () => {
+    const cwd = await tempDir();
+    await mkdir(join(cwd, ".flecten-migration/v1/originals"), { recursive: true });
+    await writeFile(join(cwd, ".flecten-migration/v1/originals/secrets.json"), "migration-secret");
+    await writeFile(join(cwd, "public.txt"), "migration-secret");
+    for (const search of [runGrep, runGrepFallback]) {
+      const result = await search({ pattern: "migration-secret", hidden: true }, context(cwd));
+      expect(result.output).toContain("public.txt");
+      expect(result.output).not.toContain(".flecten-migration");
+    }
+    for (const glob of [runGlob, runGlobFallback]) {
+      const result = await glob({ pattern: "**/*", hidden: true }, context(cwd));
+      expect(result.output).not.toContain(".flecten-migration");
+    }
+  });
   test("honors case sensitivity", async () => {
     const cwd = await tempDir();
     await writeFile(join(cwd, "a.ts"), "Needle\nneedle\n");
@@ -223,7 +238,7 @@ describe("glob fallback", () => {
     await writeFile(join(cwd, "b.ts"), "");
     const result = await runGlobFallback({ pattern: "*.ts", maxResults: 2 }, context(cwd));
     expect(result.ok).toBe(true);
-    expect(result.output).toContain("Showing 2 of 3 files");
+    expect(result.data).toMatchObject({ count: 2, total: 3, nextOffset: 2 });
     expect(result.output.indexOf("a.ts")).toBeLessThan(result.output.indexOf("b.ts"));
     expect(result.output).not.toContain("c.ts");
   });

@@ -264,7 +264,7 @@ test("mandatory checkpoint and queued denial preserve human feedback", async () 
       .getByRole("button", { name: "Close settings", exact: true })
       .dispatchEvent("click");
     await expect(card.getByText("Denied", { exact: true })).toBeVisible();
-    const sessions = join(h.cwd, ".liquid", "sessions");
+    const sessions = join(h.cwd, ".flecten", "sessions");
     await expect
       .poll(async () => {
         for (const session of await readdir(sessions)) {
@@ -340,7 +340,7 @@ test("Access settings persist the approval policy and execution boundary without
 test("folder grants cover the chat and saved project scope without repeated requests", async () => {
   const problem = environmentProblem();
   test.skip(Boolean(problem), problem);
-  const folder = await mkdtemp(join(tmpdir(), "liquid-e2e-external-"));
+  const folder = await mkdtemp(join(tmpdir(), "flecten-e2e-external-"));
   const paths = [join(folder, "first.txt"), join(folder, "second.txt")];
   await Promise.all(paths.map((path, index) => writeFile(path, `External file ${index + 1}\n`)));
   const h = await launchApprovalApp({
@@ -410,7 +410,7 @@ test("folder grants cover the chat and saved project scope without repeated requ
       page.getByText("Файл прочитан. Folder check complete.", { exact: true }).last(),
     ).toBeVisible();
     await expect(page.locator("section.approval")).toHaveCount(0);
-    const sessions = join(h.cwd, ".liquid", "sessions");
+    const sessions = join(h.cwd, ".flecten", "sessions");
     await expect
       .poll(async () => {
         const events = (

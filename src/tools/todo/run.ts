@@ -37,7 +37,7 @@ function todoPath(cwd: string, sessionId: string): string {
   if (!SESSION_FILE.test(sessionId)) {
     throw new Error(`Invalid session id for todo storage: ${sessionId}`);
   }
-  return join(cwd, ".liquid", "todos", `${sessionId}.json`);
+  return join(cwd, ".flecten", "todos", `${sessionId}.json`);
 }
 
 async function loadTodos(path: string): Promise<Todo[]> {

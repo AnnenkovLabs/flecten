@@ -19,7 +19,7 @@ const limits = {
 };
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-mcp-context-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-mcp-context-"));
   dirs.push(dir);
   return dir;
 }
@@ -42,7 +42,7 @@ function context(cwd: string): ToolContext {
     sessionId: "s_test",
     cwd,
     signal: new AbortController().signal,
-    logDir: join(cwd, ".liquid/logs"),
+    logDir: join(cwd, ".flecten/logs"),
     limits,
     reads: new ReadTracker(),
   };

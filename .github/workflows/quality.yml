@@ -80,7 +80,7 @@ jobs:
           name: electron-report-${{ matrix.shard }}
           path: |
             playwright-report/
-            .liquid/e2e-results/
+            .flecten/e2e-results/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

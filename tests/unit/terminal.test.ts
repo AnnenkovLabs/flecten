@@ -26,7 +26,7 @@ function startSession(options: TerminalStartOptions): TerminalSession {
 }
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-terminal-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-terminal-"));
   dirs.push(dir);
   return dir;
 }
@@ -282,7 +282,7 @@ describe.skipIf(process.platform === "win32")("TerminalSession POSIX PTY", () =>
       });
     });
 
-    session.start({ cwd: await tempDir(), shell: "liquid-missing-shell" });
+    session.start({ cwd: await tempDir(), shell: "flecten-missing-shell" });
     const event = await errorEvent;
     expect(event.type).toBe("error");
     if (event.type === "error") expect(event.message).toContain("Shell not found");
@@ -294,7 +294,7 @@ test("a missing shell returns its startup failure to the caller", async () => {
   const session = track(new TerminalSession());
   const events: TerminalEvent[] = [];
   session.onEvent((event) => events.push(event));
-  const error = session.start({ cwd: await tempDir(), shell: "liquid-missing-shell" });
+  const error = session.start({ cwd: await tempDir(), shell: "flecten-missing-shell" });
   expect(error).toBeInstanceOf(Error);
   if (!error) throw new Error("Expected shell startup failure");
   expect(error.message).toContain("Shell not found");

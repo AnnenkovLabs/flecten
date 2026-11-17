@@ -31,7 +31,7 @@ afterEach(async () => {
 });
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-config-migrations-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-config-migrations-"));
   dirs.push(dir);
   return dir;
 }

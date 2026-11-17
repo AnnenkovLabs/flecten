@@ -14,7 +14,7 @@
 
 ## Что проверять в первую очередь
 
-- обход пути в протоколе `liquid://`;
+- обход пути в протоколе `flecten://`;
 - мост `preload` и доступ к `ipcRenderer`;
 - `contextIsolation`, `sandbox` и `nodeIntegration` в окне;
 - CSP и загрузка внешних ресурсов;

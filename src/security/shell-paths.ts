@@ -1,6 +1,7 @@
 import { homedir } from "node:os";
 import { isAbsolute, resolve } from "node:path";
 import { parseShell } from "./shell-lexer";
+import { sshResources } from "./ssh-resources";
 
 const SAFE_DEVICES = new Set(["/dev/null", "/dev/stdout", "/dev/stderr", "/dev/zero"]);
 
@@ -8,11 +9,16 @@ const SAFE_DEVICES = new Set(["/dev/null", "/dev/stdout", "/dev/stderr", "/dev/z
 export function shellPaths(command: string, cwd: string): string[] {
   const paths = new Set<string>();
   for (const simple of parseShell(command).commands) {
+    const ssh = sshResources(simple.argv);
+    for (const local of ssh?.commands ?? [])
+      for (const path of shellPaths(local, cwd)) paths.add(path);
     const words = [
-      ...simple.argv
-        .slice(1)
-        .filter((word) => !word.expands && !word.glob)
-        .map((word) => word.value),
+      ...(ssh
+        ? ssh.files
+        : simple.argv
+            .slice(1)
+            .filter((word) => !word.expands && !word.glob)
+            .map((word) => word.value)),
       ...simple.assignments,
       ...simple.redirects
         .filter((redirect) => !["<<", "<<<", ">&", "<&"].includes(redirect.op))

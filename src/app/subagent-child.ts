@@ -22,6 +22,9 @@ import { configSecrets } from "./provider-secrets";
 import { maxOutputTokens, modelContext } from "./provider-state";
 import { inputModalities } from "./service-policy";
 import { terminalSettings, usagePrice } from "./session-config";
+import { sessionModelOptions } from "./session-model-options";
+import { validateModelChoice } from "./session-models";
+import { subagentModelConfig } from "./subagent-models";
 import { formatSubagentReport } from "./subagent-report";
 import { translationOptions } from "./translation";
 import { visionOptions } from "./vision";
@@ -50,13 +53,16 @@ export function subagentChildRunner(runtime: ChildRuntime) {
   const language = translationOptions();
   return async (request: SubagentChildRequest): Promise<SubagentChildResult> => {
     const config = runtime.config();
-    const providerId = request.spec.provider ?? config.provider;
-    const model = request.spec.model ?? config.model;
-    const childConfig = { ...config, provider: providerId, model };
+    const childConfig = subagentModelConfig(config, request.spec, request.parentModel);
+    const providerId = childConfig.provider;
+    const model = childConfig.model;
     let childProvider: ModelProvider;
     try {
+      if (childConfig !== config) validateModelChoice(childConfig, childConfig);
       childProvider =
-        providerId === config.provider && model === config.model
+        providerId === config.provider &&
+        model === config.model &&
+        childConfig.variant === config.variant
           ? runtime.provider()
           : createProvider(childConfig, providerId).provider;
     } catch (error) {
@@ -101,6 +107,12 @@ export function subagentChildRunner(runtime: ChildRuntime) {
     const shellCheckpoints = runtime.shellCheckpoints();
     const child = createSession({
       role: "worker",
+      ...(request.taskBudget
+        ? {
+            taskBudget: request.taskBudget,
+            externalBudgetExhausted: () => request.taskBudget?.stopReason(),
+          }
+        : {}),
       ...(runtime.modules ? { modules: runtime.modules } : {}),
       ...(runtime.memory ? { memory: readOnlyMemory(runtime.memory) } : {}),
       ...(runtime.dictionary ? { dictionary: runtime.dictionary } : {}),
@@ -130,12 +142,14 @@ export function subagentChildRunner(runtime: ChildRuntime) {
         ...(request.budget.maxCost === undefined ? {} : { maxCostUsd: request.budget.maxCost }),
       },
       price: usagePrice(childConfig),
+      priceFor: sessionModelOptions(childConfig, childProvider).priceFor,
       limits: config.tools,
       maxOutputTokens: Math.max(
         1,
         Math.min(maxOutputTokens(childConfig), request.budget.maxTokens),
       ),
-      ...(config.reasoning ? { reasoning: config.reasoning } : {}),
+      ...(childConfig.reasoning ? { reasoning: childConfig.reasoning } : {}),
+      ...(childConfig.variant ? { variant: childConfig.variant } : {}),
       context: modelContext(childConfig),
       loop: {
         maxTurns: request.budget.maxTurns,
@@ -213,10 +227,12 @@ export function subagentChildRunner(runtime: ChildRuntime) {
       return await formatSubagentReport({
         request,
         provider: childProvider,
+        providerId,
         model,
         history: child.getHistory(),
         maxTokens: maxOutputTokens(childConfig),
         price: usagePrice(childConfig),
+        priceFor: sessionModelOptions(childConfig, childProvider).priceFor,
         result: {
           text: text || result.summary,
           usage,

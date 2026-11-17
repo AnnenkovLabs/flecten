@@ -48,10 +48,10 @@
 <svelte:document onclick={onDocumentClick} onkeydown={onDocumentKeydown} />
 
 <details class="ns-picker" bind:this={root} bind:open={open}>
-  <summary class="ns-picker-trigger" bind:this={trigger} title={currentPath}>
+  <summary class="ns-picker-trigger" bind:this={trigger} data-tooltip={currentPath}>
     <Icon name="folder" size={16} />
     <span class="ns-picker-text">
-      <span class="ns-picker-name" title={currentName}>{currentName}</span>
+      <span class="ns-picker-name" data-tooltip={currentName}>{currentName}</span>
     </span>
     <span class="ns-picker-chevron" aria-hidden="true">
       <Icon name="chevron-down" size={13} />
@@ -72,9 +72,9 @@
           >
             <Icon name="folder" size={15} />
             <span class="ns-picker-row-text">
-              <span class="ns-picker-row-name" title={project.name}>{project.name}</span>
+              <span class="ns-picker-row-name" data-tooltip={project.name}>{project.name}</span>
               {#if project.path}
-                <span class="ns-picker-row-path" title={project.path}>{project.path}</span>
+                <span class="ns-picker-row-path" data-tooltip={project.path}>{project.path}</span>
               {/if}
             </span>
             {#if project.id === current?.id}

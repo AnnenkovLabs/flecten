@@ -70,7 +70,7 @@ function session(cwd: string, store: MemoryStore, scripts: ModelEvent[][]) {
     maxOutputTokens: 2000,
     context: { window: 100000, reserve: 2000 },
     loop: { maxTurns: 12, continuations: 0, parallelTools: false },
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
   });
   run.subscribe((event) => events.push(event));
   return { run, provider, events };

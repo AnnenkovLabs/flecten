@@ -1,10 +1,17 @@
 import { expect, test } from "bun:test";
+import { ProviderProtectionDraft } from "../../ui/src/lib/settings/provider-protection.svelte";
 import { SettingsStore } from "../../ui/src/lib/settings.svelte";
 import { clone, emptyProvider } from "../../ui/src/lib/settings-utils";
 import type { HarnessSettings } from "../../ui/src/lib/types";
 
 function store(): SettingsStore {
   const host = new SettingsStore();
+  host.protection = new ProviderProtectionDraft(async () => ({
+    gateway: "unknown",
+    confidence: "unknown",
+    evidence: [],
+    checkedAt: new Date().toISOString(),
+  }));
   host.settings = {
     provider: "working",
     model: "working-model",
@@ -29,7 +36,7 @@ function store(): SettingsStore {
   return host;
 }
 
-test("unchecked custom provider joins the savable draft without a bridge or automatic test", async () => {
+test("unchecked custom provider joins the savable draft after inspection without automatic model discovery", async () => {
   const host = store();
   expect(host.custom.checkConnection).toBe(true);
   host.custom.checkConnection = false;

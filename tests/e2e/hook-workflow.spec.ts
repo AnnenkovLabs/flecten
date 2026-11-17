@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
+import { chooseSelect } from "./custom-select";
 import { type AppHarness, environmentProblem, launchApp } from "./fixtures";
 
 async function snapshots(h: AppHarness, name: string, anchor?: Locator): Promise<void> {
@@ -46,7 +47,7 @@ test("hooks support unsaved tests, ordering, persistence and real activity", asy
     await expect(editor.getByLabel("Name", { exact: true })).toBeFocused();
     await editor.getByLabel("Name", { exact: true }).fill("Check source files");
     await editor.getByLabel("Command", { exact: true }).fill("printf 'Formatting complete\\n'");
-    await expect(editor.getByLabel("Response format")).toHaveValue("text");
+    await expect(editor.getByLabel("Response format")).toHaveAttribute("value", "text");
     await dialog.locator("#settings-hooks").scrollIntoViewIfNeeded();
     await snapshots(h, "hooks-editor", editor.getByLabel("Command", { exact: true }));
     await editor.locator("summary").filter({ hasText: "Conditions" }).click();
@@ -62,7 +63,7 @@ test("hooks support unsaved tests, ordering, persistence and real activity", asy
     await editor.getByRole("button", { name: "Run test", exact: true }).click();
     await expect(editor.getByText("Conditions did not match", { exact: true })).toBeVisible();
     await editor.getByLabel("Example path", { exact: true }).fill("src/app.ts");
-    await editor.getByLabel("Response format").selectOption("json");
+    await chooseSelect(editor.getByLabel("Response format"), "json");
     await editor
       .getByLabel("Command", { exact: true })
       .fill(`printf '%s' '{"decision":"deny","reason":"Use the reviewed source path"}'`);
@@ -74,10 +75,10 @@ test("hooks support unsaved tests, ordering, persistence and real activity", asy
     await editor.getByLabel("Name", { exact: true }).fill("Notify run start");
     await dialog.getByRole("button", { name: "Move up", exact: true }).click();
     await expect(dialog.locator(".hook-identity strong").first()).toHaveText("Notify run start");
-    await editor.getByLabel("When", { exact: true }).selectOption("sessionStart");
+    await chooseSelect(editor.getByLabel("When", { exact: true }), "sessionStart");
     await expect(editor.getByLabel("When", { exact: true })).toBeFocused();
     await editor.getByLabel("Command", { exact: true }).fill("printf 'Starting workflow\\n'");
-    await editor.getByLabel("Response format").selectOption("text");
+    await chooseSelect(editor.getByLabel("Response format"), "text");
     // Copied conditions stay visible until the user explicitly clears them.
     await editor.getByLabel("Tool name", { exact: true }).fill("");
     await editor.getByLabel("Path prefix", { exact: true }).fill("");

@@ -106,7 +106,7 @@ test("saved command authorization refreshes through the provider settings button
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Missing test provider port");
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-auth-ui-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-auth-ui-"));
   const credential = join(cwd, "credential.txt");
   const executions = join(cwd, "auth-executions.txt");
   const auth = join(cwd, "authorize.cjs");
@@ -117,9 +117,9 @@ test("saved command authorization refreshes through the provider settings button
     "const fs = require('node:fs'); fs.appendFileSync(process.argv[3], 'executed\\n'); process.stdout.write(fs.readFileSync(process.argv[2], 'utf8'));",
   );
   await writeFile(join(cwd, "README.md"), "Provider authorization UI fixture");
-  await mkdir(join(cwd, ".liquid", "skills", "qa-auth"), { recursive: true });
+  await mkdir(join(cwd, ".flecten", "skills", "qa-auth"), { recursive: true });
   await writeFile(
-    join(cwd, ".liquid", "skills", "qa-auth", "SKILL.md"),
+    join(cwd, ".flecten", "skills", "qa-auth", "SKILL.md"),
     "---\nname: qa-auth\ndescription: Review provider authorization\nversion: 1.0.0\nallowed-tools: read\n---\n\nRead the selected file.\n",
   );
   await writeFile(
@@ -153,7 +153,7 @@ test("saved command authorization refreshes through the provider settings button
       },
       sandbox: { enabled: false },
       catalog: { autoRefresh: false },
-      skills: { sources: ["project-liquid"] },
+      skills: { sources: ["project-flecten"] },
       mcp: {
         servers: { "qa-server": { command: process.execPath, args: [], env: {}, enabled: false } },
       },

@@ -17,7 +17,7 @@ export class HarnessError extends Error {
 
 /** A provider limit ended the run: the kind and, when known, the reset time for the UI. */
 export class LimitError extends HarnessError {
-  readonly limit: "rate" | "five_hour" | "weekly" | "billing";
+  readonly limit: "rate" | "five_hour" | "weekly" | "billing" | "model_quota";
   readonly resetAt: number | undefined;
 
   constructor(

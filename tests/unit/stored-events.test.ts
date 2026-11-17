@@ -15,7 +15,7 @@ const everyStoredEventReads: [Unread] extends [never] ? true : Unread = true;
 describe("stored events", () => {
   test("every event the sidecar writes comes back when a task is reopened", async () => {
     expect(everyStoredEventReads).toBe(true);
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-stored-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-stored-"));
     try {
       const id = "s-stored";
       const events: Event[] = [

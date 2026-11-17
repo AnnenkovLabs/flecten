@@ -1,13 +1,15 @@
 <script lang="ts">
   import { t } from "./lib/i18n.svelte";
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, setContext } from "svelte";
   import GooFilters from "./components/GooFilters.svelte";
+  import TooltipLayer from "./components/controls/TooltipLayer.svelte";
   import MainHeader from "./components/MainHeader.svelte";
   import InspectorPanel from "./components/InspectorPanel.svelte";
   import MainPane from "./components/MainPane.svelte";
   import FileViewer from "./components/FileViewer.svelte";
   import RestoreDialog from "./components/RestoreDialog.svelte";
   import SettingsModal from "./components/SettingsModal.svelte";
+  import StorageMigration from "./components/StorageMigration.svelte";
   import ExtensionRequests from "./components/settings/ExtensionRequests.svelte";
   import ProjectNavigation from "./components/ProjectNavigation.svelte";
   import TitleBar from "./components/TitleBar.svelte";
@@ -31,8 +33,11 @@
   import { MODEL_PICKER_EVENT } from "./lib/ui-polish";
   import { fileViewer } from "./lib/file-viewer.svelte";
   import type { SummaryDestination } from "./lib/markdown/summary-navigation";
+  import { twinPowerContext } from "./lib/twin/context";
+  import { readPreference } from "./lib/preference-storage";
 
   const run = new RunStore();
+  setContext(twinPowerContext, () => run.twin.power);
   const harness = moduleHarness(run);
   const composer = $derived({
     context: run.contextView,
@@ -229,6 +234,7 @@
   }
 
   function onKeydown(event: KeyboardEvent): void {
+    if (run.migration.snapshot) return;
     if (event.key === "Escape") {
       if (event.defaultPrevented || mode === "ide" || document.querySelector("dialog[open], :popover-open")) return;
       if (searching) {
@@ -268,7 +274,7 @@
 
   onMount(() => {
     viewportWidth = window.innerWidth;
-    try { workspace.restore(localStorage.getItem(WORKSPACE_LAYOUT_KEY)); } catch { /* Optional preference storage. */ }
+    workspace.restore(readPreference(WORKSPACE_LAYOUT_KEY, "liquid.workspace-layout"));
     const disconnect = run.connect();
     const openChild = (event: Event): void => {
       const id = (event as CustomEvent<{ id?: unknown }>).detail?.id;
@@ -277,7 +283,6 @@
     window.addEventListener(OPEN_SUBAGENT, openChild);
     const refreshIde = (): void => { if (mode === "ide") void run.ide.requestRefresh(); };
     window.addEventListener("focus", refreshIde);
-    void run.loadCommands();
     return () => {
       disconnect();
       window.removeEventListener(OPEN_SUBAGENT, openChild);
@@ -390,7 +395,7 @@
       onSendModeChange={(mode) => run.setSendMode(mode)}
       onStop={() => run.stop()}
       jobs={run.view.jobs}
-      budget={run.view.budget}
+      budget={run.view.taskBudget ?? run.view.budget}
     />
     {/if}
     </div>
@@ -400,7 +405,10 @@
       {split}
       files={run.view.thread.changeFiles}
       terminal={run.view.thread.terminalLines}
-      workers={run.view.worker.items}
+      taskId={run.activeTask}
+      worker={run.view.worker}
+      onOpenChanges={openChanges}
+      onNavigateSummary={navigateSummary}
       checkpoints={run.checkpoints.list}
       shellCheckpoints={run.info?.shellCheckpoints}
       onRestoreCheckpoint={(id, target) => void run.checkpoints.restore(id, target)}
@@ -430,6 +438,10 @@
 <SettingsModal hookRuns={run.view.hookRuns} dictionary={run.dictionary} />
 <ExtensionRequests />
 <ModuleInterfaceHost snapshot={run.modules.state} {harness} />
+<TooltipLayer />
+{#if run.migration.snapshot}
+  <StorageMigration state={run.migration.snapshot} onStart={run.migration.start} onAccept={run.migration.accept} />
+{/if}
 
 <style>
   .app {

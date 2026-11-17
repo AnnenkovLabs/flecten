@@ -23,12 +23,12 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
 
 /** A user repository with one commit, a staged file and an ignored build folder. */
 async function userRepo(): Promise<string> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-shell-cp-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-shell-cp-"));
   dirs.push(cwd);
   await git(cwd, "init", "-q");
   await git(cwd, "config", "user.email", "test@example.com");
   await git(cwd, "config", "user.name", "Test");
-  await writeFile(join(cwd, ".gitignore"), "build/\n.liquid/\n");
+  await writeFile(join(cwd, ".gitignore"), "build/\n.flecten/\n");
   await writeFile(join(cwd, "a.txt"), "alpha\n");
   await writeFile(join(cwd, "b.txt"), "beta\n");
   await git(cwd, "add", ".");
@@ -43,7 +43,7 @@ async function userRepo(): Promise<string> {
 async function service(cwd: string, limits: { maxFiles?: number } = {}) {
   const store = new CheckpointStore({ cwd });
   await store.init();
-  const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".liquid", "shadow"));
+  const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".flecten", "shadow"));
   const shell = new ShellCheckpointService(snapshots, store, limits);
   expect(await shell.ready()).toBeUndefined();
   return { store, shell };
@@ -75,7 +75,7 @@ describe("shell checkpoints", () => {
       }
     }
     const store = new ContendedStore({ cwd });
-    const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".liquid", "shadow"));
+    const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".flecten", "shadow"));
     const shell = new ShellCheckpointService(snapshots, store);
     expect(await shell.ready()).toBeUndefined();
     const blocker = store.capture({ paths: ["a.txt"], tool: "write", label: "concurrent session" });
@@ -189,7 +189,7 @@ describe("shell checkpoints", () => {
 
   test("a capture that cannot finish before its deadline gives up instead of blocking", async () => {
     const cwd = await userRepo();
-    const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".liquid", "shadow"));
+    const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".flecten", "shadow"));
     const started = Date.now();
     const result = await snapshots.capture({ deadline: Date.now() });
     expect(Date.now() - started).toBeLessThan(1000);

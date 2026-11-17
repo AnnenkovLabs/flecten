@@ -14,7 +14,7 @@
 <button
   class="file-change"
   type="button"
-  title={t("Open changes for {0}", [file.path])}
+  data-tooltip={t("Open changes for {0}", [file.path])}
   onclick={onOpen}
 >
   <FileTypeBadge kind={file.kind} />

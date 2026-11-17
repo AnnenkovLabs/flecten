@@ -54,7 +54,7 @@ afterEach(async () => {
 });
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-app-security-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-app-security-"));
   dirs.push(dir);
   return dir;
 }
@@ -75,7 +75,7 @@ function secretConfig(): HarnessConfig {
         },
         auth: {
           command: "/bin/echo",
-          args: ["--audience", "liquid", "--token=ghp_abcdefghijklmnopqrst"],
+          args: ["--audience", "flecten", "--token=ghp_abcdefghijklmnopqrst"],
         },
         models: {
           "test-1": {
@@ -374,12 +374,12 @@ describe("settings.get", () => {
 
 describe("shell sender validation", () => {
   test("accepts only the app frame or the configured dev origin", () => {
-    expect(isTrustedSenderUrl("liquid://app/index.html")).toBe(true);
-    expect(isTrustedSenderUrl("liquid://app")).toBe(true);
+    expect(isTrustedSenderUrl("flecten://app/index.html")).toBe(true);
+    expect(isTrustedSenderUrl("flecten://app")).toBe(true);
     expect(isTrustedSenderUrl("file:///tmp/index.html")).toBe(false);
     expect(isTrustedSenderUrl("file:///tmp/index.html", "null")).toBe(false);
     expect(isTrustedSenderUrl("https://evil.test/index.html")).toBe(false);
-    expect(isTrustedSenderUrl("liquid://other/index.html")).toBe(false);
+    expect(isTrustedSenderUrl("flecten://other/index.html")).toBe(false);
     expect(isTrustedSenderUrl("not a url")).toBe(false);
     expect(isTrustedSenderUrl("https://dev.test:5173/index.html", "https://dev.test:5173")).toBe(
       true,

@@ -9,7 +9,7 @@ export async function sessionMemoryAllowed(
   sessionId: string,
   action: "read" | "write",
 ): Promise<boolean> {
-  const path = join(options.cwd, ".liquid", "memory.json");
+  const path = join(options.cwd, ".flecten", "memory.json");
   const decision = options.permissions?.check({
     action,
     tool: "memory",

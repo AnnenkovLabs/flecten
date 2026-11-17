@@ -18,7 +18,7 @@ import { _electron as electron } from "@playwright/test";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const scenarioPath = process.argv[2];
-const outDir = resolve(process.argv[3] ?? join(repoRoot, ".liquid/preview"));
+const outDir = resolve(process.argv[3] ?? join(repoRoot, ".flecten/preview"));
 if (!scenarioPath) {
   console.error("usage: node scripts/ui-preview.mjs <scenario.json> [outDir]");
   process.exit(2);
@@ -51,12 +51,12 @@ function startMock() {
 
 const cwd = scenario.projectName
   ? join(tmpdir(), scenario.projectName)
-  : mkdtempSync(join(tmpdir(), "liquid-preview-"));
+  : mkdtempSync(join(tmpdir(), "flecten-preview-"));
 if (scenario.projectName) {
   rmSync(cwd, { recursive: true, force: true });
   mkdirSync(cwd, { recursive: true });
 }
-const home = mkdtempSync(join(tmpdir(), "liquid-preview-home-"));
+const home = mkdtempSync(join(tmpdir(), "flecten-preview-home-"));
 for (const [name, text] of Object.entries(scenario.workspace ?? { "README.md": "# Demo\n" })) {
   mkdirSync(dirname(join(cwd, name)), { recursive: true });
   writeFileSync(join(cwd, name), text);
@@ -127,7 +127,7 @@ async function setSize(width, height) {
 
 /** The task updated last, for `{"emit": {"sessionId": "@latest"}}`. */
 function latestSession() {
-  const index = JSON.parse(readFileSync(join(cwd, ".liquid/sessions/index.json"), "utf8"));
+  const index = JSON.parse(readFileSync(join(cwd, ".flecten/sessions/index.json"), "utf8"));
   const sessions = [...(index.sessions ?? [])].sort((a, b) =>
     String(b.updatedAt).localeCompare(String(a.updatedAt)),
   );

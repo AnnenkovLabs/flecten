@@ -67,7 +67,7 @@ async function fixture(
     maxOutputTokens: 2000,
     context: { window: 100000, reserve: 2000 },
     loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     memory: store,
     ...(permissions ? { permissions } : {}),
   });

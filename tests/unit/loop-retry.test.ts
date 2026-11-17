@@ -32,7 +32,7 @@ describe("loop retry", () => {
         yield { type: "done", reason: "end" };
       },
     };
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-retry-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-retry-"));
     try {
       const events: Event[] = [];
       const session = createSession({
@@ -46,7 +46,7 @@ describe("loop retry", () => {
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
       });
       session.subscribe((event) => events.push(event));
 

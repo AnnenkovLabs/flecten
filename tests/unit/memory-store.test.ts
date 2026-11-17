@@ -9,7 +9,7 @@ import { MemoryStore } from "../../src/store/memory";
 
 const workspaces: string[] = [];
 async function workspace(): Promise<string> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-memory-store-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-memory-store-"));
   workspaces.push(cwd);
   return cwd;
 }
@@ -120,7 +120,7 @@ describe("durable agent memory", () => {
 
   test("fails closed on corrupt or malformed files and never replaces the original with an empty store", async () => {
     const store = new MemoryStore({ cwd: await workspace() });
-    await mkdir(join(store.cwd, ".liquid"));
+    await mkdir(join(store.cwd, ".flecten"));
     for (const raw of [
       "{ broken json",
       JSON.stringify({ version: 2, records: [], history: [], unexpected: true }),
@@ -175,7 +175,7 @@ describe("durable agent memory", () => {
 
   test("migrates strict legacy files without pretending old entries are verified user evidence", async () => {
     const store = new MemoryStore({ cwd: await workspace() });
-    await mkdir(join(store.cwd, ".liquid"));
+    await mkdir(join(store.cwd, ".flecten"));
     const legacy = {
       version: 1,
       records: [

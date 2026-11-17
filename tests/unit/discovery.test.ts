@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-discovery-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-discovery-"));
   dirs.push(dir);
   return dir;
 }
@@ -40,7 +40,7 @@ describe("provider discovery", () => {
     });
     servers.push(server);
     const cwd = await tempDir();
-    const cache = join(cwd, ".liquid", "cache");
+    const cache = join(cwd, ".flecten", "cache");
     await mkdir(cache, { recursive: true });
     await writeFile(
       join(cache, "models-dev.json"),
@@ -106,7 +106,7 @@ describe("native local discovery", () => {
     });
     servers.push(server);
     const cwd = await tempDir();
-    const cache = join(cwd, ".liquid", "cache");
+    const cache = join(cwd, ".flecten", "cache");
     await mkdir(cache, { recursive: true });
     await writeFile(join(cache, "models-dev.json"), "{}");
     await writeFile(join(cache, "agent-one.json"), "{}");

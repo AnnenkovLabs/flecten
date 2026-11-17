@@ -51,7 +51,7 @@
       <span
         class="shell-state"
         class:is-ready={shell.state === "ready"}
-        title={shell.reason ?? SHELL_STATE[shell.state]}
+        data-tooltip={shell.reason ?? SHELL_STATE[shell.state]}
       >
         {SHELL_STATE[shell.state]}
       </span>
@@ -70,14 +70,14 @@
           <div class="checkpoint-main">
             <span class="checkpoint-label">{checkpoint.label}</span>
             {#if checkpoint.command}
-              <code class="checkpoint-command" title={checkpoint.command}>{checkpoint.command}</code>
+              <code class="checkpoint-command" data-tooltip={checkpoint.command}>{checkpoint.command}</code>
             {/if}
             <span class="checkpoint-meta">
               {timeOf(checkpoint.createdAt)} · {filesLabel(checkpoint.files.length)} ·
               {formatBytes(checkpoint.bytes)} · {checkpoint.tool}
             </span>
             {#if checkpoint.gap}
-              <span class="checkpoint-gap" title={checkpoint.gap.reason}> {t("Not included in the snapshot: {0}, {1}", [filesLabel(checkpoint.gap.files), formatBytes(checkpoint.gap.bytes)])} </span>
+              <span class="checkpoint-gap" data-tooltip={checkpoint.gap.reason}> {t("Not included in the snapshot: {0}, {1}", [filesLabel(checkpoint.gap.files), formatBytes(checkpoint.gap.bytes)])} </span>
             {/if}
           </div>
           <div class="checkpoint-actions">
@@ -91,14 +91,14 @@
               <button
                 class="st-btn st-btn--quiet"
                 type="button"
-                title={t("Restore files to their state before this action")}
+                data-tooltip={t("Restore files to their state before this action")}
                 onclick={() => requestRestore(checkpoint.id, "before")}
               > {t("Roll back")} </button>
               {#if checkpoint.finalizedAt}
                 <button
                   class="st-btn st-btn--quiet"
                   type="button"
-                  title={t("Restore the state after this action")}
+                  data-tooltip={t("Restore the state after this action")}
                   onclick={() => requestRestore(checkpoint.id, "after")}
                 > {t("Restore")} </button>
               {/if}

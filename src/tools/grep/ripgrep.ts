@@ -159,6 +159,8 @@ export async function runRipgrep(
   if (args.literal) command.push("--fixed-strings");
   if (args.caseSensitive === false) command.push("--ignore-case");
   if (args.hidden) command.push("--hidden");
+  command.push("--glob", "!**/.flecten-migration/**");
+  command.push("--glob", "!**/.flecten-scratch/**");
   if (!args.filesWithMatches && !args.count) {
     if (args.context) command.push("--context", String(args.context));
     // One extra match is needed to report truncation in a single matching file.

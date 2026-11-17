@@ -14,9 +14,9 @@
   } = $props();
 </script>
 <aside class="agent-sidebar" aria-label={t("Agent")} id="ide-agent">
-  <header><Icon name="brain" size={17} /><h2>{t("Agent")}</h2><span class="connection" title={run.connection === "ready" ? t("Agent connected") : t("Not connected")}>{run.connection === "ready" ? run.busy ? t("Working") : t("Ready") : t("Connecting…")}</span>
-    <button type="button" title={t("Open full conversation")} aria-label={t("Open full conversation")} onclick={onShowAgent}><Icon name="layers" size={15} /></button>
-    <button type="button" title={t("Hide agent")} aria-label={t("Hide agent")} onclick={onClose}><Icon name="x" size={15} /></button>
+  <header><Icon name="brain" size={17} /><h2>{t("Agent")}</h2><span class="connection" data-tooltip={run.connection === "ready" ? t("Agent connected") : t("Not connected")}>{run.connection === "ready" ? run.busy ? t("Working") : t("Ready") : t("Connecting…")}</span>
+    <button type="button" data-tooltip={t("Open full conversation")} aria-label={t("Open full conversation")} onclick={onShowAgent}><Icon name="layers" size={15} /></button>
+    <button type="button" data-tooltip={t("Hide agent")} aria-label={t("Hide agent")} onclick={onClose}><Icon name="x" size={15} /></button>
   </header>
   {#if run.view.thread.items.length || run.view.live}
     <Thread taskId={run.activeTask} items={run.history.items} historyDisabled={run.history.blocked} live={run.view.live} liveLabel={run.view.liveLabel} pendingCalls={run.view.thread.pendingCalls} busy={run.busy} {onOpenChanges} onRepeat={(prompt) => run.repeat(prompt)} onEditMessage={(id, text) => run.history.begin(id, text)} onSelectVersion={(id, variant) => run.history.select(id, variant)} />
@@ -24,7 +24,7 @@
     <div class="agent-empty"><Icon name="brain" size={28} /><h3>{t("Working in the same project")}</h3><p>{t("Give the agent a task. Its actions and replies will appear here, while your files stay in view.")}</p></div>
   {/if}
   <div class="agent-composer">
-    <RunStrip jobs={run.view.jobs} budget={run.view.budget} />
+    <RunStrip jobs={run.view.jobs} budget={run.view.taskBudget ?? run.view.budget} />
     <ApprovalDock items={run.view.thread.items} />
     <Composer running={run.busy} stopping={run.view.stopping} {focusToken} placeholder={t("Message the agent…")} context={run.contextView}
       editing={run.history.editing} editBlocked={run.history.blocked} onCancelEdit={() => run.history.cancel()}

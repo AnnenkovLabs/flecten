@@ -87,6 +87,7 @@ const LIMIT_OF: Partial<Record<RetryFailure["kind"], LimitError["limit"]>> = {
   rate_limit: "rate",
   quota_5h: "five_hour",
   quota_weekly: "weekly",
+  model_quota: "model_quota",
   billing: "billing",
 };
 

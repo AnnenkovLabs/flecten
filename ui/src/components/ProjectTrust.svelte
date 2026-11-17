@@ -21,7 +21,7 @@
 </script>
 
 <dialog class="project-trust" bind:this={dialog} aria-labelledby="project-trust-title" aria-describedby="project-trust-description" oncancel={(event) => event.preventDefault()}>
-  <button class="trust-close" type="button" aria-label={t("Close")} title={t("Close")} disabled={saving} onclick={onClose}><Icon name="x" size={20} /></button>
+  <button class="trust-close" type="button" aria-label={t("Close")} data-tooltip={t("Close")} disabled={saving} onclick={onClose}><Icon name="x" size={20} /></button>
   <section class="trust-content">
     <Icon name="folder" size={30} />
     <p class="trust-eyebrow">{t("Project access")}</p>

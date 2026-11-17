@@ -7,7 +7,7 @@ import { checkpointSettings } from "./session-config";
 const DAY_MS = 86_400_000;
 
 /**
- * Snapshots around bash and terminal commands live in a shadow git under .liquid/shadow,
+ * Snapshots around bash and terminal commands live in a shadow git under .flecten/shadow,
  * separate from the user's repository: the user's git keeps what the user decides to
  * commit, the shadow keeps every command of the agent. Warming runs in the background.
  */
@@ -18,7 +18,7 @@ export function shellCheckpointsFor(
 ): ShellCheckpointService | undefined {
   const settings = checkpointSettings(config);
   if (!settings.shell) return undefined;
-  const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".liquid", "shadow"));
+  const snapshots = new WorkspaceSnapshots(cwd, join(cwd, ".flecten", "shadow"));
   void snapshots.warm().catch(() => undefined);
   return new ShellCheckpointService(snapshots, store, {
     maxFiles: settings.maxFiles,

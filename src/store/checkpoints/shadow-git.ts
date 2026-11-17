@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 
 /**
- * A private git repository in `.liquid/shadow` that indexes the workspace for shell checkpoints.
+ * A private git repository in `.flecten/shadow` that indexes the workspace for shell checkpoints.
  * It never writes to the user's repository: the user's object database is read through
  * `objects/info/alternates` and the user's index is copied once as a warm stat cache.
  */
@@ -83,10 +83,12 @@ export class ShadowGit {
   }
 
   /** Creates the repository once; returns false when git is missing or init fails. */
-  async ensure(): Promise<boolean> {
+  async ensure(deadline?: number): Promise<boolean> {
     if (existsSync(join(this.gitDir, "HEAD"))) return true;
     await mkdir(this.gitDir, { recursive: true });
-    const init = await this.run(["init", "--quiet"]).catch(() => undefined);
+    const init = await this.run(["init", "--quiet"], {
+      ...(deadline === undefined ? {} : { deadline }),
+    }).catch(() => undefined);
     if (init === undefined || init.code !== 0) return false;
     const config = await readFile(join(this.gitDir, "config"), "utf8");
     await writeFile(join(this.gitDir, "config"), `${config}${SHADOW_CONFIG}`);
@@ -136,6 +138,7 @@ export interface UserRepo {
 export async function findUserRepo(
   workTree: string,
   binary = "git",
+  deadline = Date.now() + 4000,
 ): Promise<UserRepo | undefined> {
   const env = {
     PATH: process.env.PATH ?? "/usr/bin:/bin",
@@ -147,13 +150,13 @@ export async function findUserRepo(
     ["rev-parse", "--path-format=absolute", "--show-toplevel", "--git-dir", "--git-common-dir"],
     workTree,
     { ...env, GIT_OPTIONAL_LOCKS: "0" },
-    { deadline: Date.now() + 2000 },
+    { deadline: Math.min(deadline, Date.now() + 2000) },
   ).catch(() => undefined);
   if (out === undefined || out.code !== 0) return undefined;
   const [top, gitDir, commonDir] = out.stdout.toString("utf8").split("\n");
   if (!top || !gitDir || !commonDir || resolve(top) !== resolve(workTree)) return undefined;
   const settings = await runGit(binary, ["config", "--list", "--null"], workTree, env, {
-    deadline: Date.now() + 2000,
+    deadline: Math.min(deadline, Date.now() + 2000),
   }).catch(() => undefined);
   const converts = settingsConvert(settings?.code === 0 ? settings.stdout.toString("utf8") : "");
   return {
@@ -187,6 +190,9 @@ export async function runGit(
   env: Record<string, string>,
   call: GitCall = {},
 ): Promise<GitOutput & { truncated: boolean }> {
+  if (call.deadline !== undefined && Date.now() >= call.deadline) {
+    return { code: 124, stdout: Buffer.alloc(0), stderr: "", timedOut: true, truncated: false };
+  }
   const proc = Bun.spawn({
     cmd: [binary, ...args],
     cwd,

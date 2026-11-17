@@ -25,7 +25,7 @@
     type="button"
     aria-expanded={expanded}
     aria-controls={listId}
-    title={expanded ? t("Collapse calls") : t("Show each call")}
+    data-tooltip={expanded ? t("Collapse calls") : t("Show each call")}
     onclick={() => (expanded = !expanded)}
   >
     <Icon name="search" size={14} />

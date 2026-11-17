@@ -4,7 +4,7 @@ import type { TabId } from "./types";
 export type SubagentTab = `subagent:${string}`;
 export type ModuleTab = `module:${string}:${string}`;
 export type WorkspaceSurface = "thread" | TabId | SubagentTab | ModuleTab;
-export const WORKSPACE_LAYOUT_KEY = "liquid.workspace-layout";
+export const WORKSPACE_LAYOUT_KEY = "flecten.workspace-layout";
 const layoutSchema = z.enum(["focus", "split"]);
 
 /** Keep a readable conversation beside a useful review pane, including when the sidebar is open. */

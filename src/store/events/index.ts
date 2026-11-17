@@ -1,12 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { cp, mkdir, readdir, readFile, rename, stat, utimes, writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { cp, mkdir, readdir, readFile, rename, stat, utimes } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { z } from "zod";
 import type { Event } from "../../core/types";
+import { atomicWrite } from "../../util/atomic";
 import { newId } from "../../util/ids";
 import { redact } from "../../util/redact";
 import { copyPageArchive } from "../pages";
 import { sessionPaths } from "../paths";
+import { archiveSessionScratch } from "../session-scratch";
 import { readTolerant } from "./envelope";
 import { assertForkOptions, type ForkSessionOptions, forkCutoff, forkLines } from "./fork";
 
@@ -67,11 +69,11 @@ export function assertSessionId(id: string): void {
 }
 
 export function sessionIndexPath(cwd: string): string {
-  return join(cwd, ".liquid", "sessions", "index.json");
+  return join(cwd, ".flecten", "sessions", "index.json");
 }
 
 function sessionsRoot(cwd: string): string {
-  return join(cwd, ".liquid", "sessions");
+  return join(cwd, ".flecten", "sessions");
 }
 
 async function readIndexFile(cwd: string): Promise<SessionSummary[] | undefined> {
@@ -84,9 +86,6 @@ async function readIndexFile(cwd: string): Promise<SessionSummary[] | undefined>
 }
 
 async function writeIndexFile(cwd: string, sessions: SessionSummary[]): Promise<void> {
-  const path = sessionIndexPath(cwd);
-  await mkdir(dirname(path), { recursive: true });
-  const temp = `${path}.${process.pid}.${randomUUID()}.tmp`;
   const body: SessionIndexFile = {
     version: SESSION_INDEX_VERSION,
     sessions: sortSessions(sessions).map((session) => ({
@@ -95,8 +94,7 @@ async function writeIndexFile(cwd: string, sessions: SessionSummary[]): Promise<
       lastPrompt: redact(session.lastPrompt),
     })),
   };
-  await writeFile(temp, `${JSON.stringify(body, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-  await rename(temp, path);
+  await atomicWrite(sessionIndexPath(cwd), `${JSON.stringify(body, null, 2)}\n`, 0o600);
 }
 
 function sortSessions(sessions: readonly SessionSummary[]): SessionSummary[] {
@@ -342,13 +340,14 @@ export async function deleteSession(
   if (!info?.isDirectory()) throw new Error(`unknown session: ${id}`);
 
   return serialized(cwd, async () => {
-    const trashRoot = join(cwd, ".liquid", "trash");
+    const trashRoot = join(cwd, ".flecten", "trash");
     await mkdir(trashRoot, { recursive: true });
     let trash = join(trashRoot, id);
     if (await stat(trash).catch(() => undefined)) {
       trash = join(trashRoot, `${id}-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`);
     }
     await rename(paths.session, trash);
+    await archiveSessionScratch(cwd, id, trash);
     const deletedAt = new Date();
     await utimes(trash, deletedAt, deletedAt);
 
@@ -393,10 +392,11 @@ export async function forkSession(
   }).catch((error: unknown) => {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw errorOf(error);
   });
-  await writeFile(target.events, `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  });
+  await atomicWrite(
+    target.events,
+    `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`,
+    0o600,
+  );
   await cp(sessionPaths(cwd, sourceId).logs, target.logs, {
     recursive: true,
     force: true,

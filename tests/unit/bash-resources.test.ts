@@ -12,7 +12,7 @@ afterEach(async () => {
 
 describe("foreground bash resources", () => {
   test.skipIf(process.platform === "win32")("runs commands in the configured shell", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-configured-shell-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-configured-shell-"));
     dirs.push(cwd);
     const terminals = new TerminalManager({ shell: "/bin/sh" });
     const result = await runBash(
@@ -24,7 +24,7 @@ describe("foreground bash resources", () => {
   });
 
   test.skipIf(process.platform !== "linux")("enforces the configured UDP port range", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-bash-ports-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-bash-ports-"));
     dirs.push(cwd);
     const terminals = new TerminalManager({ limits: { ports: { min: 1, max: 1 } } });
     const result = await runBash(
@@ -41,7 +41,7 @@ describe("foreground bash resources", () => {
   test.skipIf(process.platform !== "linux")(
     "enforces the configured process tree budget",
     async () => {
-      const cwd = await mkdtemp(join(tmpdir(), "liquid-bash-resources-"));
+      const cwd = await mkdtemp(join(tmpdir(), "flecten-bash-resources-"));
       dirs.push(cwd);
       const terminals = new TerminalManager({ limits: { maxProcesses: 2 } });
       const result = await runBash(

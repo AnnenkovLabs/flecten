@@ -63,9 +63,10 @@ export async function searchWorkspace(
   const matches: WorkspaceMatch[] = [];
   const deadline = Date.now() + 5000;
   let filesSearched = 0;
-  let limited = false;
+  const index = await listWorkspaceFiles(cwd);
+  let limited = index.limited;
   // ponytail: bounded scan of the file index; use an indexed search service for larger workspaces.
-  for (const path of await listWorkspaceFiles(cwd)) {
+  for (const path of index.files) {
     if (Date.now() > deadline || matches.length >= 500) {
       limited = true;
       break;

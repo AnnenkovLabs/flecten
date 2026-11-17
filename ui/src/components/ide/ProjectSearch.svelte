@@ -11,10 +11,10 @@
   });
 </script>
 <aside class="project-search" aria-label={t("Search project")}>
-  <header><strong>{t("Search")}</strong><button type="button" title={t("Search again")} aria-label={t("Search again")} onclick={() => void search.find()}><Icon name="refresh" size={15} /></button></header>
+  <header><strong>{t("Search")}</strong><button type="button" data-tooltip={t("Search again")} aria-label={t("Search again")} onclick={() => void search.find()}><Icon name="refresh" size={15} /></button></header>
   <form onsubmit={(event) => { event.preventDefault(); void search.find(); }}>
     <label for="project-query">{t("Find in files")}</label>
-    <div class="search-input"><input id="project-query" placeholder={t("Search text")} bind:value={search.query} /><button type="button" aria-pressed={search.caseSensitive} title={t("Match case")} onclick={() => search.caseSensitive = !search.caseSensitive}>Aa</button><button type="button" aria-pressed={search.wholeWord} title={t("Whole word")} onclick={() => search.wholeWord = !search.wholeWord}>ab</button></div>
+    <div class="search-input"><input id="project-query" placeholder={t("Search text")} bind:value={search.query} /><button type="button" aria-label={t("Match case")} aria-pressed={search.caseSensitive} data-tooltip={t("Match case")} onclick={() => search.caseSensitive = !search.caseSensitive}>Aa</button><button type="button" aria-label={t("Whole word")} aria-pressed={search.wholeWord} data-tooltip={t("Whole word")} onclick={() => search.wholeWord = !search.wholeWord}>ab</button></div>
     <label for="project-include">{t("Partial path")} <span>{t("optional")}</span></label>
     <input id="project-include" placeholder={t("src/ or .svelte")} bind:value={search.include} />
     <button class="search-submit" type="submit" disabled={search.busy}><Icon name="search" size={14} />{search.busy ? t("Searching…") : t("Find")}<kbd>Enter</kbd></button>
@@ -25,8 +25,8 @@
     {#if search.error}<p role="alert">{search.error}</p>{/if}
     {#if search.result?.limited}<p>{t("Only some results are shown. Refine the search text or partial path.")}</p>{/if}
     {#each groups as [path, matches] (path)}
-      <details open><summary title={path}><Icon name="file" size={14} /><span>{path}</span><small>{matches.length}</small></summary>
-        {#each matches as match, index (index)}<button type="button" title={`${path}:${match.line}:${match.column}\n${match.text}`} onclick={() => onOpen(match)}><span class="line-number">{match.line}</span><span class="match-text">{match.text}</span></button>{/each}
+      <details open><summary data-tooltip={path}><Icon name="file" size={14} /><span>{path}</span><small>{matches.length}</small></summary>
+        {#each matches as match, index (index)}<button type="button" data-tooltip={`${path}:${match.line}:${match.column}\n${match.text}`} onclick={() => onOpen(match)}><span class="line-number">{match.line}</span><span class="match-text">{match.text}</span></button>{/each}
       </details>
     {/each}
     {#if search.result && !search.result.matches.length}<p>{t("No matches. Change the search text or remove the path filter.")}</p>{/if}

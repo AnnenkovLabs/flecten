@@ -30,7 +30,7 @@ const limits = {
 };
 
 test("real queue and approval commands keep UI state on failed IPC and converge after reconnect", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-state-ui-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-state-ui-"));
   const stored: Event[] = [];
   const provider = scriptedProvider([
     [
@@ -196,7 +196,7 @@ test("real queue and approval commands keep UI state on failed IPC and converge 
 });
 
 test("preparation and its failure publish the same phase used by status and the view", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-preparing-ui-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-preparing-ui-"));
   let failPreparation!: (error: Error) => void;
   const history = new Promise<never>((_resolve, reject) => {
     failPreparation = reject;

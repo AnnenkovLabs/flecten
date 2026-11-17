@@ -220,6 +220,6 @@ AGPL-3.0. Ver [LICENSE](../../LICENSE). Libre para usar, modificar y compartir; 
 
 ---
 
-<p align="center"><sub>Flecten se llamaba antes Liquid Harness. Los archivos <code>liquid.config.json</code>, las variables <code>LIQUID_*</code>, los enlaces <code>liquid-harness://</code> y los perfiles guardados siguen funcionando. Los nombres principales ahora son <code>flecten.config.json</code>, <code>FLECTEN_*</code> y <code>flecten://</code>. La carpeta <code>.liquid/</code> conserva sesiones, adjuntos y checkpoints sin migración de datos.</sub></p>
+<p align="center"><sub>Flecten se llamaba antes Liquid Harness. Los archivos <code>liquid.config.json</code>, las variables <code>LIQUID_*</code>, los enlaces <code>liquid-harness://</code> y los perfiles guardados siguen funcionando. Los nombres principales ahora son <code>flecten.config.json</code>, <code>FLECTEN_*</code> y <code>flecten://</code>. La carpeta <code>.flecten/</code> guarda sesiones, adjuntos y checkpoints. Los datos existentes de <code>.liquid/</code> se trasladan automáticamente al abrir el proyecto.</sub></p>
 
 <p align="center"><sub>La interfaz inicia en inglés. Elige un idioma en <b>Ajustes → General → Idioma de la interfaz</b>. La elección se guarda en este dispositivo y es independiente del idioma de las respuestas del agente.</sub></p>

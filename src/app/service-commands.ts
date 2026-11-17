@@ -12,7 +12,7 @@ import type { Skill } from "../skills/schema";
 export const RESUME_PROMPT = "/continue";
 
 /**
- * Slash commands from `.claude/commands` and `.liquid/commands` (user and project) plus skills.
+ * Slash commands from `.claude/commands` and `.flecten/commands` (user and project) plus skills.
  * Files are read on every call, so a new command works without a restart.
  */
 export function slashCommands(

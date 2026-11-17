@@ -150,7 +150,10 @@ async function authorizeRequest(
     request.action === "external_path" ? undefined : await recheckPermission(request, context);
   if (blocked) return { request, error: blocked };
   const engine = context.permissions;
-  if (!engine) return { request };
+  if (!engine)
+    return request.humanOnly
+      ? { request, error: denied("Provider protection requires a human approval channel") }
+      : { request };
   const inspected = engine.check(request);
   const hook = await options.hooks?.run(
     "permission",

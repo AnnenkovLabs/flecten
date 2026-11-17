@@ -129,6 +129,7 @@ async function run() {
     tsModule,
     { z },
     { builtinTools },
+    { catalogTool },
     configModule,
     mcpConfigModule,
     mcpToolsModule,
@@ -138,6 +139,7 @@ async function run() {
     import("typescript"),
     import("zod"),
     import(file("src/tools/builtin.ts")),
+    import(file("src/tools/catalog.ts")),
     import(file("src/config/schema.ts")),
     import(file("src/mcp/config.ts")),
     import(file("src/mcp/tools.ts")),
@@ -209,10 +211,21 @@ async function run() {
   }
 
   const tools = builtinTools();
-  const toolNames = [...tools.map((tool) => tool.name), "skill", "module"];
+  const toolNames = [
+    ...tools.map((tool) => tool.name),
+    catalogTool([], new Set()).name,
+    "skill",
+    "module",
+  ];
   const documentedTools = parseToolNames(toolsDoc);
   issues.push(
-    ...compareDocumented("tool", documentedTools, toolNames, TOOLS_DOC, "builtinTools()"),
+    ...compareDocumented(
+      "tool",
+      documentedTools,
+      toolNames,
+      TOOLS_DOC,
+      "builtinTools() or catalogTool()",
+    ),
   );
 
   const configSchema = z.toJSONSchema(configModule.HarnessConfigSchema, { io: "input" });
@@ -256,6 +269,7 @@ async function run() {
   const protectedWrites = new Set(sandboxModule.DEFAULT_PROTECTED_WRITE_PREFIXES);
   for (const path of [
     ".git",
+    ".flecten",
     ".liquid",
     "flecten.config.json",
     "AGENTS.md",
@@ -282,7 +296,7 @@ async function run() {
     `${SECURITY_DOC}: write must accept "why" for paths outside the project`,
   );
 
-  const root = await mkdtemp(join(tmpdir(), "liquid-docs-check-"));
+  const root = await mkdtemp(join(tmpdir(), "flecten-docs-check-"));
   try {
     const decision = await new sandboxModule.SandboxPolicy({ workspaceRoot: root }).checkWrite(
       "../outside.txt",

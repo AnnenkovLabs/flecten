@@ -1,5 +1,7 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Could not save your draft. Keep this window open and free up storage, then try again.":
+    "Não foi possível salvar o rascunho. Mantenha esta janela aberta, libere espaço e tente novamente.",
   "Stop voice input": "Parar entrada por voz",
   "Agent actions": "Ações do agente",
   "Waiting for the current step to finish. Click again to stop immediately":

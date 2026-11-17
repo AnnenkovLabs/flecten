@@ -9,11 +9,12 @@ import { type ElectronApplication, _electron as electron, type Page } from "@pla
 import { selectProject, setProjectTrust } from "../../shared/project-index.cjs";
 import type { ModulesConfig } from "../../src/config/modules";
 import type { ModelInfo } from "../../ui/src/lib/types";
+import { acceptStorageUpgrade } from "./storage-ready";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 export const repoRoot = resolve(here, "../..");
-export const README_MARKER = "E2E_README_MARKER: liquid harness read tool";
+export const README_MARKER = "E2E_README_MARKER: flecten read tool";
 
 const shellMain = join(repoRoot, "shell/main.mjs");
 const uiIndex = join(repoRoot, "ui/dist/index.html");
@@ -227,6 +228,7 @@ function launchEnvironment(cwd: string, configPath: string, user?: string): Reco
 }
 
 export interface LaunchOptions {
+  migration?: "manual";
   projectless?: boolean;
   projectTrust?: "unknown" | "trusted" | "untrusted";
   /** Exercise the normal desktop profile instead of an explicitly selected config file. */
@@ -263,7 +265,7 @@ export interface LaunchOptions {
 
 function prepareDirectory(options: LaunchOptions): string {
   if (options.cwd) return options.cwd;
-  if (!options.directory) return mkdtempSync(join(tmpdir(), "liquid-e2e-"));
+  if (!options.directory) return mkdtempSync(join(tmpdir(), "flecten-e2e-"));
   const cwd = join(tmpdir(), options.directory);
   rmSync(cwd, { recursive: true, force: true });
   mkdirSync(cwd, { recursive: true });
@@ -385,7 +387,33 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
     for (const existing of app.windows()) track(existing);
     app.on("window", track);
 
-    const page = app.windows()[0] ?? (await app.firstWindow());
+    // Profile migration may briefly create a WebContentsView before the app window.
+    await app.evaluate(async ({ app: electronApp, BrowserWindow }) => {
+      if (BrowserWindow.getAllWindows().length > 0) return;
+      await new Promise<void>((resolveWindow) =>
+        electronApp.once("browser-window-created", () => resolveWindow()),
+      );
+    });
+    const mainUrl = "flecten://app/index.html";
+    const newWindow = app.waitForEvent("window", async (window) => {
+      try {
+        await window.waitForURL(mainUrl);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    const page = await Promise.any([
+      newWindow,
+      ...app.windows().map(async (window) => {
+        try {
+          await window.waitForURL(mainUrl);
+          return window;
+        } catch {
+          throw new Error("A startup view closed before the main renderer loaded");
+        }
+      }),
+    ]);
     await page.waitForLoadState("domcontentloaded");
     if (process.env.FLECTEN_E2E_PRIVATE_DISPLAY === "1") {
       await app.evaluate(({ BrowserWindow }) => {
@@ -403,6 +431,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
     }
 
     const readyApp = app;
+    if (options.migration !== "manual") await acceptStorageUpgrade(page);
     const readyMock = mock;
     return {
       app: readyApp,

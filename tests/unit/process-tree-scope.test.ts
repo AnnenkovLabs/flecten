@@ -8,7 +8,7 @@ import { runBash } from "../../src/tools/bash/run";
 test.skipIf(process.platform !== "linux" || !Bun.which("setsid"))(
   "production bash kills an orphan that starts a separate session",
   async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-process-scope-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-process-scope-"));
     let pid: number | undefined;
     try {
       const result = await runBash(

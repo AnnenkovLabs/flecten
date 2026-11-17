@@ -23,7 +23,7 @@ const limits = {
 };
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-tools-pack-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-tools-pack-"));
   dirs.push(dir);
   return dir;
 }
@@ -32,7 +32,7 @@ function context(cwd: string, overrides: Partial<ToolContext> = {}): ToolContext
     sessionId: "s_test",
     cwd,
     signal: new AbortController().signal,
-    logDir: join(cwd, ".liquid/logs"),
+    logDir: join(cwd, ".flecten/logs"),
     limits,
     reads: new ReadTracker(),
     ...overrides,
@@ -115,7 +115,7 @@ describe("apply_patch", () => {
     expect(await readFile(join(cwd, "a.txt"), "utf8")).toBe("keep\n");
     expect(await readFile(join(cwd, "b.txt"), "utf8")).toBe("one\n");
     await expect(readFile(join(cwd, "new.txt"), "utf8")).rejects.toThrow();
-    expect((await readdir(cwd)).filter((name) => name.includes("liquid-tmp"))).toEqual([]);
+    expect((await readdir(cwd)).filter((name) => name.includes("flecten-tmp"))).toEqual([]);
   });
 
   test("captures and finalizes a checkpoint", async () => {
@@ -228,7 +228,7 @@ describe("todo", () => {
     expect(todoData(updated).find((todo) => todo.id === first.id)?.status).toBe("completed");
 
     const stored = JSON.parse(
-      await readFile(join(cwd, ".liquid", "todos", "s_test.json"), "utf8"),
+      await readFile(join(cwd, ".flecten", "todos", "s_test.json"), "utf8"),
     ) as { version: number; todos: Todo[] };
     expect(stored.version).toBe(1);
     expect(stored.todos).toHaveLength(2);

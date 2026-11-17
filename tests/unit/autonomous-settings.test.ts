@@ -23,7 +23,7 @@ afterEach(async () => {
 
 async function session(provider: ModelProvider, overrides = {}) {
   const config = defaultConfig();
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-autonomous-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-autonomous-"));
   dirs.push(cwd);
   await Bun.write(join(cwd, "README.md"), "test");
   return createSession({
@@ -37,7 +37,7 @@ async function session(provider: ModelProvider, overrides = {}) {
     maxOutputTokens: 1000,
     context: { window: 1_000_000, reserve: 1000 },
     loop: config.loop,
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     ...overrides,
   });
 }

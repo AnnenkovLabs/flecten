@@ -20,7 +20,7 @@
   style:width={`${size}px`}
   style:height={`${size}px`}
   style:--glyph-background={`var(--provider-glyph-${glyph.tone})`}
-  title={glyph.label}
+  data-tooltip={glyph.label}
   aria-hidden="true"
 >
   {#if glyph.logo !== undefined}

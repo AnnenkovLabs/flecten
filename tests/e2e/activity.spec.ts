@@ -35,7 +35,7 @@ test("activity stays compact until inspected and failed actions remain accessibl
     await summary.click();
     await expect(run.locator(".run-details")).toBeHidden();
 
-    const sessions = await readdir(join(cwd, ".liquid/sessions"), { withFileTypes: true });
+    const sessions = await readdir(join(cwd, ".flecten/sessions"), { withFileTypes: true });
     const sessionId = sessions.find((entry) => entry.isDirectory())?.name;
     if (!sessionId) throw new Error("The completed fixture run did not create a session");
     await expect(page.locator(".main-head .state")).toHaveCount(0);

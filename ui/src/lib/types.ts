@@ -135,6 +135,7 @@ export interface WorkerItem {
   sessionId: string;
   status: "running" | "done" | "stopped" | "error" | "interrupted";
   actions: RunAction[];
+  acceptance?: import("../../../shared/worker-assignment").WorkerAcceptance;
 }
 
 export type ThreadItem =
@@ -279,6 +280,7 @@ export interface ProviderInfo {
 }
 
 export interface ProviderSettings {
+  protection?: import("../../../shared/provider-protection").ProviderProtection;
   protocol: ProviderProtocol;
   baseUrl: string;
   proxy?: string;
@@ -357,8 +359,16 @@ export interface HarnessSettings {
     approvalTimeoutMs: number;
     rules: import("./permissions").SavedPermissionRule[];
   };
-  vision?: { provider: string; model: string };
-  conversation?: { enabled: boolean };
+  vision?: import("../../../shared/model-choice").ModelChoice;
+  conversation?: {
+    enabled: boolean;
+    talker?: import("../../../shared/model-choice").ModelChoice;
+    worker?: import("../../../shared/model-choice").ModelChoice;
+  };
+  subagents?: {
+    dirs: string[];
+    models?: Record<string, import("../../../shared/model-choice").ModelChoice>;
+  };
   translation?: {
     enabled: boolean;
     provider: string;

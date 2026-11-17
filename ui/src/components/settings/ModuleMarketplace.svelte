@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { t } from "../../lib/i18n.svelte";
   import type { ModulesSettingsStore } from "../../lib/settings/modules.svelte";
   import Icon from "../Icon.svelte";
@@ -45,8 +46,8 @@
   {:else}
     <div class="market-filters">
       <label class="st-search"><Icon name="search" size={16} /><input type="search" bind:value={manager.query} aria-label={t("Search modules")} placeholder={t("Search modules")} /></label>
-      <div class="category-field"><label class="sr-only" for="module-category">{t("Module category")}</label><select id="module-category" class="st-input" bind:value={manager.category}>{#each categories as category}<option value={category.id}>{category.label}</option>{/each}</select></div>
-      <button class="st-icon-btn market-refresh" type="button" aria-label={t("Refresh marketplace")} title={t("Refresh marketplace")} disabled={manager.busy} onclick={() => manager.marketplace({ action: "list", refresh: true })}><Icon name="refresh" size={17} /></button>
+      <div class="category-field"><label class="sr-only" for="module-category">{t("Module category")}</label><Select id="module-category" class="st-input" bind:value={manager.category} options={categories.map((category) => ({ value: category.id, label: category.label }))} /></div>
+      <button class="st-icon-btn market-refresh" type="button" aria-label={t("Refresh marketplace")} data-tooltip={t("Refresh marketplace")} disabled={manager.busy} onclick={() => manager.marketplace({ action: "list", refresh: true })}><Icon name="refresh" size={17} /></button>
     </div>
     <p class="sr-only" role="status">{manager.loading ? t("Loading marketplace…") : t("Modules found: {0}", [manager.filtered.length])}</p>
     <div class="market-list">
@@ -76,7 +77,7 @@
   .market-refresh { min-width: 40px; min-height: 40px; }
   .market-filters { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-3); align-items: center; }
   .category-field { min-width: 0; }
-  .market-filters input, select { min-height: 40px; }
+  .market-filters input, .category-field :global(.st-input) { min-height: 40px; }
   .market-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: var(--space-8) var(--space-4); }
   .market-list > .st-empty { grid-column: 1 / -1; }
   .module-glyph { display: grid; place-items: center; flex: 0 0 44px; min-height: 44px; border-radius: 8px; background: var(--raised); color: var(--text-2); }

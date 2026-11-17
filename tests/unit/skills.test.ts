@@ -29,7 +29,7 @@ interface WriteSkillOptions {
 }
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-skills-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-skills-"));
   dirs.push(dir);
   return dir;
 }
@@ -63,7 +63,7 @@ function context(cwd: string, sessionId = "s_test"): ToolContext {
     sessionId,
     cwd,
     signal: new AbortController().signal,
-    logDir: join(cwd, ".liquid/logs"),
+    logDir: join(cwd, ".flecten/logs"),
     limits,
     reads: new ReadTracker(),
   };
@@ -101,7 +101,7 @@ describe("skills", () => {
     const onlyAgents = await discoverSkills(cwd, { home, sources: ["user-agents"] });
     expect(onlyAgents.skills[0]?.location).toBe(join(home, ".agents/skills/review/SKILL.md"));
     const ordered = await discoverSkills(cwd, { home, sources: [...SKILL_SOURCES].reverse() });
-    expect(ordered.skills[0]?.description).toBe("project-liquid");
+    expect(ordered.skills[0]?.description).toBe("project-flecten");
     expect(await discoverSkills(cwd, { home, sources: [] })).toEqual({
       skills: [],
       diagnostics: [],
@@ -113,7 +113,7 @@ describe("skills", () => {
     const home = await tempDir();
     await writeSkill(home, ".agents/skills", "review", "User review");
     await writeSkill(cwd, ".agents/skills", "review", "Project review");
-    await writeSkill(cwd, ".liquid/skills", "release", "Release safety");
+    await writeSkill(cwd, ".flecten/skills", "release", "Release safety");
 
     const result = await discoverSkills(cwd, { home });
     expect(result.skills.map((skill) => skill.name)).toEqual(["release", "review"]);

@@ -18,7 +18,7 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 async function options(provider: LoopOptions["provider"]): Promise<LoopOptions> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-completion-contract-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-completion-contract-"));
   dirs.push(cwd);
   const limits = defaultConfig().tools;
   return {

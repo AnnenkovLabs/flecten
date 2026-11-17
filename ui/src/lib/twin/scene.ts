@@ -1,4 +1,5 @@
 import { type TwinEmotion, TwinRig, type TwinState } from "./pose";
+import { TWIN_FALLING_MS, TWIN_PLEADING_MS, type TwinPowerVisual } from "./power";
 import { createTwinRenderer } from "./renderer";
 
 /** One visible canvas, with no model calls or work scheduled outside its lifetime. */
@@ -21,6 +22,7 @@ export function createTwinScene(
   let width = canvas.clientWidth;
   let learningFrame: number | undefined;
   let completionFrame: number | undefined;
+  let power: TwinPowerVisual = { phase: "enabled", since: 0 };
   const still = () => paused || motion.matches || !interactive;
   const shown = () => visible && !document.hidden && width > 0 && !lost && !disposed;
 
@@ -46,7 +48,17 @@ export function createTwinScene(
     last = now;
     try {
       renderer ??= createTwinRenderer(canvas);
-      const pose = rig.frame(elapsed / 1000, still(), learningFrame, completionFrame);
+      const powerElapsed = Math.max(0, now - power.since) / 1000;
+      const pose = rig.frame(elapsed / 1000, still(), learningFrame, completionFrame, {
+        phase: power.phase,
+        elapsed: still()
+          ? power.phase === "falling"
+            ? TWIN_FALLING_MS / 1000
+            : power.phase === "pleading"
+              ? TWIN_PLEADING_MS / 2000
+              : powerElapsed
+          : powerElapsed,
+      });
       // ponytail: size-adaptive framebuffer capped at 512px and 24fps; profile GPU timing before raising it.
       const resolution = Math.max(
         Math.min(64, width),
@@ -57,6 +69,11 @@ export function createTwinScene(
       canvas.dataset.frame = String(++count);
       canvas.dataset.yaw = String(pose.uYaw);
       canvas.dataset.look = String(pose.uLook);
+      canvas.dataset.power = power.phase;
+      canvas.dataset.powerElapsed = String(powerElapsed);
+      canvas.dataset.tears = String(pose.uTears ?? 0);
+      canvas.dataset.desaturate = String(pose.uGrey ?? 0);
+      canvas.dataset.hearts = String(pose.uHearts ?? 0);
       fallback(false);
     } catch (error) {
       renderer?.dispose();
@@ -68,7 +85,7 @@ export function createTwinScene(
       stop();
       return;
     }
-    const animate = !still();
+    const animate = !still() && power.phase !== "disabled";
     canvas.dataset.active = String(animate);
     if (animate) frame = requestAnimationFrame(draw);
     else last = 0;
@@ -125,6 +142,16 @@ export function createTwinScene(
 
   let drag: { id: number; x: number; distance: number } | undefined;
   return {
+    power(value: TwinPowerVisual): void {
+      if (power.phase === value.phase && power.since === value.since) return;
+      power = value;
+      if (power.phase !== "enabled") {
+        drag = undefined;
+        rig.reset();
+      }
+      stop();
+      wake();
+    },
     set(state: TwinState, emotion: TwinEmotion, frame?: number, completion?: number): void {
       rig.set(state, emotion);
       learningFrame = frame;
@@ -139,6 +166,7 @@ export function createTwinScene(
       wake();
     },
     point(event: PointerEvent): void {
+      if (power.phase !== "enabled") return;
       const rect = canvas.getBoundingClientRect();
       rig.look(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -153,11 +181,13 @@ export function createTwinScene(
       wake();
     },
     down(event: PointerEvent): void {
+      if (power.phase !== "enabled") return;
       if (event.button !== 0) return;
       drag = { id: event.pointerId, x: event.clientX, distance: 0 };
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     },
     up(event: PointerEvent): void {
+      if (power.phase !== "enabled") return;
       if (!drag || drag.id !== event.pointerId) return;
       if (drag.distance < 6) rig.greet();
       drag = undefined;
@@ -173,6 +203,7 @@ export function createTwinScene(
       wake();
     },
     key(event: KeyboardEvent): void {
+      if (power.phase !== "enabled") return;
       switch (event.key) {
         case "ArrowLeft":
           rig.turn(-0.25);

@@ -34,7 +34,7 @@ const end: ModelEvent[] = [
 
 /** A pool whose n-th new task gets the n-th script; bash always asks for approval. */
 async function pool(scripts: ModelEvent[][][], maxActive = 4, secrets: readonly string[] = []) {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-pool-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-pool-"));
   const providers: ScriptedProvider[] = [];
   const sessions = new SessionPool({
     maxActive: () => maxActive,
@@ -53,7 +53,7 @@ async function pool(scripts: ModelEvent[][][], maxActive = 4, secrets: readonly 
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
         permissions: new PermissionEngine({
           rules: [{ action: "shell", tool: "bash", policy: "ask" }],
         }),

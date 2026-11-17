@@ -10,7 +10,6 @@
 .twin-toolbar nav button { min-height: var(--control-h); padding: 6px 12px; border-radius: 7px; color: var(--text-2); font-size: 13px; }
 .twin-toolbar nav button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
 .twin-toolbar nav button span { margin-inline-start: 8px; color: var(--muted); }
-.twin-enabled { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; cursor: pointer; }
 .twin-page input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); flex: none; }
 .twin-content { overflow: auto; min-height: 0; padding: 8px 32px 32px; scrollbar-gutter: stable; }
 .twin-source-layout { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(360px, 0.95fr); gap: 32px; max-width: 1180px; margin: 0 auto; }
@@ -63,7 +62,7 @@
 .twin-profile-intro p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-2); max-width: 55ch; }
 .twin-profile-controls { display: flex; gap: 12px; margin-block: 24px 8px; }
 .twin-profile-controls .twin-search { flex: 1; min-width: 0; }
-.twin-profile-controls select { width: auto; }
+.twin-profile-controls .custom-select { width: auto; }
 .twin-reaction { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--text-2); }
 .twin-reaction strong { font-weight: 500; }
 .twin-reaction > span { display: flex; gap: 3px; }

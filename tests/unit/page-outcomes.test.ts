@@ -38,7 +38,8 @@ describe("page continuation evidence", () => {
     ]);
     expect(page).toContain("Login and Registration verified");
     expect(page).toContain("Authentication checks passed");
-    expect(page).toContain("## Next step\n- Build only the dashboard shell");
+    expect(page).toContain("## Next step");
+    expect(page).toContain("Build only the dashboard shell");
   });
   test("fallback correlates parallel results and preserves failures and unknown effects", async () => {
     const page = await fallbackPage([

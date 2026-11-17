@@ -27,7 +27,7 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 async function workspace(): Promise<string> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-media-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-media-"));
   dirs.push(cwd);
   return cwd;
 }

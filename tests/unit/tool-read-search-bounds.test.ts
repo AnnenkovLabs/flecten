@@ -6,7 +6,7 @@ import { join } from "node:path";
 const directories: string[] = [];
 
 async function fixture(): Promise<string> {
-  const path = await mkdtemp(join(tmpdir(), "liquid-tool-bounds-"));
+  const path = await mkdtemp(join(tmpdir(), "flecten-tool-bounds-"));
   directories.push(path);
   return path;
 }

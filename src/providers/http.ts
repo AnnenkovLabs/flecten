@@ -17,6 +17,8 @@ export interface PostOptions {
   signal: AbortSignal;
   retries?: number;
   providerId?: string;
+  model?: string;
+  quotaGroup?: string;
   fetch?: ProviderFetch;
   random?: () => number;
   retryBaseMs?: number;
@@ -90,17 +92,28 @@ export async function postStream(options: PostOptions): Promise<Response> {
   const sleep = options.sleep ?? wait;
   let lastError: unknown;
   options.signal.throwIfAborted();
-  const waitMs = options.providerId ? rateLimitDelayMs(options.providerId) : 0;
-  if (waitMs > 0 && options.providerId) {
-    const known = rateLimitState(options.providerId);
-    throw new TransportError(`provider rate limit active for ${waitMs} ms`, {
-      reason: "http",
-      status: 429,
-      retryable: false,
-      retryAfterMs: waitMs,
-      limitKind: known?.kind,
-      resetAt: known?.resetAt,
-    });
+  const waitMs = options.providerId
+    ? rateLimitDelayMs(options.providerId, Date.now(), options.model, options.quotaGroup)
+    : 0;
+  const known = options.providerId
+    ? rateLimitState(options.providerId, Date.now(), options.model, options.quotaGroup)
+    : undefined;
+  if ((waitMs > 0 || (known?.limited && known.kind === "model_quota")) && options.providerId) {
+    throw new TransportError(
+      known?.resetAt === undefined
+        ? "provider quota exhausted without a reset time"
+        : `provider rate limit active for ${waitMs} ms`,
+      {
+        requested: false,
+        reason: "http",
+        status: known?.status ?? 429,
+        retryable: false,
+        ...(known?.resetAt === undefined ? {} : { retryAfterMs: waitMs }),
+        limitKind: known?.kind,
+        resetAt: known?.resetAt,
+        providerCode: known?.providerCode,
+      },
+    );
   }
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -154,6 +167,8 @@ export async function postStream(options: PostOptions): Promise<Response> {
         recordRateLimit(
           options.providerId,
           parseRateLimit({ status: response.status, headers: response.headers }),
+          options.model,
+          options.quotaGroup,
         );
       }
       return response;
@@ -161,7 +176,8 @@ export async function postStream(options: PostOptions): Promise<Response> {
 
     const body = await errorBody(response, options.headers);
     const limit = parseRateLimit({ status: response.status, headers: response.headers, body });
-    if (options.providerId) recordRateLimit(options.providerId, limit);
+    if (options.providerId)
+      recordRateLimit(options.providerId, limit, options.model, options.quotaGroup);
     const retryAfterMs =
       (limit?.limited ? limit.retryAfterMs : undefined) ??
       parseRetryAfterMs(response.headers.get("retry-after"));

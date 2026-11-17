@@ -43,7 +43,7 @@
     type="button"
     aria-expanded={action.subagent ? undefined : expanded}
     aria-controls={action.subagent ? `pane-subagent:${action.subagent.id}` : detailId}
-    title={action.subagent ? `${action.subagent.name} · ${subagentRole(action.subagent.agent)}` : `${action.label}${action.subject ? ` · ${action.subject}` : ""}. ${expanded ? t("Hide details") : t("Show details")}`}
+    data-tooltip={action.subagent ? `${action.subagent.name} · ${subagentRole(action.subagent.agent)}` : `${action.label}${action.subject ? ` · ${action.subject}` : ""}. ${expanded ? t("Hide details") : t("Show details")}`}
     onclick={toggle}
     onkeydown={onKeydown}
   >
@@ -73,7 +73,7 @@
     type="button"
     disabled={!action.running}
     aria-hidden={!action.running ? true : undefined}
-    title={t("Cancel call: the process will stop and the model will be notified of the cancellation")}
+    data-tooltip={t("Cancel call: the process will stop and the model will be notified of the cancellation")}
     aria-label={t("Cancel: {0}", [action.label])}
     onclick={() => cancelToolCall(action.id)}
   >

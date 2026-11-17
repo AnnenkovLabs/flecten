@@ -21,7 +21,7 @@ const limits = {
 };
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-composition-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-composition-"));
   dirs.push(dir);
   return dir;
 }
@@ -128,7 +128,7 @@ describe("session sandbox context", () => {
       context: { window: 100_000, reserve: 1000 },
       loop: { maxTurns: 4, continuations: 0, parallelTools: false },
       osSandbox,
-      logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+      logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     });
 
     const result = (await session.send({ type: "run", prompt: "probe" })) as RunResult;
@@ -140,9 +140,9 @@ describe("session sandbox context", () => {
 describe("app service composition", () => {
   test("wires memory, subagents, sandbox status and secret masking", async () => {
     const cwd = await tempDir();
-    await mkdir(join(cwd, ".liquid"), { recursive: true });
+    await mkdir(join(cwd, ".flecten"), { recursive: true });
     await writeFile(
-      join(cwd, ".liquid", "memory.json"),
+      join(cwd, ".flecten", "memory.json"),
       JSON.stringify({
         version: 1,
         records: [

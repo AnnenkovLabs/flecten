@@ -14,6 +14,7 @@ export function shouldAnimate(current: boolean, next: boolean): boolean {
 
 export function expandable(node: HTMLElement, open: boolean) {
   let current = open;
+  let active: Animation | undefined;
 
   function settle(value: boolean): void {
     node.hidden = !value;
@@ -22,7 +23,8 @@ export function expandable(node: HTMLElement, open: boolean) {
   }
 
   function apply(value: boolean, animate: boolean, start?: number): void {
-    for (const animation of node.getAnimations()) animation.cancel();
+    active?.cancel();
+    active = undefined;
 
     if (!animate || prefersReducedMotion()) {
       settle(value);
@@ -37,12 +39,15 @@ export function expandable(node: HTMLElement, open: boolean) {
       { height: `${from}px`, opacity: value && from === 0 ? 0 : 1 },
       { height: `${value ? height : 0}px`, opacity: value ? 1 : 0 },
     ];
-    const animation = node.animate(frames, {
+    active = node.animate(frames, {
       duration: value ? 220 : 160,
       easing: DRAWER,
     });
 
-    animation.onfinish = () => settle(value);
+    active.onfinish = () => {
+      active = undefined;
+      settle(value);
+    };
   }
 
   apply(open, false);
@@ -58,6 +63,10 @@ export function expandable(node: HTMLElement, open: boolean) {
       queueMicrotask(() => {
         if (ticket === queued) apply(next, true, from);
       });
+    },
+    destroy() {
+      queued += 1;
+      active?.cancel();
     },
   };
 }

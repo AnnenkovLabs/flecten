@@ -36,7 +36,7 @@
             {/if}
           </span>
           <span class="lh-att-body">
-            <span class="lh-att-name" title={attachment.name}>{attachment.name}</span>
+            <span class="lh-att-name" data-tooltip={attachment.name}>{attachment.name}</span>
             <span class="lh-att-meta">
               {attachment.kind === "folder"
                 ? kindLabels.folder
@@ -46,7 +46,7 @@
           <button
             class="lh-icon-button lh-att-remove"
             type="button"
-            title={t("Remove {0}", [attachment.name])}
+            data-tooltip={t("Remove {0}", [attachment.name])}
             aria-label={t("Remove {0}", [attachment.name])}
             {disabled}
             onclick={() => onRemove(attachment.id)}

@@ -39,7 +39,7 @@ async function approvalRun(
   answer: Answer,
   extra: Partial<SessionOptions> = {},
 ) {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-approvals-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-approvals-"));
   dirs.push(cwd);
   const provider = scriptedProvider(scripts);
   const session = createSession({
@@ -53,7 +53,7 @@ async function approvalRun(
     maxOutputTokens: 1000,
     context: { window: 100_000, reserve: 1000 },
     loop: { maxTurns: 6, continuations: 0, parallelTools: false },
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     permissions: new PermissionEngine({
       rules: [{ action: "shell", tool: "bash", policy: "ask" }],
     }),

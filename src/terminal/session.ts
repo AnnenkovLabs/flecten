@@ -31,6 +31,7 @@ export type TerminalSandboxPolicy = {
   writablePaths?: string[];
   readOnlyPaths?: string[];
   readDeniedPaths?: string[];
+  temporaryDirectory?: string;
 };
 
 export type ShellSandbox =

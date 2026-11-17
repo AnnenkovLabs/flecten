@@ -19,7 +19,7 @@
     <SubagentAvatar variant={agent.avatar} size={48} />
     <div class="identity"><h2>{agent.name}</h2><p>{subagentRole(agent.agent)}<span>·</span>{subagentStatus(agent.status)}</p></div>
     {#if agent.status === "running"}
-      <button class="stop-child" type="button" disabled={agent.stopping} title={t("Cancel: {0}", [agent.name])} onclick={onStop}>
+      <button class="stop-child" type="button" disabled={agent.stopping} data-tooltip={t("Cancel: {0}", [agent.name])} onclick={onStop}>
         <Icon name="stop" size={14} />{agent.stopping ? t("Waiting for the step to finish") : t("Stop tool")}
       </button>
     {/if}

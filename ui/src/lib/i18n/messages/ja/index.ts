@@ -15,8 +15,10 @@ import part19 from "./editor-3";
 import hooks from "./hooks";
 import marketplace from "./marketplace";
 import messageHistory from "./message-history";
+import modelDefaults from "./model-defaults";
 import modules from "./modules";
 import projects from "./projects";
+import providerProtection from "./provider-protection";
 import part13 from "./providers";
 import part14 from "./providers-2";
 import part15 from "./providers-3";
@@ -25,14 +27,19 @@ import part8 from "./settings";
 import part9 from "./settings-2";
 import part10 from "./settings-3";
 import part11 from "./settings-4";
+import storageMigration from "./storage-migration";
 import part12 from "./tasks";
 import tools from "./tools";
 import twin from "./twin";
 import twinCorrection from "./twin-correction";
 
 import vision from "./vision";
+import workerAcceptance from "./worker-acceptance";
 
 export default {
+  ...providerProtection,
+  ...storageMigration,
+  ...workerAcceptance,
   ...projects,
   ...twin,
   ...twinCorrection,
@@ -40,6 +47,7 @@ export default {
   ...approvals,
   ...hooks,
   ...vision,
+  ...modelDefaults,
   ...modules,
   ...marketplace,
   ...messageHistory,

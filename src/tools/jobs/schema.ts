@@ -1,12 +1,24 @@
 import { z } from "zod";
+import { RemoteTargetSchema } from "./remote-schema";
 
 export const jobsSpec = {
   name: "jobs",
   description:
-    "Inspect or control jobs started with bash background=true. list shows ids and states; output returns a log tail or a page from a character offset; wait waits for completion or timeout; stop kills the process tree. Prefer a bounded wait over repeated polling, or continue independent work and use the automatic completion notice. A wait timeout means the job is still running. Verify final status and exit code before claiming success.",
+    "Inspect local jobs started with bash background=true, or submit a detached Linux remote job through an explicit SSH target and argv. Remote handles are saved before submission and survive reconnects; status reconciles the same PID/start identity and atomic exit record. Reuse a saved remote id after transport failure; never resubmit the workload blindly. list includes saved remote handles, output reads bounded logs, wait is bounded, stop targets the owned process group. Local jobs notify automatically; remote jobs require status/wait. A started handle is not verified success.",
   schema: z
     .object({
-      op: z.enum(["list", "output", "wait", "stop"]).describe("Operation"),
+      op: z
+        .enum(["list", "submit", "status", "output", "wait", "stop"])
+        .describe("Operation. Remote submit uses argv and remote; its id survives reconnects."),
+      remote: RemoteTargetSchema.optional().describe(
+        "Explicit SSH target for submit. Credentials stay with the host SSH agent.",
+      ),
+      argv: z
+        .array(z.string().refine((word) => !word.includes("\0")))
+        .min(1)
+        .max(1000)
+        .optional()
+        .describe("Remote submit: executable and arguments, without shell interpolation"),
       id: z.string().min(1).optional().describe("Job id, as job-1; required except for list"),
       lines: z
         .number()
@@ -31,9 +43,16 @@ export const jobsSpec = {
     })
     .strict()
     .superRefine((args, context) => {
-      if (args.op !== "list" && args.id === undefined) {
+      if (args.op !== "list" && args.op !== "submit" && args.id === undefined) {
         context.addIssue({ code: "custom", path: ["id"], message: `${args.op} needs id` });
       }
+      if (args.op === "submit" && (!args.remote || !args.argv))
+        context.addIssue({ code: "custom", message: "Remote submit requires remote and argv" });
+      if (args.op !== "submit" && (args.remote || args.argv))
+        context.addIssue({
+          code: "custom",
+          message: "remote and argv are only valid for submit; other operations use the saved id",
+        });
     }),
 };
 

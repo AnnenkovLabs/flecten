@@ -73,7 +73,7 @@
       const canvas = node.querySelector<HTMLElement>(".mermaid-canvas");
       if (!source || !canvas) continue;
       try {
-        const svg = await renderMermaid(source, `liquid-mermaid-${uid}-${pass}-${index}`);
+        const svg = await renderMermaid(source, `flecten-mermaid-${uid}-${pass}-${index}`);
         if (pass !== renderPass || !node.isConnected) return;
         if (!svg) throw new Error("unsafe svg");
         canvas.innerHTML = svg;
@@ -87,7 +87,7 @@
   }
 
   $effect(() => {
-    const id = "liquid-markdown-theme";
+    const id = "flecten-markdown-theme";
     if (document.getElementById(id)) return;
     const style = document.createElement("style");
     style.id = id;

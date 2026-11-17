@@ -99,7 +99,7 @@
         data-tab={tab.id}
         type="button"
         role="tab"
-        title={tab.status ? `${tab.label} · ${tab.status}` : tab.label}
+        data-tooltip={tab.status ? `${tab.label} · ${tab.status}` : tab.label}
         aria-selected={activeTab === tab.id}
         aria-controls={`pane-${tab.id}`}
         tabindex={activeTab === tab.id ? 0 : -1}

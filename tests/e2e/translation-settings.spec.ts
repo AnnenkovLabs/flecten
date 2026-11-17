@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { chooseSelect } from "./custom-select";
 import { environmentProblem, launchApp } from "./fixtures";
 
 test("translation settings stay hidden while other preferences persist at both window sizes", async () => {
@@ -20,7 +21,7 @@ test("translation settings stay hidden while other preferences persist at both w
     await expect(page.getByLabel("Модель перевода", { exact: true })).toBeHidden();
     await expect(page.getByLabel("Язык ответа", { exact: true })).toBeHidden();
     await expect(page.getByLabel("Язык интерфейса", { exact: true })).toBeVisible();
-    await page.getByLabel("Отправка сообщения", { exact: true }).selectOption("modifier-enter");
+    await chooseSelect(page.getByLabel("Отправка сообщения", { exact: true }), "modifier-enter");
     await expect(save).toBeEnabled();
     for (const [width, height] of [
       [1480, 940],
@@ -51,7 +52,8 @@ test("translation settings stay hidden while other preferences persist at both w
     await page.reload();
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
     await expect(dialog.getByText("Работать на английском", { exact: true })).toBeHidden();
-    await expect(page.getByLabel("Отправка сообщения", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("Отправка сообщения", { exact: true })).toHaveAttribute(
+      "value",
       "modifier-enter",
     );
     expect(h.consoleErrors).toEqual([]);

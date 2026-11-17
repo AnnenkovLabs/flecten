@@ -5,6 +5,7 @@ import type { SettingsStore } from "../settings.svelte";
 import { clone, emptyProvider, hostName } from "../settings-utils";
 import type { AgentEvent, DiscoverResult } from "../types";
 import { mergeModels, providerWithBaseUrl, uniqueProviderId } from "./provider-draft";
+import { providerEndpoint } from "./provider-protection.svelte";
 import { providerIssue } from "./validation";
 
 type Response = Extract<AgentEvent, { type: "response" }>;
@@ -23,6 +24,12 @@ export async function addCustomProvider(host: SettingsStore): Promise<string | u
   host.error = "";
   host.discoverResult = null;
   try {
+    const apiKey = host.custom.apiKey;
+    const existing = providerWithBaseUrl(settings, baseUrl);
+    const protection = await host.protection.inspect(
+      baseUrl,
+      existing ? settings.providers[existing]?.protection : undefined,
+    );
     let result: DiscoverResult | undefined;
     if (host.custom.checkConnection) {
       const response = await requestAgent<Response>(
@@ -30,7 +37,7 @@ export async function addCustomProvider(host: SettingsStore): Promise<string | u
           type: "provider.discover",
           protocol: host.custom.protocol,
           baseUrl,
-          ...(host.custom.apiKey ? { apiKey: host.custom.apiKey } : {}),
+          ...(apiKey ? { apiKey } : {}),
         },
         90_000,
       );
@@ -39,6 +46,7 @@ export async function addCustomProvider(host: SettingsStore): Promise<string | u
       host.discoverResult = result;
     }
     const url = result?.baseUrl ?? baseUrl;
+    if (protection) protection.checkedBaseUrl = providerEndpoint(url);
     const name = result?.providerName || hostName(url);
     const sameUrl = providerWithBaseUrl(settings, url);
     const current = sameUrl ? settings.providers[sameUrl] : undefined;
@@ -46,14 +54,16 @@ export async function addCustomProvider(host: SettingsStore): Promise<string | u
       host.notice = result
         ? mergeModels(current, result.models, sameUrl)
         : t("Provider added without checking. Add models manually in the Models tab.");
-      if (host.custom.apiKey) current.apiKey = host.custom.apiKey;
+      if (apiKey) current.apiKey = apiKey;
+      if (protection) current.protection = protection;
       return sameUrl;
     }
     const id = uniqueProviderId(settings, result?.providerId ?? name);
     settings.providers[id] = {
       ...emptyProvider(result?.protocol ?? host.custom.protocol, url),
       name,
-      ...(host.custom.apiKey ? { apiKey: host.custom.apiKey } : {}),
+      ...(protection ? { protection } : {}),
+      ...(apiKey ? { apiKey } : {}),
       models: clone(result?.models ?? {}),
       ...(result ? { modelMetadataBaseline: clone(result.models) } : {}),
     };

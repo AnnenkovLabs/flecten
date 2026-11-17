@@ -31,7 +31,7 @@ function usage(sessionId: string, input: number, output: number, cached: number)
 }
 
 async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-event-replay-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-event-replay-"));
   try {
     await run(dir);
   } finally {

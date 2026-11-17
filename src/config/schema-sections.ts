@@ -4,6 +4,7 @@ import {
   HookDefinitionSchema,
   HooksConfigSchema as SharedHooksConfigSchema,
 } from "../../shared/hooks";
+import { ModelChoiceSchema } from "../../shared/model-choice";
 import { isGithubName, UPDATE_CHANNELS } from "../../shared/update-settings.cjs";
 
 /** Config sections outside providers and models: tools, safety, terminal, sessions, limits. */
@@ -208,6 +209,7 @@ export const ModesConfigSchema = z
 export const SubagentsConfigSchema = z
   .object({
     dirs: z.array(z.string().min(1)).default([]),
+    models: z.record(z.string().min(1), ModelChoiceSchema).optional(),
   })
   .default({ dirs: [] })
   .optional();

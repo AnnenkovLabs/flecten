@@ -1,7 +1,8 @@
 <script lang="ts">
   import { t } from "../lib/i18n.svelte";
-  import { onDestroy, onMount, tick, untrack } from "svelte";
+  import { type Snippet, onDestroy, onMount, tick, untrack } from "svelte";
   import { restoredThreadTop, saveThreadPosition, threadPosition } from "../lib/thread-position";
+  import { ownsThreadShortcut } from "../lib/thread-shortcuts";
   import { ThreadViewport } from "../lib/thread-viewport.svelte";
   import { threadRowKeys } from "../lib/thread-window";
   import type { PendingToolCall, ThreadItem } from "../lib/types";
@@ -30,7 +31,9 @@
     liveLabel: string;
     pendingCalls: PendingToolCall[];
     onOpenChanges: () => void;
-    onRepeat: (prompt?: string) => void;
+    onRepeat?: (prompt?: string) => void;
+    header?: Snippet;
+    retryUntil?: number | undefined;
     onEditMessage?: ((messageId: string, text: string) => void) | undefined;
     onSelectVersion?: ((messageId: string, variantId: string) => Promise<boolean>) | undefined;
     onNavigateSummary?: (destination: SummaryDestination) => void;
@@ -45,6 +48,8 @@
     pendingCalls,
     onOpenChanges,
     onRepeat,
+    header,
+    retryUntil,
     onEditMessage,
     onSelectVersion,
     onNavigateSummary,
@@ -52,6 +57,7 @@
   const NEAR_BOTTOM = 72;
   let scroller: HTMLDivElement;
   let threadInner: HTMLDivElement;
+  let threadHeader: HTMLDivElement;
   let focusToken = $state(0);
   const toolMirrors = $derived(workerMirrors(entries));
   const items = $derived(conversationItems(entries, toolMirrors).filter(item => item.kind !== "approval" || item.state !== "pending"));
@@ -176,7 +182,8 @@
     searchOpen = false;
     query = "";
     searchIndex = 0;
-    focusComposer();
+    if (scroller.closest('[role="tabpanel"]')?.querySelector("#prompt")) focusComposer();
+    else scroller.focus({ preventScroll: true });
   }
   $effect.pre(() => {
     const nextTask = taskId;
@@ -244,11 +251,12 @@
     if (!threadInner) return;
     return viewport.attach(element, threadInner, () => atBottom && !searchOpen, () => {
       if (!restoring && atBottom && !searchOpen) followEnd();
-    });
+    }, threadHeader);
   });
 
   $effect(() => {
     if (!searchOpen || !activeId) return;
+    atBottom = false;
     const id = activeId;
     const key = rowIds[items.findIndex((item) => item.id === id)];
     if (key) untrack(() => viewport.reveal(key));
@@ -260,12 +268,12 @@
       viewport.scroll();
     });
   });
-
   onDestroy(rememberPosition);
 
   onMount(() => {
     const timer = setInterval(() => (now = Date.now()), 30_000);
     const onKeydown = (event: KeyboardEvent): void => {
+      if (!scroller || !ownsThreadShortcut(scroller) || event.defaultPrevented) return;
       const modifier = event.metaKey || event.ctrlKey;
       if (
         modifier &&
@@ -290,9 +298,9 @@
     };
   });
 </script>
-
 <div
   class="thread"
+  tabindex="-1"
   bind:this={scroller}
   role="log"
   aria-label={t("Task progress")}
@@ -304,6 +312,7 @@
   {/if}
 
   <div class="thread-inner" bind:this={threadInner}>
+    <div class="thread-header" bind:this={threadHeader}>{@render header?.()}</div>
     {#if window.before > 0}<div class="thread-spacer" aria-hidden="true" style:height={`${window.before}px`}></div>{/if}
     {#each visible as item, index (item.id)}
       <div class="thread-slot" class:is-user={item.kind === "message" && window.start + index > 0} data-thread-key={rowIds[window.start + index]} use:viewport.row={rowIds[window.start + index] ?? item.id}>
@@ -368,7 +377,7 @@
     {#if window.after > 0}<div class="thread-spacer" aria-hidden="true" style:height={`${window.after}px`}></div>{/if}
 
     {#if live}
-      <LiveRun label={liveLabel} glow={!reasoningLive} />
+      <LiveRun label={liveLabel} glow={!reasoningLive} {retryUntil} />
       {#if pendingCalls.length > 0}
         <ToolCallProgress calls={pendingCalls} />
       {/if}
@@ -377,7 +386,7 @@
 
   {#if !atBottom}
     <div class="jump-wrap" class:is-reviewing={items.some(item => item.kind === "approval" && item.state === "pending")}>
-      <button class="jump" type="button" aria-label={jumpLabel} title={jumpLabel} onclick={jumpToBottom}>
+      <button class="jump" type="button" aria-label={jumpLabel} data-tooltip={jumpLabel} onclick={jumpToBottom}>
         <span>{t("Scroll down")}</span>
         {#if unread > 0}
           <span class="jump-count" aria-hidden="true">{unread}</span>
@@ -410,6 +419,7 @@
   }
 
   .thread-slot { display: flow-root; }
+  .thread-header { display: flow-root; }
   .thread-slot.is-user { padding-top: 40px; }
   .thread-spacer { pointer-events: none; }
 

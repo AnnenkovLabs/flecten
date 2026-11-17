@@ -10,7 +10,7 @@ test("voice records audio, reacts to the mic, transcribes into the draft, cancel
     const editor = page.getByRole("textbox", { name: "Сообщение агенту" });
     await expect(page.getByRole("button", { name: "Голосовой ввод", exact: true })).toBeEnabled();
     await editor.fill("Задача:");
-    await page.screenshot({ path: ".liquid/voice-before.png" });
+    await page.screenshot({ path: ".flecten/voice-before.png" });
     await page.getByRole("button", { name: "Голосовой ввод", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Запись" })).toBeVisible();
     for (const [width, height] of [
@@ -38,14 +38,14 @@ test("voice records audio, reacts to the mic, transcribes into the draft, cancel
       await expect(page.getByRole("button", { name: "Отправить", exact: true })).toBeDisabled();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
       expect(overflow).toBe(false);
-      await page.screenshot({ path: `.liquid/voice-${width}x${height}.png` });
+      await page.screenshot({ path: `.flecten/voice-${width}x${height}.png` });
     }
     await page.getByRole("button", { name: "Остановить голосовой ввод" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Распознавание речи" })).toBeVisible();
-    await page.screenshot({ path: ".liquid/voice-processing.png" });
+    await page.screenshot({ path: ".flecten/voice-processing.png" });
     await expect(editor).toHaveText("Задача: Добавь голосовой ввод.");
     await expect(page.locator(".voice-glow")).toHaveCount(0);
-    await page.screenshot({ path: ".liquid/voice-result.png" });
+    await page.screenshot({ path: ".flecten/voice-result.png" });
 
     await page.getByRole("button", { name: "Голосовой ввод", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: "Запись" })).toBeVisible();

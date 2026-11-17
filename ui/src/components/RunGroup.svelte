@@ -19,6 +19,10 @@
 
   let { id, summary, onOpenChanges }: Props = $props();
   let expanded = $state(false);
+  let detailsMounted = $state(false);
+  $effect(() => {
+    if (expanded) detailsMounted = true;
+  });
   let wasFailed = false;
   let now = $state(Date.now());
   const duration = $derived(summary.live && summary.startedAt !== undefined
@@ -55,7 +59,7 @@
     type="button"
     aria-expanded={expanded}
     aria-controls={detailsId}
-    title={expanded ? t("Hide actions") : t("Show actions")}
+    data-tooltip={expanded ? t("Hide actions") : t("Show actions")}
     onclick={() => (expanded = !expanded)}
   >
     <span class="run-status" aria-hidden="true">
@@ -86,6 +90,7 @@
   {/if}
 
   <div class="run-details" id={detailsId} use:expandable={expanded}>
+    {#if detailsMounted}
     {#if summary.turns.length > 0}
       {#each summary.turns as turn (turn.index)}
         <div class="turn">
@@ -120,6 +125,7 @@
           <FileChangeChip {file} onOpen={onOpenChanges} />
         {/each}
       </div>
+    {/if}
     {/if}
   </div>
 

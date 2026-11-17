@@ -18,7 +18,7 @@ test("context details show real usage, fit both viewports and survive reopening"
     },
   });
   const { page, app } = harness;
-  const artifactDir = join(repoRoot, ".liquid/context-usage-review");
+  const artifactDir = join(repoRoot, ".flecten/context-usage-review");
   mkdirSync(artifactDir, { recursive: true });
   try {
     await page.evaluate(() => localStorage.setItem("flecten.locale", "ru"));

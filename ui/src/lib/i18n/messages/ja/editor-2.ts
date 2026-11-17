@@ -1,5 +1,7 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Only part of this folder is shown. Open a project folder to see its files.":
+    "このフォルダーの一部のみを表示しています。プロジェクトのフォルダーを開くと、そのファイルを表示できます。",
   "Reopen closed file": "閉じたファイルを開く",
   "Replace in file": "ファイル内を置換",
   "Find in project": "プロジェクト内を検索",

@@ -2,6 +2,7 @@ import type { ToolResult } from "../../core/types";
 import { jobView } from "../jobs/view";
 import { deletedPaths } from "../shell-checkpoint";
 import type { ToolContext } from "../types";
+import { prepareScratch, scratchEnvironment } from "../util/scratch";
 import type { BashArgs } from "./schema";
 
 /**
@@ -15,11 +16,14 @@ export async function startBackgroundBash(
 ): Promise<ToolResult> {
   const manager = context.terminals;
   if (!manager) return { ok: false, output: "", error: "Background jobs are not available" };
+  const protection = context.providerProtection;
+  await prepareScratch(context.scratchDir);
   const include = deletedPaths(args.command, cwd, context.cwd);
+  const command = protection ? protection.vault.protect(args.command) : args.command;
   const handle = await context.shellCheckpoints?.begin({
     tool: "job",
-    label: `job: ${args.command.split("\n")[0] ?? args.command}`.slice(0, 80),
-    command: args.command,
+    label: `job: ${command.split("\n")[0] ?? command}`.slice(0, 80),
+    command,
     sessionId: context.sessionId,
     ...(include.length > 0 ? { include } : {}),
   });
@@ -27,9 +31,17 @@ export async function startBackgroundBash(
     args.command,
     {
       cwd,
-      ...(context.env ? { env: context.env } : {}),
+      env: { ...context.env, ...scratchEnvironment(context.scratchDir) },
+      ...(protection ? { protectOutput: (text: string) => protection.vault.protect(text) } : {}),
       ...(args.timeoutMs === undefined ? {} : { timeoutMs: args.timeoutMs }),
-      ...(context.osSandbox ? { sandbox: context.osSandbox } : {}),
+      ...(context.osSandbox
+        ? {
+            sandbox: {
+              ...context.osSandbox,
+              ...(context.scratchDir ? { temporaryDirectory: context.scratchDir } : {}),
+            },
+          }
+        : {}),
     },
     async () => {
       const checkpoint = await handle?.finish();

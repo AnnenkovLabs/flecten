@@ -9,5 +9,25 @@
     "angry": 1180,
     "furious": 1180
   },
-  "changes": "Original purple 3D shader and rig, with anger and fury expressions. Live interactive WebGL2 in the UI; these images are the fallback for unavailable or lost contexts."
+  "changes": "Original purple 3D shader and rig, with anger and fury expressions. Live interactive WebGL2 in the UI; these images are the fallback for unavailable or lost contexts.",
+  "power": {
+    "source": "ui/src/lib/twin/pose.ts and renderer.ts",
+    "shaderSha256": "2932b749818c32b6c76dfe75cde460c67e13404a9088a48f57bf18ebd155ef27",
+    "rigSha256": "b9c234231feff1498cd083aa64b966ab98759c271c893832a9d96167d9fca004",
+    "samples": {
+      "pleading": {
+        "elapsedSeconds": 4,
+        "still": true
+      },
+      "disabled": {
+        "elapsedSeconds": 0,
+        "still": true
+      },
+      "reviving": {
+        "elapsedSeconds": 1.2,
+        "still": true
+      }
+    },
+    "changes": "Power-state fallbacks rendered from the production rig and renderer, including tears, floor-contact pose and revival hearts."
+  }
 }

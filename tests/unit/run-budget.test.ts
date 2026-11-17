@@ -26,7 +26,7 @@ async function options(
   provider: ModelProvider,
   overrides: Partial<SessionOptions>,
 ): Promise<SessionOptions> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-budget-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-budget-"));
   dirs.push(cwd);
   return {
     cwd,
@@ -39,7 +39,7 @@ async function options(
     maxOutputTokens: 1000,
     context: { window: 100_000, reserve: 1000 },
     loop: { maxTurns: 8, continuations: 0, parallelTools: false },
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     ...overrides,
   };
 }

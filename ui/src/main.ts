@@ -2,6 +2,7 @@ import { mount } from "svelte";
 import App from "./App.svelte";
 import "./app.css";
 import "./controls.css";
+import "./custom-controls.css";
 import { installFocusNavigation } from "./lib/focus-navigation";
 import { initializeLocale } from "./lib/i18n.svelte";
 import { initializeInterfaceScale } from "./lib/interface-scale.svelte";

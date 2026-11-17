@@ -49,7 +49,7 @@ function gitCommit(cwd) {
 
 const cwd = process.cwd();
 const now = new Date();
-const defaultOut = join(cwd, ".liquid", "diagnostics", now.toISOString().replace(/[:.]/g, "-"));
+const defaultOut = join(cwd, ".flecten", "diagnostics", now.toISOString().replace(/[:.]/g, "-"));
 const output = resolve(argument("out", defaultOut));
 const format = argument("format", "directory");
 if (format !== "directory" && format !== "tar") {
@@ -75,12 +75,12 @@ const bundle = buildDiagnosticsBundle({
   paths: {
     workingDirectory: cwd,
     config: configPath,
-    sessions: join(cwd, ".liquid", "sessions"),
-    logs: join(cwd, ".liquid", "logs"),
-    diagnostics: join(cwd, ".liquid", "diagnostics"),
+    sessions: join(cwd, ".flecten", "sessions"),
+    logs: join(cwd, ".flecten", "logs"),
+    diagnostics: join(cwd, ".flecten", "diagnostics"),
   },
   providers,
-  recentErrors: await readRecentErrors(join(cwd, ".liquid", "diagnostics", "recent-errors.jsonl")),
+  recentErrors: await readRecentErrors(join(cwd, ".flecten", "diagnostics", "recent-errors.jsonl")),
   config: configObject,
   now,
   platform: process.platform,
@@ -99,7 +99,7 @@ if (format === "directory") {
   await writeBundle(output);
   console.log(join(output, "diagnostics.json"));
 } else {
-  const temporary = await mkdtemp(join(tmpdir(), "liquid-diagnostics-"));
+  const temporary = await mkdtemp(join(tmpdir(), "flecten-diagnostics-"));
   try {
     await writeBundle(temporary);
     await mkdir(dirname(output), { recursive: true });

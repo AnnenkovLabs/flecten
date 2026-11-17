@@ -13,7 +13,7 @@ import type {
 const dirs: string[] = [];
 
 async function tempDir(label: string): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), `liquid-security-${label}-`));
+  const dir = await mkdtemp(join(tmpdir(), `flecten-security-${label}-`));
   dirs.push(dir);
   return dir;
 }
@@ -199,8 +199,8 @@ describe("SandboxPolicy", () => {
     expect((await sandbox.checkWrite(".git/config")).allowed).toBe(false);
     expect((await sandbox.checkWrite("AGENTS.md")).allowed).toBe(false);
     expect((await sandbox.checkWrite("flecten.config.json")).allowed).toBe(false);
-    expect((await sandbox.checkWrite(".liquid/sessions/run/events.jsonl")).allowed).toBe(false);
-    expect((await sandbox.checkRead(".liquid/secrets.json")).allowed).toBe(false);
+    expect((await sandbox.checkWrite(".flecten/sessions/run/events.jsonl")).allowed).toBe(false);
+    expect((await sandbox.checkRead(".flecten/secrets.json")).allowed).toBe(false);
     expect((await sandbox.checkRead(".env")).allowed).toBe(false);
     expect((await sandbox.checkRead(join(homedir(), ".ssh", "id_rsa"))).allowed).toBe(false);
     expect((await sandbox.checkRead(join(homedir(), ".aws", "credentials"))).allowed).toBe(false);

@@ -36,7 +36,7 @@
         class:is-active={value === option.value}
         type="button"
         aria-pressed={value === option.value}
-        title={option.description}
+        data-tooltip={option.description}
         onclick={() => onChange(option.value)}
       >
         {option.label}

@@ -1,9 +1,10 @@
 import { createReadStream } from "node:fs";
-import { type FileHandle, mkdir, open as openFile } from "node:fs/promises";
+import { type FileHandle, open as openFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline";
 import { z } from "zod";
 import type { Event, EventType, SessionId } from "../../core/types";
+import { durableMkdir, syncDirectory } from "../../util/durable";
 import { redactValue } from "../../util/redact";
 
 export const SCHEMA_VERSION = 1;
@@ -31,6 +32,10 @@ export interface AppendOptions {
  * the core gains an event this list misses, so a new event is never dropped on read as corrupt.
  */
 const KNOWN_EVENTS: Record<EventType, true> = {
+  "provider.response": true,
+  "usage.unavailable": true,
+  "task.budget": true,
+  "worker.acceptance": true,
   "twin.activity": true,
   "history.edited": true,
   "history.selected": true,
@@ -39,6 +44,7 @@ const KNOWN_EVENTS: Record<EventType, true> = {
   "session.started": true,
   "input.translated": true,
   "translation.failed": true,
+  "context.summary.failed": true,
   "turn.started": true,
   "message.started": true,
   "message.delta": true,
@@ -160,6 +166,7 @@ export class DurableEventLog {
   private tail: Promise<void> = Promise.resolve();
   private nextSeq: number;
   private closed = false;
+  private closing: Promise<void> | undefined;
   private failure: Error | undefined;
 
   private constructor(
@@ -179,7 +186,7 @@ export class DurableEventLog {
       const { envelopes } = await readTolerant(path);
       // ponytail: scans the log on open to recover seq; store seq in a sidecar if startup cost matters.
       const lastSeq = envelopes.reduce((max, envelope) => Math.max(max, envelope.seq), 0);
-      await mkdir(dirname(path), { recursive: true });
+      await durableMkdir(dirname(path));
       const handle = await openFile(path, "a+", 0o600);
       try {
         const { size } = await handle.stat();
@@ -189,6 +196,8 @@ export class DurableEventLog {
           // Keep an incomplete tail as its own corrupt line, never merge it with a new event.
           if (last[0] !== 10) await handle.appendFile("\n", "utf8");
         }
+        await handle.sync();
+        await syncDirectory(dirname(path));
         return new DurableEventLog(sessionId, handle, lastSeq + 1);
       } catch (error) {
         await handle.close();
@@ -207,18 +216,20 @@ export class DurableEventLog {
   append(event: Event, options: AppendOptions = {}): Promise<void> {
     if (this.closed) {
       const error = new Error("event log is closed");
-      this.failure = error;
+      this.failure ??= error;
       return Promise.reject(error);
     }
+    if (this.failure) return Promise.reject(this.failure);
     const seq = this.nextSeq;
     this.nextSeq += 1;
     const write = this.tail.then(async () => {
+      if (this.failure) throw this.failure;
       const envelope = redactValue(withEnvelope(event, seq, this.sessionId));
       await this.handle.appendFile(`${JSON.stringify(envelope)}\n`, "utf8");
       if (options.fsync) await this.handle.sync();
     });
     const tracked = write.catch((error: unknown) => {
-      this.failure = errorOf(error);
+      this.failure ??= errorOf(error);
       throw error;
     });
     this.tail = tracked.then(
@@ -229,20 +240,39 @@ export class DurableEventLog {
   }
 
   async flush(): Promise<void> {
-    if (this.closed) return;
+    if (this.closed) return this.closing;
     await this.tail;
-    await this.handle.sync();
+    if (this.failure) throw this.failure;
+    try {
+      await this.handle.sync();
+    } catch (error) {
+      this.failure = errorOf(error);
+      throw error;
+    }
   }
 
-  async close(): Promise<void> {
-    if (this.closed) return;
+  close(): Promise<void> {
+    if (this.closing) return this.closing;
     this.closed = true;
-    DurableEventLog.writers.delete(this.sessionId);
+    this.closing = this.finishClose();
+    return this.closing;
+  }
+
+  private async finishClose(): Promise<void> {
     try {
       await this.tail;
-      await this.handle.sync();
+      if (!this.failure) await this.handle.sync();
+    } catch (error) {
+      this.failure ??= errorOf(error);
     } finally {
-      await this.handle.close();
+      try {
+        await this.handle.close();
+      } catch (error) {
+        this.failure ??= errorOf(error);
+      } finally {
+        DurableEventLog.writers.delete(this.sessionId);
+      }
     }
+    if (this.failure) throw this.failure;
   }
 }

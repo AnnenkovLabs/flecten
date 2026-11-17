@@ -124,7 +124,7 @@ test("Computer module delivers real media through the model and guarded surface,
     expect(stopped.data).toMatchObject({
       structuredContent: { state: "stopped", observation: null },
     });
-    const logs = await logContents(join(f.cwd, ".liquid/sessions/computer"));
+    const logs = await logContents(join(f.cwd, ".flecten/sessions/computer"));
     expect(logs).not.toContain("iVBORw0KGgo");
     expect(JSON.stringify(await f.app.readSession("computer"))).not.toContain("iVBORw0KGgo");
   } finally {

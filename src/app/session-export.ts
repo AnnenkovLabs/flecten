@@ -38,9 +38,9 @@ async function assertDirectory(path: string): Promise<void> {
 /** Copies durable events and their media into one closed, atomically published directory. */
 export async function exportSession(cwd: string, id: string): Promise<{ path: string }> {
   assertSessionId(id);
-  await assertDirectory(join(cwd, ".liquid"));
-  await assertDirectory(join(cwd, ".liquid", "sessions"));
-  const directory = join(cwd, ".liquid", "exports");
+  await assertDirectory(join(cwd, ".flecten"));
+  await assertDirectory(join(cwd, ".flecten", "sessions"));
+  const directory = join(cwd, ".flecten", "exports");
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await assertDirectory(directory);
   await chmod(directory, 0o700);

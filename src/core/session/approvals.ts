@@ -121,12 +121,17 @@ export class ApprovalWaiters {
         signal.removeEventListener("abort", abort);
         this.#resolved.push({ id: prompt.id, choice: outcome.choice, by: outcome.by });
         if (this.#resolved.length > 100) this.#resolved.shift();
+        const sessionGrant =
+          outcome.by === "user" && outcome.choice === "allow_session"
+            ? authority?.sessionGrant(prompt.request)
+            : undefined;
         this.#emit({
           type: "approval.resolved",
           sessionId,
           id: prompt.id,
           choice: outcome.choice,
           by: outcome.by,
+          ...(sessionGrant ? { sessionGrant } : {}),
           ...(outcome.by === "user" && outcome.feedback !== undefined
             ? { feedback: outcome.feedback }
             : {}),

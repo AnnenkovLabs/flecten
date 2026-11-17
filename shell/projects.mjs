@@ -41,7 +41,7 @@ export function projectSelection(profile, initial, legacyCwd) {
 }
 
 export function registerProjectIpc({ ipcMain, dialog, BrowserWindow, isTrusted, selection, switchProject, refresh }) {
-  ipcMain.handle("liquid:choose-project", async (event) => {
+  ipcMain.handle("flecten:choose-project", async (event) => {
     if (!isTrusted(event)) return null;
     const win = BrowserWindow.fromWebContents(event.sender);
     const result = await dialog.showOpenDialog(win, { properties: ["openDirectory"] });
@@ -49,13 +49,13 @@ export function registerProjectIpc({ ipcMain, dialog, BrowserWindow, isTrusted, 
     if (!selected) return null;
     return switchProject(selected);
   });
-  ipcMain.handle("liquid:select-project", (event, path, sessionId) => {
+  ipcMain.handle("flecten:select-project", (event, path, sessionId) => {
     if (!isTrusted(event)) throw new Error("Untrusted window");
     if (path !== null && typeof path !== "string") throw new Error("Invalid project path");
     if (sessionId !== undefined && (typeof sessionId !== "string" || sessionId.length > 128)) throw new Error("Invalid session id");
     return switchProject(path, sessionId);
   });
-  ipcMain.handle("liquid:remove-project", (event, path) => {
+  ipcMain.handle("flecten:remove-project", (event, path) => {
     if (!isTrusted(event) || typeof path !== "string") throw new Error("Invalid project path");
     if (selection.remove(path)) switchProject(null);
     else refresh();

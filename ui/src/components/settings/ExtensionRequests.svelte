@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { t } from "../../lib/i18n.svelte";
   import { onMount } from "svelte";
   import { openExternal } from "../../lib/desktop";
@@ -56,7 +57,7 @@
           {#if field.type === "boolean"}
             <input type="checkbox" checked={values[field.name] === true} onchange={(event) => values[field.name] = event.currentTarget.checked} />
           {:else if field.options}
-            <select class="st-select" value={String(values[field.name] ?? "")} onchange={(event) => update(field, event.currentTarget.value)}><option value="">{t("Select")}</option>{#each field.options as option (option)}<option value={option}>{option}</option>{/each}</select>
+            <Select class="st-select" value={String(values[field.name] ?? "")} onchange={(value) => update(field, value)} options={[{ value: "", label: t("Select") }, ...field.options.map((option) => ({ value: option, label: option }))]} />
           {:else}
             <input class="st-input" type={field.type === "string" ? "text" : "number"} value={String(values[field.name] ?? "")} min={field.minimum} max={field.maximum} step={field.type === "integer" ? "1" : "any"} oninput={(event) => update(field, event.currentTarget.value)} />
           {/if}

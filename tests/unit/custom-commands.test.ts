@@ -21,7 +21,7 @@ afterEach(async () => {
 });
 
 async function temp(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-commands-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-commands-"));
   dirs.push(dir);
   return dir;
 }
@@ -88,13 +88,13 @@ describe("custom slash commands", () => {
     const home = await temp();
     const cwd = await temp();
     await mkdir(join(home, ".claude", "commands"), { recursive: true });
-    await mkdir(join(cwd, ".liquid", "commands"), { recursive: true });
+    await mkdir(join(cwd, ".flecten", "commands"), { recursive: true });
     await writeFile(join(home, ".claude", "commands", "ship.md"), "User ship");
     await writeFile(
-      join(cwd, ".liquid", "commands", "ship.md"),
+      join(cwd, ".flecten", "commands", "ship.md"),
       "---\ndescription: Ship it\n---\nProject ship $ARGUMENTS",
     );
-    await writeFile(join(cwd, ".liquid", "commands", "notes.txt"), "ignored");
+    await writeFile(join(cwd, ".flecten", "commands", "notes.txt"), "ignored");
 
     const commands = await loadCustomCommands(commandDirectories(cwd, home));
     expect(commands).toHaveLength(1);

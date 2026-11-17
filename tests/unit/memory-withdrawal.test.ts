@@ -74,7 +74,7 @@ test("mass withdrawal removes every stale body before a request even with no dis
       maxOutputTokens: 2000,
       context: { window: 100000, reserve: 2000 },
       loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-      logDir: (id: string) => join(cwd, ".liquid", "sessions", id, "logs"),
+      logDir: (id: string) => join(cwd, ".flecten", "sessions", id, "logs"),
     };
     const first = createSession(options);
     const events: Event[] = [];

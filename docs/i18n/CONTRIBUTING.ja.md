@@ -53,7 +53,7 @@ bun run build:ui
 
 ## コミット
 
-1 コミットは 1 つの意味の変更です。メッセージは命令形: `add spec parsing`、`fix page boundary`。シークレットと `.liquid/` はコミットしません。
+1 コミットは 1 つの意味の変更です。メッセージは命令形: `add spec parsing`、`fix page boundary`。シークレットと `.flecten/` はコミットしません。
 
 ## 行動
 

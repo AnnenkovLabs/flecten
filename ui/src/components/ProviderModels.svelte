@@ -7,6 +7,7 @@
   import ModelEditor from "./ModelEditor.svelte";
   import ModelRow from "./ModelRow.svelte";
   import SelectBox from "./SelectBox.svelte";
+  import Select from "./controls/Select.svelte";
 
   interface Props {
     providerId: string;
@@ -194,11 +195,8 @@
     </div>
 
     <div class="filters">
-      <select class="st-select model-filter" bind:value={filter} aria-label={t("Model filter")}>
-        {#each FILTERS as entry (entry.id)}
-          <option value={entry.id}>{entry.label}</option>
-        {/each}
-      </select>
+      <Select class="st-select model-filter" bind:value={filter} aria-label={t("Model filter")}
+        options={FILTERS.map((entry) => ({ value: entry.id, label: entry.label }))} />
       {#if filter !== "all" || modelSearch.trim()}
         <span class="filter-count">{t("{0} of {1}", [models.length, allIds.length])}</span>
       {/if}
@@ -229,7 +227,7 @@
     {/if}
 
     {#if update}
-      <p class="update-note" class:is-error={!update.probe.text} title={probeTitle()}>
+      <p class="update-note" class:is-error={!update.probe.text} data-tooltip={probeTitle()}>
         <Icon name={update.probe.text ? "check" : "x"} size={13} /> {t("Updated: +{0} · −{1} · changed {2}.", [update.added.length, update.removed.length, update.updated.length])} </p>
       <details class="st-details">
         <summary>{t("Catalog changes")}<Icon name="chevron-down" size={14} class="st-chevron" /></summary>
@@ -316,7 +314,7 @@
     gap: 8px;
   }
 
-  .model-filter {
+  .filters :global(.model-filter) {
     width: 180px;
     min-height: 32px;
     font-size: 12.5px;

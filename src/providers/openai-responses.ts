@@ -218,6 +218,8 @@ export function createOpenAiResponses(
         body: buildBody(request, runtime, warn),
         signal,
         providerId: runtime.providerId,
+        model: apiModel(request),
+        ...(model?.quotaGroup ? { quotaGroup: model.quotaGroup } : {}),
         ...(runtime.fetch ? { fetch: runtime.fetch } : {}),
         ...(runtime.config.transport?.retries === undefined
           ? {}

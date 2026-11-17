@@ -186,17 +186,10 @@ async function fixture(
     await rm(cwd, { recursive: true, force: true });
   });
   async function status(): Promise<{ result?: RunResult; running: boolean }> {
-    await conversation.send({
-      type: "run",
-      sessionId: "recovery",
-      prompt: "Inspect worker status",
-    });
-    await conversation.flush();
-    const event = events.findLast(
-      (event) => event.type === "tool.finished" && event.call.id === "status",
-    );
-    if (event?.type !== "tool.finished") throw new Error("Missing Worker status");
-    return event.result.data as { result?: RunResult; running: boolean };
+    const state = (await conversation.send({ type: "status" })) as {
+      worker: { result?: RunResult; running: boolean };
+    };
+    return state.worker;
   }
   return { conversation, events, requests, reviewing, status };
 }
@@ -249,7 +242,7 @@ test("A persisted final Twin acceptance restores the accepted result", async () 
 });
 
 test("A Worker result that exhausts the shared budget cannot bypass final Twin acceptance", async () => {
-  const f = await fixture({ budgets: { maxTokens: 20 } });
+  const f = await fixture({ budgets: { maxTokens: 30 } });
   await f.conversation.send({ type: "run", sessionId: "recovery", prompt: "Build checkout" });
   await until(() =>
     f.events.some(

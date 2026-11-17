@@ -82,7 +82,7 @@
 <svelte:window onmessage={receive} />
 <section class="module-surface" aria-label={surface.title}>
   {#if error}<p role="alert">{error}</p>{:else if html}
-    <iframe bind:this={frame} title={surface.title} sandbox="allow-scripts allow-forms" src="liquid-summary://module" referrerpolicy="no-referrer"></iframe>
+    <iframe bind:this={frame} title={surface.title} sandbox="allow-scripts allow-forms" src="flecten-summary://module" referrerpolicy="no-referrer"></iframe>
   {:else}<p role="status">{t("Loading module surface…")}</p>{/if}
 </section>
 <style>

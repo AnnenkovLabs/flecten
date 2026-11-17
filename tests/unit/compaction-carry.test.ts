@@ -77,7 +77,7 @@ async function compact(messages: Message[], cwd: string, pageWriter?: PageWriter
 
 describe("typed compaction carry-forward", () => {
   test("the real no-writer path retains recent checks and requests across a persisted second compaction", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-carry-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-carry-"));
     dirs.push(cwd);
     const original = "Fix the helper. Preserve data/user-draft.md exactly.";
     const steering = "Keep the public API. Only fix empty input.";
@@ -146,7 +146,7 @@ describe("typed compaction carry-forward", () => {
   });
 
   test("the PageWriter route preserves prior evidence through four deterministic fallbacks", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-writer-carry-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-writer-carry-"));
     dirs.push(cwd);
     const provider = scriptedProvider(
       Array.from({ length: 3 }, () => [
@@ -208,7 +208,7 @@ describe("typed compaction carry-forward", () => {
   });
 
   test("legacy compactions remain readable and malformed typed carry is rejected at the log boundary", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-legacy-carry-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-legacy-carry-"));
     dirs.push(cwd);
     const id = "s-legacy-carry";
     const path = sessionPaths(cwd, id).events;

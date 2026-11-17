@@ -14,7 +14,7 @@ function skipIfUnavailable(): void {
 async function expectSummaryFrame(page: Page): Promise<void> {
   const frame = page.locator("iframe.summary").last();
   await expect(frame).toBeVisible();
-  await expect(frame).toHaveAttribute("src", /^liquid-summary:\/\//);
+  await expect(frame).toHaveAttribute("src", /^flecten-summary:\/\//);
   await expect(frame).toHaveAttribute("sandbox", "allow-scripts");
   await expect(frame).toHaveAttribute("title");
   expect(await frame.getAttribute("srcdoc")).toBeNull();

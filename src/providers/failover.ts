@@ -1,6 +1,7 @@
 import type { FailoverConfig, ProviderConfig } from "../config/schema";
 import { HarnessError } from "../errors";
 import { retryDelayMs } from "./http";
+import { type ProviderResponse, ProviderResponseError } from "./response";
 import { StreamError } from "./sse";
 import { TransportError } from "./transport";
 import type { ModelEvent, ModelProvider, ModelRequest } from "./types";
@@ -19,6 +20,7 @@ export type ProviderFailureKind =
   | "unknown";
 
 const QUOTA_CODES = new Set([
+  "model_quota_exhausted",
   "insufficient_quota",
   "quota_exceeded",
   "quota_5h",
@@ -45,6 +47,7 @@ const NETWORK_CODES = new Set([
 ]);
 
 export interface ProviderFailureInit {
+  response?: ProviderResponse | undefined;
   status?: number | undefined;
   retryable?: boolean | undefined;
   retryAfterMs?: number | undefined;
@@ -52,6 +55,7 @@ export interface ProviderFailureInit {
 }
 
 export class ProviderFailure extends HarnessError {
+  readonly response: ProviderResponse | undefined;
   readonly kind: ProviderFailureKind;
   readonly status: number | undefined;
   readonly retryable: boolean;
@@ -71,6 +75,7 @@ export class ProviderFailure extends HarnessError {
     );
     this.name = "ProviderFailure";
     this.kind = kind;
+    this.response = init.response;
     this.status = init.status;
     this.retryable = init.retryable ?? defaultRetryable(kind);
     this.retryAfterMs = init.retryAfterMs;
@@ -78,6 +83,12 @@ export class ProviderFailure extends HarnessError {
 
   static from(error: unknown): ProviderFailure {
     if (error instanceof ProviderFailure) return error;
+    if (error instanceof ProviderResponseError)
+      return new ProviderFailure(
+        error.kind === "bad_request" ? "invalid" : error.kind,
+        error.message,
+        { retryable: error.retryable, response: error.response, cause: error },
+      );
     if (error instanceof TransportError) {
       const kind = transportKind(error);
       return new ProviderFailure(kind, error.message, {
@@ -107,7 +118,9 @@ export class ProviderFailure extends HarnessError {
           ? "context"
           : error.code === "cancelled"
             ? "aborted"
-            : "unknown";
+            : error.code === "invalid_input"
+              ? "invalid"
+              : "unknown";
       return new ProviderFailure(kind, error.message, { cause: error });
     }
     if (isRecord(error) && error.name === "AbortError") {
@@ -352,7 +365,7 @@ export async function* streamWithFailover(
       let emitted = false;
       try {
         for await (const event of options.run(target)) {
-          emitted = true;
+          if (!["response", "usage", "route"].includes(event.type)) emitted = true;
           yield event;
         }
         breaker.recordSuccess(target);
@@ -409,6 +422,7 @@ export function createFailoverProvider(
   });
   const budget: FailoverBudget = { remaining: config?.retryBudget ?? 2 };
   let lastUsed: FailoverTarget | undefined;
+  let selected: ModelProvider | undefined;
   /** Why the request left the targets before the current one: a failure kind or an open circuit. */
   let routeReason: string | undefined;
   const onAttempt = (attempt: FailoverAttempt): void => {
@@ -420,6 +434,9 @@ export function createFailoverProvider(
   return {
     id: options.primary.provider,
     model: options.primary.model,
+    get protection() {
+      return selected?.protection;
+    },
     get lastUsed(): FailoverTarget | undefined {
       return lastUsed;
     },
@@ -430,8 +447,9 @@ export function createFailoverProvider(
         const adapted =
           target.model === request.model ? request : { ...request, model: target.model };
         let announced = target.provider === primary.provider && target.model === primary.model;
-        for await (const event of options.resolve(target).stream(adapted, signal)) {
-          if (!announced) {
+        selected = options.resolve(target);
+        for await (const event of selected.stream(adapted, signal)) {
+          if (!announced && event.type !== "response") {
             // Announced with the first real output, so a fallback that fails silently stays retryable.
             announced = true;
             const reason = routeReason ?? "unknown";

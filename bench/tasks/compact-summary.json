@@ -55,7 +55,7 @@
   "budgetTokens": 120000,
   "baseline": "codex",
   "options": {
-    "contextWindow": 2000,
+    "contextWindow": 2500,
     "reserveTokens": 200,
     "maxTurns": 8,
     "continuations": 1,

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
+  import Combobox from "../controls/Combobox.svelte";
   import { locales } from "../../lib/i18n/locales";
   import { t } from "../../lib/i18n.svelte";
   import type { HarnessSettings } from "../../lib/types";
@@ -29,16 +31,13 @@
     </label>
     {#if value?.enabled}
       <SettingsRow title={t("Translation provider")}>
-        <select class="st-input" aria-label={t("Translation provider")} value={value.provider}
-          onchange={(event) => { value.provider = event.currentTarget.value; value.model = ""; }}>
-          {#each providers as [id, provider]}<option value={id}>{provider.name || id}</option>{/each}
-        </select>
+        <Select class="st-input" aria-label={t("Translation provider")} value={value.provider}
+          onchange={(provider) => { value.provider = provider; value.model = ""; }}
+          options={providers.map(([id, provider]) => ({ value: id, label: provider.name || id }))} />
       </SettingsRow>
       <SettingsRow title={t("Translation model")} description={t("Choose a fast, low-cost model without reasoning. Translation costs count toward the task budget.")}>
-        <select class="st-input" aria-label={t("Translation model")} bind:value={value.model}>
-          <option value="" disabled>{t("Select a model")}</option>
-          {#each models as [id, model]}<option value={id}>{model.name || id}</option>{/each}
-        </select>
+        <Select class="st-input" aria-label={t("Translation model")} bind:value={value.model}
+          options={[{ value: "", label: t("Select a model"), disabled: true }, ...models.map(([id, model]) => ({ value: id, label: model.name || id }))]} />
       </SettingsRow>
       <SettingsRow title={t("Translation timeout")} description={t("Seconds per request. Translating long instructions may take more time than a short message.")}>
         <input class="st-input" type="number" min="1" max="120" step="1"
@@ -46,11 +45,8 @@
           oninput={(event) => { value.timeoutMs = event.currentTarget.valueAsNumber * 1000; }} />
       </SettingsRow>
       <SettingsRow title={t("Response language")} description={t("Auto uses the message language. For another language, enter its code, such as pl or ja.")}>
-        <input class="st-input" aria-label={t("Response language")} list="translation-languages" bind:value={value.language} />
-        <datalist id="translation-languages">
-          <option value="auto">{t("Auto")}</option>
-          {#each locales as locale (locale.id)}<option value={locale.id}>{locale.name}</option>{/each}
-        </datalist>
+        <Combobox class="st-input" aria-label={t("Response language")} bind:value={value.language}
+          options={[{ value: "auto", label: t("Auto") }, ...locales.map((locale) => ({ value: locale.id, label: locale.name, lang: locale.id }))]} />
       </SettingsRow>
     {/if}
   </div>

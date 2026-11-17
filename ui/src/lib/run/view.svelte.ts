@@ -30,12 +30,10 @@ import { WorkerView } from "./worker.svelte";
 
 export type SessionEvent = Extract<AgentEvent, { sessionId: string }>;
 export type ErrorEvent = Extract<AgentEvent, { type: "error" }>;
-
 export interface ViewHooks {
   /** A tool call saved a checkpoint: the history pane reloads. */
   checkpointSaved(): void;
 }
-
 export class TaskView {
   state = $state<SessionState | null>(null);
   pendingSend = $state(false);
@@ -51,6 +49,7 @@ export class TaskView {
     return [...this.#jobs, ...this.worker.jobs];
   }
   budget = $state<AgentBudget | null>(null);
+  taskBudget = $state<AgentBudget | null>(null);
   readonly context = new ContextMeter();
   #usage = $state(emptyTokenUsage());
   get usage() {
@@ -123,6 +122,7 @@ export class TaskView {
     this.queued = [];
     this.#jobs = [];
     this.budget = null;
+    this.taskBudget = null;
     this.context.reset();
     this.#usage = emptyTokenUsage();
     this.lastPrompt = "";
@@ -162,12 +162,14 @@ export class TaskView {
       }
     } finally {
       this.thread.restoring = false;
+      this.worker.transcript.restoring = false;
+      this.#syncSubagents();
     }
   }
-
   /** The core's view of the task after a rebuild: queue, jobs, budget and live approvals. */
   attach(info: AgentInfo | undefined): void {
     if (info?.budget) this.budget = info.budget;
+    if (info?.taskBudget) this.taskBudget = info.taskBudget;
     if (info?.context) this.context.apply(info.context);
     if (info?.sessionState) this.applyState(info.sessionState);
   }
@@ -251,7 +253,6 @@ export class TaskView {
       ...(event.resetAt ? { resetAt: event.resetAt } : {}),
     });
   }
-
   apply(event: SessionEvent): void {
     this.#usage = tokenUsageEvent(this.#usage, event);
     if (event.type === "twin.activity") {
@@ -261,6 +262,9 @@ export class TaskView {
     if (event.type !== "provider.retry") clearRetry();
     const restoring = this.thread.restoring;
     switch (event.type) {
+      case "worker.acceptance":
+        this.worker.acceptance(event.acceptance);
+        return;
       case "hook.finished":
         this.hookRuns = [...this.hookRuns.slice(-49), event.hook];
         return;
@@ -429,6 +433,9 @@ export class TaskView {
         this.thread.push(jobNotice(event.job));
         if (event.checkpoint !== undefined && !restoring) this.#hooks.checkpointSaved();
         return;
+      case "task.budget":
+        this.taskBudget = event.budget;
+        return;
       case "budget":
         this.budget = event.budget;
         return;
@@ -480,21 +487,9 @@ export class TaskView {
   #status(label: MessageKey): void {
     this.liveLabel = label;
   }
-
   #syncSubagents(): void {
-    for (const item of this.subagents.items) {
-      const action = this.subagents.action(item);
-      for (const row of this.thread.items) {
-        const actions =
-          row.kind === "run" ? row.summary.list : row.kind === "worker" ? row.actions : [];
-        const index = actions.findIndex((entry) => entry.id === item.callId);
-        if (index >= 0) actions[index] = action;
-        if (row.kind === "run")
-          for (const turn of row.summary.turns) {
-            const position = turn.actions.findIndex((entry) => entry.id === item.callId);
-            if (position >= 0) turn.actions[position] = action;
-          }
-      }
-    }
+    if (this.thread.restoring) return;
+    this.subagents.syncActions(this.thread);
+    this.subagents.syncActions(this.worker.transcript);
   }
 }

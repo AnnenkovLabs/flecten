@@ -35,7 +35,7 @@
   type="button"
   disabled={settings.syncing}
   aria-label={t("Update model catalog")}
-  title={tooltip}
+  data-tooltip={tooltip}
   onclick={() => settings.syncCatalog()}
 >
   <Icon name="refresh" size={12} />

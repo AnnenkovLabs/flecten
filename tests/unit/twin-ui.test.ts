@@ -1,5 +1,6 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, jest, test } from "bun:test";
 import type { TwinSnapshot } from "../../shared/twin";
+import { TWIN_FALLING_MS, TWIN_PLEADING_MS, TWIN_REVIVING_MS } from "../../ui/src/lib/twin/power";
 import { TwinStore } from "../../ui/src/lib/twin.svelte";
 import type { AgentCommand, AgentEvent } from "../../ui/src/lib/types";
 
@@ -9,6 +10,7 @@ const originalWindow = globalThis.window;
 const stores: TwinStore[] = [];
 afterEach(() => {
   for (const store of stores.splice(0)) store.dispose();
+  jest.useRealTimers();
   globalThis.window = originalWindow;
 });
 
@@ -47,9 +49,9 @@ function snapshot(state: TwinSnapshot["training"]["state"] = "idle"): TwinSnapsh
     enabled: true,
     sources: [
       {
-        id: "liquid",
-        name: "Liquid Harness",
-        path: "/project/.liquid/sessions",
+        id: "flecten",
+        name: "Flecten",
+        path: "/project/.flecten/sessions",
         available: true,
         sessions: 1,
         selected: false,
@@ -138,12 +140,12 @@ test("reopening Twin and rescanning preserve the user's source selection", async
   const loading = h.store.load();
   h.reply(h.requests[0], { ok: true, twin: snapshot() });
   await loading;
-  h.store.toggleSource("liquid", true);
+  h.store.toggleSource("flecten", true);
   for (const scan of [false, true]) {
     const refresh = h.store.load(scan);
     h.reply(h.requests.at(-1), { ok: true, twin: snapshot() });
     await refresh;
-    expect(h.store.selected).toEqual(["liquid"]);
+    expect(h.store.selected).toEqual(["flecten"]);
   }
 });
 
@@ -173,4 +175,83 @@ test("changing project clears the selected section and ignores responses from th
   expect(h.store.question).toBe("");
   expect(String(h.store.tab)).toBe("sources");
   expect(h.store.projectEpoch).toBe(1);
+});
+
+test("Twin restores its disabled pose without replay and keeps it when reloaded", async () => {
+  const h = bridge();
+  const loading = h.store.load();
+  h.reply(h.requests[0], { ok: true, twin: { ...snapshot(), enabled: false } });
+  await loading;
+  expect(h.store.power.phase).toBe("disabled");
+  expect(h.store.enabled).toBe(false);
+  const restored = h.store.power;
+  const reload = h.store.load();
+  h.reply(h.requests[1], { ok: true, twin: { ...snapshot(), enabled: false } });
+  await reload;
+  expect(h.store.power).toBe(restored);
+});
+
+test("Twin reacts before saving, falls after goodbye and revives when enabled", async () => {
+  jest.useFakeTimers();
+  const h = bridge();
+  h.store.snapshot = snapshot();
+  const disabling = h.store.configure(false);
+  const goodbye = h.store.power;
+  expect(goodbye.phase).toBe("pleading");
+  expect(h.store.enabled).toBe(false);
+  expect(h.store.snapshot.enabled).toBe(true);
+  h.reply(h.requests[0], { ok: true, twin: { ...snapshot(), enabled: false } });
+  await disabling;
+  expect(h.store.power).toBe(goodbye);
+  jest.advanceTimersByTime(TWIN_PLEADING_MS);
+  expect(h.store.power.phase).toBe("falling");
+  jest.advanceTimersByTime(TWIN_FALLING_MS);
+  expect(h.store.power.phase).toBe("disabled");
+  const enabling = h.store.configure(true);
+  expect(h.store.power.phase).toBe("reviving");
+  h.reply(h.requests[1], { ok: true, twin: snapshot() });
+  await enabling;
+  jest.advanceTimersByTime(TWIN_REVIVING_MS);
+  expect(h.store.power.phase).toBe("enabled");
+});
+
+test("Twin can be rescued while its disable save is pending and ignores the old fall timer", async () => {
+  jest.useFakeTimers();
+  const h = bridge();
+  h.store.snapshot = snapshot();
+  const saving = h.store.configure(false);
+  jest.advanceTimersByTime(TWIN_PLEADING_MS / 2);
+  await h.store.configure(true);
+  expect(h.store.power.phase).toBe("reviving");
+  expect(h.store.enabled).toBe(true);
+  expect(h.requests).toHaveLength(1);
+  h.reply(h.requests[0], { ok: true, twin: { ...snapshot(), enabled: false } });
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(h.requests).toHaveLength(2);
+  expect(h.requests[1]?.type).toBe("twin.configure");
+  h.reply(h.requests[1], { ok: true, twin: snapshot() });
+  await saving;
+  jest.advanceTimersByTime(TWIN_PLEADING_MS + TWIN_FALLING_MS);
+  expect(h.store.power.phase).toBe("enabled");
+  expect(h.store.snapshot.enabled).toBe(true);
+});
+
+test("failed saves restore the canonical Twin state and disposal cancels pending animation", async () => {
+  jest.useFakeTimers();
+  const h = bridge();
+  h.store.snapshot = snapshot();
+  const failed = h.store.configure(false);
+  h.reply(h.requests[0], { ok: false, error: "Could not save Twin" });
+  await failed;
+  expect(h.store.power.phase).toBe("enabled");
+  expect(h.store.enabled).toBe(true);
+  expect(h.store.error).toBe("Could not save Twin");
+  const pending = h.store.configure(false);
+  h.store.dispose();
+  const disposed = h.store.power;
+  h.reply(h.requests[1], { ok: true, twin: { ...snapshot(), enabled: false } });
+  await pending;
+  jest.advanceTimersByTime(TWIN_PLEADING_MS + TWIN_FALLING_MS);
+  expect(h.store.power).toBe(disposed);
 });

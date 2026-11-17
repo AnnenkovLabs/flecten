@@ -1,4 +1,5 @@
 import type { Message } from "../core/types";
+import type { PermissionEngine } from "../security/permissions";
 import { replaySkillActivations } from "../skills/replay";
 import type { SkillActivations } from "../skills/tool";
 import { restoreSessionMedia } from "../store/attachments";
@@ -13,12 +14,23 @@ export async function sessionModelHistory(
   sessionId: string,
   activations: SkillActivations,
   storage?: { envelopes(id: string): Promise<import("../core/services/storage").EventEnvelope[]> },
+  permissions?: PermissionEngine,
 ): Promise<Message[]> {
   try {
     const envelopes = storage
       ? await storage.envelopes(sessionId)
       : (await readTolerant(sessionPaths(cwd, sessionId).events)).envelopes;
     const selected = projectBranches(envelopes).envelopes;
+    for (const { event: stored } of envelopes) {
+      const event = stored.type === "worker.event" ? stored.event : stored;
+      if (
+        event.type === "approval.resolved" &&
+        event.by === "user" &&
+        event.choice === "allow_session" &&
+        event.sessionGrant
+      )
+        permissions?.restoreSessionGrant(event.sessionGrant, sessionId);
+    }
     activations.delete(sessionId);
     const workers = new Set(
       envelopes.flatMap(({ event }) =>

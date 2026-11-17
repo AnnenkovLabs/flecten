@@ -19,7 +19,7 @@ def command(arguments, output, timeout=300):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task", type=Path)
-    parser.add_argument("--upstream", type=Path, default=Path(".liquid/benchmarks/upstream/deep-swe"))
+    parser.add_argument("--upstream", type=Path, default=Path(".flecten/benchmarks/upstream/deep-swe"))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     task = args.task.resolve()

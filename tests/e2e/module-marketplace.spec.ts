@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseSelect } from "./custom-select";
 import { launchApp } from "./fixtures";
 import { hiddenScreenshot } from "./hidden-screenshot";
 
@@ -28,10 +29,10 @@ test("the default marketplace is empty and keeps catalog and installed-module co
     await expect(empty).toBeVisible();
     const search = dialog.getByRole("searchbox", { name: "Search modules" });
     await search.fill("better-trailer");
-    await dialog.getByLabel("Module category", { exact: true }).selectOption("interface");
+    await chooseSelect(dialog.getByLabel("Module category", { exact: true }), "interface");
     await expect(dialog.locator(".market-entry")).toHaveCount(0);
     await search.fill("");
-    await dialog.getByLabel("Module category", { exact: true }).selectOption("all");
+    await chooseSelect(dialog.getByLabel("Module category", { exact: true }), "all");
     for (const [width, height] of [
       [1480, 940],
       [1180, 640],

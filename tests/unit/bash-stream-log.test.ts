@@ -24,7 +24,7 @@ const source = resolve(import.meta.dir, "../helpers/shell-output.ts");
 const command = bunFileCommand(source);
 
 async function workspace() {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-stream-log-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-stream-log-"));
   dirs.push(cwd);
   return {
     cwd,

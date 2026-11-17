@@ -39,7 +39,7 @@ async function seedHistory(cwd: string): Promise<void> {
       },
     );
   }
-  const root = join(cwd, ".liquid", "sessions");
+  const root = join(cwd, ".flecten", "sessions");
   await mkdir(join(root, sessionId), { recursive: true });
   await writeFile(
     join(root, sessionId, "events.jsonl"),
@@ -105,6 +105,10 @@ test("long threads mount a bounded window while search, task restoration and fol
     await expect(h.page.locator(".is-search-active")).toContainText("UNIQUE_ARCHIVE_0005");
     await expect(h.page.locator(".is-search-active")).toBeInViewport();
     await h.page.keyboard.press("Escape");
+    await expect(
+      h.page.getByRole("button", { name: "Вниз, к последнему сообщению", exact: true }),
+    ).toBeVisible();
+    await expect(h.page.getByText("UNIQUE_ARCHIVE_0005", { exact: false })).toBeInViewport();
     const before = await anchor(h.page);
     await h.page.getByRole("button", { name: "Новая задача", exact: true }).click();
     await task.click();

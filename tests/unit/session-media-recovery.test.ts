@@ -17,7 +17,7 @@ afterEach(async () => {
 
 type RequestBody = { model: string; messages: Array<{ role: string; content: unknown }> };
 async function workspace(largeFirstAnswer = false) {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-media-history-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-media-history-"));
   cleanups.push(() => rm(cwd, { recursive: true, force: true }));
   const requests: RequestBody[] = [];
   const server = Bun.serve({

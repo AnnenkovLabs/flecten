@@ -106,7 +106,7 @@ jobs:
           else
             bun run app:shot > diagnostics/screenshot.log 2>&1 || true
           fi
-          bun -e 'const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path"); for (const name of fs.readdirSync(os.tmpdir())) { if (name.startsWith("liquid-ui") && name.endsWith(".png")) fs.copyFileSync(path.join(os.tmpdir(), name), path.join("diagnostics", name)); }'
+          bun -e 'const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path"); for (const name of fs.readdirSync(os.tmpdir())) { if (name.startsWith("flecten-ui") && name.endsWith(".png")) fs.copyFileSync(path.join(os.tmpdir(), name), path.join("diagnostics", name)); }'
       - name: Upload packaging diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

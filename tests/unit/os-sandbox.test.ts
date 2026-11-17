@@ -25,7 +25,7 @@ const POLICY = {
 } satisfies SandboxCommandOptions;
 
 async function sandboxTempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-os-sandbox-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-os-sandbox-"));
   dirs.push(dir);
   return dir;
 }

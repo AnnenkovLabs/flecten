@@ -22,7 +22,7 @@ export function contextMentions(
         ...(session.lastPrompt ? { preview: session.lastPrompt } : {}),
         context: {
           kind: "task",
-          source: `liquid://sessions/${session.id}`,
+          source: `flecten://sessions/${session.id}`,
           label: session.title,
           text: `Task: ${session.id}\nStatus: ${session.running ? "running" : (session.stopReason ?? "idle")}\nLast user prompt:\n${(session.lastPrompt ?? "").slice(0, 58_000)}`,
         },

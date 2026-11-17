@@ -10,13 +10,13 @@ const roots: string[] = [];
 const children: Bun.Subprocess[] = [];
 
 async function project(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "liquid-lock-"));
+  const root = await mkdtemp(join(tmpdir(), "flecten-lock-"));
   roots.push(root);
   return root;
 }
 
 function lockFile(root: string): string {
-  return join(root, ".liquid", "sidecar.lock");
+  return join(root, ".flecten", "sidecar.lock");
 }
 
 /** A live process that is not this one, to stand for another core. */
@@ -27,7 +27,7 @@ function otherProcess(): Bun.Subprocess {
 }
 
 async function writeHolder(root: string, pid: number, token = "other"): Promise<void> {
-  await mkdir(join(root, ".liquid"), { recursive: true });
+  await mkdir(join(root, ".flecten"), { recursive: true });
   await writeFile(
     lockFile(root),
     JSON.stringify({ pid, token, startedAt: "2026-01-01T00:00:00Z" }),
@@ -36,7 +36,7 @@ async function writeHolder(root: string, pid: number, token = "other"): Promise<
 
 /** Root, or a sandbox with CAP_DAC_OVERRIDE, writes into a read-only folder anyway. */
 function permissionsEnforced(): boolean {
-  const probe = mkdtempSync(join(tmpdir(), "liquid-probe-"));
+  const probe = mkdtempSync(join(tmpdir(), "flecten-probe-"));
   try {
     chmodSync(probe, 0o500);
     mkdirSync(join(probe, "inner"));

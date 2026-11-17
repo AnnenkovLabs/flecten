@@ -38,25 +38,25 @@
 </script>
 
 <div class="project-row" class:is-current={project.current} bind:this={row} oncontextmenu={contextMenu} role="group" aria-label={project.name}>
-  <button class="project-select" type="button" title={project.path ?? project.name} onclick={() => onSelectProject?.(project)}>
+  <button class="project-select" type="button" data-tooltip={project.path ?? project.name} onclick={() => onSelectProject?.(project)}>
   <Icon name="folder" />
   <span>{project.name}</span>
   {#if project.age}
     <span class="project-time">{project.age}</span>
   {/if}
   </button>
-  <button class="project-options" type="button" aria-label={t("Project options")} title={t("Project options")} popovertarget={menuId} onclick={position}><Icon name="more" size={14} /></button>
+  <button class="project-options" type="button" aria-label={t("Project options")} data-tooltip={t("Project options")} popovertarget={menuId} onclick={position}><Icon name="more" size={14} /></button>
 </div>
 <div class="project-menu" id={menuId} bind:this={menu} popover="auto" style:top={`${top}px`} style:left={`${left}px`}>
   {#if project.projectRoot !== null}
-    <p title={project.path}>{project.path}</p>
+    <p data-tooltip={project.path}>{project.path}</p>
     <button type="button" onclick={() => { menu.hidePopover(); onProjectTrust?.(project); }}>{t("Change project trust")}</button>
     <button type="button" onclick={() => { menu.hidePopover(); onRemoveProject?.(project); }}>{t("Remove from sidebar")}</button>
   {:else}
     <button type="button" onclick={() => { menu.hidePopover(); onSelectProject?.(project); }}>{t("Work without a project")}</button>
   {/if}
 </div>
-{#if project.error}<p class="project-error" title={project.error}>{project.error}</p>{/if}
+{#if project.error}<p class="project-error" data-tooltip={project.error}>{project.error}</p>{/if}
 
 {#if project.tasks}
   <div class="project-tasks">

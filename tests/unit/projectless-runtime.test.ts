@@ -44,7 +44,7 @@ test("projectless model context keeps global instructions and excludes cwd and n
   }
   const project = await buildPrompt(cwd, { instructions: { managed: [], user: [] } });
   expect(project.system).toContain("UNSELECTED_ROOT_RULE");
-  expect(project.system).toContain("UNSELECTED_NESTED_RULE");
+  expect(project.system).not.toContain("UNSELECTED_NESTED_RULE");
 });
 
 test("projectless skill discovery cannot load project sources even when explicitly enabled", async () => {
@@ -77,7 +77,7 @@ test("projectless mode never starts shadow git indexing even when shell snapshot
   expect(snapshots.service).toBeUndefined();
   expect(snapshots.state.state).toBe("off");
   await snapshots.settled();
-  expect(await Bun.file(join(cwd, ".liquid/shadow/HEAD")).exists()).toBe(false);
+  expect(await Bun.file(join(cwd, ".flecten/shadow/HEAD")).exists()).toBe(false);
 });
 
 test("the real service runs outside-file tools without treating the file's parent as a project", async () => {
@@ -141,8 +141,8 @@ test("the real service runs outside-file tools without treating the file's paren
     expect(JSON.stringify(provider.requests[1]?.messages)).toContain("TASK_FILE_CONTENT");
     expect(provider.requests[0]?.system).not.toContain("OUTSIDE_PROJECT_INSTRUCTION");
     expect((await app.listSessions()).length).toBe(1);
-    expect(await Bun.file(join(external, ".liquid/sessions/index.json")).exists()).toBe(false);
-    expect(await Bun.file(join(cwd, ".liquid/shadow/HEAD")).exists()).toBe(false);
+    expect(await Bun.file(join(external, ".flecten/sessions/index.json")).exists()).toBe(false);
+    expect(await Bun.file(join(cwd, ".flecten/shadow/HEAD")).exists()).toBe(false);
   } finally {
     await app.dispose();
     if (prior === undefined) delete process.env.FLECTEN_CONFIG;

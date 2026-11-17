@@ -23,7 +23,7 @@
     class="st-btn st-btn--danger st-btn--sm"
     type="button"
     disabled={!canDelete}
-    title={canDelete ? t("Delete selected models") : t("Cannot delete all models")}
+    data-tooltip={canDelete ? t("Delete selected models") : t("Cannot delete all models")}
     onclick={() => (confirming = true)}
   > {t("Delete")} </button>
   <button class="st-btn st-btn--quiet st-btn--sm" type="button" onclick={onclear}> {t("Clear selection")} </button>

@@ -97,10 +97,10 @@
           </div>
         {:else}
           <div class="lh-queue-body">
-            <span class="lh-queue-mode" role="img" aria-label={modeLabels[item.mode]} title={modeLabels[item.mode]}>
+            <span class="lh-queue-mode" role="img" aria-label={modeLabels[item.mode]} data-tooltip={modeLabels[item.mode]}>
               <Icon name={modeIcons[item.mode]} size={14} />
             </span>
-            <span class="lh-queue-text" title={item.text}>{item.text}</span>
+            <span class="lh-queue-text" data-tooltip={item.text}>{item.text}</span>
             {#if item.state === "sending"}
               <span class="lh-queue-state">{t("Sending")}</span>
             {/if}
@@ -110,7 +110,7 @@
               <button
                 class="lh-icon-button"
                 type="button"
-                title={t("Edit message")}
+                data-tooltip={t("Edit message")}
                 aria-label={t("Edit message")}
                 onclick={() => startEdit(item)}
               >
@@ -119,7 +119,7 @@
               <button
                 class="lh-icon-button"
                 type="button"
-                title={t("Delete message")}
+                data-tooltip={t("Delete message")}
                 aria-label={t("Delete message")}
                 onclick={() => onRemove(item.id)}
               >

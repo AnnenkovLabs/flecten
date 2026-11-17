@@ -6,6 +6,7 @@
   import Icon from "./Icon.svelte";
   import ProviderHeaders from "./ProviderHeaders.svelte";
   import ProviderTest from "./ProviderTest.svelte";
+  import Select from "./controls/Select.svelte";
 
   interface Props {
     providerId: string;
@@ -140,15 +141,13 @@
 
       <label class="st-field">
         <span class="st-label">{t("Protocol")}</span>
-        <select
+        <Select
           class="st-select"
           bind:value={provider.protocol}
+          options={PROTOCOLS}
+          aria-label={t("Protocol")}
           data-settings-field={t("Protocol")}
-        >
-          {#each PROTOCOLS as protocol}
-            <option value={protocol.value}>{protocol.label}</option>
-          {/each}
-        </select>
+        />
       </label>
 
       <label class="st-field">

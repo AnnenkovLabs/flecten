@@ -15,7 +15,7 @@ const Environment = z.object({
     .default("https://chatgpt.com/connector_platform_oauth_redirect"),
   X_CONNECTOR_PORT: z.coerce.number().int().min(1).max(65535).default(8787),
   X_CONNECTOR_HOST: z.string().default("127.0.0.1"),
-  X_CONNECTOR_STORE: z.string().default(".liquid/x-connector/oauth.enc"),
+  X_CONNECTOR_STORE: z.string().default(".flecten/x-connector/oauth.enc"),
 });
 
 function secureUrl(value: string): string {

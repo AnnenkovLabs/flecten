@@ -8,6 +8,7 @@ import { redact } from "../util/redact";
 import { lockProject } from "./project-lock";
 import { type CommandInput, createHandlers, isCommandType, REFRESH_AFTER } from "./server-handlers";
 import { createAppService } from "./service";
+import { STORAGE_COMMANDS, StorageBootstrap } from "./storage-bootstrap";
 
 function write(message: unknown): void {
   const safe =
@@ -52,6 +53,42 @@ function fail(requestId: string | undefined) {
 
 async function main(): Promise<void> {
   const cwd = productEnv("CWD")?.trim() || process.cwd();
+  const migration = new StorageBootstrap(cwd, write);
+  const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
+  const initialized = migration.initialize();
+  let releaseRuntime!: () => void;
+  const runtimeReady = new Promise<void>((resolve) => {
+    releaseRuntime = resolve;
+  });
+  let dispatch = async (input: CommandInput): Promise<void> => {
+    await initialized;
+    if (!migration.blocked) {
+      await runtimeReady;
+      return dispatch(input);
+    }
+    respond(requestIdOf(input), { ok: true, ...(await migration.command(input.type)) });
+  };
+  lines.on("line", (line) => {
+    if (!line.trim()) return;
+    let command: unknown;
+    try {
+      command = JSON.parse(line);
+    } catch {
+      write({ type: "error", code: "invalid_input", message: "command is not valid JSON" });
+      return;
+    }
+    if (!isObject(command) || typeof command.type !== "string" || !isCommandType(command.type)) {
+      write({ type: "error", code: "invalid_input", message: "command needs a valid type" });
+      return;
+    }
+    void dispatch(command as CommandInput).catch(fail(requestIdOf(command)));
+  });
+  const closeBootstrap = () => process.exit(0);
+  lines.once("close", closeBootstrap);
+  process.once("SIGTERM", closeBootstrap);
+  process.once("SIGINT", closeBootstrap);
+  await initialized;
+  await migration.ready;
   // One core per project: a second window or app on the same folder waits, then gets project_locked.
   const lock = await lockProject(cwd);
   process.once("exit", () => lock.release());
@@ -72,48 +109,30 @@ async function main(): Promise<void> {
 
   const ready = async (): Promise<void> => write(await status());
   app.session.subscribeStamped((event) => write(event));
-  await ready();
-  void app
-    .resumeInterrupted()
-    .then((result) => {
-      if (result.interrupted.length > 0) write({ type: "sessions.interrupted", ...result });
-    })
-    .catch(() => undefined);
-
   const handlers = createHandlers(
     app,
     (message, context) => write({ type: "error", code: "run_failed", message, ...context }),
     diagnostics,
   );
-  const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
-  lines.on("line", (line) => {
-    if (line.trim().length === 0) return;
-    let command: unknown;
-    try {
-      command = JSON.parse(line) as unknown;
-    } catch {
-      write({ type: "error", code: "invalid_input", message: "command is not valid JSON" });
-      return;
-    }
-    if (!isObject(command) || typeof command.type !== "string") {
-      write({ type: "error", code: "invalid_input", message: "command needs a type" });
-      return;
-    }
-    const input = command as CommandInput;
+  dispatch = async (input) => {
     const requestId = requestIdOf(input);
+    if ((STORAGE_COMMANDS as readonly string[]).includes(input.type)) {
+      respond(requestId, { ok: true, ...(await migration.command(input.type)) });
+      return;
+    }
     if (!isCommandType(input.type)) {
       write({ type: "error", code: "invalid_input", message: `unknown command: ${input.type}` });
       return;
     }
-    const handler = handlers[input.type];
-    void Promise.resolve()
+    const handler = handlers[input.type as keyof typeof handlers];
+    await Promise.resolve()
       .then(() => handler(input))
       .then(async (reply) => {
         if (reply !== undefined) respond(requestId, { ok: true, ...reply });
         if (REFRESH_AFTER.has(input.type)) await ready();
       })
       .catch(fail(requestId));
-  });
+  };
 
   let closing = false;
   const shutdown = async (): Promise<void> => {
@@ -124,9 +143,20 @@ async function main(): Promise<void> {
     await diagnostics.flush();
     process.exit(0);
   };
+  lines.removeListener("close", closeBootstrap);
+  process.removeListener("SIGTERM", closeBootstrap);
+  process.removeListener("SIGINT", closeBootstrap);
   lines.on("close", () => void shutdown());
   process.on("SIGTERM", () => void shutdown());
   process.on("SIGINT", () => void shutdown());
+  releaseRuntime();
+  await ready();
+  void app
+    .resumeInterrupted()
+    .then((result) => {
+      if (result.interrupted.length > 0) write({ type: "sessions.interrupted", ...result });
+    })
+    .catch(() => undefined);
 }
 
 const moduleEntry = process.argv[2] === "--module-host" ? process.argv[3] : undefined;
@@ -142,4 +172,5 @@ const moduleEntry = process.argv[2] === "--module-host" ? process.argv[3] : unde
     message: error instanceof Error ? error.message : String(error),
   });
   process.exitCode = 1;
+  process.stdin.destroy();
 });

@@ -118,7 +118,7 @@ describe("startup measurement output", () => {
 
 describe("startup measurement", () => {
   test("measures a fake sidecar and enforces the budget", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "liquid-startup-fake-"));
+    const dir = mkdtempSync(join(tmpdir(), "flecten-startup-fake-"));
     dirs.push(dir);
     const fake = join(dir, "fake-sidecar.mjs");
     writeFileSync(fake, 'setTimeout(() => process.stdout.write(\'{"type":"status"}\\n\'), 25);\n');

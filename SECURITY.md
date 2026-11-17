@@ -14,7 +14,7 @@ Expect a response within 7 days. The fix and the disclosure of details are coord
 
 ## What to check first
 
-- path traversal in the `liquid://` protocol;
+- path traversal in the `flecten://` protocol;
 - the `preload` bridge and access to `ipcRenderer`;
 - `contextIsolation`, `sandbox`, and `nodeIntegration` in the window;
 - CSP and loading of external resources;

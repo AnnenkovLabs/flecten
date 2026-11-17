@@ -11,7 +11,17 @@ import type { GrepArgs } from "./schema";
 
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_LINE = 500;
-const IGNORED = ["node_modules", ".git", "dist", "release", ".liquid", ".kilo"];
+const IGNORED = [
+  "node_modules",
+  ".git",
+  "dist",
+  "release",
+  ".flecten",
+  ".liquid",
+  ".flecten-migration",
+  ".flecten-scratch",
+  ".kilo",
+];
 
 const TYPE_EXTENSIONS: Record<string, string[]> = {
   ts: [".ts", ".tsx", ".mts", ".cts"],

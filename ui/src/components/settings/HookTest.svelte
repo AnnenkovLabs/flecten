@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { HOOK_EVENTS } from "../../../../shared/hooks";
   import { actionLabel, POLICY_ACTIONS } from "../../lib/permissions";
   import { t } from "../../lib/i18n.svelte";
@@ -26,8 +27,8 @@
       {#if fields.some((field) => field === "path")}<label class="st-field"><span class="st-label">{t("Example path")}</span><input class="st-input" bind:value={tester.sample.path} spellcheck="false" /></label>{/if}
       {#if fields.some((field) => field === "command")}<label class="st-field span-2"><span class="st-label">{t("Example command")}</span><input class="st-input" bind:value={tester.sample.command} spellcheck="false" /></label>{/if}
       {#if event === "sessionStart" || event === "userPromptSubmit"}<label class="st-field span-2"><span class="st-label">{t("Example message")}</span><textarea class="st-textarea" rows="2" bind:value={tester.sample.prompt}></textarea></label>{/if}
-      {#if event === "permission"}<div class="st-field"><label class="st-label" for={`${uid}-permission`}>{t("Action")}</label><select id={`${uid}-permission`} class="st-select" bind:value={tester.sample.permissionAction}>{#each POLICY_ACTIONS as action (action)}<option value={action}>{actionLabel(action)}</option>{/each}</select></div>{/if}
-      {#if event === "postToolUse"}<div class="st-field"><label class="st-label" for={`${uid}-tool-result`}>{t("Tool result")}</label><select id={`${uid}-tool-result`} class="st-select" value={String(tester.sample.toolOk)} onchange={(e) => tester.sample.toolOk = e.currentTarget.value === "true"}><option value="true">{t("Success")}</option><option value="false">{t("Error")}</option></select></div>{/if}
+      {#if event === "permission"}<div class="st-field"><label class="st-label" for={`${uid}-permission`}>{t("Action")}</label><Select id={`${uid}-permission`} class="st-select" bind:value={tester.sample.permissionAction} options={POLICY_ACTIONS.map((action) => ({ value: action, label: actionLabel(action) }))} /></div>{/if}
+      {#if event === "postToolUse"}<div class="st-field"><label class="st-label" for={`${uid}-tool-result`}>{t("Tool result")}</label><Select id={`${uid}-tool-result`} class="st-select" bind:value={tester.sample.toolOk} options={[{ value: true, label: t("Success") }, { value: false, label: t("Error") }]} /></div>{/if}
     </div>
     <div><button class="st-btn st-btn--quiet" type="button" onclick={() => tester.run(event, hook)} disabled={tester.busy}>{tester.busy ? t("Testing") : t("Run test")}</button></div>
     {#if tester.error}<p class="st-error" role="alert">{tester.error}</p>{/if}

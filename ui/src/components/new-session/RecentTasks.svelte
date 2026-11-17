@@ -32,15 +32,15 @@
           <Icon name={RECENT_STATUS[task.status].icon} size={16} />
         </span>
         <span class="ns-task-main">
-          <span class="ns-task-title" title={task.title}>{task.title}</span>
+          <span class="ns-task-title" data-tooltip={task.title}>{task.title}</span>
           <span class="ns-task-meta">
             {#if task.project !== projectName}
-              <span class="ns-task-project" title={task.project}>{task.project}</span>
+              <span class="ns-task-project" data-tooltip={task.project}>{task.project}</span>
               <span class="ns-task-sep" aria-hidden="true">·</span>
             {/if}
             <span class="ns-task-status is-{task.status}">{RECENT_STATUS[task.status].label}</span>
             <span class="ns-task-sep" aria-hidden="true">·</span>
-            <time class="ns-task-age" datetime={task.updatedAt} title={timeTitle(task.updatedAt, now)}>{taskAge(task.updatedAt, now)}</time>
+            <time class="ns-task-age" datetime={task.updatedAt} data-tooltip={timeTitle(task.updatedAt, now)}>{taskAge(task.updatedAt, now)}</time>
           </span>
         </span>
         <span class="ns-task-open" aria-hidden="true"><Icon name="chevron-right" size={15} /></span>

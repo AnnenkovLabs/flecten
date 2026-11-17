@@ -1,3 +1,4 @@
+import { ProtectedOutputBuffer } from "../security/provider-secrets/output-buffer";
 import { createProcessScope } from "./process-scope";
 import { killProcessTree } from "./process-tree";
 import { ResourceMonitor, withResourceLimits } from "./resources";
@@ -14,6 +15,8 @@ export interface TerminalJobOptions {
   timeoutMs?: number | null;
   /** Same OS sandbox as foreground bash; the job fails to start when it is unavailable. */
   sandbox?: TerminalSandboxPolicy;
+  /** Runtime boundary for provider-specific output protection; never serialized. */
+  protectOutput?: (text: string) => string;
 }
 
 export interface TerminalJobSnapshot {
@@ -59,6 +62,9 @@ export class TerminalJob {
   private readonly env: Record<string, string> | undefined;
   private readonly sandbox: TerminalSandboxPolicy | undefined;
   private readonly timeoutMs: number | null;
+  private readonly protectOutput: TerminalJobOptions["protectOutput"];
+  private readonly protectedBuffer: ProtectedOutputBuffer | undefined;
+  private protectedComplete = false;
   private readonly listeners = new Set<TerminalJobListener>();
   private readonly readers: Promise<void>[] = [];
   private readonly finishedPromise: Promise<void>;
@@ -94,6 +100,10 @@ export class TerminalJob {
     this.settings = settings;
     this.env = options.env;
     this.sandbox = options.sandbox;
+    this.protectOutput = options.protectOutput;
+    this.protectedBuffer = options.protectOutput
+      ? new ProtectedOutputBuffer(options.protectOutput)
+      : undefined;
     this.persistent = options.persistent ?? settings.background.defaultPersistent;
     this.timeoutMs = options.timeoutMs === undefined ? settings.timeouts.jobMs : options.timeoutMs;
     this.finishedPromise = new Promise((resolve) => {
@@ -138,7 +148,7 @@ export class TerminalJob {
       this.proc = proc;
       scope.attach(proc.pid);
       this.isolated = setsid !== null;
-      this.readers.push(this.read(proc.stdout), this.read(proc.stderr));
+      this.readers.push(this.read(proc.stdout, "stdout"), this.read(proc.stderr, "stderr"));
       void proc.exited
         .then((code) => this.finish(code))
         .catch((cause: unknown) => this.fail(cause));
@@ -152,7 +162,7 @@ export class TerminalJob {
   }
 
   snapshot(): TerminalJobSnapshot {
-    return {
+    const snapshot: TerminalJobSnapshot = {
       id: this.id,
       command: this.command,
       cwd: this.cwd,
@@ -170,6 +180,23 @@ export class TerminalJob {
       truncated: this.truncated,
       error: this.error,
     };
+    const protect = this.protectOutput;
+    if (!protect) return snapshot;
+    // ponytail: withhold running logs until an incremental scanner can retain complete
+    // credentials across arbitrary writes. A truncated tail cannot be scanned safely.
+    if (!this.protectedComplete) {
+      snapshot.log = "[Protected background output is available when the job finishes.]";
+    } else if (this.droppedBytes > 0) {
+      snapshot.log = "[Protected background output withheld because the log was truncated.]";
+    }
+    // Learn credentials from all free-text fields before returning any of their copies.
+    for (let pass = 0; pass < 2; pass += 1) {
+      snapshot.command = protect(snapshot.command);
+      snapshot.cwd = protect(snapshot.cwd);
+      snapshot.log = protect(snapshot.log);
+      if (snapshot.error !== null) snapshot.error = protect(snapshot.error);
+    }
+    return snapshot;
   }
 
   async wait(timeoutMs = this.settings.timeouts.jobWaitMs): Promise<TerminalJobWait> {
@@ -226,13 +253,20 @@ export class TerminalJob {
     killProcessTree(this.proc.pid, signal, this.isolated);
   }
 
-  private async read(stream: ReadableStream<Uint8Array>): Promise<void> {
+  private async read(
+    stream: ReadableStream<Uint8Array>,
+    channel: "stdout" | "stderr",
+  ): Promise<void> {
     const decoder = new TextDecoder();
     try {
       for await (const chunk of stream) {
-        this.append(decoder.decode(chunk, { stream: true }));
+        const text = decoder.decode(chunk, { stream: true });
+        this.protectedBuffer?.push(text, channel);
+        this.append(text);
       }
-      this.append(decoder.decode());
+      const tail = decoder.decode();
+      this.protectedBuffer?.push(tail, channel);
+      this.append(tail);
     } catch {
       // A killed job closes its pipes; the exit status carries the reason.
     }
@@ -260,6 +294,11 @@ export class TerminalJob {
     if (this.proc !== null) killProcessTree(this.proc.pid, "SIGKILL", this.isolated);
     await Promise.all(this.readers);
     if (this.finished) return;
+    if (this.protectedBuffer) {
+      this.log = this.protectedBuffer.finish();
+      this.logBytes = Buffer.byteLength(this.log);
+      this.protectedComplete = true;
+    }
     this.finished = true;
     this.status = this.resolveStatus(code);
     this.finishedAt = Date.now();

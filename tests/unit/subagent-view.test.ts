@@ -4,6 +4,39 @@ import type { Event } from "../../src/core/types";
 import { TaskView } from "../../ui/src/lib/run/view.svelte";
 import type { AgentEvent } from "../../ui/src/lib/types";
 
+test("an unfinished replay keeps subagent identity in the published run actions", () => {
+  const view = new TaskView({ checkpointSaved() {} });
+  view.restore([
+    {
+      type: "session.started",
+      sessionId: "parent",
+      provider: "test",
+      model: "test",
+      prompt: "Work",
+    },
+    {
+      type: "tool.started",
+      sessionId: "parent",
+      call: { id: "task-live", name: "task", args: { agent: "explore", prompt: "Inspect" } },
+    },
+    {
+      type: "subagent.started",
+      sessionId: "parent",
+      subagent: {
+        id: "child-live",
+        callId: "task-live",
+        name: "Milo",
+        avatar: 0,
+        agent: "explore",
+        prompt: "Inspect",
+      },
+    },
+  ]);
+  const run = view.thread.items.find((item) => item.kind === "run");
+  expect(run?.kind === "run" && run.summary.list[0]?.subagent?.id).toBe("child-live");
+  expect(run?.kind === "run" && run.summary.turns[0]?.actions[0]?.subagent?.id).toBe("child-live");
+});
+
 test.each([false, true])(
   "child identity and live activity survive parent stop and replay; worker=%s",
   (worker) => {

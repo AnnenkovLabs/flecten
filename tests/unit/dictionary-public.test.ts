@@ -105,7 +105,7 @@ describe("public dictionary snapshots", () => {
         fetch: fetcher((url) => Response.json(url.endsWith("index.json") ? manifest : category)),
       });
       await dictionary.syncPublic();
-      await writeFile(join(cwd, ".liquid", "dictionary", "public.json"), "broken");
+      await writeFile(join(cwd, ".flecten", "dictionary", "public.json"), "broken");
       const reopened = await new PublicDictionary(cwd).load();
       expect(reopened.error).toContain("Refresh it");
       expect(reopened.entries.map((entry) => entry.id)).toContain("liquid-glass");

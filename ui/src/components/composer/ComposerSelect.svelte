@@ -68,7 +68,7 @@
   bind:this={trigger}
   type="button"
   aria-label={`${label}: ${selected?.label ?? value}`}
-  title={selected?.description ?? `${label}: ${selected?.label ?? value}`}
+  data-tooltip={selected?.description ?? `${label}: ${selected?.label ?? value}`}
   aria-haspopup="listbox"
   aria-expanded={open}
   aria-controls={open ? id : undefined}

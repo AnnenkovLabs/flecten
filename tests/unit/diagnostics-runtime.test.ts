@@ -12,7 +12,7 @@ afterEach(async () => {
 });
 
 test("runtime records safe operational evidence and exports a local diagnostics bundle", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-diagnostics-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-diagnostics-"));
   directories.push(cwd);
   const runtime = new DiagnosticsRuntime(cwd);
   runtime.record({ type: "message.delta", sessionId: "s_trace", text: "private prompt" });
@@ -21,6 +21,47 @@ test("runtime records safe operational evidence and exports a local diagnostics 
     sessionId: "s_trace",
     call: { id: "c1", name: "read", args: { path: "private-path" } },
     result: { ok: true, output: "private file content", durationMs: 5 },
+  });
+  runtime.record({
+    type: "worker.event",
+    sessionId: "s_trace",
+    event: {
+      type: "provider.retry",
+      sessionId: "s_trace_worker",
+      kind: "network",
+      attempt: 2,
+      delayMs: 400,
+      until: 900,
+      reason: "retryable network failure",
+    },
+  });
+  runtime.record({
+    type: "worker.event",
+    sessionId: "s_trace",
+    event: {
+      type: "message.delta",
+      sessionId: "s_trace_worker",
+      text: "private worker output",
+    },
+  });
+  runtime.record({
+    type: "provider.response",
+    sessionId: "s_trace",
+    response: {
+      protocol: "openai-chat",
+      status: "failed",
+      outcome: "empty_completion",
+      requestId: "req-safe",
+      frames: 2,
+      invalidFrames: 0,
+      unsupportedFrames: 0,
+      textBytes: 0,
+      reasoningBytes: 0,
+      toolCalls: 0,
+      usage: "missing",
+      terminal: true,
+      durationMs: 200,
+    },
   });
   runtime.record({
     type: "error",
@@ -37,11 +78,14 @@ test("runtime records safe operational evidence and exports a local diagnostics 
   expect(text).not.toContain("private-path");
   expect(text).not.toContain("private file content");
   expect(text).not.toContain("sk-abcdefghijk");
-  expect(await readFile(join(cwd, ".liquid", "diagnostics", "events.jsonl"), "utf8")).toContain(
-    "s_trace",
-  );
+  const journal = await readFile(join(cwd, ".flecten", "diagnostics", "events.jsonl"), "utf8");
+  expect(journal).toContain("s_trace_worker");
+  expect(journal).toContain('"attempt":2');
+  expect(journal).toContain('"outcome":"empty_completion"');
+  expect(journal).toContain('"requestId":"req-safe"');
+  expect(journal).not.toContain("private worker output");
   await runtime.crash(new Error("crash sk-abcdefghijk"));
-  expect(await readFile(join(cwd, ".liquid", "diagnostics", "crash.json"), "utf8")).not.toContain(
+  expect(await readFile(join(cwd, ".flecten", "diagnostics", "crash.json"), "utf8")).not.toContain(
     "sk-abcdefghijk",
   );
 });
@@ -55,7 +99,7 @@ test("telemetry sends counters only after explicit opt-in", async () => {
       return Response.json({ ok: true });
     },
   });
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-metrics-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-metrics-"));
   directories.push(cwd);
   const runtime = new DiagnosticsRuntime(cwd);
   const config = HarnessConfigSchema.parse({

@@ -15,6 +15,7 @@
   }
 
   function close(): void {
+    if (settings.discovering) return;
     settings.addOpen = false;
   }
 
@@ -41,8 +42,9 @@
         class="st-icon-btn"
         type="button"
         aria-label={t("Close")}
-        title={t("Close")}
+        data-tooltip={t("Close")}
         onclick={close}
+        disabled={settings.discovering}
       >
         <Icon name="x" size={16} />
       </button>
@@ -53,6 +55,7 @@
         class="tab"
         class:is-on={settings.addMode === "ready"}
         type="button"
+        disabled={settings.discovering}
         aria-pressed={settings.addMode === "ready"}
         onclick={() => (settings.addMode = "ready")}
       > {t("From catalog")} </button>
@@ -60,6 +63,7 @@
         class="tab"
         class:is-on={settings.addMode === "custom"}
         type="button"
+        disabled={settings.discovering}
         aria-pressed={settings.addMode === "custom"}
         onclick={() => (settings.addMode = "custom")}
       > {t("Custom server")} </button>
@@ -93,7 +97,7 @@
                 <ProviderGlyph id={provider.id} baseUrl={provider.baseUrl} title={provider.name} size={24} />
                 <span class="provider-main">
                   <span class="provider-name">{provider.name}</span>
-                  <span class="provider-url st-mono" title={provider.baseUrl}>{provider.baseUrl}</span>
+                  <span class="provider-url st-mono" data-tooltip={provider.baseUrl}>{provider.baseUrl}</span>
                 </span>
                 <span class="provider-meta">
                   <span class="st-badge">{protocolShort(provider.protocol)}</span>
@@ -123,6 +127,7 @@
                 type="button"
                 role="radio"
                 aria-checked={settings.custom.protocol === protocol.value}
+                disabled={settings.discovering}
                 onclick={() => choose(protocol.value)}
               >
                 <strong>{protocol.short}</strong>
@@ -135,6 +140,7 @@
             <span class="st-label">{t("API URL")}</span>
             <input
               class="st-input"
+              disabled={settings.discovering}
               bind:value={settings.custom.baseUrl}
               placeholder="https://api.example.com/v1"
               spellcheck="false"
@@ -147,6 +153,7 @@
             <input
               class="st-input"
               type="password"
+              disabled={settings.discovering}
               bind:value={settings.custom.apiKey}
               placeholder={t("optional for a local server")}
               autocomplete="off"

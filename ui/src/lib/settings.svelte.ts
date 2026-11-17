@@ -8,6 +8,10 @@ import { answerAllApprovals, approvalViews, respondApproval } from "./settings/a
 import { addCustomProvider } from "./settings/provider-add";
 import { actualizeProvider, probeKey, probeModel, testProvider } from "./settings/provider-checks";
 import { activateIfNeeded, mergeModels, providerWithBaseUrl } from "./settings/provider-draft";
+import {
+  inspectChangedProviders,
+  ProviderProtectionDraft,
+} from "./settings/provider-protection.svelte";
 import { settingsIssue } from "./settings/validation";
 import {
   cleanSettings,
@@ -37,6 +41,7 @@ import type {
 type Response = Extract<AgentEvent, { type: "response" }>;
 
 export class SettingsStore {
+  protection = new ProviderProtectionDraft();
   open = $state(false);
   loading = $state(false);
   saving = $state(false);
@@ -47,6 +52,7 @@ export class SettingsStore {
   notice = $state("");
   settings = $state<HarnessSettings | null>(null);
   baseline = $state<HarnessSettings | null>(null);
+  subagentRoles = $state<{ id: string; name: string; description: string }[]>([]);
   info = $state<AgentInfo | null>(null);
   catalog = $state<CatalogSummary[]>([]);
   catalogLoading = $state(false);
@@ -106,6 +112,8 @@ export class SettingsStore {
       this.dirty &&
       !this.saving &&
       !this.loading &&
+      !this.discovering &&
+      !this.protection.pending &&
       this.validationIssue === ""
     );
   }
@@ -157,6 +165,7 @@ export class SettingsStore {
   }
 
   close(): void {
+    if (this.protection.pending) return;
     this.open = false;
     this.addOpen = false;
     this.testResult = null;
@@ -165,6 +174,7 @@ export class SettingsStore {
   }
 
   discard(): void {
+    if (this.protection.pending) return;
     if (this.baseline) this.settings = clone(this.baseline);
     this.clearApiKeys = [];
     this.error = "";
@@ -194,6 +204,7 @@ export class SettingsStore {
       if (!response.settings) throw new Error("settings are missing in the response");
       this.settings = response.settings.config;
       this.baseline = clone(response.settings.config);
+      this.subagentRoles = response.settings.subagentRoles ?? [];
       this.info = {
         ...response.settings.info,
         ...(this.info?.approvals ? { approvals: this.info.approvals } : {}),
@@ -269,7 +280,9 @@ export class SettingsStore {
       if (!provider) throw new Error("catalog provider is missing");
       const sameUrl = providerWithBaseUrl(this.settings, provider.baseUrl);
       const current = sameUrl ? this.settings.providers[sameUrl] : undefined;
+      const protection = await this.protection.inspect(provider.baseUrl, current?.protection);
       if (sameUrl && current) {
+        if (protection) current.protection = protection;
         this.notice = mergeModels(current, provider.models as Record<string, ModelInfo>, sameUrl);
         this.#added(sameUrl);
         return;
@@ -277,6 +290,7 @@ export class SettingsStore {
       this.settings.providers[id] = {
         ...emptyProvider(provider.protocol, provider.baseUrl),
         name: provider.name,
+        ...(protection ? { protection } : {}),
         ...(provider.apiKeyEnv ? { apiKeyEnv: provider.apiKeyEnv } : {}),
         models: clone(provider.models) as Record<string, ModelInfo>,
         modelMetadataBaseline: clone(provider.models) as Record<string, ModelInfo>,
@@ -347,15 +361,15 @@ export class SettingsStore {
       }
       this.settings.model = first;
     }
-    const cleaned = cleanSettings(this.settings);
     this.saving = true;
     this.error = "";
     this.notice = "";
     try {
+      await inspectChangedProviders(this);
       const response = await requestAgent<Response>(
         {
           type: "settings.save",
-          config: cleaned,
+          config: cleanSettings(this.settings),
           ...(this.baseline ? { baseline: this.baseline } : {}),
           ...(this.clearApiKeys.length > 0 ? { clearApiKeys: [...this.clearApiKeys] } : {}),
         },

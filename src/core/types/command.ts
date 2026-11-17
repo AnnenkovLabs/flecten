@@ -50,7 +50,7 @@ export type Command =
       target?: "before" | "after";
       /** Overwrite files edited after the checkpoint. */
       force?: boolean;
-      /** Also restore flecten.config.json, .liquid/ and .env files; off unless the user asks. */
+      /** Also restore flecten.config.json, .flecten/ and .env files; off unless the user asks. */
       includeProtected?: boolean;
       paths?: string[];
     }

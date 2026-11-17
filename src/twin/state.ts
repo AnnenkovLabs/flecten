@@ -60,7 +60,7 @@ export class TwinStateStore {
   readonly #path: string;
   readonly #mutex = new Mutex();
   constructor(cwd: string) {
-    this.#path = join(cwd, ".liquid/twin.json");
+    this.#path = join(cwd, ".flecten/twin.json");
   }
   async load(): Promise<TwinState> {
     let handle: FileHandle | undefined;

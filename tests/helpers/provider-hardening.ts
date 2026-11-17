@@ -17,13 +17,13 @@ export function serve(fetch: (request: Request) => Response | Promise<Response>)
 }
 
 export async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-hardening-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-hardening-"));
   dirs.push(dir);
   return dir;
 }
 
 export async function writeCache(cwd: string, name: string, value: unknown): Promise<void> {
-  const dir = join(cwd, ".liquid", "cache");
+  const dir = join(cwd, ".flecten", "cache");
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, name), typeof value === "string" ? value : JSON.stringify(value));
 }
@@ -59,9 +59,12 @@ export function sse(...events: string[]): string {
 }
 
 export function chatDone(): Response {
-  return new Response(sse('{"choices":[{"delta":{"content":"ok"}}]}', "[DONE]"), {
-    headers: { "content-type": "text/event-stream" },
-  });
+  return new Response(
+    sse('{"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}', "[DONE]"),
+    {
+      headers: { "content-type": "text/event-stream" },
+    },
+  );
 }
 
 export async function withFetch<T>(replacement: typeof fetch, run: () => Promise<T>): Promise<T> {

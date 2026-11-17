@@ -98,12 +98,12 @@ for (const conversation of [false, true]) {
         await page.setViewportSize({ width, height });
         await hiddenScreenshot(h, test.info().outputPath(`chat-model-${width}x${height}.png`));
       }
-      const entries = await readdir(join(h.cwd, ".liquid/sessions"), { withFileTypes: true });
+      const entries = await readdir(join(h.cwd, ".flecten/sessions"), { withFileTypes: true });
       const runs: Array<Extract<AgentEvent, { type: "session.started" }>> = [];
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
         const source = await readFile(
-          join(h.cwd, ".liquid/sessions", entry.name, "events.jsonl"),
+          join(h.cwd, ".flecten/sessions", entry.name, "events.jsonl"),
           "utf8",
         );
         for (const line of source.trim().split("\n")) {

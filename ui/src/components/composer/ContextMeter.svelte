@@ -55,7 +55,7 @@
     aria-haspopup="dialog"
     aria-expanded={open}
     aria-label={title}
-    {title}
+    data-tooltip={title}
     onclick={toggle}
   >
     <svg class="lh-context-ring" viewBox="0 0 18 18" width="16" height="16" aria-hidden="true">

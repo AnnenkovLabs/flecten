@@ -13,7 +13,7 @@ import { pageSink } from "../../src/store/pages";
 import { sessionPaths } from "../../src/store/paths";
 
 test("branch replay restores skill restrictions and limits page reads to the selected continuation", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-branch-context-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-branch-context-"));
   const storage = new SessionStorage(
     cwd,
     () => [],
@@ -98,7 +98,7 @@ test("branch replay restores skill restrictions and limits page reads to the sel
 });
 
 test("recovery abandons an edit that crashed before recording its replacement message", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-branch-pending-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-branch-pending-"));
   const storage = new SessionStorage(
     cwd,
     () => [],

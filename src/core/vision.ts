@@ -3,6 +3,7 @@ import type { ImagePart, Usage } from "./types";
 
 export interface VisionUsage {
   usage: Usage;
+  reported?: boolean;
   provider: string;
   model: string;
   price: UsagePrice;

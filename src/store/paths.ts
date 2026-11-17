@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { canonicalPath } from "../util/canonical-path";
 
 export interface ProjectPaths {
-  liquid: string;
+  flecten: string;
   db: string;
   profile: string;
   terms: string;
@@ -22,19 +22,19 @@ export interface SessionPaths {
 }
 
 export function projectPaths(root: string): ProjectPaths {
-  const liquid = join(root, ".liquid");
+  const flecten = join(root, ".flecten");
   return {
-    liquid,
-    db: join(liquid, "liquid.db"),
-    profile: join(liquid, "profile.json"),
-    terms: join(liquid, "terms.jsonl"),
-    lock: join(liquid, "sidecar.lock"),
+    flecten,
+    db: join(flecten, "flecten.db"),
+    profile: join(flecten, "profile.json"),
+    terms: join(flecten, "terms.jsonl"),
+    lock: join(flecten, "sidecar.lock"),
   };
 }
 
 export function sessionPaths(root: string, sessionId: string): SessionPaths {
   root = canonicalPath(root);
-  const session = join(root, ".liquid", "sessions", sessionId);
+  const session = join(root, ".flecten", "sessions", sessionId);
   return {
     root,
     session,

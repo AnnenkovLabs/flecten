@@ -7,6 +7,7 @@ import { ServiceLoopResultSchema } from "./validation";
 
 /** Alternative drivers retain the session's queue, budgets, approvals, persistence and UI. */
 export async function runAgent(prompt: string, options: LoopOptions): Promise<LoopResult> {
+  options = { ...options, tools: options.tools.forSession(options.messages ?? []) };
   const services = options.toolContext.services;
   if (!services?.has(harnessServices.agent)) return runLoop(prompt, options);
   const expectedSystem = options.system;

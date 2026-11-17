@@ -72,7 +72,7 @@ test("projectless entry, remembered folders and sessions survive navigation and 
     await page.getByRole("button", { name: "Remove from sidebar", exact: true }).click();
     await expect(page.getByText("No project selected", { exact: true })).toBeVisible();
     await expect(page.locator(".sidebar .task-title")).toHaveCount(2);
-    expect(existsSync(join(first, ".liquid/sessions"))).toBe(true);
+    expect(existsSync(join(first, ".flecten/sessions"))).toBe(true);
     expect(existsSync(join(first, "flecten.config.json"))).toBe(false);
     expect(existsSync(join(second, "flecten.config.json"))).toBe(false);
     expect(h.consoleErrors).toEqual([]);

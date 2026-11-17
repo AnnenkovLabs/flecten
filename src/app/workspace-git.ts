@@ -58,7 +58,8 @@ async function status(
       entry.original = records[++index] ?? "";
     if (entry.original && prefix && entry.original.startsWith(prefix))
       entry.original = entry.original.slice(prefix.length);
-    if (![".git", ".liquid"].includes(path.split("/")[0] ?? "")) entries.push(entry);
+    if (![".git", ".flecten", ".liquid", ".flecten-migration"].includes(path.split("/")[0] ?? ""))
+      entries.push(entry);
   }
   const branch =
     (await git(cwd, ["branch", "--show-current"])).trim() ||

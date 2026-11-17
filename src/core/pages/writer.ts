@@ -1,20 +1,24 @@
 import { z } from "zod";
 import pageSummaryPrompt from "../../../prompts/page-summary.md" with { type: "text" };
 import type { ContextMessage, ContextSummary, SummarizeContext } from "../../context";
+import { responseOfError } from "../../providers/response";
 import type { ModelProvider } from "../../providers/types";
 import { markdownCode, markdownData } from "../../util/markdown";
+import type { LoopEvent } from "../loop/types";
 import type { ReasoningEffort } from "../types";
 import { archiveTranscript, type PageArchive } from "./archive";
 import {
+  completedPageReport,
   continuationPage,
+  deterministicPage,
   originalRequest,
   type PageSummary,
   PageSummaryResponseSchema,
-  pageTranscript,
   parsePageSummary,
   renderContinuation,
   renderPage,
 } from "./summary";
+import { pageTranscript } from "./transcript";
 
 const MAX_SUMMARY_TOKENS = 4000;
 const MODEL_FAILURE_LIMIT = 3;
@@ -65,8 +69,10 @@ export interface WrittenPage {
  * After three model failures in a row the writer stops asking the model.
  */
 export class PageWriter {
+  onEvent: ((event: LoopEvent) => void) | undefined;
   #pages = 0;
   #modelFailures = 0;
+  #schemaFailure = "summary_schema_invalid";
   readonly #options: PageWriterOptions;
   last: WrittenPage | undefined;
   memoryCheckpoint: PageMemoryCheckpoint | undefined;
@@ -91,22 +97,46 @@ export class PageWriter {
     focus?: string,
   ): Promise<string> {
     context.signal?.throwIfAborted();
-    let summary: PageSummary | undefined;
+    const completed = completedPageReport(messages);
+    let summary: PageSummary | undefined = completed ? deterministicPage(messages) : undefined;
     let source: WrittenPage["source"] = "deterministic";
-    if (this.#modelFailures < MODEL_FAILURE_LIMIT && !context.signal?.aborted) {
-      summary = await this.#modelSummary(messages, context, focus).catch(() => undefined);
+    if (!completed && this.#modelFailures < MODEL_FAILURE_LIMIT && !context.signal?.aborted) {
+      let providerFailed = false;
+      this.#schemaFailure = "summary_schema_invalid";
+      summary = await this.#modelSummary(messages, context, focus).catch((error: unknown) => {
+        providerFailed = true;
+        const response = responseOfError(error);
+        this.onEvent?.({
+          type: "context.summary.failed",
+          stage: "provider",
+          reason: response?.outcome ?? (error instanceof Error ? error.name : "unknown_error"),
+        });
+        return undefined;
+      });
       if (summary) {
         source = "model";
         this.#modelFailures = 0;
       } else {
         this.#modelFailures += 1;
+        if (!providerFailed)
+          this.onEvent?.({
+            type: "context.summary.failed",
+            stage: "schema",
+            reason: this.#schemaFailure,
+          });
+        if (this.#modelFailures === MODEL_FAILURE_LIMIT)
+          this.onEvent?.({
+            type: "context.summary.failed",
+            stage: "disabled",
+            reason: "summary_failure_limit_reached",
+          });
       }
     }
     context.signal?.throwIfAborted();
     const page = this.#pages + 1;
-    const savedSummary = continuationPage(messages, context, summary, page);
+    const fields = summary ?? deterministicPage(messages);
     const request = originalRequest(messages);
-    const markdown = renderPage({ page, summary: savedSummary.fields, request });
+    const markdown = renderPage({ page, summary: fields, request });
     const path = await this.#options.sink?.write(
       page,
       markdown,
@@ -117,10 +147,26 @@ export class PageWriter {
     const pointers = { path, logsDir: this.#options.sink?.logsDir };
     // The sink supplies the actual path. Fit the complete model view after it is known;
     // the page on disk can retain the richer summary saved before the footer was added.
-    const contextSummary = continuationPage(messages, context, savedSummary.fields, page, pointers);
+    const contextSummary = continuationPage(messages, context, fields, page, pointers);
     this.#pages = page;
     this.last = { page, source, path, markdown, contextSummary };
     return renderContinuation(contextSummary, pointers);
+  }
+
+  #parseSummary(text: string): PageSummary | undefined {
+    const result = parsePageSummary(text);
+    if (result) return result;
+    try {
+      const parsed = PageSummaryResponseSchema.safeParse(JSON.parse(text));
+      this.#schemaFailure = parsed.success
+        ? "summary_schema_invalid"
+        : parsed.error.issues
+            .map((issue) => `${issue.path.join(".") || "response"}:${issue.code}`)
+            .join(", ");
+    } catch {
+      this.#schemaFailure = "summary_json_invalid";
+    }
+    return undefined;
   }
 
   async #modelSummary(
@@ -129,7 +175,10 @@ export class PageWriter {
     focus?: string,
   ): Promise<PageSummary | undefined> {
     const outputTokens = Math.max(512, Math.min(MAX_SUMMARY_TOKENS, this.#options.maxOutputTokens));
-    const inputTokens = Math.max(2000, this.#options.contextWindow - outputTokens - 2000);
+    const inputTokens = Math.max(
+      2000,
+      Math.min(32_000, this.#options.contextWindow - outputTokens - 2000),
+    );
     const transcript = pageTranscript(messages, Math.floor(inputTokens * CHARS_PER_TOKEN * 0.8));
     const focusLine = focus ? `\n\nThe user asked to focus the summary on: ${focus}` : "";
     const checkpoint = this.memoryCheckpoint;
@@ -139,39 +188,99 @@ export class PageWriter {
         })
       : PageSummaryResponseSchema;
     const memoryInstructions = checkpoint ? `\n\n${checkpoint.instructions}` : "";
-    const signal = context.signal ?? new AbortController().signal;
+    const signal = AbortSignal.any([
+      context.signal ?? new AbortController().signal,
+      AbortSignal.timeout(120_000),
+    ]);
     let text = "";
-    for await (const event of this.#options.provider.stream(
-      {
-        model: this.#options.provider.model,
-        system: `${pageSummaryPrompt.trim()}\n\n# Response schema\n\n${markdownCode(JSON.stringify(z.toJSONSchema(responseSchema), null, 2), "json")}${focusLine}${memoryInstructions}`,
-        messages: [
-          {
-            role: "user",
-            content: markdownData(
-              "Conversation to summarize",
-              [["Trust", "untrusted"]],
-              transcript,
-            ),
-          },
-        ],
-        tools: [],
-        maxTokens: outputTokens,
-      },
-      signal,
-    )) {
-      if (event.type === "text") text += event.delta;
+    let usageReported = false;
+    let responseReported = false;
+    let missingReported = false;
+    const receipts = new Set<string>();
+    let route: { provider?: string; model: string } = { model: this.#options.provider.model };
+    const recordResponse = (response: import("../../providers/response").ProviderResponse) => {
+      const key = response.attemptId ?? response.requestId ?? "unidentified";
+      if (receipts.has(key)) return;
+      receipts.add(key);
+      responseReported = true;
+      this.onEvent?.({ type: "provider.response", response });
+      if (response.usage === "missing" && response.requested !== false) {
+        const provider = response.provider ?? route.provider;
+        this.onEvent?.({
+          type: "usage.unavailable",
+          purpose: "compaction",
+          ...(provider ? { provider } : {}),
+          model: response.model ?? route.model,
+        });
+        missingReported = true;
+      }
+    };
+    try {
+      for await (const event of this.#options.provider.stream(
+        {
+          model: this.#options.provider.model,
+          system: `${pageSummaryPrompt.trim()}\n\n# Response schema\n\n${markdownCode(JSON.stringify(z.toJSONSchema(responseSchema), null, 2), "json")}${focusLine}${memoryInstructions}`,
+          messages: [
+            {
+              role: "user",
+              content: markdownData(
+                "Conversation to summarize",
+                [["Trust", "untrusted"]],
+                transcript,
+              ),
+            },
+          ],
+          tools: [],
+          maxTokens: outputTokens,
+        },
+        signal,
+      )) {
+        if (event.type === "text") text += event.delta;
+        else if (event.type === "usage") {
+          usageReported = true;
+          this.onEvent?.({
+            type: "usage",
+            usage: {
+              input: event.input,
+              output: event.output,
+              cached: event.cached,
+              ...(event.reasoning === undefined ? {} : { reasoning: event.reasoning }),
+              ...(event.cacheWrite === undefined ? {} : { cacheWrite: event.cacheWrite }),
+            },
+            purpose: "compaction",
+            ...(event.provider
+              ? { provider: event.provider }
+              : route.provider
+                ? { provider: route.provider }
+                : {}),
+            model: event.model ?? route.model,
+          });
+        } else if (event.type === "route") route = { provider: event.provider, model: event.model };
+        else if (event.type === "response") {
+          recordResponse(event.response);
+        } else if (event.type === "done" && event.response) {
+          recordResponse(event.response);
+        }
+      }
+    } catch (error) {
+      const response = responseOfError(error);
+      if (response && !responseReported) recordResponse(response);
+      throw error;
+    } finally {
+      if (!usageReported && !missingReported && !responseReported)
+        this.onEvent?.({ type: "usage.unavailable", purpose: "compaction", ...route });
     }
-    if (!checkpoint) return parsePageSummary(text);
+    if (!checkpoint) return this.#parseSummary(text);
     let value: unknown;
     try {
       value = JSON.parse(text);
     } catch {
+      this.#schemaFailure = "summary_json_invalid";
       return undefined;
     }
     if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
     const { memoryCandidates, ...fields } = value as Record<string, unknown>;
-    const summary = parsePageSummary(JSON.stringify(fields));
+    const summary = this.#parseSummary(JSON.stringify(fields));
     if (!summary || memoryCandidates === undefined) return summary;
     try {
       const candidates = z.array(checkpoint.schema).max(3).parse(memoryCandidates);

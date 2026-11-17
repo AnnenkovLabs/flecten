@@ -1,7 +1,8 @@
 import { harnessServices } from "../core/services/contracts";
 import { ServiceToolResultSchema } from "../core/services/validation";
-import type { ToolCall, ToolResult } from "../core/types";
+import type { Message, ToolCall, ToolResult } from "../core/types";
 import { isObject } from "../util/json";
+import { CATALOG_TOOL, catalogTool, restoredMcpSelection } from "./catalog";
 import { ToolExecutionDeadline } from "./execution-deadline";
 import { writeToolLog } from "./logs";
 import { repairToolInput, resolveToolAlias } from "./repair";
@@ -17,6 +18,8 @@ import {
 
 export interface ToolRegistryOptions {
   limits: ToolLimits;
+  /** External MCP schemas are activated explicitly within an owning session. */
+  deferredMcp?: boolean;
   authorize?(tool: Tool, context: ToolContext): string | undefined;
 }
 
@@ -114,20 +117,44 @@ function abortedResult(result: ToolResult): ToolResult {
 
 export class ToolRegistry {
   readonly #tools = new Map<string, Tool>();
+  readonly #activeMcp = new Set<string>();
+  readonly deferredMcp: boolean;
   readonly #prepared = new WeakMap<ToolCall, PreparedInput>();
   #limits: ToolLimits;
   readonly #authorize: ToolRegistryOptions["authorize"];
 
   constructor(tools: Tool[], options: ToolRegistryOptions) {
     this.#limits = options.limits;
+    this.deferredMcp = options.deferredMcp ?? false;
     this.#authorize = options.authorize;
     for (const tool of tools) {
+      if (this.deferredMcp && tool.name === CATALOG_TOOL) continue;
       if (this.#tools.has(tool.name)) {
         throw new Error(`tool already registered: ${tool.name}`);
       }
       // A catalog may customize metadata without changing another registry's definition.
       this.#tools.set(tool.name, { ...tool });
     }
+    const external = this.list().filter((tool) => tool.source === "mcp");
+    if (this.deferredMcp && external.length)
+      this.#tools.set(CATALOG_TOOL, catalogTool(external, this.#activeMcp));
+  }
+
+  /** A fresh view prevents one chat or role from inheriting another's activation choices. */
+  forSession(messages: readonly Message[]): ToolRegistry {
+    if (!this.deferredMcp) return this;
+    const scoped = new ToolRegistry(this.list(), {
+      limits: this.#limits,
+      deferredMcp: true,
+      ...(this.#authorize ? { authorize: this.#authorize } : {}),
+    });
+    for (const name of restoredMcpSelection(messages))
+      if (scoped.get(name)?.source === "mcp") scoped.#activeMcp.add(name);
+    return scoped;
+  }
+
+  activeMcpTools(): string[] {
+    return [...this.#activeMcp];
   }
 
   setLimits(limits: ToolLimits): void {
@@ -160,11 +187,15 @@ export class ToolRegistry {
   }
 
   specs(): Array<{ name: string; description: string; parameters: Record<string, unknown> }> {
-    return this.list().map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters,
-    }));
+    return this.list()
+      .filter(
+        (tool) => !this.deferredMcp || tool.source !== "mcp" || this.#activeMcp.has(tool.name),
+      )
+      .map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+      }));
   }
 
   /** Repair and validate once, before hooks and authorization see the executable arguments. */
@@ -172,6 +203,14 @@ export class ToolRegistry {
     if (this.#prepared.has(call)) return { call };
     const alias = resolveToolAlias(call.name, new Set(this.#tools.keys()));
     const tool = this.#tools.get(alias.name);
+    if (tool?.source === "mcp" && this.deferredMcp && !this.#activeMcp.has(tool.name))
+      return {
+        error: {
+          ok: false,
+          output: "",
+          error: "Activate this external tool through tool_catalog before calling it.",
+        },
+      };
     if (!tool) {
       return {
         error: {
@@ -217,6 +256,7 @@ export class ToolRegistry {
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       result = await this.#executeOnce(tool, input, { ...context, callId: call.id });
+      if (context.providerProtection) result = context.providerProtection.vault.protect(result);
       if (result.ok || attempt === maxAttempts) break;
       if (context.signal.aborted) {
         result = abortedResult(result);

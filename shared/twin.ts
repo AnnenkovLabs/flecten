@@ -1,16 +1,9 @@
 import { z } from "zod";
 
-export const TwinSourceIdSchema = z.enum([
-  "claude",
-  "codex",
-  "cursor",
-  "omp",
-  "kilo",
-  "deepseek",
-  "opencode",
-  "hermes",
-  "liquid",
-]);
+export const TwinSourceIdSchema = z.preprocess(
+  (value) => (value === "liquid" ? "flecten" : value),
+  z.enum(["claude", "codex", "cursor", "omp", "kilo", "deepseek", "opencode", "hermes", "flecten"]),
+);
 export type TwinSourceId = z.infer<typeof TwinSourceIdSchema>;
 const text = (max: number) => z.string().min(1).max(max);
 export const TwinReactionSchema = z.enum(["anger", "like", "delight"]);
@@ -59,6 +52,18 @@ export const TwinUsageSchema = z.object({
   output: z.number().min(0),
   cached: z.number().min(0),
   costUsd: z.number().min(0).optional(),
+  requested: z.literal(false).optional(),
+  charges: z
+    .array(
+      z.object({
+        input: z.number().nonnegative(),
+        output: z.number().nonnegative(),
+        cached: z.number().nonnegative(),
+        costUsd: z.number().nonnegative().optional(),
+      }),
+    )
+    .optional(),
+  missingRequests: z.number().int().nonnegative().optional(),
 });
 export const TwinSnapshotSchema = z.object({
   enabled: z.boolean(),

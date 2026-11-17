@@ -1,5 +1,5 @@
 import type { Stats } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { join, sep } from "node:path";
 import type { ToolResult } from "../../core/types";
 import { withoutPrefix } from "../../util/text";
@@ -9,10 +9,28 @@ import { readGitignore } from "./gitignore";
 import type { GlobArgs } from "./schema";
 
 const MAX_COLLECT = 2 * 1024 * 1024;
-const IGNORED = ["node_modules", ".git", "dist", "release", ".liquid", ".kilo"];
+const IGNORED = [".git", ".flecten", ".liquid", ".flecten-migration", ".flecten-scratch", ".kilo"];
+const GENERATED = [
+  "node_modules",
+  "dist",
+  "release",
+  "vendor",
+  "build",
+  "coverage",
+  ".cache",
+  "__pycache__",
+  ".venv",
+  "venv",
+  "cache",
+];
 
-function ignored(path: string): boolean {
-  return path.split("/").some((segment) => IGNORED.includes(segment));
+function ignored(path: string, args: GlobArgs): boolean {
+  return path
+    .split("/")
+    .some(
+      (segment) =>
+        IGNORED.includes(segment) || (!args.includeGenerated && GENERATED.includes(segment)),
+    );
 }
 
 function scanPattern(pattern: string): string {
@@ -47,22 +65,70 @@ function finish(args: GlobArgs, results: string[], limit: number, capped: boolea
     return {
       ok: true,
       output: "No files found matching pattern",
-      data: { kind: "glob", pattern: args.pattern, count: 0 },
+      data: {
+        kind: "glob",
+        pattern: args.pattern,
+        mode: args.mode ?? "files",
+        count: 0,
+        offset: args.offset ?? 0,
+        total: capped ? null : 0,
+        totalAtLeast: 0,
+        nextOffset: null,
+        complete: !capped,
+      },
     };
   }
   const total = results.length;
-  const shown = results.slice(0, limit);
+  const offset = args.offset ?? 0;
+  const shown = results.slice(offset, offset + limit);
   const parts = [shown.join("\n")];
-  if (total > limit) {
-    parts.push(`[Showing ${limit} of ${total} files; refine the pattern or raise maxResults.]`);
+  if (total > offset + limit) {
+    parts.push(
+      `[Showing ${shown.length} of ${capped ? "at least " : ""}${total} entries. Use offset=${offset + shown.length} to continue, or narrow path/pattern.]`,
+    );
   } else if (capped) {
     parts.push(`[File list capped at ${MAX_COLLECT} bytes; refine the pattern.]`);
   }
   return {
     ok: true,
     output: parts.join("\n\n"),
-    data: { kind: "glob", pattern: args.pattern, count: shown.length },
+    data: {
+      kind: "glob",
+      pattern: args.pattern,
+      mode: args.mode ?? "files",
+      count: shown.length,
+      offset,
+      total: capped ? null : total,
+      totalAtLeast: total,
+      nextOffset: total > offset + shown.length ? offset + shown.length : null,
+      complete: !capped,
+    },
   };
+}
+
+async function entries(
+  args: GlobArgs,
+  context: SearchContext,
+  searchPath: string,
+): Promise<ToolResult> {
+  const prefix = displayPath(context.cwd, searchPath);
+  const matcher = await readGitignore(context.cwd);
+  const pattern = new Bun.Glob(args.pattern);
+  const results: string[] = [];
+  for (const entry of await readdir(searchPath, { withFileTypes: true })) {
+    if (context.signal.aborted) return { ok: false, output: "", error: "Glob aborted" };
+    const relative = prefix === "." ? entry.name : `${prefix}/${entry.name}`;
+    if (
+      (!args.hidden && entry.name.startsWith(".")) ||
+      ignored(entry.name, args) ||
+      !pattern.match(entry.name)
+    )
+      continue;
+    if (await matcher(relative)) continue;
+    if (!(await canReadSearchPath(context, join(searchPath, entry.name), "glob"))) continue;
+    results.push(`${relative}${entry.isDirectory() ? "/" : ""}`);
+  }
+  return finish(args, results, args.maxResults ?? 500, false);
 }
 
 async function validateDirectory(path: string, label: string): Promise<string | undefined> {
@@ -80,6 +146,7 @@ export async function runGlobFallback(args: GlobArgs, context: SearchContext): P
   const searchPath = resolveToolPath(context.cwd, args.path ?? ".");
   const problem = await validateDirectory(searchPath, args.path ?? ".");
   if (problem) return { ok: false, output: "", error: problem };
+  if (args.mode === "entries") return entries(args, context, searchPath);
 
   const limit = args.maxResults ?? 500;
   const prefix = displayPath(context.cwd, searchPath);
@@ -96,7 +163,10 @@ export async function runGlobFallback(args: GlobArgs, context: SearchContext): P
     if (context.signal.aborted) {
       return { ok: false, output: "", error: "Glob aborted" };
     }
-    if (ignored(relative) || (await matcher(prefix === "." ? relative : `${prefix}/${relative}`)))
+    if (
+      ignored(relative, args) ||
+      (await matcher(prefix === "." ? relative : `${prefix}/${relative}`))
+    )
       continue;
     if (!(await canReadSearchPath(context, join(searchPath, relative), "glob"))) continue;
     results.push(prefix === "." ? relative : `${prefix}/${relative}`);
@@ -109,6 +179,7 @@ export async function runGlob(args: GlobArgs, context: SearchContext): Promise<T
   const searchPath = resolveToolPath(context.cwd, args.path ?? ".");
   const problem = await validateDirectory(searchPath, args.path ?? ".");
   if (problem) return { ok: false, output: "", error: problem };
+  if (args.mode === "entries") return entries(args, context, searchPath);
 
   const rg = Bun.which("rg");
   if (!rg || context.permissions || context.sandbox) return runGlobFallback(args, context);
@@ -125,6 +196,8 @@ export async function runGlob(args: GlobArgs, context: SearchContext): Promise<T
   ];
   if (args.hidden) command.push("--hidden");
   for (const directory of IGNORED) command.push("--glob", `!**/${directory}/**`);
+  if (!args.includeGenerated)
+    for (const directory of GENERATED) command.push("--glob", `!**/${directory}/**`);
   command.push(".");
   const proc = Bun.spawn({
     cmd: command,
@@ -153,10 +226,13 @@ export async function runGlob(args: GlobArgs, context: SearchContext): Promise<T
 
   const results: string[] = [];
   const filter = new Bun.Glob(scanPattern(args.pattern));
-  for (const line of stdout.text.split("\n")) {
+  const completeLines = stdout.capped
+    ? stdout.text.slice(0, stdout.text.lastIndexOf("\n"))
+    : stdout.text;
+  for (const line of completeLines.split("\n")) {
     if (!line) continue;
     const clean = withoutPrefix(line, "./");
-    if (ignored(clean) || !filter.match(clean)) continue;
+    if (ignored(clean, args) || !filter.match(clean)) continue;
     results.push(prefix === "." ? clean : `${prefix}/${clean}`);
   }
   return finish(args, results, limit, stdout.capped);

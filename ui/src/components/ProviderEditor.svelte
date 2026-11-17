@@ -5,6 +5,7 @@
   import { settings } from "../lib/settings.svelte";
   import Icon from "./Icon.svelte";
   import ProviderAdvanced from "./ProviderAdvanced.svelte";
+  import ProviderProtection from "./ProviderProtection.svelte";
   import ProviderConnection from "./ProviderConnection.svelte";
   import ProviderModels from "./ProviderModels.svelte";
   import ProviderModelRefresh from "./ProviderModelRefresh.svelte";
@@ -143,6 +144,8 @@
         aria-labelledby="provider-tab-advanced"
         hidden={tab !== "advanced"}
       >
+        <ProviderProtection {provider} />
+
         <section class="section">
           <ProviderModelRefresh {provider} />
         </section>
@@ -204,7 +207,7 @@
               class="st-btn st-btn--danger st-btn--sm"
               type="button"
               disabled={!canRemove}
-              title={canRemove ? undefined : t("Cannot delete the last provider")}
+              data-tooltip={canRemove ? undefined : t("Cannot delete the last provider")}
               onclick={() => (confirmDelete = true)}
             >
               <Icon name="trash" size={13} /> {t("Delete")} </button>

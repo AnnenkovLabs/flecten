@@ -1,5 +1,6 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Cost unavailable": "Витрати невідомі",
   Profile: "Профіль",
   "Change name": "Змінити ім’я",
   "Could not save name. Try again.": "Не вдалося зберегти ім’я. Спробуйте ще раз.",

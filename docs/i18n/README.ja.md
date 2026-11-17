@@ -220,6 +220,6 @@ AGPL-3.0。[LICENSE](../../LICENSE) を参照。自由に使用・改変・共�
 
 ---
 
-<p align="center"><sub>Flecten は以前 Liquid Harness と呼ばれていました。既存の <code>liquid.config.json</code> ファイル、<code>LIQUID_*</code> 変数、<code>liquid-harness://</code> リンク、保存済みプロフィールは引き続き動作します。主な名前は現在 <code>flecten.config.json</code>、<code>FLECTEN_*</code>、<code>flecten://</code> です。<code>.liquid/</code> フォルダーはデータ移行なしでセッション、添付、チェックポイントを保持します。</sub></p>
+<p align="center"><sub>Flecten は以前 Liquid Harness と呼ばれていました。既存の <code>liquid.config.json</code> ファイル、<code>LIQUID_*</code> 変数、<code>liquid-harness://</code> リンク、保存済みプロフィールは引き続き動作します。主な名前は現在 <code>flecten.config.json</code>、<code>FLECTEN_*</code>、<code>flecten://</code> です。<code>.flecten/</code> フォルダーにセッション、添付、チェックポイントを保存します。既存の <code>.liquid/</code> データはプロジェクトを開くと自動的に移行されます。</sub></p>
 
 <p align="center"><sub>インターフェースは英語で起動します。<b>設定 → 一般 → インターフェースの言語</b>で言語を選択できます。選択はこのデバイスに保存され、エージェントの回答言語とは独立しています。</sub></p>

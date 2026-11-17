@@ -136,7 +136,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
     });
     const user = page.locator(".msg.user").first();
     await expect(user).toContainText(`@${path}`);
-    const sessions = join(cwd, ".liquid/sessions");
+    const sessions = join(cwd, ".flecten/sessions");
     const session = readdirSync(sessions, { withFileTypes: true }).find((entry) =>
       entry.isDirectory(),
     )?.name;

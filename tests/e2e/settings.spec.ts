@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { chooseSelect } from "./custom-select";
 import { environmentProblem, launchApp } from "./fixtures";
 
 test("settings save practical preferences and apply them to the composer", async () => {
@@ -20,8 +21,8 @@ test("settings save practical preferences and apply them to the composer", async
     await expect(dialog.locator("#settings-general")).toBeVisible();
     await expect(dialog.getByText("Ходов на задачу", { exact: true })).toHaveCount(0);
     await expect(dialog.getByText("TTL каталога, часов", { exact: true })).toHaveCount(0);
-    await page.getByLabel("Отправка сообщения", { exact: true }).selectOption("modifier-enter");
-    await page.getByLabel("Сообщения во время работы", { exact: true }).selectOption("steer");
+    await chooseSelect(page.getByLabel("Отправка сообщения", { exact: true }), "modifier-enter");
+    await chooseSelect(page.getByLabel("Сообщения во время работы", { exact: true }), "steer");
     await page.getByLabel("Одновременные задачи", { exact: true }).fill("8");
     await page.getByRole("button", { name: "Терминал и инструменты", exact: true }).click();
     await page.getByLabel("Ожидание команды, с", { exact: true }).fill("60");

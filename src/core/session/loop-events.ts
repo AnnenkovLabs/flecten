@@ -48,12 +48,15 @@ export function mapLoopEvent(event: LoopEvent, sessionId: SessionId): Event {
     case "memory.context":
     case "steer.applied":
     case "translation.failed":
+    case "context.summary.failed":
     case "notice.applied":
     case "model.fallback":
     case "provider.retry":
+    case "provider.response":
     case "context.compacted":
     case "context.usage":
       return { ...event, sessionId };
+    case "usage.unavailable":
     case "usage":
       return { ...event, sessionId };
     case "hook.finished":

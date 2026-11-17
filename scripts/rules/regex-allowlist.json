@@ -1,4 +1,7 @@
 {
+  "src/tools/jobs/remote-schema.ts": "validates SSH destination, user and UUID handle formats at the tool and persisted-record boundary",
+  "src/security/session-grant.ts": "validates SHA-256 policy and exact request keys at the persisted session grant boundary",
+  "src/tools/bash/outputs.ts": "validates an expected SHA-256 digest in the command output schema",
   "src/core/memory/schema.ts": "validates memory key, category and SHA-256 formats at the persistence/tool boundary",
   "src/app/voice.ts": "validates base64 audio format at the sidecar command boundary",
   "src/config/schema.ts": "validates the provider id format in the config schema",
@@ -25,5 +28,6 @@
   "ui/src/lib/markdown/sanitize.ts": "validates URL schemes and attribute formats for HTML sanitizing",
   "ui/src/lib/platform.ts": "reads the platform from the user agent string",
   "ui/src/components/ModelAddForm.svelte": "validates the model id format",
-  "src/config/schema-sections.ts": "validates exact permission request SHA-256 format at the configuration boundary"
+  "src/config/schema-sections.ts": "validates exact permission request SHA-256 format at the configuration boundary",
+  "src/providers/response.ts": "validates provider request identifiers and finish-reason field formats before recording response metadata"
 }

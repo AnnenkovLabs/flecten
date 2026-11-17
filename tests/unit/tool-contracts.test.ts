@@ -27,13 +27,13 @@ const limits = {
 };
 
 async function context(): Promise<ToolContext> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-tool-contracts-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-tool-contracts-"));
   dirs.push(cwd);
   return {
     sessionId: "s_contracts",
     cwd,
     signal: new AbortController().signal,
-    logDir: join(cwd, ".liquid", "logs"),
+    logDir: join(cwd, ".flecten", "logs"),
     limits,
     reads: new ReadTracker(),
   };

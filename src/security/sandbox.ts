@@ -11,7 +11,9 @@ export const DEFAULT_PROTECTED_WRITE_PREFIXES = [
   ".agents",
   ".codex",
   ".mcp.json",
+  ".flecten",
   ".liquid",
+  ".flecten-migration",
   "flecten.config.json",
   "liquid.config.json",
   "AGENTS.md",
@@ -26,6 +28,8 @@ export const DEFAULT_PROTECTED_WRITE_PREFIXES = [
 ] as const;
 
 export const DEFAULT_PROTECTED_READ_PREFIXES = [
+  ".flecten-migration",
+  ".flecten/secrets.json",
   ".liquid/secrets.json",
   "secrets.json",
   ".env",
@@ -115,7 +119,7 @@ export class SandboxPolicy {
   /** A fixed native capability may persist its own metadata; raw file writes stay protected. */
   checkMemory(mode: "read" | "write"): Promise<SandboxDecision> {
     return this.check(
-      join(this.workspaceRoot, ".liquid", "memory.json"),
+      join(this.workspaceRoot, ".flecten", "memory.json"),
       mode,
       mode === "write"
         ? [...DEFAULT_PROTECTED_READ_PREFIXES, ...this.customWriteDenyPrefixes]

@@ -6,6 +6,7 @@ import type { TerminalSnapshot } from "../../terminal/types";
 import { withShellCheckpoint } from "../shell-checkpoint";
 import type { ToolContext } from "../types";
 import { resolveToolPath } from "../util/paths";
+import { prepareScratch, scratchEnvironment } from "../util/scratch";
 import type { TerminalArgs } from "./schema";
 import { streamTerminal } from "./stream";
 
@@ -102,7 +103,10 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
   }
 
   let session = manager.get(id);
-  const boundary = JSON.stringify(context.osSandbox ?? null);
+  const boundary = JSON.stringify({
+    sandbox: context.osSandbox ?? null,
+    scratch: context.scratchDir ?? null,
+  });
   if (
     session &&
     (args.op === "run" || args.op === "write") &&
@@ -127,10 +131,18 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
     }
     const cwd = resolveToolPath(context.cwd, args.cwd ?? ".");
     try {
+      await prepareScratch(context.scratchDir);
       session = manager.create(id, {
         cwd,
-        ...(context.env ? { env: context.env } : {}),
-        ...(context.osSandbox ? { sandbox: context.osSandbox } : {}),
+        env: { ...context.env, ...scratchEnvironment(context.scratchDir) },
+        ...(context.osSandbox
+          ? {
+              sandbox: {
+                ...context.osSandbox,
+                ...(context.scratchDir ? { temporaryDirectory: context.scratchDir } : {}),
+              },
+            }
+          : {}),
         ...(args.cols ? { cols: args.cols } : {}),
         ...(args.rows ? { rows: args.rows } : {}),
       });

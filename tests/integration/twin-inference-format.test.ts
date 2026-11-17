@@ -65,6 +65,11 @@ test.each([
   ["prose around code", `I changed my mind.\n~~~json\n${json}\n~~~`],
   ["another language", `~~~javascript\n${json}\n~~~`],
   ["schema mismatch", '{"verdict":"pass"}'],
+  ["invalid bracket escape", json.replace("checkout", String.raw`\]`)],
+  ["invalid letter escape", json.replace("checkout", String.raw`\q`)],
+  ["incomplete Unicode escape", json.replace("checkout", String.raw`\u12`)],
+  ["literal newline in a string", json.replace("checkout", "check\nout")],
+  ["unescaped inner quote", json.replace("checkout", '"checkout"')],
   ["unknown citation", JSON.stringify({ ...decision, entryIds: ["invented"] })],
 ])("Twin rejects %s while retaining billed usage", async (_name, response) => {
   const f = fixture(response);

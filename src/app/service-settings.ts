@@ -3,7 +3,7 @@ import { type HarnessConfig, HarnessConfigSchema } from "../config/schema";
 import { configWithAccessMode } from "./access";
 import { mergeSecrets } from "./provider-secrets";
 import { sanitizeConfig } from "./service-policy";
-import type { AppInfo, AppService, ModelChoiceInput } from "./service-types";
+import type { AppInfo, AppService, ModelChoiceInput, SettingsPayload } from "./service-types";
 import { validateModelChoice, withModelChoice } from "./session-models";
 
 /** Global settings mutations share the service's serialized commit and live config. */
@@ -15,9 +15,14 @@ export function settingsActions(
   ) => Promise<unknown>,
   info: () => AppInfo,
   selectSession?: (input: ModelChoiceInput & { sessionId: string }) => Promise<AppInfo>,
+  subagentRoles?: () => SettingsPayload["subagentRoles"],
 ): Pick<AppService, "settings" | "setAccessMode" | "saveSettings" | "setModel"> {
   return {
-    settings: () => ({ config: sanitizeConfig(current()), info: info() }),
+    settings: () => ({
+      config: sanitizeConfig(current()),
+      info: info(),
+      subagentRoles: subagentRoles?.() ?? [],
+    }),
     setAccessMode: (mode) => commit(() => configWithAccessMode(current(), mode)).then(info),
     async saveSettings(input) {
       const parsed = HarnessConfigSchema.parse(input.config);

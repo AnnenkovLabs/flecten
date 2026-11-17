@@ -47,7 +47,7 @@
     type="button"
     aria-expanded={expanded}
     aria-controls={bodyId}
-    title={expanded ? t("Hide reasoning") : t("Show reasoning")}
+    data-tooltip={expanded ? t("Hide reasoning") : t("Show reasoning")}
     onclick={toggle}
   >
     <span>{streaming ? t("Thinking") : duration ? t("Thought for {0}", [duration]) : t("Reasoning")}</span>

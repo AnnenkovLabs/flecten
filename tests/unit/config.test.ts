@@ -29,7 +29,7 @@ afterEach(async () => {
 });
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-config-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-config-"));
   dirs.push(dir);
   return dir;
 }
@@ -121,7 +121,7 @@ describe("config", () => {
       providers: Record<string, { apiKey?: string }>;
     };
     expect(file.providers.openai?.apiKey).toBeUndefined();
-    const secrets = (await Bun.file(join(cwd, ".liquid", "secrets.json")).json()) as Record<
+    const secrets = (await Bun.file(join(cwd, ".flecten", "secrets.json")).json()) as Record<
       string,
       string
     >;

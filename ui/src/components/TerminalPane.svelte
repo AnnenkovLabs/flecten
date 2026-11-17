@@ -52,6 +52,7 @@
   import { t } from "../lib/i18n.svelte";
   import { onMount, tick } from "svelte";
   import type { TerminalLine } from "../lib/types";
+  import { readPreference } from "../lib/preference-storage";
   import Icon from "./Icon.svelte";
   import CopyButton from "./CopyButton.svelte";
 
@@ -59,7 +60,7 @@
     lines: TerminalLine[];
   }
 
-  const ZOOM_KEY = "liquid.terminal.zoom";
+  const ZOOM_KEY = "flecten.terminal.zoom";
 
   let { lines }: Props = $props();
   let scrollEl = $state<HTMLDivElement | null>(null);
@@ -113,7 +114,7 @@
 
   onMount(() => {
     if (typeof localStorage !== "undefined") {
-      const stored = Number(localStorage.getItem(ZOOM_KEY));
+      const stored = Number(readPreference(ZOOM_KEY, "liquid.terminal.zoom"));
       if (Number.isFinite(stored) && stored >= 0.8 && stored <= 1.4) zoom = stored;
     }
     lastCount = lines.length;
@@ -133,7 +134,7 @@
       class="term-btn"
       type="button"
       aria-label={t("Decrease terminal font size")}
-      title={t("Decrease terminal font size")}
+      data-tooltip={t("Decrease terminal font size")}
       disabled={zoom <= 0.8}
       onclick={() => setZoom(zoom - 0.1)}
     >
@@ -143,7 +144,7 @@
       class="term-btn"
       type="button"
       aria-label={t("Increase terminal font size")}
-      title={t("Increase terminal font size")}
+      data-tooltip={t("Increase terminal font size")}
       disabled={zoom >= 1.4}
       onclick={() => setZoom(zoom + 0.1)}
     >
@@ -163,7 +164,7 @@
     aria-label={t("Terminal output")}
   >
     {#if truncated}
-      <div class="term-note" title={t("Earlier lines are no longer stored in the interface")}>{t("Showing the last {0} lines", [TERMINAL_LINE_LIMIT])}</div>
+      <div class="term-note" data-tooltip={t("Earlier lines are no longer stored in the interface")}>{t("Showing the last {0} lines", [TERMINAL_LINE_LIMIT])}</div>
     {/if}
     {#if lines.length === 0}
       <div class="term-empty">{t("No commands yet")}</div>

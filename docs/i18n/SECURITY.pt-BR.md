@@ -14,7 +14,7 @@ Espere uma resposta em até 7 dias. A correção e a divulgação de detalhes s�
 
 ## O que verificar primeiro
 
-- path traversal no protocolo `liquid://`;
+- path traversal no protocolo `flecten://`;
 - a ponte `preload` e o acesso a `ipcRenderer`;
 - `contextIsolation`, `sandbox` e `nodeIntegration` na janela;
 - CSP e o carregamento de recursos externos;

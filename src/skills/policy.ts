@@ -8,7 +8,7 @@ export function skillToolPolicy(
   skills?: () => SkillDiscovery,
 ) {
   return (tool: Tool, context: ToolContext): string | undefined => {
-    if (tool.name === "skill") return undefined;
+    if (tool.name === "skill" || tool.name === "tool_catalog") return undefined;
     for (const { data } of activations?.get(context.sessionId)?.values() ?? []) {
       const current = skills?.().skills.find((skill) => skill.name === data.name);
       if (skills && (!current || current.trust === "untrusted"))

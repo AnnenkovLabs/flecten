@@ -376,7 +376,7 @@
   text-wrap: pretty;
 }
 
-.st-row-control > select.st-input {
+.st-row-control > [role="combobox"].st-input {
   width: 230px;
   max-width: 100%;
 }

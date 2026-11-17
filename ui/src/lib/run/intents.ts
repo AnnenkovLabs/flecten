@@ -13,12 +13,12 @@ export interface RunIntents {
   stopWorker?(): void;
 }
 
-const APPROVAL = "liquid:approval";
-const CANCEL_TOOL = "liquid:tool-cancel";
-const CONTINUE = "liquid:task-continue";
-const STOP_WORKER = "liquid:worker-stop";
-const STOP_JOB = "liquid:job-stop";
-export const OPEN_SUBAGENT = "liquid:subagent-open";
+const APPROVAL = "flecten:approval";
+const CANCEL_TOOL = "flecten:tool-cancel";
+const CONTINUE = "flecten:task-continue";
+const STOP_WORKER = "flecten:worker-stop";
+const STOP_JOB = "flecten:job-stop";
+export const OPEN_SUBAGENT = "flecten:subagent-open";
 export function openSubagent(id: string): void {
   emit(OPEN_SUBAGENT, { id });
 }

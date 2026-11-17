@@ -19,7 +19,7 @@ const claude = z.object({
   isSidechain: z.boolean().optional(),
 });
 const pi = z.object({ type: z.literal("message"), message });
-const liquid = z.object({
+const flecten = z.object({
   event: z.object({
     type: z.literal("session.started"),
     prompt: z.string(),
@@ -28,7 +28,7 @@ const liquid = z.object({
     role: z.string().optional(),
   }),
 });
-const liquidEvent = liquid.shape.event;
+const flectenEvent = flecten.shape.event;
 
 function plain(value: z.infer<typeof content>, types = ["text"]): string[] {
   return typeof value === "string"
@@ -57,11 +57,11 @@ export function userWords(id: TwinSourceId, value: unknown): string[] {
       ? plain(parsed.data.message.content)
       : [];
   }
-  if (id === "liquid") {
-    const nested = liquid.safeParse(value);
+  if (id === "flecten") {
+    const nested = flecten.safeParse(value);
     const parsed = nested.success
       ? { success: true as const, data: nested.data.event }
-      : liquidEvent.safeParse(value);
+      : flectenEvent.safeParse(value);
     return parsed.success &&
       !parsed.data.internal &&
       !parsed.data.resumed &&
@@ -92,7 +92,7 @@ export const OpenCodePartSchema = z.object({
 
 /** Preceding assistant text supplies the object of a reaction, never authority for a trait. */
 export function assistantWords(id: TwinSourceId, value: unknown): string[] {
-  if (id === "liquid") {
+  if (id === "flecten") {
     const schema = z.object({ type: z.literal("message.finished"), text: z.string() });
     const nested = z.object({ event: schema }).safeParse(value);
     const parsed = nested.success

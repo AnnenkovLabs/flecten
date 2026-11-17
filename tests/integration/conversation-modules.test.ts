@@ -124,7 +124,7 @@ async function computerConversation() {
     expect(visible.ok).toBe(true);
     expect(snapshot(visible).observation?.id).toBe(workerStart.observation?.id);
     expect(snapshot(visible).state).toBe("ready");
-    expect(await readdir(join(f.cwd, ".liquid/module-runtime"))).toHaveLength(1);
+    expect(await readdir(join(f.cwd, ".flecten/module-runtime"))).toHaveLength(1);
     expect((await f.app.modules.state("unrelated-chat")).active).toEqual([]);
     expect((await f.app.modules.state(`${sessionId}_worker`)).active).toEqual(
       (await f.app.modules.state(sessionId)).active,
@@ -145,11 +145,11 @@ async function computerConversation() {
     await f.app.modules.runtime.close(`${sessionId}_worker`);
     expect(snapshot(await invoke("status")).state).toBe("stopped");
     await f.app.session.close(sessionId);
-    expect(await readdir(join(f.cwd, ".liquid/module-runtime"))).toEqual([]);
+    expect(await readdir(join(f.cwd, ".flecten/module-runtime"))).toEqual([]);
     const reopened = await invoke("status");
     expect(reopened.ok).toBe(true);
     expect(snapshot(reopened).state).toBe("idle");
-    expect(await readdir(join(f.cwd, ".liquid/module-runtime"))).toHaveLength(1);
+    expect(await readdir(join(f.cwd, ".flecten/module-runtime"))).toHaveLength(1);
   } finally {
     act.resolve();
     inspectStopped.resolve();

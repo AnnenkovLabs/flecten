@@ -21,7 +21,7 @@ const limits = {
 
 describe("session history", () => {
   test("lists and reopens a saved chat", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-history-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-history-"));
     try {
       const paths = sessionPaths(cwd, "s-saved");
       const events: Event[] = [
@@ -105,7 +105,7 @@ describe("session history", () => {
         { type: "done", reason: "end" },
       ],
     ]);
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-continuity-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-continuity-"));
     try {
       const session = createSession({
         cwd,
@@ -118,7 +118,7 @@ describe("session history", () => {
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
       });
 
       const first = (await session.send({ type: "run", prompt: "first" })) as RunResult;
@@ -148,7 +148,7 @@ describe("session history", () => {
         { type: "done", reason: "end" },
       ],
     ]);
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-fallback-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-fallback-"));
     try {
       const events: Event[] = [];
       const session = createSession({
@@ -162,7 +162,7 @@ describe("session history", () => {
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
       });
       session.subscribe((event) => events.push(event));
 
@@ -188,7 +188,7 @@ describe("session history", () => {
         { type: "done", reason: "end" },
       ],
     ]);
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-summary-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-summary-"));
     try {
       const events: Event[] = [];
       const session = createSession({
@@ -202,7 +202,7 @@ describe("session history", () => {
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
       });
       session.subscribe((event) => events.push(event));
 
@@ -231,7 +231,7 @@ describe("session history", () => {
         { type: "done", reason: "end" },
       ],
     ]);
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-summary-context-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-summary-context-"));
     try {
       const session = createSession({
         cwd,
@@ -244,7 +244,7 @@ describe("session history", () => {
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
       });
 
       const first = (await session.send({ type: "run", prompt: "first" })) as RunResult;
@@ -272,7 +272,7 @@ describe("session history", () => {
         { type: "done", reason: "end" },
       ],
     ]);
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-image-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-image-"));
     try {
       const image = join(cwd, "pixel.png");
       await Bun.write(
@@ -293,7 +293,7 @@ describe("session history", () => {
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
       });
 
       await session.send({ type: "run", prompt: "look", attachments: [image] });
@@ -313,7 +313,7 @@ describe("session history", () => {
         { type: "done", reason: "end" },
       ],
     ]);
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-resume-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-resume-"));
     try {
       const session = createSession({
         cwd,
@@ -326,7 +326,7 @@ describe("session history", () => {
         maxOutputTokens: 1000,
         context: { window: 100_000, reserve: 1000 },
         loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-        logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+        logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
         loadHistory: async () => [
           { role: "user", content: "prior" },
           { role: "assistant", content: "prior answer", reasoning: "", toolCalls: [] },

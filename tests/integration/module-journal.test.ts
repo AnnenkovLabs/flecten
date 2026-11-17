@@ -21,8 +21,8 @@ test("SQLite example replaces journal writes, list/search/read/rename/fork/delet
   const raw = "  Preserve this request\nword for word.  ";
   await f.app.session.send({ type: "run", sessionId: "ledger", prompt: raw });
   await f.app.session.flush();
-  expect(await Bun.file(join(f.cwd, ".liquid/module-journal.sqlite")).exists()).toBe(true);
-  expect(await Bun.file(join(f.cwd, ".liquid/sessions/ledger/events.jsonl")).exists()).toBe(false);
+  expect(await Bun.file(join(f.cwd, ".flecten/module-journal.sqlite")).exists()).toBe(true);
+  expect(await Bun.file(join(f.cwd, ".flecten/sessions/ledger/events.jsonl")).exists()).toBe(false);
   expect(await f.app.listSessions()).toMatchObject([{ id: "ledger", lastPrompt: raw }]);
   expect(await f.app.searchSessions("word for word")).toHaveLength(1);
   expect(await f.app.renameSession("ledger", "A renamed ledger")).toMatchObject({
@@ -54,7 +54,7 @@ test("SQLite example replaces journal writes, list/search/read/rename/fork/delet
     ).toHaveLength(2);
     // A crash marker written through the same real repository is recovered from SQLite.
     const { Database } = await import("bun:sqlite");
-    const db = new Database(join(f.cwd, ".liquid/module-journal.sqlite"));
+    const db = new Database(join(f.cwd, ".flecten/module-journal.sqlite"));
     const started = {
       type: "session.started",
       sessionId: "crashed",

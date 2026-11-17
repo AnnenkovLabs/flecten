@@ -72,6 +72,11 @@ test("Twin live 3D, interactions and character workflow stay usable at both desk
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Twin", exact: true }).click();
     const panel = page.getByTestId("twin-page");
+    await panel.getByRole("switch", { name: "Use Twin in this project", exact: true }).click();
+    await expect(panel.locator(".twin-portrait [data-testid='twin-character']")).toHaveAttribute(
+      "data-power",
+      "enabled",
+    );
     await expect(
       panel.getByRole("heading", { name: "Same ideas. Same thoughts.", exact: true }),
     ).toBeVisible();
@@ -191,7 +196,7 @@ test("Twin live 3D, interactions and character workflow stay usable at both desk
     await page.locator("#prompt").fill("Review the checkout and keep it on one screen.");
     await page.locator("#prompt").press("Enter");
     await expect(page.locator(".run-check")).toBeVisible();
-    const sessions = await readdir(join(h.cwd, ".liquid/sessions"), { withFileTypes: true });
+    const sessions = await readdir(join(h.cwd, ".flecten/sessions"), { withFileTypes: true });
     const sessionId = sessions.find((entry) => entry.isDirectory())?.name;
     if (!sessionId) throw new Error("The checkout review did not create a task session");
     const work = page.getByTestId("twin-work");

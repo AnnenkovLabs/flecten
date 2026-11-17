@@ -27,7 +27,7 @@ afterEach(async () => {
 });
 
 async function project(): Promise<string> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-lock-core-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-lock-core-"));
   dirs.push(cwd);
   const config = {
     useDefaults: false,
@@ -111,7 +111,7 @@ describe("one core per project", () => {
     expect(await second.next("status", LOCK_WAIT_MS)).not.toBeNull();
     second.child.stdin.end();
     expect(await second.child.exited).toBe(0);
-    expect(await exists(join(cwd, ".liquid", "sidecar.lock"))).toBe(false);
+    expect(await exists(join(cwd, ".flecten", "sidecar.lock"))).toBe(false);
   }, 30_000);
 
   test("a core that keeps the project turns the next one away with project_locked", async () => {
@@ -123,7 +123,7 @@ describe("one core per project", () => {
     expect(error).toMatchObject({ type: "error", code: "project_locked" });
     expect(String(error?.message)).toContain(`pid ${first.child.pid}`);
     expect(await second.child.exited).toBe(1);
-    expect(await exists(join(cwd, ".liquid", "sidecar.lock"))).toBe(true);
+    expect(await exists(join(cwd, ".flecten", "sidecar.lock"))).toBe(true);
   }, 40_000);
 
   test("a killed core leaves its project to the next one at once", async () => {
@@ -132,7 +132,7 @@ describe("one core per project", () => {
     expect(await first.next("status")).not.toBeNull();
     first.child.kill("SIGKILL");
     await first.child.exited;
-    expect(await exists(join(cwd, ".liquid", "sidecar.lock"))).toBe(true);
+    expect(await exists(join(cwd, ".flecten", "sidecar.lock"))).toBe(true);
     const started = Date.now();
     const second = startCore(cwd);
     expect(await second.next("status")).not.toBeNull();

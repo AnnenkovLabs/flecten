@@ -12,6 +12,7 @@ interface PageState {
   active?: ActivePage;
   pending: boolean;
   blocked?: PageReport;
+  finalResult?: string;
 }
 
 /** Successful typed calls are the durable lifecycle; summaries carry an interrupted page. */
@@ -21,6 +22,7 @@ export class PageRuntime {
   constructor(
     readonly messages: Message[],
     readonly archive?: PageArchive,
+    readonly readOnlyTools: ReadonlySet<string> = new Set(),
   ) {}
 
   #state(): PageState {
@@ -46,7 +48,10 @@ export class PageRuntime {
             pending: false,
           };
         } else if (command?.op === "complete" && state.active && !state.pending) {
-          state = { pending: true };
+          state = {
+            pending: true,
+            ...(command.finalResult ? { finalResult: command.finalResult } : {}),
+          };
         } else if (command?.op === "block" && state.active && !state.pending) {
           const { op: _op, ...blocked } = command;
           state = { active: state.active, pending: true, blocked };
@@ -67,6 +72,18 @@ export class PageRuntime {
   /** Read before compaction replaces the pending block call with its continuation. */
   blocked(): PageReport | undefined {
     return this.#state().blocked;
+  }
+
+  finalResult(): string | undefined {
+    return this.#state().finalResult;
+  }
+
+  /** Evidence reads remain available after a durable checkpoint, including restored history. */
+  canInspect(): boolean {
+    return (
+      this.#checkpointed ||
+      this.messages.some((message) => message.role === "user" && !!message.contextSummary)
+    );
   }
 
   /** The loop records a successful semantic checkpoint made during this invocation. */
@@ -94,7 +111,14 @@ export class PageRuntime {
     }
     const state = this.#state();
     if (state.pending) return "The completed page must be compacted before any further tool call.";
-    if (!state.active && calls.some((call) => call.name !== "context" && call.name !== "done")) {
+    if (
+      !state.active &&
+      calls.some(
+        (call) =>
+          !["context", "criterion", "done"].includes(call.name) &&
+          !(this.canInspect() && this.readOnlyTools.has(call.name)),
+      )
+    ) {
       return "Start one small logical page with context begin before using work tools.";
     }
     if (!this.canFinish() && calls.some((call) => call.name === "done")) {
@@ -141,6 +165,11 @@ export class PageRuntime {
       output: [
         command.op === "block" ? "# Logical page blocked" : "# Logical page completed",
         command.summary,
+        ...(command.findings?.length ? ["## Findings", ...command.findings] : []),
+        ...(command.result ? ["## Result", command.result] : []),
+        ...(command.op === "complete" && command.finalResult
+          ? ["## Final result", command.finalResult]
+          : []),
         "## Evidence",
         ...command.evidence.map((item) => `- ${item}`),
         "## Next step",

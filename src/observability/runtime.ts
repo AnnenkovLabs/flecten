@@ -6,10 +6,10 @@ import type { HarnessConfig } from "../config/schema";
 import type { Event } from "../core/types";
 import { atomicWrite } from "../util/atomic";
 import { buildCrashReport, buildDiagnosticsBundle, type LogRecord } from "./diagnostics";
+import { operationalData, transientDiagnostic } from "./event-data";
 import { redactDeep } from "./redact";
 
 const MAX_LOG_BYTES = 2 * 1024 * 1024;
-const TRANSIENT = new Set(["message.delta", "reasoning.delta", "tool_call.progress"]);
 
 /** Local, bounded operational evidence. Prompts, outputs and credentials never enter metrics. */
 export class DiagnosticsRuntime {
@@ -22,11 +22,11 @@ export class DiagnosticsRuntime {
   #failure: string | undefined;
 
   constructor(readonly cwd: string) {
-    this.#directory = join(cwd, ".liquid", "diagnostics");
+    this.#directory = join(cwd, ".flecten", "diagnostics");
   }
 
   record(event: Event): void {
-    if (TRANSIENT.has(event.type)) return;
+    if (transientDiagnostic(event)) return;
     this.#counts.set(event.type, (this.#counts.get(event.type) ?? 0) + 1);
     const record: LogRecord = {
       ts: new Date().toISOString(),
@@ -35,21 +35,8 @@ export class DiagnosticsRuntime {
       traceId: event.sessionId ?? this.#trace,
       ...(event.sessionId ? { sessionId: event.sessionId } : {}),
       ...(event.type === "error" ? { errorCode: event.code } : {}),
-      data: {},
+      data: operationalData(event),
     };
-    if (event.type === "tool.finished") {
-      record.data = {
-        tool: event.call.name,
-        ok: event.result.ok,
-        durationMs: event.result.durationMs,
-      };
-    }
-    if (event.type === "session.finished")
-      record.data = {
-        reason: event.result.stopReason,
-        turns: event.result.turns,
-        usage: event.result.usage,
-      };
     this.#recent.push(record);
     if (this.#recent.length > 50) this.#recent.shift();
     if (event.type === "error")

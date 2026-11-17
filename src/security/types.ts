@@ -35,6 +35,8 @@ export type PermissionRisk = {
 };
 
 export type PermissionRequest = {
+  /** Trusted execution boundary requires a fresh human answer, regardless of saved grants. */
+  humanOnly?: boolean;
   action: PermissionAction;
   tool: string;
   target?: string;
@@ -60,6 +62,7 @@ export type PermissionDecision = {
 };
 
 export type PermissionEngineOptions = {
+  grantEpoch?: string;
   rules?: PermissionRule[];
   /** Policy for destructive operations no rule names; `ask` by default. */
   destructive?: PermissionPolicy;

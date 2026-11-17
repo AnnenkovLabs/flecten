@@ -28,7 +28,7 @@ test("model HTML opens real harness menus, panels and files through buttons and 
     await page.evaluate(() =>
       window.postMessage(
         {
-          type: "liquid-summary",
+          type: "flecten-summary",
           version: 1,
           kind: "action",
           action: "navigate",
@@ -41,7 +41,7 @@ test("model HTML opens real harness menus, panels and files through buttons and 
     await frame.locator("#summary-root").evaluate(() => {
       for (const payload of ["flecten://run?command=echo", "flecten://settings/unknown"]) {
         parent.postMessage(
-          { type: "liquid-summary", version: 1, kind: "action", action: "navigate", payload },
+          { type: "flecten-summary", version: 1, kind: "action", action: "navigate", payload },
           "*",
         );
       }
@@ -105,13 +105,13 @@ test("model HTML opens real harness menus, panels and files through buttons and 
           ),
       ).toBe(true);
       await page.screenshot({
-        path: `.liquid/html-navigation/${width}x${height}.png`,
+        path: `.flecten/html-navigation/${width}x${height}.png`,
         animations: "disabled",
       });
       await frame.getByRole("button", { name: "Настроить MCP" }).press("Enter");
       await expect(page.locator('.section-nav [aria-current="true"]')).toHaveText("MCP");
       await page.screenshot({
-        path: `.liquid/html-navigation/mcp-${width}x${height}.png`,
+        path: `.flecten/html-navigation/mcp-${width}x${height}.png`,
         animations: "disabled",
       });
       await page.keyboard.press("Escape");
@@ -124,13 +124,13 @@ test("model HTML opens real harness menus, panels and files through buttons and 
     await page.locator("iframe.summary").evaluate((element, tokens) => {
       for (const message of [{ kind: "reset" }, { kind: "append", tokens }]) {
         (element as HTMLIFrameElement).contentWindow?.postMessage(
-          { type: "liquid-summary", version: 1, ...message },
+          { type: "flecten-summary", version: 1, ...message },
           "*",
         );
       }
     }, tokens);
     const script = frame.locator("#summary-root script");
-    await expect(script).toHaveAttribute("type", "application/x-liquid-pending");
+    await expect(script).toHaveAttribute("type", "application/x-flecten-pending");
     const runs = () =>
       script.evaluate(
         () => (globalThis as unknown as { streamingRuns?: number }).streamingRuns ?? 0,
@@ -138,7 +138,7 @@ test("model HTML opens real harness menus, panels and files through buttons and 
     expect(await runs()).toBe(0);
     await page.locator("iframe.summary").evaluate((element) => {
       const target = (element as HTMLIFrameElement).contentWindow;
-      const finish = { type: "liquid-summary", version: 1, kind: "finish" };
+      const finish = { type: "flecten-summary", version: 1, kind: "finish" };
       target?.postMessage(finish, "*");
       target?.postMessage(finish, "*");
     });

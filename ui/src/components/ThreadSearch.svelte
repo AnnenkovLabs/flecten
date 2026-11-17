@@ -58,7 +58,7 @@
     class="search-btn is-prev"
     type="button"
     aria-label={t("Previous match")}
-    title={t("Previous match")}
+    data-tooltip={t("Previous match")}
     disabled={count === 0}
     onclick={() => step(-1)}
   >
@@ -68,13 +68,13 @@
     class="search-btn is-next"
     type="button"
     aria-label={t("Next match")}
-    title={t("Next match")}
+    data-tooltip={t("Next match")}
     disabled={count === 0}
     onclick={() => step(1)}
   >
     <Icon name="chevron-right" size={14} />
   </button>
-  <button class="search-btn" type="button" aria-label={t("Close search")} title={t("Close search")} onclick={onClose}>
+  <button class="search-btn" type="button" aria-label={t("Close search")} data-tooltip={t("Close search")} onclick={onClose}>
     <Icon name="x" size={14} />
   </button>
 </div>

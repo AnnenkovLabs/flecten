@@ -19,7 +19,7 @@ const screen: Display[] = [{ workArea: { x: 0, y: 0, width: 1920, height: 1080 }
 const dirs: string[] = [];
 
 function stateFile(content?: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "liquid-window-"));
+  const dir = mkdtempSync(join(tmpdir(), "flecten-window-"));
   dirs.push(dir);
   const file = join(dir, "window-state.json");
   if (content !== undefined) writeFileSync(file, content);

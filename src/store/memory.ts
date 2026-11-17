@@ -103,7 +103,7 @@ export class MemoryStore implements MemoryPort {
 
   constructor(options: MemoryStoreOptions = {}) {
     this.cwd = canonicalPath(resolve(options.cwd ?? process.cwd()));
-    this.path = canonicalPath(resolve(this.cwd, options.file ?? ".liquid/memory.json"));
+    this.path = canonicalPath(resolve(this.cwd, options.file ?? ".flecten/memory.json"));
     this.#maxRecords = options.maxRecords ?? MEMORY_ACTIVE_LIMIT;
     if (
       !Number.isInteger(this.#maxRecords) ||

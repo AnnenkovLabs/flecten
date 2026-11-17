@@ -7,8 +7,8 @@ for (const parentState of ["missing", "empty", "existing"] as const) {
   test(`conversation restores legacy Worker-only activation when parent state is ${parentState}`, async () => {
     const f = await moduleFixture({ conversation: true });
     const sessionId = `restore-${parentState}`;
-    const parent = join(f.cwd, ".liquid/sessions", sessionId, "modules.json");
-    const child = join(f.cwd, ".liquid/sessions", `${sessionId}_worker`, "modules.json");
+    const parent = join(f.cwd, ".flecten/sessions", sessionId, "modules.json");
+    const child = join(f.cwd, ".flecten/sessions", `${sessionId}_worker`, "modules.json");
     const legacy = JSON.stringify({ schemaVersion: 1, requested: ["studio"] });
     try {
       await f.app.acceptTrust();
@@ -45,7 +45,7 @@ test("legacy Worker activation never grants trust to a changed package", async (
   try {
     await f.app.acceptTrust();
     await Bun.write(
-      join(f.cwd, ".liquid/sessions/untrusted_worker/modules.json"),
+      join(f.cwd, ".flecten/sessions/untrusted_worker/modules.json"),
       JSON.stringify({ schemaVersion: 1, requested: ["studio"] }),
     );
     await Bun.write(join(f.root, "instructions.md"), "MODIFIED_UNTRUSTED_INSTRUCTIONS");

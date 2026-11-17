@@ -62,7 +62,7 @@
           <button
             class="detail-link"
             type="button"
-            title={t("Open {0} in the built-in viewer", [file])}
+            data-tooltip={t("Open {0} in the built-in viewer", [file])}
             onclick={() => void fileViewer.open(file, detail.line)}
           > {t("Open file")} </button>
         {/if}
@@ -71,7 +71,7 @@
           <button
             class="detail-link"
             type="button"
-            title={log}
+            data-tooltip={log}
             onclick={() => void fileViewer.open(log)}
           > {t("Full log")} </button>
         {/if}

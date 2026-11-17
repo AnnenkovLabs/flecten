@@ -46,7 +46,7 @@ export function describePaths(paths) {
 }
 
 export function registerAttachmentIpc({ BrowserWindow, clipboard, dialog, ipcMain, isTrusted }) {
-  ipcMain.handle("liquid:pick-attachments", async (event) => {
+  ipcMain.handle("flecten:pick-attachments", async (event) => {
     if (!isTrusted(event)) return [];
     const win = BrowserWindow.fromWebContents(event.sender);
     const result = await dialog.showOpenDialog(win, {
@@ -62,12 +62,12 @@ export function registerAttachmentIpc({ BrowserWindow, clipboard, dialog, ipcMai
     return describePaths(result.filePaths);
   });
 
-  ipcMain.handle("liquid:describe-paths", (event, paths) => {
+  ipcMain.handle("flecten:describe-paths", (event, paths) => {
     if (!isTrusted(event)) return [];
     return describePaths(paths);
   });
 
-  ipcMain.handle("liquid:paste-image", async (event) => {
+  ipcMain.handle("flecten:paste-image", async (event) => {
     if (!isTrusted(event)) return null;
     const items = await clipboard.read();
     const image = items.find((item) => item.types.includes("image/png"));

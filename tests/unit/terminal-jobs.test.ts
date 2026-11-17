@@ -24,7 +24,7 @@ function createManager(settings: TerminalSettingsInput = {}): TerminalManager {
 }
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-terminal-jobs-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-terminal-jobs-"));
   dirs.push(dir);
   return dir;
 }

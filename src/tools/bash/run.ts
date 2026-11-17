@@ -7,6 +7,7 @@ import {
   runSandboxed,
   type SandboxDetection,
 } from "../../security/os-sandbox";
+import { PROTECTED_OUTPUT_TRUNCATED } from "../../security/provider-secrets/output-buffer";
 import type { TerminalManager } from "../../terminal/manager";
 import { ProcessOutputLog } from "../../terminal/output-log";
 import { createProcessScope } from "../../terminal/process-scope";
@@ -18,11 +19,14 @@ import {
   type TerminalResourceLimits,
 } from "../../terminal/settings";
 import { shellCommand } from "../../terminal/shell";
+import { isObject } from "../../util/json";
 import { seconds } from "../jobs/view";
 import { withShellCheckpoint } from "../shell-checkpoint";
 import type { OsSandboxContext, ToolContext } from "../types";
 import { resolveToolPath } from "../util/paths";
+import { prepareScratch } from "../util/scratch";
 import { startBackgroundBash } from "./background";
+import { verifyOutputs } from "./outputs";
 import type { BashArgs } from "./schema";
 
 const MAX_COLLECT = 2 * 1024 * 1024;
@@ -34,11 +38,13 @@ type BashContext = {
   signal: AbortSignal;
   limits: { bashTimeoutMs: number };
   env?: Record<string, string>;
+  scratchDir?: string;
   osSandbox?: OsSandboxContext | undefined;
   terminals?: Pick<TerminalManager, "settings">;
   logDir?: string;
   reportOutput?(text: string): void;
   secrets?: readonly string[];
+  providerProtection?: ToolContext["providerProtection"];
 };
 
 export type BashSandboxDeps = {
@@ -140,6 +146,8 @@ async function runBashSandboxed(
   deps: BashSandboxDeps,
   resourceLimits: TerminalResourceLimits,
   log: ProcessOutputLog | undefined,
+  temporaryDirectory?: string,
+  environment?: Record<string, string>,
 ): Promise<ToolResult> {
   const detection = deps.detect();
   const started = performance.now();
@@ -181,6 +189,8 @@ async function runBashSandboxed(
       cwd,
       allowNetwork: policy.allowNetwork,
       envAllowlist: policy.envAllowlist,
+      ...(temporaryDirectory ? { temporaryDirectory } : {}),
+      ...(environment ? { environment } : {}),
       ...(policy.writablePaths ? { writablePaths: policy.writablePaths } : {}),
       ...(policy.readOnlyPaths ? { readOnlyPaths: policy.readOnlyPaths } : {}),
       ...(policy.readDeniedPaths ? { readDeniedPaths: policy.readDeniedPaths } : {}),
@@ -225,6 +235,17 @@ export async function runBash(
   context: BashContext,
   deps: BashSandboxDeps = defaultSandboxDeps,
 ): Promise<ToolResult> {
+  const finish = (result: ToolResult): ToolResult => {
+    const protection = context.providerProtection;
+    if (!protection) return result;
+    if (isObject(result.data) && result.data.truncated === true)
+      result = {
+        ...result,
+        output: PROTECTED_OUTPUT_TRUNCATED,
+        data: { ...result.data, output: PROTECTED_OUTPUT_TRUNCATED },
+      };
+    return protection.vault.protect(result);
+  };
   const cwd = resolveToolPath(context.cwd, args.cwd ?? ".");
   try {
     const info = await stat(cwd);
@@ -236,21 +257,33 @@ export async function runBash(
   }
 
   const timeoutMs = Math.min(args.timeoutMs ?? context.limits.bashTimeoutMs, MAX_TIMEOUT_MS);
+  await prepareScratch(context.scratchDir);
   const resourceLimits = context.terminals?.settings.limits ?? DEFAULT_TERMINAL_SETTINGS.limits;
   const log = context.logDir
-    ? await ProcessOutputLog.open(context.logDir, context.secrets, context.reportOutput)
+    ? await ProcessOutputLog.open(
+        context.logDir,
+        context.secrets,
+        context.reportOutput,
+        context.providerProtection
+          ? (text) => context.providerProtection?.vault.protect(text) ?? text
+          : undefined,
+      )
     : undefined;
   if (context.osSandbox?.enabled) {
     try {
-      return await runBashSandboxed(
-        args,
-        cwd,
-        timeoutMs,
-        context.signal,
-        context.osSandbox,
-        deps,
-        resourceLimits,
-        log,
+      return finish(
+        await runBashSandboxed(
+          args,
+          cwd,
+          timeoutMs,
+          context.signal,
+          context.osSandbox,
+          deps,
+          resourceLimits,
+          log,
+          context.scratchDir,
+          context.env,
+        ),
       );
     } finally {
       await log?.close();
@@ -270,7 +303,15 @@ export async function runBash(
         resourceLimits,
       ),
       cwd,
-      env: { ...(context.env ?? process.env), LIQUID: "1", FLECTEN: "1", ...scope.environment },
+      env: {
+        ...(context.env ?? process.env),
+        ...(context.scratchDir
+          ? { TMPDIR: context.scratchDir, FLECTEN_SCRATCH: context.scratchDir }
+          : {}),
+        LIQUID: "1",
+        FLECTEN: "1",
+        ...scope.environment,
+      },
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -342,7 +383,7 @@ export async function runBash(
     ...(resourceError ? { resourceError } : {}),
   };
 
-  return { ...resultFor(data, timeoutMs), ...(log ? { fullOutputPath: log.path } : {}) };
+  return finish({ ...resultFor(data, timeoutMs), ...(log ? { fullOutputPath: log.path } : {}) });
 }
 
 /** The bash tool: foreground runs between two workspace snapshots, background runs as a job. */
@@ -350,6 +391,8 @@ export function runBashTool(args: BashArgs, context: ToolContext): Promise<ToolR
   const cwd = resolveToolPath(context.cwd, args.cwd ?? ".");
   if (args.background) return startBackgroundBash(args, context, cwd);
   return withShellCheckpoint(context, { tool: "bash", command: args.command, cwd }, () =>
-    runBash(args, context),
+    runBash(args, context).then((result) =>
+      verifyOutputs(result, args.expectedOutputs, cwd, context),
+    ),
   );
 }

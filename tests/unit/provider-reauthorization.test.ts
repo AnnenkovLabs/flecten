@@ -9,7 +9,7 @@ import { createProvider, invalidateProviderAuthorization } from "../../src/provi
 import { collect, request } from "../helpers/provider-adapters";
 
 test("reauthorization refreshes the command token and the already-created provider", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-auth-refresh-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-auth-refresh-"));
   const tokenPath = join(cwd, "credential.txt");
   const headers: string[] = [];
   const id = `refresh-${crypto.randomUUID()}`;

@@ -29,7 +29,7 @@ describe("skill source settings", () => {
   });
 
   test("saving refreshes status, slash commands and prompt and survives reopening", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-skill-sources-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-skill-sources-"));
     dirs.push(cwd);
     for (const [directory, name] of [
       [".claude", "claude-only"],

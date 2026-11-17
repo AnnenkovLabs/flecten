@@ -27,13 +27,13 @@ function build(provider: ReturnType<typeof scriptedProvider>, cwd: string) {
     maxOutputTokens: 1000,
     context: { window: 100_000, reserve: 1000 },
     loop: { maxTurns: 8, continuations: 0, parallelTools: true },
-    logDir: (sessionId) => join(cwd, ".liquid/sessions", sessionId, "logs"),
+    logDir: (sessionId) => join(cwd, ".flecten/sessions", sessionId, "logs"),
   });
 }
 
 describe("agent session", () => {
   test("streams text and finishes", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-session-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-session-"));
     try {
       const provider = scriptedProvider([
         [
@@ -69,7 +69,7 @@ describe("agent session", () => {
   });
 
   test("repairs a tool call and terminates on done", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-session-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-session-"));
     try {
       await writeFile(join(cwd, "a.ts"), "export const value = 1;\n");
       const provider = scriptedProvider([
@@ -117,7 +117,7 @@ describe("agent session", () => {
   });
 
   test("passes a per-run reasoning effort to the provider", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-session-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-session-"));
     try {
       const provider = scriptedProvider([
         [
@@ -134,7 +134,7 @@ describe("agent session", () => {
   });
 
   test("stops a running session", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-session-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-session-"));
     try {
       const provider = {
         id: "slow",
@@ -164,7 +164,7 @@ describe("agent session", () => {
   });
 
   test("rejects a second run while one is active", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-session-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-session-"));
     try {
       const provider = scriptedProvider([
         [

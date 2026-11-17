@@ -1,5 +1,7 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Could not save your draft. Keep this window open and free up storage, then try again.":
+    "下書きを保存できませんでした。このウィンドウを開いたまま空き容量を確保し、もう一度お試しください。",
   "Stop voice input": "音声入力を停止",
   "Agent actions": "エージェントの操作",
   "Waiting for the current step to finish. Click again to stop immediately":

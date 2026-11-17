@@ -15,6 +15,7 @@ import type {
   AgentToolResult,
   DiffFile,
   IconName,
+  NoticeItem,
   PendingToolCall,
   RunAction,
   RunSummary,
@@ -42,15 +43,25 @@ export class ThreadView {
   changeFiles = $state<DiffFile[]>([]);
   terminalLines = $state<TerminalLine[]>([]);
   pendingCalls = $state<PendingToolCall[]>([]);
-  restoring = false;
+  #restoring = false;
+  #actionNotices: NoticeItem[] = [];
 
-  #answerId: string | null = null;
+  get restoring(): boolean {
+    return this.#restoring;
+  }
+  set restoring(value: boolean) {
+    this.#restoring = value;
+    if (!value && this.#run()?.summary.live) this.#updateRun();
+  }
+
+  #answerIndex: number | null = null;
   #answerFinished = false;
-  #runItemId: string | null = null;
+  #runIndex: number | null = null;
   #runStarted = 0;
   #turnStartedAt = 0;
   #thinkingStartedAt = 0;
-  #actions: RunAction[] = [];
+  #actions = new Map<string, RunAction>();
+  #actionTurns = new Map<string, RunTurn>();
   #turns: RunTurn[] = [];
   #currentTurn: RunTurn | null = null;
   #files = new Map<string, DiffFile>();
@@ -59,23 +70,25 @@ export class ThreadView {
   #currentPrompt = "";
 
   get hasAnswer(): boolean {
-    return this.#answerId !== null;
+    return this.#answerIndex !== null;
   }
 
   clear(): void {
     this.items = [];
+    this.#actionNotices = [];
     this.resetSession();
   }
 
   resetRun(): void {
-    this.#answerId = null;
+    this.#answerIndex = null;
     this.#answerFinished = false;
-    this.#runItemId = null;
+    this.#runIndex = null;
     this.#answerRaw = "";
     this.#runStarted = 0;
     this.#turnStartedAt = 0;
     this.#thinkingStartedAt = 0;
-    this.#actions = [];
+    this.#actions = new Map();
+    this.#actionTurns = new Map();
     this.#turns = [];
     this.#currentTurn = null;
     this.pendingCalls = [];
@@ -111,13 +124,14 @@ export class ThreadView {
 
   /** Only the latest notice offers to continue: a new run settles the older ones. */
   settleNotices(): void {
-    for (const item of this.items) {
-      if (item.kind === "notice" && item.action) delete item.action;
-    }
+    for (const item of this.#actionNotices) delete item.action;
+    this.#actionNotices = [];
   }
 
   push(item: ThreadItem): void {
     this.items.push(item);
+    const stored = this.items[this.items.length - 1];
+    if (stored?.kind === "notice" && stored.action) this.#actionNotices.push(stored);
   }
 
   turnStarted(index: number, timestamp = Date.now()): void {
@@ -203,10 +217,9 @@ export class ThreadView {
     if (answer) answer.streaming = false;
     this.#answerFinished = true;
     for (const call of toolCalls) {
-      if (this.#actions.some((action) => action.id === call.id)) continue;
-      const action = toolAction(call);
-      this.#actions.push(action);
-      turn.actions.push(action);
+      if (this.#actions.has(call.id)) continue;
+      const action = $state(toolAction(call));
+      this.#setAction(action);
     }
     this.pendingCalls = [];
     if (turn.reasoning.length > 0 || turn.actions.length > 0) {
@@ -215,22 +228,22 @@ export class ThreadView {
     }
   }
 
-  startTool(call: AgentToolCall): void {
-    const turn = this.#ensureTurn();
-    const existing = this.#actions.find((action) => action.id === call.id);
-    if (existing) existing.running = true;
+  startTool(call: AgentToolCall): RunAction {
+    let action = this.#actions.get(call.id);
+    if (action) action.running = true;
     else {
-      const action = Object.assign(toolAction(call), { running: true });
-      this.#actions.push(action);
-      turn.actions.push(action);
+      const started = $state(Object.assign(toolAction(call), { running: true }));
+      this.#setAction(started);
+      action = started;
     }
     this.pendingCalls = [];
     this.#ensureRun();
     this.#updateRun();
+    return action;
   }
 
   toolOutput(callId: string, text: string): void {
-    const action = this.#actions.find((entry) => entry.id === callId);
+    const action = this.#actions.get(callId);
     if (!action) return;
     action.detail = {
       ...action.detail,
@@ -244,7 +257,7 @@ export class ThreadView {
     call: AgentToolCall,
     result: AgentToolResult,
   ): { action: RunAction; checkpoint: boolean } {
-    const action = toolAction(call, result, result.durationMs ?? 0);
+    const action = $state(toolAction(call, result, result.durationMs ?? 0));
     this.#setAction(action);
     this.recordResult(result);
     const done = doneData(result);
@@ -278,11 +291,9 @@ export class ThreadView {
 
   /** A note inside the run, as «Контекст сжат». */
   note(icon: IconName, label: string, meta: string, output: string): void {
-    const turn = this.#ensureTurn();
-    const action: RunAction = { id: nextId("note"), icon, label, meta, duration: "" };
+    const action = $state<RunAction>({ id: nextId("note"), icon, label, meta, duration: "" });
     if (output) action.detail = { output };
-    this.#actions.push(action);
-    turn.actions.push(action);
+    this.#setAction(action);
     this.#ensureRun();
     this.#updateRun();
   }
@@ -301,7 +312,7 @@ export class ThreadView {
   }
 
   interruptTools(): void {
-    for (const action of this.#actions) {
+    for (const action of this.#actions.values()) {
       if (action.running || action.state === "queued") action.state = "interrupted";
       delete action.running;
     }
@@ -367,14 +378,14 @@ export class ThreadView {
   }
 
   #answer(): AnswerItem | undefined {
-    if (!this.#answerId) return undefined;
-    const item = this.items.find((entry) => entry.id === this.#answerId);
+    if (this.#answerIndex === null) return undefined;
+    const item = this.items[this.#answerIndex];
     return item?.kind === "answer" ? item : undefined;
   }
 
   #run(): Extract<ThreadItem, { kind: "run" }> | undefined {
-    if (!this.#runItemId) return undefined;
-    const item = this.items.find((entry) => entry.id === this.#runItemId);
+    if (this.#runIndex === null) return undefined;
+    const item = this.items[this.#runIndex];
     return item?.kind === "run" ? item : undefined;
   }
 
@@ -392,17 +403,12 @@ export class ThreadView {
   }
 
   #setAction(action: RunAction): void {
-    const index = this.#actions.findIndex((entry) => entry.id === action.id);
-    if (index >= 0) this.#actions[index] = action;
-    else this.#actions.push(action);
-    for (const turn of this.#turns) {
-      const turnIndex = turn.actions.findIndex((entry) => entry.id === action.id);
-      if (turnIndex >= 0) {
-        turn.actions[turnIndex] = action;
-        return;
-      }
-    }
-    this.#ensureTurn().actions.push(action);
+    this.#actions.set(action.id, action);
+    const turn = this.#actionTurns.get(action.id) ?? this.#ensureTurn();
+    const index = turn.actions.findIndex((entry) => entry.id === action.id);
+    if (index >= 0) turn.actions[index] = action;
+    else turn.actions.push(action);
+    this.#actionTurns.set(action.id, turn);
   }
 
   #visibleTurns(): RunTurn[] {
@@ -428,7 +434,7 @@ export class ThreadView {
       streaming: true,
     };
     this.push(item);
-    this.#answerId = item.id;
+    this.#answerIndex = this.items.length - 1;
     return item;
   }
 
@@ -438,8 +444,8 @@ export class ThreadView {
     return {
       duration: formatDuration(Math.max(0, timestamp - (this.#runStarted || timestamp))),
       ...(this.#runStarted ? { startedAt: this.#runStarted } : {}),
-      actions: this.#actions.length,
-      list: [...this.#actions],
+      actions: this.#actions.size,
+      list: [...this.#actions.values()],
       turns: this.#visibleTurns(),
       files: [...this.#files.values()].map((file) => ({
         path: file.path,
@@ -451,7 +457,7 @@ export class ThreadView {
   }
 
   #ensureRun(): void {
-    if (this.#runItemId) return;
+    if (this.#runIndex !== null) return;
     const summary: RunSummary = {
       ...this.#progress(),
       criteria: 0,
@@ -461,15 +467,18 @@ export class ThreadView {
       live: true,
     };
     const item: Extract<ThreadItem, { kind: "run" }> = { kind: "run", id: nextId("run"), summary };
-    const answerIndex = this.#answerId
-      ? this.items.findIndex((entry) => entry.id === this.#answerId)
-      : -1;
-    if (answerIndex >= 0) this.items.splice(answerIndex, 0, item);
-    else this.push(item);
-    this.#runItemId = item.id;
+    if (this.#answerIndex !== null) {
+      this.#runIndex = this.#answerIndex;
+      this.items.splice(this.#answerIndex++, 0, item);
+    } else {
+      this.push(item);
+      this.#runIndex = this.items.length - 1;
+    }
   }
 
   #updateRun(): void {
+    // Replay publishes each completed run once and the live tail when restoration finishes.
+    if (this.restoring) return;
     const run = this.#run();
     if (run) run.summary = { ...run.summary, ...this.#progress(), live: true };
   }

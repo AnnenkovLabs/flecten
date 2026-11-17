@@ -41,7 +41,7 @@ const Mention = Node.create({
         "data-kind": node.attrs.kind,
         class: "prompt-mention",
         contenteditable: "false",
-        title: path,
+        "data-tooltip": path,
         "aria-label": path,
         dir: "ltr",
       },

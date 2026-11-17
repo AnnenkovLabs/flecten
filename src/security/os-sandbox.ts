@@ -46,6 +46,7 @@ export type SandboxPolicy = {
   readOnlyPaths?: string[];
   readDeniedPaths?: string[];
   envAllowlist?: string[];
+  temporaryDirectory?: string;
 };
 
 export type SandboxCommandOptions = SandboxPolicy & {
@@ -54,6 +55,7 @@ export type SandboxCommandOptions = SandboxPolicy & {
 };
 
 export type RunSandboxOptions = SandboxCommandOptions & {
+  environment?: Record<string, string>;
   timeoutMs?: number;
   signal?: AbortSignal;
   detection?: SandboxDetection;
@@ -105,7 +107,14 @@ export function detectSandbox(options: DetectSandboxOptions = {}): SandboxDetect
 export function buildBubblewrapArgs(options: SandboxCommandOptions): string[] {
   // envAllowlist is applied to Bun.spawn's env: bwrap inherits a sanitized
   // environment, so values never appear in argv or the process list.
-  const args = ["--ro-bind", "/", "/", "--tmpfs", "/tmp"];
+  const args = [
+    "--ro-bind",
+    "/",
+    "/",
+    ...(options.temporaryDirectory
+      ? ["--bind", options.temporaryDirectory, "/tmp"]
+      : ["--tmpfs", "/tmp"]),
+  ];
 
   for (const path of uniquePaths([options.workspaceRoot, ...(options.writablePaths ?? [])])) {
     if (path === "/tmp") continue;
@@ -125,10 +134,11 @@ export function buildBubblewrapArgs(options: SandboxCommandOptions): string[] {
 
 export function buildSeatbeltProfile(policy: SandboxPolicy): string {
   const writable = uniquePaths(
-    [policy.workspaceRoot, ...(policy.writablePaths ?? [])].flatMap((path) => [
-      path,
-      canonicalPath(path),
-    ]),
+    [
+      policy.workspaceRoot,
+      ...(policy.writablePaths ?? []),
+      ...(policy.temporaryDirectory ? [policy.temporaryDirectory] : []),
+    ].flatMap((path) => [path, canonicalPath(path)]),
   );
   const protection = sandboxProtection(policy);
   const readOnly = protection.readOnly;
@@ -218,7 +228,16 @@ export async function runSandboxed(options: RunSandboxOptions): Promise<RunSandb
     Bun.spawn({
       cmd: options.resourceLimits ? withResourceLimits(command, options.resourceLimits) : command,
       cwd: options.cwd,
-      env: { ...allowlistedEnv(options.envAllowlist ?? []), ...scope.environment },
+      env: {
+        ...allowlistedEnv(options.envAllowlist ?? [], options.environment),
+        ...(options.temporaryDirectory
+          ? {
+              TMPDIR: detection.kind === "bubblewrap" ? "/tmp" : options.temporaryDirectory,
+              FLECTEN_SCRATCH: options.temporaryDirectory,
+            }
+          : {}),
+        ...scope.environment,
+      },
       stdin: "ignore",
       stdout: "pipe",
       stderr: "pipe",
@@ -345,10 +364,13 @@ function uniquePaths(paths: readonly string[]): string[] {
   return [...new Set(paths.filter((path) => path.length > 0))];
 }
 
-function allowlistedEnv(names: readonly string[]): Record<string, string> {
+function allowlistedEnv(
+  names: readonly string[],
+  explicit: Record<string, string> = {},
+): Record<string, string> {
   const env: Record<string, string> = {};
   for (const name of names) {
-    const value = process.env[name];
+    const value = explicit[name] ?? process.env[name];
     if (value !== undefined) env[name] = value;
   }
   return env;

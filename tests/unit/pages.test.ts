@@ -22,7 +22,7 @@ afterEach(async () => {
 });
 
 async function workspace(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-pages-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-pages-"));
   dirs.push(dir);
   return dir;
 }

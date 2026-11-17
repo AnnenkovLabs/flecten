@@ -33,7 +33,7 @@ export interface SessionCompactionOptions {
   readonly hooks?: HooksConfig;
   readonly provider: ModelProvider;
   readonly maxOutputTokens: number;
-  readonly context: { window: number; reserve: number };
+  readonly context: { window: number; reserve: number; workingSetTokens?: number };
   readonly system: string;
   readonly systemParts?: readonly PromptTextPart[];
   readonly language?: LanguageOptions | undefined;
@@ -63,10 +63,15 @@ export class SessionCompaction {
     this.#options = options;
   }
 
-  async writer(sessionId: SessionId, memoryCheckpoint?: PageMemoryCheckpoint): Promise<PageWriter> {
+  async writer(
+    sessionId: SessionId,
+    memoryCheckpoint?: PageMemoryCheckpoint,
+    onEvent?: (event: LoopEvent) => void,
+  ): Promise<PageWriter> {
     const known = this.#writers.get(sessionId);
     if (known) {
       known.memoryCheckpoint = memoryCheckpoint;
+      known.onEvent = onEvent;
       return known;
     }
     const options = this.#options;
@@ -88,6 +93,7 @@ export class SessionCompaction {
       existing,
     );
     writer.memoryCheckpoint = memoryCheckpoint;
+    writer.onEvent = onEvent;
     this.#writers.set(sessionId, writer);
     return writer;
   }
@@ -114,7 +120,7 @@ export class SessionCompaction {
     if (this.#reading?.sessionId === sessionId)
       return { ...this.#reading.value, window: context.window, reserve: context.reserve };
     if (history.length === 0) return undefined;
-    const used = contextEstimate(system, history, tools);
+    const used = contextEstimate(system, history, tools.forSession(history));
     return { used, window: context.window, reserve: context.reserve, source: "estimate" };
   }
 
@@ -135,7 +141,16 @@ export class SessionCompaction {
         new LanguageRun(
           selected,
           signal,
-          ({ usage, durationMs }) =>
+          ({ usage, durationMs, reported }) => {
+            if (reported === false) {
+              emit({
+                type: "usage.unavailable",
+                purpose: "translation",
+                provider: selected.providerId,
+                model: selected.client.provider.model,
+              });
+              return;
+            }
             emit({
               type: "usage",
               usage,
@@ -143,7 +158,8 @@ export class SessionCompaction {
               provider: selected.providerId,
               model: selected.client.provider.model,
               durationMs,
-            }),
+            });
+          },
           () =>
             emit({
               type: "translation.failed",
@@ -157,14 +173,17 @@ export class SessionCompaction {
       const memory = options.cwd
         ? sessionMemory({ ...options, cwd: options.cwd }, sessionId, system, history)
         : undefined;
-      const pageWriter = await this.writer(sessionId, memory?.checkpoint());
+      const pageWriter = await this.writer(sessionId, memory?.checkpoint(), emit);
       const result = await compactContextIfNeeded(history, {
         language,
         ...(options.hooks ? { hooks: createHookRunner(options.hooks) } : {}),
         system,
-        tools: options.tools,
+        tools: options.tools.forSession(history),
         contextWindow: options.context.window,
         reserveTokens: options.context.reserve,
+        ...(options.context.workingSetTokens
+          ? { workingSetTokens: options.context.workingSetTokens }
+          : {}),
         compactionState: this.state,
         pageWriter,
         takeCompactionRequest: () => {

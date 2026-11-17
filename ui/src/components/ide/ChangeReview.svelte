@@ -7,7 +7,7 @@
   const parts = $derived(splitPath(file.path));
 </script>
 <section class="review" aria-label={t("Changes to {0}", [file.path])}>
-  <header><span class="path" title={file.path}><span class="dir">{parts.dir}</span><span class="name">{parts.name}</span></span><span class="add">+{file.add}</span><span class="del">−{file.del ?? 0}</span><button type="button" onclick={onEdit}><Icon name="edit" size={14} />{t("Edit file")}</button><button class="close" type="button" title={t("Close diff")} aria-label={t("Close diff")} onclick={onClose}><Icon name="x" size={15} /></button></header>
+  <header><span class="path" data-tooltip={file.path}><span class="dir">{parts.dir}</span><span class="name">{parts.name}</span></span><span class="add">+{file.add}</span><span class="del">−{file.del ?? 0}</span><button type="button" onclick={onEdit}><Icon name="edit" size={14} />{t("Edit file")}</button><button class="close" type="button" data-tooltip={t("Close diff")} aria-label={t("Close diff")} onclick={onClose}><Icon name="x" size={15} /></button></header>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex: keyboard users scroll the code region. -->
   <div class="diff" tabindex="0" role="region" aria-label={t("File diff")}>
     {#if file.hunks.length === 0}<p>{t("Text diff unavailable. Open the current version of the file in the editor.")}</p>{/if}

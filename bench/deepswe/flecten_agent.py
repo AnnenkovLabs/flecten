@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PRIVATE_ENV = ROOT / ".liquid/benchmarks/private/provider.env"
+PRIVATE_ENV = ROOT / ".flecten/benchmarks/private/provider.env"
 INSTALL_DIR = "/opt/flecten"
 
 

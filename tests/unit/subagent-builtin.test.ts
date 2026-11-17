@@ -29,7 +29,7 @@ function toolContext(): ToolContext {
     sessionId: "s_subagent_builtin",
     cwd: process.cwd(),
     signal: new AbortController().signal,
-    logDir: "/tmp/liquid-subagent-builtin",
+    logDir: "/tmp/flecten-subagent-builtin",
     limits,
     reads: new ReadTracker(),
   };

@@ -14,7 +14,7 @@
 
 ## 优先检查项
 
-- `liquid://` 协议中的路径遍历；
+- `flecten://` 协议中的路径遍历；
 - `preload` 桥接与对 `ipcRenderer` 的访问；
 - 窗口中的 `contextIsolation`、`sandbox`、`nodeIntegration`；
 - CSP 与外部资源加载；

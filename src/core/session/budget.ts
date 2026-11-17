@@ -24,21 +24,35 @@ const LABELS: Record<BudgetKind, string> = {
  * run when it expires, even in the middle of a long tool call.
  */
 export class RunBudget {
-  readonly #limits: BudgetLimits;
+  #limits: BudgetLimits;
   readonly #price: UsagePrice | undefined;
   readonly #now: () => number;
   readonly #started: number;
   #usage: Usage = { input: 0, output: 0, cached: 0 };
   #costUsd: number | undefined;
   #costComplete = true;
+  #missingRequests = 0;
+  #unpricedRequests = 0;
+  readonly #parent: RunBudget | undefined;
   #exceeded: BudgetKind | undefined;
   #timer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(limits: BudgetLimits, price?: UsagePrice, now: () => number = Date.now) {
+  constructor(
+    limits: BudgetLimits,
+    price?: UsagePrice,
+    now: () => number = Date.now,
+    parent?: RunBudget,
+  ) {
+    this.#parent = parent;
     this.#limits = limits;
     this.#price = price;
     this.#now = now;
     this.#started = now();
+  }
+
+  setLimits(limits: BudgetLimits): void {
+    this.#limits = { ...limits };
+    this.#exceeded = undefined;
   }
 
   /** Aborts through `onExpire` when the wall-clock limit passes; returns the cleanup. */
@@ -56,8 +70,12 @@ export class RunBudget {
   }
 
   add(usage: Usage, price: UsagePrice | undefined = this.#price): BudgetView {
+    this.#parent?.add(usage, price);
     const cost = price?.(usage);
-    if (cost === undefined && usage.input + usage.output > 0) this.#costComplete = false;
+    if (cost === undefined && usage.input + usage.output > 0) {
+      this.#costComplete = false;
+      this.#unpricedRequests++;
+    }
     if (cost !== undefined) this.#costUsd = (this.#costUsd ?? 0) + cost;
     this.#usage = {
       input: this.#usage.input + usage.input,
@@ -65,6 +83,24 @@ export class RunBudget {
       cached: this.#usage.cached + usage.cached,
     };
     return this.view();
+  }
+
+  /** A request without a receipt is unknown, even when its visible output is empty. */
+  unavailable(): BudgetView {
+    this.#missingRequests++;
+    this.#parent?.unavailable();
+    return this.view();
+  }
+
+  /** Restores the owning task's durable totals; run timers always start afresh. */
+  restore(view: BudgetView): void {
+    this.#usage = { input: view.spent.tokens, output: 0, cached: 0 };
+    this.#costUsd = view.accounting?.knownCostUsd ?? view.spent.costUsd;
+    this.#missingRequests = view.accounting?.missingRequests ?? 0;
+    this.#unpricedRequests =
+      view.accounting?.unpricedRequests ??
+      Number(view.spent.costUsd === undefined && view.spent.tokens > 0);
+    this.#costComplete = this.#unpricedRequests === 0;
   }
 
   /** The limit that is used up, checked before the next model request. */
@@ -75,8 +111,8 @@ export class RunBudget {
     if (limits.tokens !== undefined && spent.tokens >= limits.tokens) this.#exceeded = "tokens";
     else if (
       limits.costUsd !== undefined &&
-      spent.costUsd !== undefined &&
-      spent.costUsd >= limits.costUsd
+      this.#costUsd !== undefined &&
+      this.#costUsd >= limits.costUsd
     )
       this.#exceeded = "cost";
     else if (limits.wallClockMs !== undefined && spent.wallClockMs >= limits.wallClockMs)
@@ -106,9 +142,10 @@ export class RunBudget {
 
   view(): BudgetView {
     const tokens = this.#usage.input + this.#usage.output;
-    const costUsd = this.#costComplete
-      ? (this.#costUsd ?? this.#price?.({ input: 0, output: 0, cached: 0 }))
-      : undefined;
+    const costUsd =
+      this.#costComplete && this.#missingRequests === 0
+        ? (this.#costUsd ?? this.#price?.({ input: 0, output: 0, cached: 0 }))
+        : undefined;
     const wallClockMs = Math.max(0, this.#now() - this.#started);
     const limits: BudgetAmounts = {
       ...(this.#limits.maxTokens === undefined ? {} : { tokens: this.#limits.maxTokens }),
@@ -130,6 +167,12 @@ export class RunBudget {
       limits,
       spent: { tokens, ...(costUsd === undefined ? {} : { costUsd }), wallClockMs },
       remaining,
+      accounting: {
+        status: this.#missingRequests || this.#unpricedRequests ? "unavailable" : "reported",
+        missingRequests: this.#missingRequests,
+        unpricedRequests: this.#unpricedRequests,
+        ...(this.#costUsd === undefined ? {} : { knownCostUsd: this.#costUsd }),
+      },
       ...(this.#exceeded ? { exceeded: this.#exceeded } : {}),
     };
   }

@@ -10,7 +10,7 @@ test("Twin trains selected sources through the Electron bridge without a clone e
   const h = await launchApp({ locale: "en" });
   try {
     // Metadata-only session exercises the complete import path without calling a model.
-    const session = join(h.cwd, ".liquid/sessions/twin-training-fixture");
+    const session = join(h.cwd, ".flecten/sessions/twin-training-fixture");
     await mkdir(session, { recursive: true });
     await writeFile(join(session, "events.jsonl"), "{}\n");
 
@@ -20,7 +20,7 @@ test("Twin trains selected sources through the Electron bridge without a clone e
     const panel = page.getByTestId("twin-page");
     await expect(panel.locator(".twin-source")).toHaveCount(9);
     await panel.getByRole("button", { name: "Scan sources", exact: true }).click();
-    const source = panel.getByRole("checkbox", { name: "Learn from Liquid Harness", exact: true });
+    const source = panel.getByRole("checkbox", { name: "Learn from Flecten", exact: true });
     await expect(source).toBeEnabled();
     await source.check();
     await panel.getByRole("button", { name: "Train Twin", exact: true }).click();
@@ -39,8 +39,8 @@ test("Twin trains selected sources through the Electron bridge without a clone e
     await expect(panel.getByRole("alert")).toHaveCount(0);
     await expect(source).toBeChecked();
 
-    const saved = JSON.parse(await readFile(join(h.cwd, ".liquid/twin.json"), "utf8"));
-    expect(saved.sourceIds).toEqual(["liquid"]);
+    const saved = JSON.parse(await readFile(join(h.cwd, ".flecten/twin.json"), "utf8"));
+    expect(saved.sourceIds).toEqual(["flecten"]);
     expect(saved.training).toMatchObject({
       state: "ready",
       messages: 0,
@@ -80,7 +80,7 @@ test("Twin recovers from cancellation and malformed training, learns fenced JSON
   const h = await launchApp({ locale: "en", twinLearning: true, reply: "invalid JSON" });
   try {
     const quote = "Keep guest checkout on one screen. Registration annoys me.";
-    const session = join(h.cwd, ".liquid/sessions/twin-workflow-fixture");
+    const session = join(h.cwd, ".flecten/sessions/twin-workflow-fixture");
     await mkdir(session, { recursive: true });
     await writeFile(
       join(session, "events.jsonl"),
@@ -89,13 +89,13 @@ test("Twin recovers from cancellation and malformed training, learns fenced JSON
     const config = JSON.parse(await readFile(join(h.cwd, "flecten.config.json"), "utf8"));
     const control = new URL("/control/twin", config.providers.e2e.baseUrl);
     const requests = async () => (await (await fetch(control)).json()).requests as number;
-    const saved = async () => JSON.parse(await readFile(join(h.cwd, ".liquid/twin.json"), "utf8"));
+    const saved = async () => JSON.parse(await readFile(join(h.cwd, ".flecten/twin.json"), "utf8"));
     const { page } = h;
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Twin", exact: true }).click();
     const panel = page.getByTestId("twin-page");
     await panel.getByRole("button", { name: "Scan sources", exact: true }).click();
-    const source = panel.getByRole("checkbox", { name: "Learn from Liquid Harness", exact: true });
+    const source = panel.getByRole("checkbox", { name: "Learn from Flecten", exact: true });
     await source.check();
     const capture = async (state: string) => {
       for (const [width, height] of [
@@ -151,7 +151,7 @@ test("Twin recovers from cancellation and malformed training, learns fenced JSON
         appliesWhen: "Designing checkout",
         evidence: [
           {
-            sourceMessageId: `source-liquid-${createHash("sha256").update(quote).digest("hex").slice(0, 24)}`,
+            sourceMessageId: `source-flecten-${createHash("sha256").update(quote).digest("hex").slice(0, 24)}`,
             quote,
           },
         ],
@@ -169,7 +169,7 @@ test("Twin recovers from cancellation and malformed training, learns fenced JSON
     await expect(panel.getByRole("alert")).toHaveCount(0);
     expect((await saved()).entries).toHaveLength(1);
     await expect(
-      panel.getByRole("checkbox", { name: "Use Twin in this project", exact: true }),
+      panel.getByRole("switch", { name: "Use Twin in this project", exact: true }),
     ).toBeChecked();
     await panel.getByRole("button", { name: "View your character", exact: true }).click();
     await expect(
@@ -193,12 +193,12 @@ test("Twin recovers from cancellation and malformed training, learns fenced JSON
     await expect(panel.locator(".twin-answer details summary")).toHaveText(
       candidates[0]?.summary ?? "",
     );
-    const enabled = panel.getByRole("checkbox", { name: "Use Twin in this project", exact: true });
-    await enabled.uncheck();
+    const enabled = panel.getByRole("switch", { name: "Use Twin in this project", exact: true });
+    await enabled.click();
     await expect(
       panel.getByRole("button", { name: "Ask Twin", exact: true }).last(),
     ).toBeDisabled();
-    await enabled.check();
+    await enabled.click();
     await panel.getByRole("button", { name: "Sources", exact: true }).click();
     const beforeRepeat = await requests();
     await train.click();

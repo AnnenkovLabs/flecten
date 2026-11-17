@@ -278,7 +278,7 @@ test("empty, failed and disposed refreshes leave saved models intact and redact 
     expect(app.commits()).toBe(0);
     await app.refresh.dispose();
     const diagnostics = await readFile(
-      join(app.cwd, ".liquid", "diagnostics", "recent-errors.jsonl"),
+      join(app.cwd, ".flecten", "diagnostics", "recent-errors.jsonl"),
       "utf8",
     );
     expect(diagnostics).toContain("provider_refresh_failed");

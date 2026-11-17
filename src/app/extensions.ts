@@ -90,6 +90,7 @@ export function registryFor(
     ],
     {
       limits: config.tools,
+      deferredMcp: true,
       authorize: skillToolPolicy(extensions().skillActivations, () => extensions().skills),
     },
   );

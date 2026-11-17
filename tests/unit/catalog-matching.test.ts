@@ -189,9 +189,9 @@ describe("catalog model identity", () => {
   });
 
   test("tries the exact fallback catalog when models.dev only has an older similar ID", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "liquid-catalog-matching-"));
+    const directory = await mkdtemp(join(tmpdir(), "flecten-catalog-matching-"));
     directories.push(directory);
-    const cache = join(directory, ".liquid", "cache");
+    const cache = join(directory, ".flecten", "cache");
     await mkdir(cache, { recursive: true });
     await writeFile(
       join(cache, "models-dev.json"),

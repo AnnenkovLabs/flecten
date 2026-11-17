@@ -7,6 +7,7 @@ import type { SessionOptions } from "../core/session/options";
 import type { Event, SessionEvent } from "../core/types";
 import { TwinInferenceError } from "../twin/inference-error";
 import { redactKnown } from "../util/redact";
+import { accountTwinUsage } from "./twin-accounting";
 import { TwinMedia } from "./twin-media";
 
 export interface ConversationTwinPort {
@@ -97,7 +98,7 @@ export class ConversationTwin {
 
   note(event: SessionEvent): void {
     this.#media.note(event);
-    if (event.type === "budget") {
+    if (event.type === "budget" && !this.options.taskBudget) {
       this.#current = {
         tokens: event.budget.spent.tokens,
         cost: event.budget.spent.costUsd ?? 0,
@@ -125,6 +126,13 @@ export class ConversationTwin {
   }
 
   remaining(): BudgetLimits | undefined {
+    if (this.options.taskBudget) {
+      const { remaining } = this.options.taskBudget.view();
+      return {
+        ...(remaining.tokens === undefined ? {} : { maxTokens: remaining.tokens }),
+        ...(remaining.costUsd === undefined ? {} : { maxCostUsd: remaining.costUsd }),
+      };
+    }
     const limits = this.options.budgets;
     if (!limits) return undefined;
     return {
@@ -141,6 +149,7 @@ export class ConversationTwin {
   }
 
   exhausted(): boolean {
+    if (this.options.taskBudget) return !!this.options.taskBudget.exhausted();
     return Object.values(this.remaining() ?? {}).some((value) => value !== undefined && value <= 0);
   }
 
@@ -227,6 +236,7 @@ export class ConversationTwin {
         this.#spent.tokens += decision.usage.input + decision.usage.output;
         this.#spent.cost += decision.usage.costUsd ?? 0;
       }
+      accountTwinUsage(this.options.taskBudget, decision.usage);
       const enabled = (await this.port.get()).enabled;
       const retired = revision !== this.#revision || signal.aborted || !enabled;
       this.emit({
@@ -251,6 +261,7 @@ export class ConversationTwin {
       return decision;
     } catch (error) {
       if (error instanceof TwinInferenceError) {
+        accountTwinUsage(this.options.taskBudget, error.usage);
         if (taskId === this.#taskId) {
           this.#spent.tokens += error.usage.input + error.usage.output;
           this.#spent.cost += error.usage.costUsd ?? 0;

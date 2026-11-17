@@ -4,6 +4,7 @@
   import { PROTOCOLS } from "../lib/settings-utils";
   import type { ModelInfo, ProviderProtocol } from "../lib/types";
   import Icon from "./Icon.svelte";
+  import Select from "./controls/Select.svelte";
 
   interface Props {
     providerId: string;
@@ -181,16 +182,13 @@
         <div class="st-grid">
           <label class="st-field">
             <span class="st-label">{t("Model protocol")}</span>
-            <select
+            <Select
               class="st-select"
+              aria-label={t("Model protocol")}
               value={protocolValue()}
-              onchange={(event) => setProtocol(event.currentTarget.value)}
-            >
-              <option value="auto">{t("Same as provider")}</option>
-              {#each PROTOCOLS as protocol}
-                <option value={protocol.value}>{protocol.label}</option>
-              {/each}
-            </select>
+              options={[{ value: "auto", label: t("Same as provider") }, ...PROTOCOLS]}
+              onchange={setProtocol}
+            />
           </label>
           <label class="st-field">
             <span class="st-label">{t("API model ID")}</span>
@@ -231,11 +229,8 @@
           </label>
           <label class="st-field">
             <span class="st-label">{t("Response limit field")}</span>
-            <select class="st-select" bind:value={model.maxTokensParameter}>
-              <option value="auto">{t("Auto")}</option>
-              <option value="max_tokens">max_tokens</option>
-              <option value="max_completion_tokens">max_completion_tokens</option>
-            </select>
+            <Select class="st-select" value={model.maxTokensParameter ?? "auto"} onchange={(value) => model.maxTokensParameter = value} aria-label={t("Response limit field")}
+              options={[{ value: "auto", label: t("Auto") }, { value: "max_tokens", label: "max_tokens" }, { value: "max_completion_tokens", label: "max_completion_tokens" }]} />
             <span class="st-hint">{t("The API parameter that limits response length.")}</span>
           </label>
         </div>

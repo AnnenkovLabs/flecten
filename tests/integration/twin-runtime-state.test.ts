@@ -84,7 +84,7 @@ test("Failed profile writes preserve the last confirmed traits and revisions in 
   const before = await f.port.teach(lesson(0));
   const entry = before.entries[0];
   if (!entry) throw new Error("Missing Twin trait");
-  const path = join(f.cwd, ".liquid/twin.json");
+  const path = join(f.cwd, ".flecten/twin.json");
   await rename(path, `${path}.backup`);
   await mkdir(path);
   await expect(f.port.teach(lesson(1))).rejects.toThrow();

@@ -59,7 +59,7 @@ async function canonical(path: string): Promise<string> {
 }
 
 function pathsFor(name: string, args: Record<string, unknown>): string[] {
-  if (name === "memory") return [".liquid/memory.json"];
+  if (name === "memory") return [".flecten/memory.json"];
   if (name === "move") return [String(args.from), String(args.to)];
   if (name === "apply_patch")
     return parseApplyPatch(String(args.patch)).flatMap((file) => [
@@ -84,9 +84,12 @@ export async function permissionRequest(
   context: ToolContext,
 ): Promise<PermissionRequest | undefined> {
   const args = isObject(call.args) ? call.args : {};
-  const action = actionFor(tool, args);
-  if (!action) return undefined;
   const native = tool.source === undefined || tool.source === "builtin";
+  const action =
+    context.providerProtection && ((native && tool.name === "task") || tool.source === "module")
+      ? "skill"
+      : actionFor(tool, args);
+  if (!action) return undefined;
   const command = shellText({ action, tool: tool.name, cwd: context.cwd, args });
   const executionCwd =
     native && action === "shell"
@@ -99,7 +102,17 @@ export async function permissionRequest(
       : context.cwd;
   const paths =
     native && action === "shell"
-      ? [executionCwd, ...(command === undefined ? [] : shellPaths(command, executionCwd))]
+      ? [
+          executionCwd,
+          ...(command === undefined ? [] : shellPaths(command, executionCwd)),
+          ...(tool.name === "bash" && Array.isArray(args.expectedOutputs)
+            ? args.expectedOutputs.flatMap((output) =>
+                isObject(output) && typeof output.path === "string"
+                  ? [resolve(executionCwd, output.path)]
+                  : [],
+              )
+            : []),
+        ]
       : native
         ? tool.name === "context"
           ? [resolve(context.logDir, "..", "pages")]
@@ -118,6 +131,13 @@ export async function permissionRequest(
     ((native && known && (action === "read" || action === "write")) || tool.source === "skill") &&
     [...resources].every((path) => isInside(context.cwd, path, context.authorizedExternalPaths));
   const request: PermissionRequest = {
+    ...(context.providerProtection &&
+    (action !== "read" ||
+      tool.source === "mcp" ||
+      tool.source === "module" ||
+      tool.source === "skill")
+      ? { humanOnly: true }
+      : {}),
     action,
     tool: tool.name,
     cwd: executionCwd,

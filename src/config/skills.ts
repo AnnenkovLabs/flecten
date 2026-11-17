@@ -3,13 +3,21 @@ import { z } from "zod";
 export const SKILL_SOURCES = [
   "user-claude",
   "user-agents",
-  "user-liquid",
+  "user-flecten",
   "project-claude",
   "project-agents",
-  "project-liquid",
+  "project-flecten",
 ] as const;
 
-export const SkillSourceIdSchema = z.enum(SKILL_SOURCES);
+export const SkillSourceIdSchema = z.preprocess(
+  (value) =>
+    value === "user-liquid"
+      ? "user-flecten"
+      : value === "project-liquid"
+        ? "project-flecten"
+        : value,
+  z.enum(SKILL_SOURCES),
+);
 export type SkillSourceId = z.infer<typeof SkillSourceIdSchema>;
 
 export const SkillsConfigSchema = z.object({

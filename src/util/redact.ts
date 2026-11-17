@@ -1,4 +1,25 @@
 const MASK = "[redacted]";
+const registeredSecrets = new Map<string, number>();
+
+/** Shared log boundary for active ephemeral vaults. Releases retain other sessions' registrations. */
+export function registerRedactionSecret(secret: string): () => void {
+  if (!secret) return () => {};
+  registeredSecrets.set(secret, (registeredSecrets.get(secret) ?? 0) + 1);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const count = registeredSecrets.get(secret) ?? 0;
+    if (count <= 1) registeredSecrets.delete(secret);
+    else registeredSecrets.set(secret, count - 1);
+  };
+}
+
+function allSecrets(secrets: readonly string[]): string[] {
+  return [...new Set([...registeredSecrets.keys(), ...secrets])]
+    .filter((secret) => secret.length >= 4)
+    .sort((left, right) => right.length - left.length);
+}
 const MASKED = /^\[redacted(?::[^\]]*)?\]$/;
 const MAX_DEPTH = 32;
 const JSON_PARSE_LIMIT = 1_000_000;
@@ -18,7 +39,7 @@ const AWS = /\b(?:AKIA|ASIA|AIDA|AROA|AIPA|ANPA|ANVA|ASCA)[A-Z0-9]{16}\b/g;
 const OPENAI = /\bsk-[A-Za-z0-9_-]{8,}\b/g;
 const BEARER = /\b(Bearer\s+)([A-Za-z0-9\-._~+/]{8,}={0,2})/gi;
 const QUOTED = new RegExp(
-  String.raw`((["'])${KEY_END}\2\s*:\s*)(["'])((?:\\[\s\S]|[^\\])*?)\3`,
+  String.raw`((?:(["'])${KEY_END}\2|${KEY_END})\s*[:=]\s*)(["'])((?:\\[\s\S]|[^\\])*?)\3`,
   "gi",
 );
 const ASSIGN = new RegExp(String.raw`(${KEY}\s*[:=]\s*)([^\r\n"']+)`, "gi");
@@ -67,7 +88,7 @@ export function isSensitiveKey(key: string): boolean {
 }
 
 export function redact(text: string): string {
-  let output = text.replace(PEM, "[redacted:pem]");
+  let output = replaceKnown(text, allSecrets([])).replace(PEM, "[redacted:pem]");
   for (const pattern of [JWT, GITHUB, GOOGLE, AWS, OPENAI]) {
     output = output.replace(pattern, (token: string) => maskToken(token));
   }
@@ -129,7 +150,9 @@ function walk<T>(value: T, depth: number, secrets: readonly string[]): T {
   if (typeof value === "object" && value !== null && isPlainObject(value)) {
     const output: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-      output[key] = isSensitiveKey(key) ? maskSecret(entry) : walk(entry, depth + 1, secrets);
+      output[redact(replaceKnown(key, secrets))] = isSensitiveKey(key)
+        ? maskSecret(entry)
+        : walk(entry, depth + 1, secrets);
     }
     return output as unknown as T;
   }
@@ -137,12 +160,10 @@ function walk<T>(value: T, depth: number, secrets: readonly string[]): T {
 }
 
 export function redactValue<T>(value: T): T {
-  return walk(value, 0, []);
+  return walk(value, 0, allSecrets([]));
 }
 
 export function redactKnown<T>(value: T, secrets: readonly string[]): T {
-  const known = [...new Set(secrets)]
-    .filter((secret) => secret.length >= 4)
-    .sort((left, right) => right.length - left.length);
+  const known = allSecrets(secrets);
   return walk(value, 0, known);
 }

@@ -37,9 +37,9 @@ function calls(items: Array<{ name: string; args: unknown }>) {
 }
 
 test("a real parallel model batch installs skill restrictions before shell execution and preserves them across reload", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-skill-lifecycle-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-skill-lifecycle-"));
   dirs.push(cwd);
-  const directory = join(cwd, ".liquid/skills/reader");
+  const directory = join(cwd, ".flecten/skills/reader");
   await mkdir(directory, { recursive: true });
   await Bun.write(
     join(directory, "SKILL.md"),
@@ -78,7 +78,7 @@ test("a real parallel model batch installs skill restrictions before shell execu
       models: { test: { context: 65536, output: 1024, tools: true, reasoning: false } },
     }),
   };
-  config.skills = { sources: ["project-liquid"] };
+  config.skills = { sources: ["project-flecten"] };
   config.catalog.autoRefresh = false;
   config.loop.parallelTools = true;
   config.sandbox = { ...config.sandbox, enabled: false } as typeof config.sandbox;
@@ -104,7 +104,11 @@ test("a real parallel model batch installs skill restrictions before shell execu
     });
     expect(await Bun.file(join(cwd, "forbidden")).exists()).toBe(false);
     const draft = first.settings().config;
-    draft.skills = { ...draft.skills, sources: ["project-liquid"], trust: { reader: "untrusted" } };
+    draft.skills = {
+      ...draft.skills,
+      sources: ["project-flecten"],
+      trust: { reader: "untrusted" },
+    };
     await first.saveSettings({ config: draft });
     expect(await first.extensions.skills()).toMatchObject([{ name: "reader", trust: "untrusted" }]);
   } finally {

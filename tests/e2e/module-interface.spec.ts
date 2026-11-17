@@ -135,7 +135,7 @@ test("a module supplies the entire harness, persists its feature, hot reloads an
       ).toBeLessThanOrEqual(1);
       await page.screenshot({ path: test.info().outputPath(`studio-harness-${width}.png`) });
     }
-    const root = join(h.cwd, ".liquid/modules/studio-harness");
+    const root = join(h.cwd, ".flecten/modules/studio-harness");
     const html = await readFile(join(root, "studio.html"), "utf8");
     await writeFile(
       join(root, "studio.html"),

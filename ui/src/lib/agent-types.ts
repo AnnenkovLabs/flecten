@@ -118,6 +118,7 @@ export interface AgentInfo {
   system?: AgentPromptStamp;
   shellCheckpoints?: { state: "ready" | "indexing" | "off" | "unavailable"; reason?: string };
   budget?: AgentBudget;
+  taskBudget?: AgentBudget;
   jobs?: AgentJob[];
   queue?: AgentQueueItem[];
   /** Every task the core holds: running, waiting in queue, approvals and jobs. */
@@ -145,6 +146,12 @@ export interface AgentBudget {
   spent: { tokens: number; costUsd?: number; wallClockMs: number };
   remaining: AgentBudgetAmounts;
   exceeded?: "tokens" | "cost" | "wall_clock";
+  accounting?: {
+    status: "reported" | "unavailable";
+    missingRequests: number;
+    unpricedRequests: number;
+    knownCostUsd?: number;
+  };
 }
 
 export interface AgentJob {

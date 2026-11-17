@@ -45,15 +45,15 @@ test("explorer creates empty folders and files, renames without overwrite, and t
     ).rejects.toThrow("существует");
     await expect(change({ operation: "trash", path: "empty" })).rejects.toThrow();
     await change({ operation: "trash", path: "empty", confirm: true });
-    const trash = await readdir(join(cwd, ".liquid/ide-trash"));
+    const trash = await readdir(join(cwd, ".flecten/ide-trash"));
     expect(
-      await readFile(join(cwd, ".liquid/ide-trash", trash[0] ?? "missing", "b.ts"), "utf8"),
+      await readFile(join(cwd, ".flecten/ide-trash", trash[0] ?? "missing", "b.ts"), "utf8"),
     ).toContain("42");
     await expect(
       change({ operation: "create", path: "../escaped", directory: false }),
     ).rejects.toThrow();
     await expect(
-      change({ operation: "create", path: ".liquid/no", directory: false }),
+      change({ operation: "create", path: ".flecten/no", directory: false }),
     ).rejects.toThrow();
     await symlink(tmpdir(), join(cwd, "outside"));
     await expect(

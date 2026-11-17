@@ -14,7 +14,7 @@
 
 ## 最初に確認すべき点
 
-- `liquid://` プロトコルのパストラバーサル;
+- `flecten://` プロトコルのパストラバーサル;
 - `preload` ブリッジと `ipcRenderer` へのアクセス;
 - ウィンドウの `contextIsolation`、`sandbox`、`nodeIntegration`;
 - CSP と外部リソースの読み込み;

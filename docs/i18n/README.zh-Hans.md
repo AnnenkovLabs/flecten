@@ -220,6 +220,6 @@ AGPL-3.0。见 [LICENSE](../../LICENSE)。可自由使用、修改和分享；�
 
 ---
 
-<p align="center"><sub>Flecten 之前名为 Liquid Harness。现有的 <code>liquid.config.json</code> 文件、<code>LIQUID_*</code> 变量、<code>liquid-harness://</code> 链接和已保存的画像仍然可用。主要名称现在是 <code>flecten.config.json</code>、<code>FLECTEN_*</code> 和 <code>flecten://</code>。<code>.liquid/</code> 文件夹保留会话、附件和检查点，无需数据迁移。</sub></p>
+<p align="center"><sub>Flecten 之前名为 Liquid Harness。现有的 <code>liquid.config.json</code> 文件、<code>LIQUID_*</code> 变量、<code>liquid-harness://</code> 链接和已保存的画像仍然可用。主要名称现在是 <code>flecten.config.json</code>、<code>FLECTEN_*</code> 和 <code>flecten://</code>。<code>.flecten/</code> 文件夹保存会话、附件和检查点。打开项目时，现有的 <code>.liquid/</code> 数据会自动迁移。</sub></p>
 
 <p align="center"><sub>界面以英语启动。在<b>设置 → 通用 → 界面语言</b>中选择语言。选择保存在本设备上，与智能体回答的语言相互独立。</sub></p>

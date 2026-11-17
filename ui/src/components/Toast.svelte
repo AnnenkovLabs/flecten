@@ -31,7 +31,7 @@
         class="toast-dismiss"
         type="button"
         aria-label={t("Dismiss notification")}
-        title={t("Hide")}
+        data-tooltip={t("Hide")}
         onclick={() => toast.dismiss(item.id)}
       >
         <Icon name="x" size={13} />

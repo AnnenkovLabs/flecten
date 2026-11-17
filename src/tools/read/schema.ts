@@ -19,6 +19,12 @@ export const readSpec = {
         .nonnegative()
         .optional()
         .describe("1-based first line; 0 is treated as 1"),
+      characterOffset: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional()
+        .describe("Character cursor within one long line; use the nextCursor returned by read"),
       limit: z
         .number()
         .int()

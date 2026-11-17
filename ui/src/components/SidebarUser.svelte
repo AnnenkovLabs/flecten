@@ -53,13 +53,13 @@
 
 <footer class="side-user">
   <button class="user-profile" class:is-open={menuOpen} type="button" bind:this={trigger}
-    title={user.name} aria-haspopup="dialog" aria-expanded={menuOpen}
+    data-tooltip={user.name} aria-haspopup="dialog" aria-expanded={menuOpen}
     onclick={() => menuOpen = !menuOpen}
     oncontextmenu={(event) => { event.preventDefault(); menuOpen = true; }}>
     <span class="avatar" aria-hidden="true">{user.initial}</span>
     <strong class="user-name">{user.name}</strong>
   </button>
-  <button class="user-settings" type="button" aria-label={t("Settings")} title={t("Settings")} onclick={onOpenSettings}>
+  <button class="user-settings" type="button" aria-label={t("Settings")} data-tooltip={t("Settings")} onclick={onOpenSettings}>
     <Icon name="settings" />
   </button>
 </footer>

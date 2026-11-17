@@ -7,7 +7,7 @@
  * Which limit was hit: a short request rate, a five-hour or weekly subscription window, or an
  * empty balance (`billing`), where waiting does not help.
  */
-export type LimitKind = "rate" | "five_hour" | "weekly" | "billing";
+export type LimitKind = "rate" | "five_hour" | "weekly" | "billing" | "model_quota";
 
 export type HeaderSource = Headers | Record<string, string> | undefined;
 

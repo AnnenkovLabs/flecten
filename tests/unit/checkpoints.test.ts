@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { CheckpointError, CheckpointStore } from "../../src/store/checkpoints";
 
 async function makeWorkspace(): Promise<string> {
-  return mkdtemp(join(tmpdir(), "liquid-checkpoints-"));
+  return mkdtemp(join(tmpdir(), "flecten-checkpoints-"));
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -44,7 +44,7 @@ describe("checkpoints", () => {
       expect(checkpoint.label).toBe("create");
       expect(checkpoint.tool).toBe("write");
       expect(checkpoint.sessionId).toBe("s-1");
-      expect(await exists(join(dir, ".liquid", "checkpoints", "manifests"))).toBe(true);
+      expect(await exists(join(dir, ".flecten", "checkpoints", "manifests"))).toBe(true);
       expect(await store.list()).toEqual([checkpoint]);
       expect(await store.get(checkpoint.id)).toEqual(checkpoint);
 
@@ -223,7 +223,7 @@ describe("checkpoints", () => {
       await writeFile(file, "a");
       const third = await store.capture(captureOptions(["f.txt"], "prune"));
 
-      const objectsDir = join(dir, ".liquid", "checkpoints", "objects");
+      const objectsDir = join(dir, ".flecten", "checkpoints", "objects");
       expect(await readdir(objectsDir)).toHaveLength(2);
 
       const result = await store.prune({ keep: 1 });
@@ -252,7 +252,7 @@ describe("checkpoints", () => {
       const hash = checkpoint.files[0]?.beforeHash;
       if (hash === undefined) throw new Error("expected a pre-image hash");
 
-      await rm(join(dir, ".liquid", "checkpoints", "objects", hash));
+      await rm(join(dir, ".flecten", "checkpoints", "objects", hash));
       await writeFile(file, "after");
       await expect(store.restore(checkpoint.id)).rejects.toThrow("Checkpoint object is missing");
       expect(await readFile(file, "utf8")).toBe("after");

@@ -30,6 +30,9 @@ export interface SubagentSpec {
 }
 
 export interface SubagentChildRequest {
+  taskBudget?: import("../session/budget").RunBudget;
+  /** Host-owned model of the invoking role, used only when this type has no override. */
+  parentModel?: import("../../../shared/model-choice").ModelChoice;
   onEvent?: (event: LeafSessionEvent) => void;
   parentPermissions?: PermissionEngine;
   parentApprovals?: import("../../security/types").ApprovalGate;

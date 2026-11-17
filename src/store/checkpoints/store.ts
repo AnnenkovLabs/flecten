@@ -76,7 +76,7 @@ export class CheckpointStore {
 
   constructor(options: CheckpointStoreOptions = {}) {
     this.cwd = resolve(options.cwd ?? process.cwd());
-    this.root = resolve(this.cwd, options.root ?? join(".liquid", "checkpoints"));
+    this.root = resolve(this.cwd, options.root ?? join(".flecten", "checkpoints"));
     this.#objects = new ObjectStore(join(this.root, "objects"));
     this.#manifestsDir = join(this.root, "manifests");
   }

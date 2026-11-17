@@ -7,6 +7,7 @@
   import TwinProfile from "./TwinProfile.svelte";
   import TwinAsk from "./TwinAsk.svelte";
   import TwinLearning from "./TwinLearning.svelte";
+  import TwinPower from "./TwinPower.svelte";
   import { prefersReducedMotion } from "../../lib/motion";
   import type { LearningOrigin } from "../../lib/twin/learning-entrance";
   import "./twin.css";
@@ -37,18 +38,23 @@
 </script>
 
 <div bind:this={page} class="twin-page" data-testid="twin-page">
-  {#if learningVisible}<TwinLearning {twin} {origin} onBack={onClose} />{:else}
+  {#if learningVisible}
+    <div class="twin-learning-layout">
+      <TwinPower {twin} />
+      <div class="twin-learning-scene"><TwinLearning {twin} {origin} onBack={onClose} /></div>
+    </div>
+  {:else}
   <header class="twin-header">
-    <div><div class="twin-title"><h1>Twin</h1><span class="twin-state">{twin.training ? t("Learning…") : snapshot?.entries.length ? t("Ready to represent you") : t("Not trained")}</span></div><p>{t("Thinks like you. Speaks for you while you work.")} <span>{project}</span></p></div>
+    <div><div class="twin-title"><h1>Twin</h1><span class="twin-state">{snapshot && !twin.enabled ? t("Twin is off") : twin.training ? t("Learning…") : snapshot?.entries.length ? t("Ready to represent you") : t("Not trained")}</span></div><p>{t("Thinks like you. Speaks for you while you work.")} <span>{project}</span></p></div>
     <button class="st-btn st-btn--quiet" type="button" onclick={onClose}><Icon name="chevron-right" size={14} />{t("Back to task")}</button>
   </header>
+  <TwinPower {twin} />
   <div class="twin-toolbar">
     <nav aria-label={t("Twin sections")}>
       <button type="button" aria-pressed={twin.tab === "sources"} onclick={() => twin.tab = "sources"}>{t("Sources")}</button>
       <button type="button" aria-pressed={twin.tab === "profile"} onclick={() => twin.tab = "profile"}>{t("Your character")}{#if snapshot?.entries.length}<span>{snapshot.entries.length}</span>{/if}</button>
       <button type="button" aria-pressed={twin.tab === "ask"} onclick={() => twin.tab = "ask"}>{t("Ask Twin")}</button>
     </nav>
-    <label class="twin-enabled"><input type="checkbox" checked={snapshot?.enabled ?? false} disabled={twin.busy || !snapshot} onchange={(event) => twin.configure(event.currentTarget.checked)} />{t("Use Twin in this project")}</label>
   </div>
   <div class="twin-content">
     {#if twin.error}<div class="twin-error" role="alert"><p>{twin.error}</p><button class="st-btn st-btn--quiet" type="button" disabled={twin.busy} onclick={() => twin.load()}>{t("Reload")}</button></div>{/if}
@@ -64,4 +70,6 @@
 
 <style>
   .twin-page { position: relative; }
+  .twin-learning-layout { display: flex; flex-direction: column; flex: 1; min-height: 0; padding-top: 16px; }
+  .twin-learning-scene { position: relative; flex: 1; min-height: 0; }
 </style>

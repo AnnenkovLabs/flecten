@@ -38,18 +38,22 @@ export function visionOptions(config: HarnessConfig): VisionOptions {
     async describe(image, focus, signal, onUsage) {
       signal.throwIfAborted();
       const target = visionTarget(config);
+      const reasoning = config.vision?.reasoning ?? "none";
+      const variant = config.vision?.variant;
+      const model = config.providers[target.provider]?.models[target.model];
+      if (variant && !model?.variants?.[variant])
+        throw new Error("Choose a variant available for the image description model in Settings.");
       const key = createHash("sha256")
         .update(image.data)
-        .update(JSON.stringify([target, focus]))
+        .update(JSON.stringify([image.mediaType, target, reasoning, variant, focus]))
         .digest("hex");
       const cached = cache.get(key);
       if (cached) return cached;
-      const model = config.providers[target.provider]?.models[target.model];
       const selected = {
         ...config,
         ...target,
-        variant: undefined,
-        reasoning: "none" as const,
+        variant,
+        reasoning,
         failover: { enabled: false, providers: [] },
       };
       const { provider } = createProvider(selected);
@@ -57,38 +61,56 @@ export function visionOptions(config: HarnessConfig): VisionOptions {
       let complete = false;
       const started = Date.now();
       const timeout = AbortSignal.any([signal, AbortSignal.timeout(120_000)]);
-      for await (const event of provider.stream(
-        {
-          model: target.model,
-          system: visionPrompt,
-          tools: [],
-          maxTokens: Math.min(4096, maxOutputTokens(selected)),
-          messages: [
-            {
-              role: "user",
-              content: focus ? `Inspection focus:\n${focus}` : "Describe this image in detail.",
-              images: [image],
-            },
-          ],
-        },
-        timeout,
-      )) {
-        if (event.type === "text") {
-          description += event.delta;
-          if (description.length > 60_000) throw new Error("Image description exceeded its limit.");
-        } else if (event.type === "usage")
+      let reported = false;
+      let requested = true;
+      try {
+        for await (const event of provider.stream(
+          {
+            model: target.model,
+            ...(reasoning ? { reasoning } : {}),
+            ...(variant ? { variant } : {}),
+            system: visionPrompt,
+            tools: [],
+            maxTokens: Math.min(4096, maxOutputTokens(selected)),
+            messages: [
+              {
+                role: "user",
+                content: focus ? `Inspection focus:\n${focus}` : "Describe this image in detail.",
+                images: [image],
+              },
+            ],
+          },
+          timeout,
+        )) {
+          if (event.type === "text") {
+            description += event.delta;
+            if (description.length > 60_000)
+              throw new Error("Image description exceeded its limit.");
+          } else if (event.type === "usage") {
+            reported = true;
+            onUsage({
+              usage: {
+                input: event.input,
+                output: event.output,
+                cached: event.cached,
+                ...(event.cacheWrite === undefined ? {} : { cacheWrite: event.cacheWrite }),
+              },
+              ...target,
+              price: (usage) => costOf(usage, model, variant),
+              durationMs: Date.now() - started,
+            });
+          } else if (event.type === "response") requested = event.response.requested !== false;
+          else if (event.type === "done") complete = event.reason === "end";
+        }
+      } finally {
+        if (!reported && requested)
           onUsage({
-            usage: {
-              input: event.input,
-              output: event.output,
-              cached: event.cached,
-              ...(event.cacheWrite === undefined ? {} : { cacheWrite: event.cacheWrite }),
-            },
+            usage: { input: 0, output: 0, cached: 0 },
+            reported: false,
             ...target,
-            price: (usage) => costOf(usage, model),
+            price: (usage) => costOf(usage, model, variant),
             durationMs: Date.now() - started,
           });
-        else if (event.type === "done") complete = event.reason === "end";
       }
       timeout.throwIfAborted();
       if (!complete || !description.trim())

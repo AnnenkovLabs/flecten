@@ -7,6 +7,13 @@ import {
   type TwinSourceId,
 } from "../../../shared/twin";
 import { requestAgent } from "./desktop";
+import {
+  TWIN_FALLING_MS,
+  TWIN_PLEADING_MS,
+  TWIN_REVIVING_MS,
+  type TwinPowerPhase,
+  type TwinPowerVisual,
+} from "./twin/power";
 
 /** One project-scoped projection. Only the sidecar reads history or calls a model. */
 export class TwinStore {
@@ -19,9 +26,13 @@ export class TwinStore {
   selected = $state<TwinSourceId[]>([]);
   tab = $state<"sources" | "profile" | "ask">("sources");
   editing = $state<TwinCandidate | null>(null);
+  power = $state<TwinPowerVisual>({ phase: "disabled", since: 0 });
+  configuring = $state(false);
+  #desiredEnabled = $state<boolean>();
   #generation = 0;
   #pollFailed = false;
   #poll: ReturnType<typeof setTimeout> | undefined;
+  #powerTimer: ReturnType<typeof setTimeout> | undefined;
 
   get training(): boolean {
     return (
@@ -29,10 +40,18 @@ export class TwinStore {
     );
   }
 
+  get enabled(): boolean {
+    return this.#desiredEnabled ?? this.snapshot?.enabled ?? false;
+  }
+
   reset(): void {
     this.projectEpoch += 1;
     this.#generation += 1;
     clearTimeout(this.#poll);
+    clearTimeout(this.#powerTimer);
+    this.power = { phase: "disabled", since: 0 };
+    this.#desiredEnabled = undefined;
+    this.configuring = false;
     this.snapshot = null;
     this.busy = false;
     this.error = "";
@@ -46,6 +65,9 @@ export class TwinStore {
   dispose(): void {
     this.#generation += 1;
     clearTimeout(this.#poll);
+    clearTimeout(this.#powerTimer);
+    this.#desiredEnabled = undefined;
+    this.configuring = false;
   }
 
   async load(scan = false): Promise<void> {
@@ -76,8 +98,25 @@ export class TwinStore {
   }
 
   async configure(enabled: boolean): Promise<void> {
-    if (this.busy) return;
-    await this.#request({ type: "twin.configure", enabled });
+    if (!this.snapshot || (this.busy && !this.configuring) || enabled === this.enabled) return;
+    this.#desiredEnabled = enabled;
+    this.#setPower(enabled ? "reviving" : "pleading");
+    if (this.configuring) return;
+    this.configuring = true;
+    const projectEpoch = this.projectEpoch;
+    while (this.#desiredEnabled !== undefined) {
+      const desired: boolean = this.#desiredEnabled;
+      const generation = this.#generation + 1;
+      const saved = await this.#request({ type: "twin.configure", enabled: desired });
+      if (projectEpoch !== this.projectEpoch || generation !== this.#generation) return;
+      if (!saved) {
+        this.#desiredEnabled = undefined;
+        this.#setPower(this.snapshot?.enabled ? "enabled" : "disabled");
+        break;
+      }
+      if (this.#desiredEnabled === desired) this.#desiredEnabled = undefined;
+    }
+    this.configuring = false;
   }
 
   async review(
@@ -156,6 +195,12 @@ export class TwinStore {
       if (generation !== this.#generation) return false;
       if (this.#pollFailed) this.error = "";
       this.#pollFailed = false;
+      const previousEnabled = this.snapshot?.enabled;
+      if (
+        command.type !== "twin.configure" &&
+        (previousEnabled === undefined || previousEnabled !== snapshot.enabled)
+      )
+        this.#setPower(snapshot.enabled ? "enabled" : "disabled");
       this.snapshot = snapshot;
       if (answer) this.answer = answer;
       return true;
@@ -179,5 +224,22 @@ export class TwinStore {
       this.#poll = setTimeout(() => {
         void this.#request({ type: "twin.get" }, true);
       }, 1000);
+  }
+
+  #setPower(phase: TwinPowerPhase, since = performance.now()): void {
+    clearTimeout(this.#powerTimer);
+    this.power = { phase, since };
+    const next = {
+      pleading: { phase: "falling", duration: TWIN_PLEADING_MS },
+      falling: { phase: "disabled", duration: TWIN_FALLING_MS },
+      reviving: { phase: "enabled", duration: TWIN_REVIVING_MS },
+    } as const;
+    if (phase === "enabled" || phase === "disabled") return;
+    const transition = next[phase];
+    const deadline = since + transition.duration;
+    this.#powerTimer = setTimeout(
+      () => this.#setPower(transition.phase, deadline),
+      Math.max(0, deadline - performance.now()),
+    );
   }
 }

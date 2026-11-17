@@ -1,4 +1,11 @@
 export default {
+  "Twin is on": "Twin はオンです",
+  "Twin is off": "Twin はオフです",
+  "Twin is saying goodbye…": "Twin がお別れしています…",
+  "Twin is back with you": "Twin が戻ってきました",
+  "Represents you while you work.": "作業中、あなたの代わりに対応します。",
+  "Your character stays saved. Turn Twin on whenever you want.":
+    "あなたの個性は保存されています。いつでも Twin をオンにできます。",
   "No new supported user messages were found. No model request was made.":
     "新しく取り込めるユーザーメッセージはありませんでした。モデルへのリクエストは送信していません。",
   "Training finished. No supported traits were found.":

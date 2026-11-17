@@ -67,7 +67,7 @@ async function fixture(scripts: ModelEvent[][], overrides: Partial<SessionOption
     maxOutputTokens: 2000,
     context: { window: 100000, reserve: 2000 },
     loop: { maxTurns: 10, continuations: 0, parallelTools: false },
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     memory: store,
     ...overrides,
   };
@@ -305,11 +305,11 @@ test("native memory persists in the default sandbox while raw metadata writes re
   run.session.update({ sandbox });
   await run.session.send({ type: "run", prompt: quote });
   expect((await run.store.list()).length).toBe(1);
-  expect((await sandbox.checkWrite(".liquid/memory.json")).allowed).toBe(false);
+  expect((await sandbox.checkWrite(".flecten/memory.json")).allowed).toBe(false);
   expect((await sandbox.checkMemory("write")).allowed).toBe(true);
   const denied = new SandboxPolicy({
     workspaceRoot: run.cwd,
-    writeDenyPrefixes: [".liquid/memory.json"],
+    writeDenyPrefixes: [".flecten/memory.json"],
   });
   expect((await denied.checkMemory("write")).allowed).toBe(false);
   await run.session.dispose();

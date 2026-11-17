@@ -42,7 +42,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
       "Use exact source evidence.",
       "Deliver the working change.",
     ];
-    const session = join(h.cwd, ".liquid/sessions/twin-learning-fixture");
+    const session = join(h.cwd, ".flecten/sessions/twin-learning-fixture");
     await mkdir(session, { recursive: true });
     await writeFile(
       join(session, "events.jsonl"),
@@ -54,8 +54,13 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.getByRole("button", { name: "Twin", exact: true }).click();
     const panel = page.getByTestId("twin-page");
+    await panel.getByRole("switch", { name: "Use Twin in this project", exact: true }).click();
+    await expect(panel.locator(".twin-portrait [data-testid='twin-character']")).toHaveAttribute(
+      "data-power",
+      "enabled",
+    );
     await panel.getByRole("button", { name: "Scan sources", exact: true }).click();
-    await panel.getByRole("checkbox", { name: "Learn from Liquid Harness", exact: true }).check();
+    await panel.getByRole("checkbox", { name: "Learn from Flecten", exact: true }).check();
     await page.screenshot({ path: test.info().outputPath("twin-before-learning.png") });
     await panel.getByRole("button", { name: "Train Twin", exact: true }).click();
     const scene = panel.getByTestId("twin-learning");
@@ -222,7 +227,7 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
         exact: false,
       }),
     ).toBeVisible();
-    const saved = JSON.parse(await readFile(join(h.cwd, ".liquid/twin.json"), "utf8"));
+    const saved = JSON.parse(await readFile(join(h.cwd, ".flecten/twin.json"), "utf8"));
     expect(saved.training).toMatchObject({ state: "ready", sessions: 1, messages: 16 });
     expect(h.consoleErrors).toEqual([]);
   } finally {

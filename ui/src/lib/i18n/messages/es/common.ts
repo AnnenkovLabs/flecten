@@ -1,5 +1,6 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Cost unavailable": "Coste desconocido",
   Profile: "Perfil",
   "Change name": "Cambiar nombre",
   "Could not save name. Try again.": "No se pudo guardar el nombre. Inténtalo de nuevo.",

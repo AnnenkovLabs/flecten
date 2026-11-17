@@ -32,7 +32,7 @@ test("HTML navigation resolves actual settings, panels, the model menu and encod
 
 test("the frame boundary rejects commands, unknown destinations and malformed file parameters", () => {
   const envelope = {
-    type: "liquid-summary",
+    type: "flecten-summary",
     version: 1,
     kind: "action",
     action: "navigate",

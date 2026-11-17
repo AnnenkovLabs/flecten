@@ -41,11 +41,11 @@
 
 <header class="main-head" data-harness-region="header">
   <div class="title-line">
-    <h1 title={title}>{title}</h1>
+    <h1 data-tooltip={title}>{title}</h1>
     {#if branch}
-      <span class="branch" title={branch}><Icon name="branch" size={12} /><span>{branch}</span></span>
+      <span class="branch" data-tooltip={branch}><Icon name="branch" size={12} /><span>{branch}</span></span>
     {/if}
-    {#if surface !== "thread" && !surface.startsWith("subagent:") && !split && phase !== "idle"}
+    {#if surface !== "thread" && surface !== "worker" && !surface.startsWith("subagent:") && !split && phase !== "idle"}
       <SessionState {phase} />
     {/if}
   </div>
@@ -54,7 +54,7 @@
     {#if canSplit}
       <button class="split-button" class:is-active={split} type="button"
         aria-pressed={split} aria-label={t("Conversation and panel side by side")}
-        title={split ? t("Show only the selected panel") : t("Show the conversation and selected panel side by side")}
+        data-tooltip={split ? t("Show only the selected panel") : t("Show the conversation and selected panel side by side")}
         onclick={onToggleSplit}>
         <Icon name="panel-right" size={16} /><span>{t("Side by side")}</span>
       </button>

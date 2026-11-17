@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TwinUsageSchema } from "./twin";
 
 /** Durable dialogue of the user's representative with the Worker. */
 export const TwinActivitySchema = z.object({
@@ -21,14 +22,7 @@ export const TwinActivitySchema = z.object({
   corrections: z.number().int().min(0).max(4),
   provider: z.string(),
   model: z.string(),
-  usage: z
-    .object({
-      input: z.number().nonnegative(),
-      output: z.number().nonnegative(),
-      cached: z.number().nonnegative(),
-      costUsd: z.number().nonnegative().optional(),
-    })
-    .optional(),
+  usage: TwinUsageSchema.optional(),
 });
 export type TwinActivity = z.infer<typeof TwinActivitySchema>;
 export type TwinActivityEvent = {

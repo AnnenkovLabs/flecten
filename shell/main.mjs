@@ -17,6 +17,7 @@ import { captureWhenLoaded } from "./screenshot.mjs";
 import { installSessionLinks } from "./deep-links.mjs";
 import { projectSelection, registerProjectIpc } from "./projects.mjs";
 import { installUpdateRuntime } from "./update-runtime.mjs";
+import { migrateRendererPreferences, preferenceMigrationDocument } from "./renderer-preferences.mjs";
 import {
   claimSingleInstance,
   DEFAULT_BOUNDS,
@@ -27,7 +28,7 @@ import {
   restoredBounds,
 } from "./window-state.mjs";
 
-const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, protocol, screen, shell } =
+const { app, BrowserWindow, WebContentsView, clipboard, dialog, ipcMain, Menu, nativeTheme, protocol, screen, shell } =
   electron;
 const require = createRequire(import.meta.url);
 const { isTrustedSenderUrl, validateAgentCommand } = require("./preload.cjs");
@@ -38,7 +39,7 @@ const uiRoot = normalize(join(repoRoot, "ui/dist"));
 const devUrl = productEnv("DEV_URL");
 const devOrigin = devUrl ? new URL(devUrl).origin : null;
 let agentCwd;
-const screenshotPath = process.argv.includes("--shot") ? join(tmpdir(), "liquid-ui.png") : null;
+const screenshotPath = process.argv.includes("--shot") ? join(tmpdir(), "flecten-ui.png") : null;
 const headless = productEnv("HEADLESS") === "1";
 const smoke = productEnv("SMOKE") === "1";
 const smokeOut = productEnv("SMOKE_OUT");
@@ -65,7 +66,11 @@ protocol.registerSchemesAsPrivileged([
     privileges: { standard: true, secure: true, supportFetchAPI: true },
   },
   {
-    scheme: "liquid-summary",
+    scheme: "flecten",
+    privileges: { standard: true, secure: true, supportFetchAPI: true },
+  },
+  {
+    scheme: "flecten-summary",
     privileges: { standard: true, secure: true, supportFetchAPI: true },
   },
 ]);
@@ -126,6 +131,8 @@ async function handleSummaryProtocol(request) {
 }
 
 async function handleProtocol(request) {
+  if (new URL(request.url).pathname === "/profile-migration")
+    return preferenceMigrationDocument(request);
   const pathname = decodeURIComponent(new URL(request.url).pathname);
   const filePath = normalize(join(uiRoot, pathname));
   if (!isInsideUi(filePath)) {
@@ -349,7 +356,7 @@ function createWindow() {
       const target = new URL(url);
       allowed = devOrigin
         ? target.origin === devOrigin
-        : target.protocol === "liquid:" && target.host === "app";
+        : target.protocol === "flecten:" && target.host === "app";
     } catch {
       allowed = false;
     }
@@ -362,7 +369,7 @@ function createWindow() {
       win.webContents.openDevTools({ mode: "detach" });
     }
   } else {
-    win.loadURL("liquid://app/index.html");
+    win.loadURL("flecten://app/index.html");
   }
 
   if (screenshotPath) captureWhenLoaded(win, screenshotPath, () => app.quit());
@@ -379,14 +386,14 @@ registerAttachmentIpc({
 });
 
 // /search in the composer: Chromium find-in-page highlights matches; an empty query clears them.
-ipcMain.handle("liquid:open-external", async (event, value) => {
+ipcMain.handle("flecten:open-external", async (event, value) => {
   if (!isTrustedIpcSender(event) || typeof value !== "string" || value.length > 8192) throw new Error("invalid external URL");
   const url = new URL(value);
   if ((url.protocol !== "http:" && url.protocol !== "https:") || url.username || url.password) throw new Error("external URL must use http or https without credentials");
   await shell.openExternal(url.href);
 });
 
-ipcMain.handle("liquid:find-in-page", (event, text) => {
+ipcMain.handle("flecten:find-in-page", (event, text) => {
   if (!isTrustedIpcSender(event)) return 0;
   const contents = event.sender;
   if (typeof text !== "string" || text.length === 0) {
@@ -441,13 +448,20 @@ ipcMain.on("agent:command", (event, command) => {
   if (command.type === "hello") sessionLinks.listening();
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (!primary) return;
-  protocol.handle("liquid", handleProtocol);
-  protocol.handle("liquid-summary", handleSummaryProtocol);
+  protocol.handle("flecten", handleProtocol);
+  protocol.handle("flecten-summary", handleSummaryProtocol);
+  protocol.handle("liquid", preferenceMigrationDocument);
+  await migrateRendererPreferences(WebContentsView, app.getPath("userData")).catch((error) => {
+    console.error("[profile] Could not migrate renderer preferences:", error);
+  });
   Menu.setApplicationMenu(null);
   startAgent();
   createWindow();
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") app.quit();
+  });
   updateRuntime = installUpdateRuntime({
     ipcMain,
     isTrusted: isTrustedIpcSender,
@@ -474,8 +488,4 @@ app.on("before-quit", () => {
     updateRuntime = null;
   }
   stopAgent();
-});
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
 });

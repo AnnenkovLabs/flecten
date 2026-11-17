@@ -45,7 +45,7 @@ describe("models.dev metadata", () => {
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
     const { loadModelsDev, resetCatalogCache } = await import("../../src/providers/catalog");
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-catalog-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-catalog-"));
     try {
       resetCatalogCache();
       const catalog = await loadModelsDev(cwd, true, {
@@ -90,9 +90,9 @@ describe("models.dev metadata", () => {
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
     const { loadModelsDev, resetCatalogCache } = await import("../../src/providers/catalog");
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-catalog-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-catalog-"));
     try {
-      const cache = join(cwd, ".liquid", "cache");
+      const cache = join(cwd, ".flecten", "cache");
       await mkdir(cache, { recursive: true });
       await writeFile(
         join(cache, "models-dev.json"),

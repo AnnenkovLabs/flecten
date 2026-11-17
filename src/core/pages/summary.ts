@@ -6,8 +6,7 @@ import {
   estimateTokens,
   type SummarizeContext,
 } from "../../context";
-import { markdownCode, markdownValue } from "../../util/markdown";
-import { PageCommandSchema } from "./control";
+import { PageCommandSchema, PageReportSchema } from "./control";
 
 export const PageSummaryResponseSchema = z
   .object({
@@ -35,6 +34,8 @@ export const ContextSummarySchema = z
         risks: z.string(),
       })
       .strict(),
+    activeMcpTools: z.array(z.string().min(1).max(256)).max(128).optional(),
+    checkpoint: PageReportSchema.extend({ finalResult: z.string().optional() }).optional(),
     originalRequest: z.string().optional(),
     latestRequest: z.string().optional(),
     activePage: z
@@ -53,7 +54,6 @@ const FIELD_TITLES: Record<PageField, string> = {
 };
 
 const MUTATING_TOOLS = new Set(["write", "edit", "apply_patch", "delete", "move"]);
-const MAX_REQUEST_CHARS = 4000;
 const MAX_LINE_CHARS = 240;
 
 function clip(text: string, limit: number): string {
@@ -118,6 +118,24 @@ function latestRequest(messages: readonly ContextMessage[]): string | undefined 
   return undefined;
 }
 
+/** Only a schema-valid command with its matching successful result is an authoritative checkpoint. */
+export function completedPageReport(messages: readonly ContextMessage[]) {
+  const calls = new Map<string, unknown>();
+  let report: Extract<z.infer<typeof PageCommandSchema>, { op: "complete" }> | undefined;
+  for (const message of messages) {
+    if (message.role === "assistant") {
+      for (const call of message.toolCalls ?? [])
+        if (call.id && call.name === "context") calls.set(call.id, call.args);
+    } else if (message.role === "tool" && message.name === "context") {
+      const command = PageCommandSchema.safeParse(calls.get(message.toolCallId));
+      calls.delete(message.toolCallId);
+      if (!message.isError && command.success && command.data.op === "complete")
+        report = command.data;
+    }
+  }
+  return report;
+}
+
 /** Fallback page built only from structured tool calls and messages, no model call. */
 export function deterministicPage(messages: readonly ContextMessage[]): PageSummary {
   const changed: string[] = [];
@@ -129,6 +147,7 @@ export function deterministicPage(messages: readonly ContextMessage[]): PageSumm
   const pending = new Map<string, ContextToolCall>();
   const unpaired: ContextToolCall[] = [];
   let nextPage: string | undefined;
+  let report: Extract<z.infer<typeof PageCommandSchema>, { op: "complete" }> | undefined;
 
   const describeCall = (call: ContextToolCall): string => {
     const command = argCommand(call.args);
@@ -160,6 +179,7 @@ export function deterministicPage(messages: readonly ContextMessage[]): PageSumm
     if (call.name === "context" && !message.isError) {
       const command = PageCommandSchema.safeParse(call.args);
       if (command.success && command.data.op === "complete") {
+        report = command.data;
         changed.push(command.data.summary, ...command.data.evidence);
         nextPage = command.data.next;
       } else if (command.success && command.data.op === "block") {
@@ -173,6 +193,27 @@ export function deterministicPage(messages: readonly ContextMessage[]): PageSumm
       changed.push(`${describeCall(call)} returned successfully: ${oneLine(message.content)}`);
     }
   }
+
+  if (report)
+    return {
+      changed: [
+        report.summary,
+        ...(report.findings ?? []),
+        ...(report.result ? [report.result] : []),
+        ...(report.finalResult ? [report.finalResult] : []),
+        "## Evidence",
+        ...report.evidence,
+      ].join("\n\n"),
+      where: bullets(where, "Sources are in the page transcript"),
+      rules: bullets(rules, "Preserve the original user request", previous?.rules),
+      next: report.next,
+      risks: bullets(
+        report.openRisks ?? [],
+        report.openRisks
+          ? "No open risks reported in this checkpoint"
+          : "Open risks were not supplied; check the archived evidence before assuming resolution",
+      ),
+    };
 
   for (const call of [...pending.values(), ...unpaired]) {
     risks.push(`${describeCall(call)} result unavailable; execution and effects unverified`);
@@ -197,7 +238,7 @@ export function originalRequest(messages: readonly ContextMessage[]): string | u
       if (message.contextSummary.originalRequest) return message.contextSummary.originalRequest;
       continue;
     }
-    return clip(message.content, MAX_REQUEST_CHARS);
+    return message.sourceText ?? message.content;
   }
   return undefined;
 }
@@ -212,9 +253,16 @@ export function continuationPage(
 ): ContextSummary {
   const request = originalRequest(messages);
   const latest = latestRequest(messages);
+  const complete = completedPageReport(messages);
+  const checkpoint = complete
+    ? (({ op: _op, ...report }) => report)(complete)
+    : previousSummary(messages)?.checkpoint;
+  const activeMcpTools = context.activeMcpTools ?? previousSummary(messages)?.activeMcpTools;
   const result: ContextSummary = {
     page,
     fields: { ...fields },
+    ...(activeMcpTools ? { activeMcpTools } : {}),
+    ...(checkpoint ? { checkpoint } : {}),
     ...(request ? { originalRequest: request } : {}),
     ...(latest ? { latestRequest: latest } : {}),
     ...(context.activePage ? { activePage: context.activePage } : {}),
@@ -230,6 +278,10 @@ export function continuationPage(
     );
     if (result.fields[field].length <= 32)
       throw new Error("Context summary budget cannot fit five fields");
+    if (!pointers?.path && completedPageReport(messages) && ["changed", "risks"].includes(field))
+      throw new Error(
+        "Checkpoint contents exceed the working set and no durable page reference is available",
+      );
     const text = result.fields[field];
     const size = Math.max(24, Math.floor(text.length * 0.75));
     result.fields[field] =
@@ -281,52 +333,4 @@ export function pageContextMessage(input: PageRender): string {
     );
   const footer = disk.length > 0 ? `\n\n${disk.join("\n")}` : "";
   return `${PAGE_HEADER} (older turns were compacted into page ${input.page}):\n\n${renderPage(input)}${footer}`;
-}
-
-function messageLine(message: ContextMessage, limit: number): string {
-  if (message.role === "user") {
-    const title = message.sourceText === undefined ? "Conversation context" : "User message";
-    const original =
-      message.sourceText !== undefined && message.sourceText !== message.content
-        ? `\n\nOriginal user evidence (verbatim):\n${clip(message.sourceText, limit)}`
-        : "";
-    return `## ${title}\n\n${clip(message.content, limit)}${original}`;
-  }
-  if (message.role === "assistant") {
-    const calls = (message.toolCalls ?? [])
-      .map(
-        (call) =>
-          `### Tool call\n\n- Name: ${markdownValue(call.name)}\n- Tool call identifier: ${markdownValue(call.id ?? "unavailable")}\n\nArguments:\n\n${markdownCode(clip(JSON.stringify(call.args ?? {}), 400), "json")}`,
-      )
-      .join("\n\n");
-    const text = message.content.trim().length > 0 ? clip(message.content, limit) : "";
-    return `## Assistant message${text ? `\n\n${text}` : ""}${calls ? `\n\n${calls}` : ""}`;
-  }
-  const status = message.isError ? "failure" : "success";
-  return `## Tool result\n\n- Name: ${markdownValue(message.name)}\n- Status: ${markdownValue(status)}\n- Tool call identifier: ${markdownValue(message.toolCallId)}\n\n${clip(message.content, limit)}`;
-}
-
-/** Transcript for the page writer, clipped to a character budget from both ends. */
-export function pageTranscript(messages: readonly ContextMessage[], maxChars: number): string {
-  const rendered = messages.map((message) => messageLine(message, 6000));
-  const total = rendered.reduce((sum, line) => sum + line.length + 2, 0);
-  if (total <= maxChars) return rendered.join("\n\n");
-  const head: string[] = [];
-  const tail: string[] = [];
-  let used = 0;
-  const headBudget = Math.floor(maxChars * 0.25);
-  let index = 0;
-  while (index < rendered.length && used + (rendered[index]?.length ?? 0) <= headBudget) {
-    head.push(rendered[index] ?? "");
-    used += (rendered[index]?.length ?? 0) + 2;
-    index += 1;
-  }
-  let back = rendered.length - 1;
-  while (back >= index && used + (rendered[back]?.length ?? 0) <= maxChars) {
-    tail.unshift(rendered[back] ?? "");
-    used += (rendered[back]?.length ?? 0) + 2;
-    back -= 1;
-  }
-  const omitted = back - index + 1;
-  return [...head, `[... ${omitted} messages omitted ...]`, ...tail].join("\n\n");
 }

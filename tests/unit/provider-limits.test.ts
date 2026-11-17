@@ -195,7 +195,7 @@ function session(provider: ModelProvider, cwd: string) {
     maxOutputTokens: 1000,
     context: { window: 100_000, reserve: 1000 },
     loop: { maxTurns: 4, continuations: 0, parallelTools: false },
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
   });
 }
 
@@ -220,7 +220,7 @@ describe("goal loop on limits", () => {
         yield { type: "done", reason: "end" };
       },
     };
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-limit-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-limit-"));
     try {
       const events: Event[] = [];
       const handle = session(provider, cwd);
@@ -252,7 +252,7 @@ describe("goal loop on limits", () => {
         });
       },
     };
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-weekly-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-weekly-"));
     try {
       const events: Event[] = [];
       const handle = session(provider, cwd);

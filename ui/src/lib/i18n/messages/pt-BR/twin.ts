@@ -1,4 +1,11 @@
 export default {
+  "Twin is on": "Twin ativado",
+  "Twin is off": "Twin desativado",
+  "Twin is saying goodbye…": "Twin está se despedindo…",
+  "Twin is back with you": "Twin está com você de novo",
+  "Represents you while you work.": "Representa você enquanto trabalha.",
+  "Your character stays saved. Turn Twin on whenever you want.":
+    "Seu perfil continua salvo. Ative o Twin quando quiser.",
   "No new supported user messages were found. No model request was made.":
     "Nenhuma nova mensagem de usuário compatível foi encontrada. Nenhuma solicitação foi enviada ao modelo.",
   "Training finished. No supported traits were found.":

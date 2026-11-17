@@ -1,11 +1,14 @@
 import { providerConfig } from "../config/load";
 import type { HarnessConfig, Protocol, ProviderConfig } from "../config/schema";
 import { HarnessError, MissingKeyError } from "../errors";
+import { ProviderProtection } from "../security/provider-protection";
 import { createAnthropic } from "./anthropic";
+import { providerAttempt } from "./attempt";
 import { buildFailoverPlan, createFailoverProvider } from "./failover";
 import { createGemini } from "./gemini";
 import { createOpenAiChat } from "./openai-chat";
 import { createOpenAiResponses } from "./openai-responses";
+import { clearProviderRateLimits } from "./rate-limit";
 import { createProviderFetch } from "./transport";
 import type {
   ActiveProvider,
@@ -19,6 +22,7 @@ const commandTokens = new Map<string, { value: string; expiresAt: number; signat
 
 export function invalidateProviderAuthorization(name: string): void {
   commandTokens.delete(name);
+  clearProviderRateLimits(name);
 }
 
 function commandApiKey(name: string, definition: ProviderConfig): string | undefined {
@@ -81,8 +85,12 @@ function createAdapter(protocol: Protocol, runtime: ProviderRuntime): ModelProvi
 function createSingleProvider(
   config: HarnessConfig,
   id: string,
+  protectionFor?: () => ProviderProtection,
 ): { active: ActiveProvider; definition: ProviderConfig } {
   const definition = providerConfig(config, id);
+  const protection = definition.protection?.enabled
+    ? (protectionFor?.() ?? new ProviderProtection(config))
+    : undefined;
   let apiKey = resolveApiKey(id, definition);
   const transport = { ...config.transport, ...definition.transport };
   const timeoutMs = definition.transportTimeoutMs ?? transport.timeoutMs;
@@ -98,7 +106,20 @@ function createSingleProvider(
     protocol: definition.protocol,
     baseUrl: definition.baseUrl,
     headers: definition.headers,
-    fetch: providerFetch,
+    fetch: protection
+      ? (input, init) => {
+          if (typeof init?.body !== "string")
+            throw new HarnessError(
+              "invalid_input",
+              "Protected provider requires a JSON request body",
+            );
+          const body: unknown = JSON.parse(init.body);
+          return providerFetch(input, {
+            ...init,
+            body: JSON.stringify(protection.vault.protect(body)),
+          });
+        }
+      : providerFetch,
     ...(apiKey ? { apiKey } : {}),
     config: definition,
     modelConfig: (model) => definition.models[model],
@@ -116,9 +137,11 @@ function createSingleProvider(
   const provider: ModelProvider = {
     id: definition.protocol,
     model: config.model,
+    ...(protection ? { protection } : {}),
     stream(request: ModelRequest, signal: AbortSignal): AsyncIterable<ModelEvent> {
       const currentKey = resolveApiKey(id, definition);
       if (currentKey !== apiKey) {
+        clearProviderRateLimits(id);
         apiKey = currentKey;
         if (currentKey) baseRuntime.apiKey = currentKey;
         else delete baseRuntime.apiKey;
@@ -137,7 +160,14 @@ function createSingleProvider(
           : { maxTokens: Math.min(request.maxTokens, variant.maxOutputTokens) }),
         tools: model?.tools === false ? [] : request.tools,
       };
-      return adapterFor(protocol).stream(adapted, signal);
+      if (currentKey) protection?.vault.seed([currentKey]);
+      const protectedRequest = protection ? protection.request(adapted) : adapted;
+      const stream = adapterFor(protocol).stream(protectedRequest, signal);
+      return providerAttempt(protection ? protection.events(stream, protectedRequest) : stream, {
+        provider: id,
+        model: request.model,
+        protocol,
+      });
     },
   };
 
@@ -169,7 +199,9 @@ function hasFallback(config: HarnessConfig, definition: ProviderConfig): boolean
 
 export function createProvider(config: HarnessConfig, providerId?: string): ActiveProvider {
   const id = providerId ?? config.provider;
-  const { active, definition } = createSingleProvider(config, id);
+  let protection: ProviderProtection | undefined;
+  const protectionFor = () => (protection ??= new ProviderProtection(config));
+  const { active, definition } = createSingleProvider(config, id, protectionFor);
   if (!hasFallback(config, definition)) return active;
 
   const resolved = new Map<string, ModelProvider>();
@@ -179,7 +211,7 @@ export function createProvider(config: HarnessConfig, providerId?: string): Acti
     const provider =
       target.provider === id
         ? active.provider
-        : createSingleProvider(config, target.provider).active.provider;
+        : createSingleProvider(config, target.provider, protectionFor).active.provider;
     resolved.set(target.provider, provider);
     return provider;
   };

@@ -23,7 +23,7 @@
   class:is-copied={feedback.copied}
   type="button"
   aria-label={title}
-  {title}
+  data-tooltip={title}
   aria-busy={feedback.pending}
   disabled={disabled || feedback.pending}
   onclick={() => feedback.copy(text)}

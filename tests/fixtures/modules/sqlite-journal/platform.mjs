@@ -5,8 +5,8 @@ import { basename, join } from "node:path";
 
 /** A complete journal adapter, independent of the default JSONL backend. */
 export default async ({ workspace, services, contracts, effect, z }) => {
-  await mkdir(join(workspace, ".liquid"), { recursive: true });
-  const db = new Database(join(workspace, ".liquid", "module-journal.sqlite"));
+  await mkdir(join(workspace, ".flecten"), { recursive: true });
+  const db = new Database(join(workspace, ".flecten", "module-journal.sqlite"));
   await effect(() => () => db.close());
   db.exec(`PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, title TEXT, archived INTEGER DEFAULT 0);
@@ -82,7 +82,7 @@ export default async ({ workspace, services, contracts, effect, z }) => {
         append({ type: "session.finished", sessionId: id, result: { sessionId: id, pass: false, stopReason: "end", summary: `Forked from ${request.sessionId}.`, turns: 0, usage: { input: 0, output: 0, cached: 0 } } });
         db.query("UPDATE sessions SET title = ? WHERE id = ?").run(request.options.title ?? `${source.title} (fork)`, id);
         for (const folder of ["attachments", "logs"]) {
-          await cp(join(workspace, ".liquid/sessions", request.sessionId, folder), join(workspace, ".liquid/sessions", id, folder), { recursive: true }).catch((error) => { if (error.code !== "ENOENT") throw error; });
+          await cp(join(workspace, ".flecten/sessions", request.sessionId, folder), join(workspace, ".flecten/sessions", id, folder), { recursive: true }).catch((error) => { if (error.code !== "ENOENT") throw error; });
         }
         return list().find((s) => s.id === id);
       }

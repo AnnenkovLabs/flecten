@@ -220,6 +220,6 @@ AGPL-3.0. See [LICENSE](LICENSE). Free to use, modify, and share; community norm
 
 ---
 
-<p align="center"><sub>Flecten was previously called Liquid Harness. Existing <code>liquid.config.json</code> files, <code>LIQUID_*</code> variables, <code>liquid-harness://</code> links, and saved profiles still work. The primary names are now <code>flecten.config.json</code>, <code>FLECTEN_*</code>, and <code>flecten://</code>. The <code>.liquid/</code> folder keeps sessions, attachments, and checkpoints without a data migration.</sub></p>
+<p align="center"><sub>Flecten was previously called Liquid Harness. Existing <code>liquid.config.json</code> files, <code>LIQUID_*</code> variables, <code>liquid-harness://</code> links, and saved profiles still work. The primary names are now <code>flecten.config.json</code>, <code>FLECTEN_*</code>, and <code>flecten://</code>. The <code>.flecten/</code> folder stores sessions, attachments, and checkpoints. Existing <code>.liquid/</code> data moves there automatically when the project opens.</sub></p>
 
 <p align="center"><sub>The interface starts in English. Choose a language in <b>Settings → General → Interface language</b>. The choice is saved on this device and is separate from the language of agent replies.</sub></p>

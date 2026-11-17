@@ -77,7 +77,7 @@ afterEach(async () => {
 });
 
 async function fixture() {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-signed-update-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-signed-update-"));
   cleanups.push(() => rm(cwd, { recursive: true, force: true }));
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
   const privatePem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();

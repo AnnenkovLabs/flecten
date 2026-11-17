@@ -1,4 +1,5 @@
 import { type ModelChoice, ModelChoiceSchema } from "../../shared/model-choice";
+import { modelChoiceError } from "../config/model-roles";
 import type { HarnessConfig } from "../config/schema";
 import type { Event } from "../core/types";
 import { assertSessionId } from "../store/events/index";
@@ -8,6 +9,7 @@ import type { SessionStorage } from "./session-storage";
 export function sessionModels(storage: SessionStorage) {
   const choices = new Map<string, ModelChoice>();
   const loaded = new Map<string, Promise<void>>();
+  const modes = new Map<string, boolean>();
   let writes = Promise.resolve();
 
   const load = (id: string): Promise<void> => {
@@ -18,9 +20,12 @@ export function sessionModels(storage: SessionStorage) {
         let selected: ModelChoice | undefined;
         let started: ModelChoice | undefined;
         for (const { event } of await storage.envelopes(id)) {
+          if (event.type === "worker.event") modes.set(id, true);
           if (event.type === "model.selected") selected = ModelChoiceSchema.parse(event);
-          if (event.type === "session.started" && event.role !== "worker")
-            started = ModelChoiceSchema.parse(event);
+          if (event.type === "session.started" && event.role !== "worker") {
+            modes.set(id, event.role === "talker");
+            if (event.role !== "talker") started = ModelChoiceSchema.parse(event);
+          }
         }
         const choice = selected ?? started;
         if (choice && !choices.has(id)) choices.set(id, choice);
@@ -33,13 +38,22 @@ export function sessionModels(storage: SessionStorage) {
   return {
     load,
     config(config: HarnessConfig, id?: string): HarnessConfig {
-      const choice = id ? choices.get(id) : undefined;
+      const choice =
+        (id ? choices.get(id) : undefined) ??
+        (((id ? modes.get(id) : undefined) ?? config.conversation?.enabled)
+          ? config.conversation?.worker
+          : undefined);
       return choice ? withModelChoice(config, choice) : config;
     },
+    choice: (id?: string) => (id ? choices.get(id) : undefined),
+    conversation: (config: HarnessConfig, id?: string) =>
+      (id ? modes.get(id) : undefined) ?? Boolean(config.conversation?.enabled),
     note(event: Event) {
+      if (event.type === "session.started" && event.role !== "worker")
+        modes.set(event.sessionId, event.role === "talker");
       if (
         event.type === "session.started" &&
-        event.role !== "worker" &&
+        event.role === undefined &&
         !choices.has(event.sessionId)
       )
         choices.set(event.sessionId, ModelChoiceSchema.parse(event));
@@ -74,8 +88,6 @@ export function withModelChoice(config: HarnessConfig, input: ModelChoice): Harn
 }
 
 export function validateModelChoice(config: HarnessConfig, choice: ModelChoice): void {
-  const definition = config.providers[choice.provider];
-  if (!definition) throw new Error(`unknown provider: ${choice.provider}`);
-  if (!definition.models[choice.model] && Object.keys(definition.models).length > 0)
-    throw new Error(`unknown model for ${choice.provider}: ${choice.model}`);
+  const error = modelChoiceError(config, choice);
+  if (error) throw new Error(error);
 }

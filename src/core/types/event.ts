@@ -3,7 +3,9 @@ import type { ModelSelected } from "../../../shared/model-choice";
 import type { SessionState } from "../../../shared/session-state";
 import type { SubagentEnvelope } from "../../../shared/subagents";
 import type { TwinActivity } from "../../../shared/twin-activity";
+import type { WorkerAcceptance } from "../../../shared/worker-assignment";
 import type { ContextSummary } from "../../context";
+import type { ProviderResponse } from "../../providers/response";
 import type { ApprovalChoice, PermissionAction, PermissionRisk } from "../../security/types";
 import type { JobView } from "../../tools/jobs/view";
 import type { AttachmentReference, AttachmentSnapshot } from "../attachment-reference";
@@ -22,9 +24,25 @@ export type Event =
   | { type: "worker.event"; sessionId: SessionId; event: SessionEvent };
 export type SessionEvent = LeafSessionEvent | SubagentEnvelope<LeafSessionEvent>;
 export type LeafSessionEvent =
+  | { type: "task.budget"; sessionId: SessionId; budget: BudgetView }
+  | {
+      type: "usage.unavailable";
+      sessionId: SessionId;
+      purpose?: "translation" | "vision" | "compaction";
+      provider?: string;
+      model?: string;
+    }
+  | {
+      type: "context.summary.failed";
+      sessionId: SessionId;
+      stage: "provider" | "schema" | "disabled";
+      reason: string;
+    }
+  | { type: "provider.response"; sessionId: SessionId; response: ProviderResponse }
   | HistoryEdited
   | HistorySelected
   | ModelSelected
+  | { type: "worker.acceptance"; sessionId: SessionId; acceptance: WorkerAcceptance }
   | { type: "twin.activity"; sessionId: SessionId; activity: TwinActivity }
   | {
       type: "memory.context";
@@ -178,7 +196,7 @@ export type LeafSessionEvent =
       type: "usage";
       sessionId: SessionId;
       usage: Usage;
-      purpose?: "translation" | "vision";
+      purpose?: "translation" | "vision" | "compaction";
       provider?: string;
       model?: string;
       durationMs?: number;
@@ -204,6 +222,7 @@ export type LeafSessionEvent =
       choice: ApprovalChoice;
       by: "user" | "timeout" | "aborted" | "policy" | "persistence";
       feedback?: string;
+      sessionGrant?: import("../../security/session-grant").SessionGrant;
     }
   | {
       type: "error";
@@ -211,7 +230,7 @@ export type LeafSessionEvent =
       code: string;
       message: string;
       /** Set when a provider limit ended the run. */
-      limit?: "rate" | "five_hour" | "weekly" | "billing";
+      limit?: "rate" | "five_hour" | "weekly" | "billing" | "model_quota";
       resetAt?: number;
     };
 

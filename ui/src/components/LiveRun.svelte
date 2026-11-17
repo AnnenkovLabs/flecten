@@ -6,14 +6,16 @@
   interface Props {
     label: string;
     glow?: boolean;
+    retryUntil?: number | undefined;
   }
 
-  let { label, glow = true }: Props = $props();
+  let { label, glow = true, retryUntil }: Props = $props();
+  const until = $derived(retryUntil ?? retryStatus.until);
   let now = $state(Date.now());
 
   // A request waiting for its retry shows a live countdown instead of a frozen number.
   $effect(() => {
-    if (retryStatus.until === 0) return;
+    if (until === 0) return;
     now = Date.now();
     const timer = setInterval(() => {
       now = Date.now();
@@ -21,10 +23,10 @@
     return () => clearInterval(timer);
   });
 
-  const countdown = $derived(retryStatus.until > 0 ? retryMeta(retryStatus.until, now) : "");
+  const countdown = $derived(until > 0 ? retryMeta(until, now) : "");
 </script>
 
-<div class="live-run">
+<div class="live-run" role="status">
   {#if glow}
     <LiveGlow />
   {/if}

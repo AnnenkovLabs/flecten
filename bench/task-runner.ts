@@ -96,7 +96,7 @@ export async function runTask(task: BenchTask, pricing: Pricing): Promise<TaskRu
         parallelTools: options.parallelTools ?? true,
       },
       checkpoints,
-      logDir: (sessionId) => join(cwd, ".liquid", "sessions", sessionId, "logs"),
+      logDir: (sessionId) => join(cwd, ".flecten", "sessions", sessionId, "logs"),
     });
     const events: Event[] = [];
     session.subscribe((event) => events.push(event));

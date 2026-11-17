@@ -58,7 +58,7 @@ async function fixture(choice: ApprovalChoice = "allow_session") {
   const context: ToolContext = {
     cwd,
     sessionId: "chat",
-    logDir: join(cwd, ".liquid/logs"),
+    logDir: join(cwd, ".flecten/logs"),
     signal: new AbortController().signal,
     reads: new ReadTracker(),
     limits: { maxOutputBytes: 5000, maxOutputLines: 100, bashTimeoutMs: 1000, readLimitLines: 100 },

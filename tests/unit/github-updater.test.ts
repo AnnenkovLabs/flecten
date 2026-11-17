@@ -75,7 +75,7 @@ async function signedChannel(
 }
 
 async function fixture(currentVersion = "1.0.0") {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-github-update-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-github-update-"));
   cleanups.push(() => rm(cwd, { recursive: true, force: true }));
   const { privateKey, publicKey } = generateKeyPairSync("ed25519");
   const privatePem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();

@@ -23,7 +23,7 @@ interface RequestBody {
 }
 
 async function fixture() {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-message-branches-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-message-branches-"));
   cleanup.push(() => rm(cwd, { recursive: true, force: true }));
   const requests: RequestBody[] = [];
   let held:

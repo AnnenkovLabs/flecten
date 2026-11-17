@@ -27,12 +27,12 @@ test("a pre-turn compaction notice and the core turn start share one rendered tu
 });
 
 test("repeating a real write preserves the last changed diff and later edits replace it", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-thread-diff-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-thread-diff-"));
   const context = {
     sessionId: "s-diff",
     cwd,
     signal: new AbortController().signal,
-    logDir: join(cwd, ".liquid/logs"),
+    logDir: join(cwd, ".flecten/logs"),
     limits: {
       maxOutputBytes: 50000,
       maxOutputLines: 2000,

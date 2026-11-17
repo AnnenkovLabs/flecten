@@ -63,8 +63,8 @@ def replace_once(text, before, after):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--upstream", type=Path, default=Path(".liquid/benchmarks/upstream/deep-swe"))
-    parser.add_argument("--output", type=Path, default=Path(".liquid/benchmarks/tasks") / TASK)
+    parser.add_argument("--upstream", type=Path, default=Path(".flecten/benchmarks/upstream/deep-swe"))
+    parser.add_argument("--output", type=Path, default=Path(".flecten/benchmarks/tasks") / TASK)
     args = parser.parse_args()
     actual = subprocess.check_output(["git", "-C", str(args.upstream), "rev-parse", "HEAD"], text=True).strip()
     if actual != COMMIT:

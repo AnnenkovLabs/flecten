@@ -53,7 +53,7 @@ A new dependency requires a decision record: context, decision, consequences. Ch
 
 ## Commits
 
-One commit is one change of meaning. Message in the imperative: `add spec parsing`, `fix page boundary`. Secrets and `.liquid/` are never committed.
+One commit is one change of meaning. Message in the imperative: `add spec parsing`, `fix page boundary`. Secrets and `.flecten/` are never committed.
 
 ## Behavior
 

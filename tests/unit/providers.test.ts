@@ -38,7 +38,7 @@ describe("openai chat adapter", () => {
       { type: "tool_call_progress", index: 0, delta: '{"path":"a.ts"}' },
       { type: "tool_call", id: "call-1", name: "read", args: { path: "a.ts" } },
       { type: "usage", input: 10, output: 2, cached: 0 },
-      { type: "done", reason: "tool_use" },
+      expect.objectContaining({ type: "done", reason: "tool_use" }),
     ]);
     expect(body.model).toBe("test-model");
     expect(body.stream).toBe(true);
@@ -51,9 +51,12 @@ describe("openai chat adapter", () => {
       port: 0,
       async fetch(req) {
         body = (await req.json()) as Record<string, unknown>;
-        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
-          headers: { "content-type": "text/event-stream" },
-        });
+        return new Response(
+          'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+          {
+            headers: { "content-type": "text/event-stream" },
+          },
+        );
       },
     });
     servers.push(server);
@@ -238,9 +241,12 @@ describe("thinking guards", () => {
       port: 0,
       async fetch(req) {
         body = (await req.json()) as Record<string, unknown>;
-        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
-          headers: { "content-type": "text/event-stream" },
-        });
+        return new Response(
+          'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+          {
+            headers: { "content-type": "text/event-stream" },
+          },
+        );
       },
     });
     servers.push(server);

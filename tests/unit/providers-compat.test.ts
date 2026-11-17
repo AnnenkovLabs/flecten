@@ -16,9 +16,12 @@ describe("provider compatibility nuances", () => {
       port: 0,
       async fetch(req) {
         body = (await req.json()) as Record<string, unknown>;
-        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
-          headers: { "content-type": "text/event-stream" },
-        });
+        return new Response(
+          'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+          {
+            headers: { "content-type": "text/event-stream" },
+          },
+        );
       },
     });
     servers.push(server);
@@ -47,9 +50,12 @@ describe("provider compatibility nuances", () => {
       port: 0,
       async fetch(req) {
         body = (await req.json()) as Record<string, unknown>;
-        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
-          headers: { "content-type": "text/event-stream" },
-        });
+        return new Response(
+          'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+          {
+            headers: { "content-type": "text/event-stream" },
+          },
+        );
       },
     });
     servers.push(server);
@@ -77,9 +83,12 @@ describe("provider compatibility nuances", () => {
       port: 0,
       async fetch(req) {
         body = (await req.json()) as Record<string, unknown>;
-        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
-          headers: { "content-type": "text/event-stream" },
-        });
+        return new Response(
+          'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+          {
+            headers: { "content-type": "text/event-stream" },
+          },
+        );
       },
     });
     servers.push(server);
@@ -112,9 +121,12 @@ describe("provider compatibility nuances", () => {
       port: 0,
       async fetch(req) {
         body = (await req.json()) as Record<string, unknown>;
-        return new Response('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n', {
-          headers: { "content-type": "text/event-stream" },
-        });
+        return new Response(
+          'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+          {
+            headers: { "content-type": "text/event-stream" },
+          },
+        );
       },
     });
     servers.push(server);

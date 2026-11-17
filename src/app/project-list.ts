@@ -2,6 +2,7 @@ import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { productEnv } from "../../shared/environment.cjs";
 import { readProjectIndex } from "../../shared/project-index.cjs";
+import { migrateDataDirectory } from "../config/data-directory";
 import { listSessions } from "../store/events/index";
 import type { AppService } from "./service-types";
 
@@ -16,6 +17,7 @@ export async function projectList(app: AppService) {
       try {
         if (!(await stat(project.path)).isDirectory())
           throw new Error("Select the folder again to restore access.");
+        migrateDataDirectory(project.path);
         const sessions =
           project.path === info.cwd ? await app.listSessions() : await listSessions(project.path);
         return { ...project, sessions };
@@ -29,6 +31,7 @@ export async function projectList(app: AppService) {
     }),
   );
   const scratch = profile ? join(profile, "projectless") : info.cwd;
+  migrateDataDirectory(scratch);
   const sessions =
     info.projectRoot === null
       ? await app.listSessions()

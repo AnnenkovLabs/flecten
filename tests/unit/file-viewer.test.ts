@@ -10,8 +10,8 @@ describe("file viewer", () => {
   });
 
   test("keeps the file name whole when the folder is cut", () => {
-    expect(splitPath(".liquid/sessions/s1/logs/bash-1.log")).toEqual({
-      dir: ".liquid/sessions/s1/logs/",
+    expect(splitPath(".flecten/sessions/s1/logs/bash-1.log")).toEqual({
+      dir: ".flecten/sessions/s1/logs/",
       name: "bash-1.log",
     });
     expect(splitPath("README.md")).toEqual({ dir: "", name: "README.md" });
@@ -27,9 +27,9 @@ describe("file viewer", () => {
 
     const bash = toolAction(
       { id: "c2", name: "bash", args: { command: "ls" } },
-      { ok: true, output: "x", fullOutputPath: "/p/.liquid/sessions/s/logs/bash.log" },
+      { ok: true, output: "x", fullOutputPath: "/p/.flecten/sessions/s/logs/bash.log" },
     );
     expect(bash.detail?.file).toBeUndefined();
-    expect(bash.detail?.fullOutputPath).toBe("/p/.liquid/sessions/s/logs/bash.log");
+    expect(bash.detail?.fullOutputPath).toBe("/p/.flecten/sessions/s/logs/bash.log");
   });
 });

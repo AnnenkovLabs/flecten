@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { t } from "../../lib/i18n.svelte";
   import { onDestroy } from "svelte";
   import { requestAgent } from "../../lib/desktop";
@@ -49,20 +50,17 @@
 
 {#if engine === "faster-whisper"}
   <SettingsRow title={t("Local model")} stacked>
-    <select class="st-input" style="width: min(100%, 400px)" aria-label={t("Local faster-whisper model")} bind:value={options.whisperModel} disabled={!!busy} onchange={clearResult}>
-      {#each WHISPER_MODELS as model}<option value={model.value}>{model.label}</option>{/each}
-    </select>
+    <Select class="st-input" style="width: min(100%, 400px)" aria-label={t("Local faster-whisper model")} bind:value={options.whisperModel} disabled={!!busy} onchange={clearResult}
+      options={WHISPER_MODELS} />
   </SettingsRow>
   <SettingsRow title={t("Processing")}>
-    <select class="st-input" aria-label={t("Speech recognition processing")} bind:value={options.device} disabled={!!busy} onchange={clearResult}>
-      <option value="cpu">{t("CPU")}</option><option value="cuda">{t("NVIDIA GPU")}</option>
-    </select>
+    <Select class="st-input" aria-label={t("Speech recognition processing")} bind:value={options.device} disabled={!!busy} onchange={clearResult}
+      options={[{ value: "cpu", label: t("CPU") }, { value: "cuda", label: t("NVIDIA GPU") }]} />
   </SettingsRow>
 {:else}
   <SettingsRow title={t("Vosk language and model")} stacked>
-    <select class="st-input" aria-label={t("Local Vosk model")} bind:value={options.voskModel} disabled={!!busy} onchange={clearResult}>
-      {#each VOSK_MODELS as model}<option value={model.value}>{model.label}</option>{/each}
-    </select>
+    <Select class="st-input" aria-label={t("Local Vosk model")} bind:value={options.voskModel} disabled={!!busy} onchange={clearResult}
+      options={VOSK_MODELS} />
   </SettingsRow>
 {/if}
 <div class="local-voice-setup">

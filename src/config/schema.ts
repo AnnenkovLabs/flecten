@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { ProviderProtectionSchema } from "../../shared/provider-protection";
 import { canDescribeImages } from "../../shared/vision";
 import { REASONING_EFFORTS } from "../core/types/reasoning";
 import { McpHttpServerConfigSchema, McpStdioServerConfigSchema } from "../mcp/config";
+import { ConversationConfigSchema, validateRoleModels } from "./model-roles";
 import { ModulesConfigSchema } from "./modules";
 import {
   BudgetsConfigSchema,
@@ -87,6 +89,7 @@ export const ModelConfigSchema = z
   .object({
     name: z.string().min(1).optional(),
     apiId: z.string().min(1).optional(),
+    quotaGroup: z.string().trim().min(1).max(256).optional(),
     protocol: ProtocolSchema.optional(),
     context: z.number().int().positive().optional(),
     input: z.number().int().positive().optional(),
@@ -167,6 +170,7 @@ export const TransportConfigSchema = z.object({
 export const ProviderConfigSchema = z
   .object({
     protocol: ProtocolSchema,
+    protection: ProviderProtectionSchema.optional(),
     baseUrl: z.string().min(1),
     proxy: z.string().min(1).optional(),
     transportTimeoutMs: z.number().int().positive().max(600_000).optional(),
@@ -288,10 +292,7 @@ export const HarnessConfigSchema = z
     voice: VoiceConfigSchema.optional(),
     vision: VisionConfigSchema.optional(),
     translation: TranslationConfigSchema.optional(),
-    conversation: z
-      .object({ enabled: z.boolean().default(true) })
-      .default({ enabled: true })
-      .optional(),
+    conversation: ConversationConfigSchema,
     skills: SkillsConfigSchema.optional(),
     failover: FailoverConfigSchema.optional(),
     transport: TransportConfigSchema.optional(),
@@ -373,6 +374,7 @@ export const HarnessConfigSchema = z
   })
   .strict()
   .superRefine((config, context) => {
+    validateRoleModels(config, context);
     if (config.vision?.model) {
       const model =
         config.providers[config.vision.provider || config.provider]?.models[config.vision.model];
@@ -381,6 +383,12 @@ export const HarnessConfigSchema = z
           code: "custom",
           path: ["vision", "model"],
           message: "Select a configured model with image input",
+        });
+      if (config.vision.variant && !model?.variants?.[config.vision.variant])
+        context.addIssue({
+          code: "custom",
+          path: ["vision", "variant"],
+          message: "Select a configured variant for the image description model",
         });
     }
     const translation = config.translation;

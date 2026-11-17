@@ -35,7 +35,7 @@ function sessionOptions(
     maxOutputTokens: 1000,
     context: { window: 100_000, reserve: 1000 },
     loop: { maxTurns: 8, continuations: 0, parallelTools: false },
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     ...overrides,
   };
 }
@@ -55,7 +55,7 @@ function doneCall(id: string, summary: string, evidence: string[]) {
 
 describe("goal integration", () => {
   test("todo criteria drive continuation and completion marks the goal met", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-goal-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-goal-"));
     try {
       const update = {
         type: "tool_call" as const,
@@ -129,7 +129,7 @@ describe("goal integration", () => {
   });
 
   test("the goal budget blocks the next turn", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-goal-budget-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-goal-budget-"));
     try {
       const provider = scriptedProvider([
         [todoAdd("call-1", "unfinished work"), { type: "done", reason: "tool_use" }],
@@ -155,7 +155,7 @@ describe("goal integration", () => {
   });
 
   test("repeated turns without progress trip the circuit breaker", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-goal-progress-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-goal-progress-"));
     try {
       const idle = [
         { type: "text" as const, delta: "still thinking" },
@@ -184,7 +184,7 @@ describe("goal integration", () => {
   });
 
   test("session status exposes objective, status, remaining criteria and evidence count", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-goal-status-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-goal-status-"));
     try {
       const provider = scriptedProvider([
         [

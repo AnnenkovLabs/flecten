@@ -1,6 +1,7 @@
-import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { open, rename, rm } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { durableMkdir, syncDirectory } from "./durable";
 
 /** Windows readers and antivirus can briefly deny replacement; keep the old file intact. */
 async function replaceFile(temp: string, path: string, signal?: AbortSignal): Promise<void> {
@@ -24,7 +25,8 @@ async function replaceFile(temp: string, path: string, signal?: AbortSignal): Pr
 }
 
 /**
- * Writes through a temp file and a rename, so a reader or a crash never sees half a file.
+ * Syncs a temp file before renaming and syncing its directory, so an acknowledged write
+ * survives power loss under the filesystem's fsync contract, without publishing half a file.
  * With `mode` the temp file gets exactly that mode before it takes the real name, so a
  * secret is never readable by others, whatever the umask.
  */
@@ -36,17 +38,21 @@ export async function atomicWrite(
 ): Promise<void> {
   signal?.throwIfAborted();
   const directory = dirname(path);
-  await mkdir(directory, { recursive: true });
+  await durableMkdir(directory);
   const temp = join(directory, `.${basename(path)}.${crypto.randomUUID()}.tmp`);
   try {
     signal?.throwIfAborted();
-    await writeFile(temp, data, {
-      ...(mode === undefined ? {} : { mode }),
-      ...(signal ? { signal } : {}),
-    });
-    if (mode !== undefined) await chmod(temp, mode);
+    const handle = await open(temp, "wx", mode);
+    try {
+      await handle.writeFile(data, signal ? { signal } : {});
+      if (mode !== undefined) await handle.chmod(mode);
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
     signal?.throwIfAborted();
     await replaceFile(temp, path, signal);
+    await syncDirectory(directory);
   } catch (error) {
     await rm(temp, { force: true }).catch(() => undefined);
     throw error;

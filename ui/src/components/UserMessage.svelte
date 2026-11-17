@@ -48,21 +48,21 @@
       <div class="message-actions">
         {#if versions && versions.count > 1}
           <div class="message-versions" role="group" aria-label={t("Message versions")}>
-            <button class="st-icon-btn history-button" type="button" disabled={locked || versions.index === 0} title={disabled ? disabledTitle : t("Previous version")} aria-label={t("Previous version")} onclick={() => selectVersion(versions!.index - 1)}>
+            <button class="st-icon-btn history-button" type="button" disabled={locked || versions.index === 0} data-tooltip={disabled ? disabledTitle : t("Previous version")} aria-label={t("Previous version")} onclick={() => selectVersion(versions!.index - 1)}>
               <span class="previous"><Icon name="chevron-right" size={14} /></span>
             </button>
             <span class="version-count" aria-label={t("Version {0} of {1}", [versions.index + 1, versions.count])}>{versions.index + 1}/{versions.count}</span>
-            <button class="st-icon-btn history-button" type="button" disabled={locked || versions.index + 1 >= versions.count} title={disabled ? disabledTitle : t("Next version")} aria-label={t("Next version")} onclick={() => selectVersion(versions!.index + 1)}>
+            <button class="st-icon-btn history-button" type="button" disabled={locked || versions.index + 1 >= versions.count} data-tooltip={disabled ? disabledTitle : t("Next version")} aria-label={t("Next version")} onclick={() => selectVersion(versions!.index + 1)}>
               <Icon name="chevron-right" size={14} />
             </button>
           </div>
         {/if}
         {#if onEdit}
-          <button class="st-icon-btn history-button edit-message" type="button" disabled={locked} title={disabled ? disabledTitle : t("Edit message")} aria-label={t("Edit message")} onclick={() => { if (!locked) onEdit?.(text); }}><Icon name="edit" size={15} /></button>
+          <button class="st-icon-btn history-button edit-message" type="button" disabled={locked} data-tooltip={disabled ? disabledTitle : t("Edit message")} aria-label={t("Edit message")} onclick={() => { if (!locked) onEdit?.(text); }}><Icon name="edit" size={15} /></button>
         {/if}
       </div>
     {/if}
-    {#if at}<time class="msg-time" datetime={at} title={timeTitle(at, new Date(now))}>{relativeTime(at, new Date(now))}</time>{/if}
+    {#if at}<time class="msg-time" datetime={at} data-tooltip={timeTitle(at, new Date(now))}>{relativeTime(at, new Date(now))}</time>{/if}
     {#if error}<p class="st-error" role="alert">{error}</p>{/if}
   </div>
 </div>

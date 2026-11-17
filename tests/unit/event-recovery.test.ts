@@ -29,7 +29,7 @@ function finished(sessionId: string): Event {
 }
 
 test("reopening an interrupted JSONL tail preserves every acknowledged append", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-tail-recovery-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-tail-recovery-"));
   const id = "s_tail";
   const path = sessionPaths(cwd, id).events;
   try {
@@ -66,7 +66,7 @@ test("reopening an interrupted JSONL tail preserves every acknowledged append", 
 });
 
 test("index rebuild preserves the latest run lifecycle and crash recovery", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-index-recovery-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-index-recovery-"));
   const logs = new SessionLogs(cwd, () => []);
   try {
     await logs.persist(started("s_crashed"));

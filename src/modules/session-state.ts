@@ -22,7 +22,7 @@ function statePath(cwd: string, sessionId: string): string {
     )
   )
     throw new Error("Invalid module session id");
-  return join(cwd, ".liquid", "sessions", sessionId, "modules.json");
+  return join(cwd, ".flecten", "sessions", sessionId, "modules.json");
 }
 async function savedModuleState(cwd: string, sessionId: string): Promise<string[] | undefined> {
   try {

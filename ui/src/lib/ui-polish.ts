@@ -2,10 +2,10 @@ import { i18n } from "./i18n.svelte";
 import { taskAge } from "./new-session";
 import type { AgentRunResult, RunAction, TaskStatusKind, ThreadItem } from "./types";
 
-export const COMPOSER_FOCUS_EVENT = "liquid:composer-focus";
-export const MODEL_PICKER_EVENT = "liquid:model-picker";
-export const TASK_RENAME_EVENT = "liquid:task-rename";
-export const TASK_DELETE_EVENT = "liquid:task-delete";
+export const COMPOSER_FOCUS_EVENT = "flecten:composer-focus";
+export const MODEL_PICKER_EVENT = "flecten:model-picker";
+export const TASK_RENAME_EVENT = "flecten:task-rename";
+export const TASK_DELETE_EVENT = "flecten:task-delete";
 
 export interface TaskRenameDetail {
   id: string;

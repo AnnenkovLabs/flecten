@@ -19,8 +19,8 @@ They are local DeepSWE derivatives, not official DeepSWE or MaxxBench scores.
 
 ```bash
 uv tool install 'datacurve-pier==0.3.1'
-git clone https://github.com/datacurve-ai/deep-swe .liquid/benchmarks/upstream/deep-swe
-git -C .liquid/benchmarks/upstream/deep-swe checkout 0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea
+git clone https://github.com/datacurve-ai/deep-swe .flecten/benchmarks/upstream/deep-swe
+git -C .flecten/benchmarks/upstream/deep-swe checkout 0b9fabbb63b9104d678fe965e1632f2dd9eaa2ea
 bun run build:agent
 python3 bench/deepswe/mutate-ofetch.py
 python3 bench/deepswe/mutate-aiomonitor.py
@@ -31,7 +31,7 @@ overwrite existing tasks. Each task's `mutation.json` records source and variant
 DeepSWE and MaxxBench benchmark contributions are Apache-2.0; upstream repository
 licenses still apply. See the upstream `PROVENANCE.md` and `LICENSE`.
 
-Create `.liquid/benchmarks/private/provider.env` with permissions 0600:
+Create `.flecten/benchmarks/private/provider.env` with permissions 0600:
 
 ```dotenv
 BENCH_BASE_URL=https://your-provider.example/v1
@@ -44,8 +44,8 @@ containers with networking disabled. Reference solutions run in separate produce
 
 ```bash
 python3 bench/deepswe/calibrate.py \
-  .liquid/benchmarks/tasks/aiomonitor-task-snapshots-diff \
-  --output .liquid/benchmarks/calibration/aiomonitor-new
+  .flecten/benchmarks/tasks/aiomonitor-task-snapshots-diff \
+  --output .flecten/benchmarks/calibration/aiomonitor-new
 ```
 
 ## Run
@@ -56,12 +56,12 @@ from the base commit. Infrastructure retries are disabled at the Pier level.
 
 ```bash
 PYTHONPATH=. pier run \
-  -p .liquid/benchmarks/tasks/ofetch-per-origin-circuit-breaker \
+  -p .flecten/benchmarks/tasks/ofetch-per-origin-circuit-breaker \
   --agent-import-path bench.deepswe.flecten_agent:FlectenAgent \
   --model deepseek-v4.1-flash-1017 \
   --ak timeout_sec=3600 --ak reasoning=high \
   -n 1 -k 1 --max-retries 0 \
-  --jobs-dir .liquid/benchmarks/jobs --job-name deepseek-ofetch-01
+  --jobs-dir .flecten/benchmarks/jobs --job-name deepseek-ofetch-01
 ```
 
 Pier permits inference traffic only to the configured provider hostname through
@@ -104,6 +104,6 @@ Generate a report from completed saved trials, including unscored infrastructure
 failures and a Wilson confidence interval:
 
 ```bash
-python3 bench/deepswe/report.py .liquid/benchmarks/jobs \
-  --output .liquid/benchmarks/report
+python3 bench/deepswe/report.py .flecten/benchmarks/jobs \
+  --output .flecten/benchmarks/report
 ```

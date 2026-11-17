@@ -16,7 +16,7 @@ import type { PageSink } from "../pages/writer";
 import type { PromptStamp } from "../prompt";
 import type { SerializedQueue } from "../queue/types";
 import type { Event, ImagePart, Message, ReasoningEffort, SessionId } from "../types";
-import type { BudgetLimits, UsagePrice } from "./budget";
+import type { BudgetLimits, RunBudget, UsagePrice } from "./budget";
 import type { SessionMemory } from "./run-input";
 
 export interface SessionOptions {
@@ -35,17 +35,22 @@ export interface SessionOptions {
   systemParts?: readonly PromptTextPart[];
   /** Conversation replies may end in Markdown; summaries and structured roles keep their contracts. */
   responseFormat?: "summary" | "structured" | "conversation";
+  /** Owning runtime may defer a completion block while independent work remains unconfirmed. */
+  completionGuard?(): string | undefined;
   /** Version, hash and budget of `system`, stored with every run. */
   promptStamp?: PromptStamp;
   limits: ToolLimits;
   maxOutputTokens: number;
   reasoning?: ReasoningEffort | undefined;
   variant?: string | undefined;
-  context: { window: number; reserve: number };
+  context: { window: number; reserve: number; workingSetTokens?: number };
   loop: { maxTurns: number; continuations: number; parallelTools: boolean };
   goal?: GoalBudget;
   /** Token, cost and wall-clock limits of every run. */
   budgets?: BudgetLimits;
+  /** Shared across roles and auxiliary requests of the owning task. */
+  taskBudget?: RunBudget;
+  priceFor?(provider: string, model: string): UsagePrice | undefined;
   /** An owning conversation may share a budget with independent background roles. */
   externalBudgetExhausted?(): string | undefined;
   /** Price of a usage for the cost limit; without it the cost limit cannot apply. */

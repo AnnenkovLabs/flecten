@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { tick } from "svelte";
   import type { HookRun } from "../../../../shared/hooks";
   import { HOOK_NAMES } from "../../../../shared/hooks";
@@ -57,7 +58,7 @@
     filter = "all";
     if (hookCanBlock(target)) hook.async = false; else hook.failClosed = false;
     await tick();
-    editor?.querySelector<HTMLSelectElement>("[data-hook-event]")?.focus();
+    editor?.querySelector<HTMLButtonElement>("[data-hook-event]")?.focus();
   }
 </script>
 
@@ -69,12 +70,12 @@
     </div>
     <p class="st-hint">{t("Run your scripts or send an HTTP request when the agent reaches an event.")}</p>
     <div class="hooks-toolbar">
-      <div class="st-field hooks-event"><label class="st-label" for={`${uid}-new-event`}>{t("When")}</label><select id={`${uid}-new-event`} class="st-select" bind:value={event}>{#each HOOK_NAMES as item (item)}<option value={item}>{hookEventLabel(item)}</option>{/each}</select></div>
+      <div class="st-field hooks-event"><label class="st-label" for={`${uid}-new-event`}>{t("When")}</label><Select id={`${uid}-new-event`} class="st-select" bind:value={event} options={HOOK_NAMES.map((item) => ({ value: item, label: hookEventLabel(item) }))} /></div>
       <button data-add-hook class="st-btn st-btn--quiet" type="button" onclick={() => addHook()} disabled={!canAdd || settings.saving}><Icon name="plus" size={14} />{t("Add hook")}</button>
     </div>
     {#if !canAdd}<p class="st-hint">{t("This event has reached its limit of {0} hooks.", [hookLimit()])}</p>{/if}
     {#if entries.length > 0}
-      <div class="hooks-list-heading"><h3>{t("Your hooks")}</h3><div class="hooks-filter"><label class="st-hint" for={`${uid}-filter`}>{t("Events")}</label><select id={`${uid}-filter`} class="st-select" bind:value={filter}><option value="all">{t("All events")}</option>{#each HOOK_NAMES as item (item)}{#if config.hooks?.[item].length}<option value={item}>{hookEventLabel(item)}</option>{/if}{/each}</select></div></div>
+      <div class="hooks-list-heading"><h3>{t("Your hooks")}</h3><div class="hooks-filter"><label class="st-hint" for={`${uid}-filter`}>{t("Events")}</label><Select id={`${uid}-filter`} class="st-select" bind:value={filter} options={[{ value: "all", label: t("All events") }, ...HOOK_NAMES.filter((item) => config.hooks?.[item].length).map((item) => ({ value: item, label: hookEventLabel(item) }))]} /></div></div>
       <p class="st-hint">{t("Hooks run from top to bottom within each event. A blocking decision stops the remaining hooks.")}</p>
       {#each visibleEvents as current (current)}
         <div class="hooks-group">
@@ -124,7 +125,7 @@
   .hooks-event { flex: 1; max-width: 320px; min-width: min(200px, 100%); }
   .hooks-list-heading { justify-content: space-between; flex-wrap: wrap; }
   .hooks-list-heading h3, .hooks-group-heading h3, .hooks-empty h3 { font-size: 13px; font-weight: 600; color: var(--text); margin: 0; }
-  .hooks-filter .st-select { width: auto; max-width: 230px; }
+  .hooks-filter :global(.st-select) { width: auto; max-width: 230px; }
   .hooks-group { margin-top: 8px; }
   .hooks-group-heading { justify-content: space-between; flex-wrap: wrap; margin-bottom: 8px; }
   .hook-item { min-width: 0; border-top: 1px solid var(--line); }

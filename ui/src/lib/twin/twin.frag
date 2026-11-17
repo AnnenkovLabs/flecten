@@ -12,6 +12,14 @@ uniform float uYaw;
 uniform vec4 uArms;         // raise L, raise R, fwd L, fwd R
 uniform float uSmile;       // 0 .. 1
 uniform float uAnger;       // explicit correction verdict, 0 calm .. 1 furious
+uniform float uSadness;
+uniform float uTears;
+uniform float uGrey;
+uniform float uFall;
+uniform float uImpact;
+uniform vec2 uReach;
+uniform float uHearts;
+uniform float uHeartTime;
 uniform vec4 uRipple;       // dir xyz (body space, unit), age s in w (<0 none)
 uniform vec4 uRipple2;
 uniform float uTuft;        // tuft sway
@@ -39,9 +47,19 @@ float sdRoundCone(vec3 p, float r1, float r2, float h) {
   return dot(q, vec2(a, b)) - r1;
 }
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+float sdHeart(vec2 p) {
+  p.x = abs(p.x);
+  if (p.y + p.x > 1.0) return length(p - vec2(0.25, 0.75)) - 0.353553;
+  vec2 a = p - vec2(0.0, 1.0), b = p - 0.5 * max(p.x + p.y, 0.0);
+  return sqrt(min(dot(a, a), dot(b, b))) * sign(p.x - p.y);
+}
 mat2 gArmR[2], gArmF[2];
 
 vec3 toBody(vec3 p) {
+  // Contact compresses along the floor normal, even after the body has tipped over.
+  float contactScale = 1.0 - uImpact * 0.16;
+  p.y = (p.y + 1.0) / contactScale - 1.0;
+  p.xz *= sqrt(contactScale);
   p.y += 1.0 - uLift;
   p.xz = rot(uYaw) * p.xz;
   p.xy = rot(uTilt.x) * p.xy;
@@ -68,11 +86,12 @@ float sdBody(vec3 q) {
   for (int i = 0; i < 2; i++) {
     float sx = i == 0 ? -1.0 : 1.0;
     if (lb < 0.02) break;
-    vec3 a = q - vec3(sx * mix(0.6, 0.74, lb), -0.3, 0.3);
+    float reach = i == 0 ? uReach.x : uReach.y;
+    vec3 a = q - vec3(sx * (mix(0.6, 0.74, lb) - reach * 0.10), -0.3 + reach * 0.12, 0.3 + reach * 0.28);
     if (dot(a, a) > 0.95 * 0.95) continue;
     a.xy = gArmR[i] * a.xy;
     a.yz = gArmF[i] * a.yz;
-    d = smin(d, sdEllipsoid(a - vec3(0.0, -0.17, 0.0), vec3(0.165, 0.26, 0.17) * mix(0.4, 1.0, lb)), 0.09);
+    d = smin(d, sdEllipsoid(a - vec3(0.0, -0.17, 0.0), vec3(0.165, 0.26 + reach * 0.20, 0.17) * mix(0.4, 1.0, lb)), 0.09);
   }
   return d;
 }
@@ -117,15 +136,15 @@ const vec3 CB = vec3(1.3, 1.05, 0.92);
 float mouth(vec3 q) {
   if (q.z < 0.6) return 0.0;
   float x = q.x, y = q.y + 0.29;
-  float curve = mix(0.11 * uSmile + 0.02, -0.07, uAnger);
+  float curve = mix(mix(0.11 * uSmile + 0.02, -0.07, uAnger), -0.045, uSadness);
   float yc = -curve + curve * (x * x) / (0.13 * 0.13);
   float w = 0.018 + 0.03 * uSmile * (1.0 - smoothstep(0.0, 0.12, abs(x)));
   float inX = 1.0 - smoothstep(0.12, 0.135, abs(x));
   float lip = inX * (1.0 - smoothstep(w * 0.5, w * 0.5 + 0.012, abs(y - yc)));
-  float browY = 0.25 + 0.34 * (abs(q.x) - 0.22);
+  float browY = mix(0.25 + 0.34 * (abs(q.x) - 0.22), 0.35 - 0.28 * (abs(q.x) - 0.22), uSadness);
   float browX = smoothstep(0.16, 0.24, abs(q.x)) * (1.0 - smoothstep(0.5, 0.57, abs(q.x)));
   float brow = browX * (1.0 - smoothstep(0.025, 0.045, abs(q.y - browY)));
-  return max(lip, brow * uAnger);
+  return max(lip, brow * max(uAnger, uSadness * 0.7));
 }
 float rayEll(vec3 ro, vec3 rd, vec3 c, vec3 r) {
   vec3 o = (ro - c) / r, d = rd / r;
@@ -151,6 +170,11 @@ vec3 eyeShade(vec3 n, vec3 v, int i) {
   float hk = smoothstep(0.955, 0.985, dot(r, LK));
   float hf = smoothstep(0.988, 0.996, dot(r, normalize(vec3(0.55, -0.25, 0.8))));
   col += vec3(1.0, 0.97, 0.93) * hk * 1.15 + vec3(0.85, 0.9, 1.0) * hf * 0.7;
+  // A still meniscus at the lower lid, with a second reflected softbox.
+  float water = uTears * (1.0 - smoothstep(-0.65, -0.28, n.y)) * smoothstep(0.15, 0.65, n.z);
+  col = mix(col, vec3(0.32, 0.43, 0.52), water * 0.8);
+  col += vec3(0.72, 0.85, 0.95) * water * pow(max(0.0, dot(n, normalize(vec3(-0.35, -0.5, 0.78)))), 16.0) * 0.75;
+  col += vec3(0.93, 0.96, 1.0) * uTears * smoothstep(0.98, 0.997, dot(n, normalize(vec3(0.32, 0.3, 0.9))));
   return col;
 }
 // glossy liquid iris (the droplet before the fur grows)
@@ -182,7 +206,7 @@ void main() {
   vec3 rd = normalize(uv.x * uu + uv.y * vv + uFocal * ww);
   float fur = max(uFur, 0.0);
   float H = H0 * fur;
-  vec3 bc = vec3(0.0, 0.2 + uLift, 0.0); float br = 1.95;
+  vec3 bc = vec3(0.0, mix(0.2 + uLift, -0.03, uFall), uFall * 0.9); float br = 1.95 + uFall * 0.45;
   vec3 oc = ro - bc; float b = dot(oc, rd), c = dot(oc, oc) - br * br, disc = b * b - c;
   vec4 acc = vec4(0.0);
   if (disc > 0.0) {
@@ -197,7 +221,7 @@ void main() {
       t += max(d * 0.7, 0.004);
       if (t > tEnd) break;
     }
-    float tEye = 1e9; int eyeI = -1;
+    float tEye = 1e9; int eyeI = -1; bool tearHit = false;
     float es = uEyes;
     float blinkS = mix(1.0, 0.07, uBlink);
     if (es > 0.01) {
@@ -205,6 +229,13 @@ void main() {
         vec3 c0 = unbendQ(eyeC(i)) - vec3(0.0, 0.0, (1.0 - es) * 0.12);
         float te = rayEll(rob, rdb, c0, vec3(ER * es, ER * blinkS * es, ER * 0.92 * es));
         if (te > 0.0 && te < tEye) { tEye = te; eyeI = i; }
+      }
+      if (uTears > 0.02) {
+        for (int i = 0; i < 2; i++) {
+          vec3 c0 = unbendQ(vec3(i == 0 ? -0.51 : 0.51, -0.205, 0.94));
+          float te = rayEll(rob, rdb, c0, vec3(0.047, 0.078, 0.046) * uTears);
+          if (te > 0.0 && te < tEye) { tEye = te; eyeI = i; tearHit = true; }
+        }
       }
     }
     if (tShell > 0.0 || tEye < 1e8) {
@@ -308,6 +339,12 @@ void main() {
         vec3 qe = rob + rdb * tEye; vec3 c0 = unbendQ(eyeC(eyeI)) - vec3(0.0, 0.0, (1.0 - es) * 0.12);
         vec3 ne = normalize((qe - c0) / vec3(ER * ER, ER * blinkS * ER * blinkS, ER * ER * 0.85));
         vec3 col = eyeShade(ne, -rd, eyeI);
+        if (tearHit) {
+          vec3 tc = unbendQ(vec3(eyeI == 0 ? -0.51 : 0.51, -0.205, 0.94));
+          vec3 tn = normalize((qe - tc) / vec3(0.047 * 0.047, 0.078 * 0.078, 0.046 * 0.046));
+          col = vec3(0.29, 0.42, 0.53) + vec3(0.7, 0.77, 0.84) * pow(max(0.0, dot(reflect(rd, tn), LK)), 18.0);
+          col += vec3(0.5, 0.65, 0.75) * pow(1.0 - max(0.0, dot(tn, -rd)), 3.0);
+        }
         acc.rgb += (1.0 - acc.a) * col; acc.a = 1.0;
       }
       if (hitBody && acc.a < 0.985) {
@@ -328,6 +365,20 @@ void main() {
     float lift = clamp(uLift / 0.8, 0.0, 1.0);
     float shA = (0.5 * (1.0 - smoothstep(-0.05, 0.75 + lift * 0.4, dB)) + 0.38 * (1.0 - smoothstep(0.0, 0.14 + lift * 0.3, dB)) * (1.0 - lift)) * (1.0 - 0.6 * lift);
     acc.a += (1.0 - acc.a) * clamp(shA, 0.0, 0.9);
+  }
+  float grey = dot(acc.rgb, vec3(0.2126, 0.7152, 0.0722));
+  acc.rgb = mix(acc.rgb, vec3(grey * 0.63), uGrey);
+  if (uHearts > 0.001) {
+    for (int i = 0; i < 3; i++) {
+      float fi = float(i), side = i == 1 ? -1.0 : 1.0;
+      float age = clamp((uHeartTime - fi * 0.18) / 2.8, 0.0, 1.0);
+      vec2 center = vec2(side * (0.19 + fi * 0.035), 0.08 + fi * 0.045 + age * 0.18);
+      vec2 hp = (uv - center) / (0.044 + 0.008 * fi) + vec2(0.0, 0.5);
+      float distance = sdHeart(hp), edge = max(fwidth(distance), 0.002);
+      float mask = (1.0 - smoothstep(-edge, edge, distance)) * uHearts;
+      acc.rgb = vec3(0.91, 0.55, 0.65) * mask + acc.rgb * (1.0 - mask);
+      acc.a = mask + acc.a * (1.0 - mask);
+    }
   }
   fragColor = vec4(acc.rgb, acc.a);
 }

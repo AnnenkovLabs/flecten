@@ -23,7 +23,7 @@ async function fixture(
   tools: Tool[] = [],
   permissions?: PermissionEngine,
 ) {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-stop-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-stop-"));
   const events: Event[] = [];
   const session = createSession({
     cwd,

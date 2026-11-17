@@ -37,8 +37,8 @@ describe("taskAge", () => {
 describe("filterRecent", () => {
   const tasks = [
     task("a", "Починить тесты", "Лихтенштейн", "2026-10-24T10:00:00.000Z"),
-    task("b", "Добавить экран", "liquidharness", "2026-10-25T10:00:00.000Z"),
-    task("c", "Обновить README", "liquidharness", "2026-10-23T10:00:00.000Z"),
+    task("b", "Добавить экран", "flecten", "2026-10-25T10:00:00.000Z"),
+    task("c", "Обновить README", "flecten", "2026-10-23T10:00:00.000Z"),
   ];
 
   it("sorts by update time and applies the limit", () => {
@@ -48,7 +48,7 @@ describe("filterRecent", () => {
 
   it("matches title and project without case", () => {
     expect(filterRecent(tasks, "ТЕСТЫ").map((entry) => entry.id)).toEqual(["a"]);
-    expect(filterRecent(tasks, " liquid ").map((entry) => entry.id)).toEqual(["b", "c"]);
+    expect(filterRecent(tasks, " flecten ").map((entry) => entry.id)).toEqual(["b", "c"]);
   });
 
   it("keeps the input order intact", () => {

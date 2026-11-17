@@ -37,7 +37,7 @@ const BWRAP: SandboxDetection = {
 };
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-os-sandbox-integration-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-os-sandbox-integration-"));
   dirs.push(dir);
   return dir;
 }
@@ -62,7 +62,7 @@ function context(
     sessionId: "s_os_sandbox",
     cwd,
     signal: options.signal ?? new AbortController().signal,
-    logDir: join(cwd, ".liquid/logs"),
+    logDir: join(cwd, ".flecten/logs"),
     limits: LIMITS,
     reads: new ReadTracker(),
     ...(options.osSandbox ? { osSandbox: options.osSandbox } : {}),

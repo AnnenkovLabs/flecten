@@ -26,7 +26,7 @@
         <div class="correction-actions"><button class="st-btn st-btn--primary st-btn--sm" type="submit" disabled={correction.busy || !rule.trim() || !appliesWhen.trim()}>{correction.busy ? t("Saving rule…") : t("Save rule to Twin")}</button><button class="st-btn st-btn--quiet st-btn--sm" type="button" disabled={correction.busy} onclick={() => { if (edit) correction.dismiss(edit.id); }}>{t("Skip this edit")}</button></div>
       </form>
     </details>
-    <button class="dismiss" type="button" aria-label={t("Skip this edit")} title={t("Skip this edit")} disabled={correction.busy} onclick={() => { if (edit) correction.dismiss(edit.id); }}><Icon name="x" size={14} /></button>
+    <button class="dismiss" type="button" aria-label={t("Skip this edit")} data-tooltip={t("Skip this edit")} disabled={correction.busy} onclick={() => { if (edit) correction.dismiss(edit.id); }}><Icon name="x" size={14} /></button>
   </div>
 {:else if correction.taughtPath === path}
   <p class="twin-saved" role="status"><Icon name="check" size={14} />{t("Rule saved to Twin.")}</p>

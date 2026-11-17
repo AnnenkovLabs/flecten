@@ -75,7 +75,7 @@ export class PublicDictionary {
   #attemptedAt = 0;
 
   constructor(cwd: string, options: { fetch?: typeof fetch } = {}) {
-    this.#path = join(cwd, ".liquid", "dictionary", "public.json");
+    this.#path = join(cwd, ".flecten", "dictionary", "public.json");
     this.#fetch = options.fetch ?? fetch;
   }
 

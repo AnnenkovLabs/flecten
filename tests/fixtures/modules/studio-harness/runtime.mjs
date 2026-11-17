@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export default ({ server, z, workspace }) => {
-  const directory = join(workspace, ".liquid", "studio-harness");
+  const directory = join(workspace, ".flecten", "studio-harness");
   const path = join(directory, "brief.txt");
   server.registerTool("brief", {
     description: "Read or save the user's project brief in this workspace",

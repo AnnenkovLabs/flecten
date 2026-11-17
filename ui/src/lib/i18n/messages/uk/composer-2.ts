@@ -1,5 +1,7 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Could not save your draft. Keep this window open and free up storage, then try again.":
+    "Не вдалося зберегти чернетку. Залиште вікно відкритим, звільніть місце й спробуйте знову.",
   "Stop voice input": "Зупинити голосове введення",
   "Agent actions": "Дії агента",
   "Waiting for the current step to finish. Click again to stop immediately":

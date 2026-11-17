@@ -1,4 +1,6 @@
 import { permissionRequestKey } from "../../security/permission-request-key";
+import { ProtectedOutputBuffer } from "../../security/provider-secrets/output-buffer";
+import { restoreToolArguments } from "../../security/provider-secrets/tool-arguments";
 import type { PermissionRequest } from "../../security/types";
 import { ToolRegistry } from "../../tools/registry";
 import type { ToolContext } from "../../tools/types";
@@ -92,7 +94,23 @@ export async function executeCalls(
     ...options.toolContext.security?.(),
     permissionIntent: options.toolContext.permissionIntent ?? (() => options.userSource),
     signal: options.signal,
+    providerProtection: options.provider?.protection ?? options.toolContext.providerProtection,
   };
+  if (context.providerProtection)
+    context.secrets = [...(context.secrets ?? []), ...context.providerProtection.vault.values];
+  const protection = context.providerProtection;
+  const hooks = options.hooks;
+  if (protection && hooks)
+    options = {
+      ...options,
+      hooks: {
+        async run(event, input, signal) {
+          return protection.vault.protect(
+            await hooks.run(event, protection.vault.protect(input), signal),
+          );
+        },
+      },
+    };
   const inputs = calls.map((call) => options.tools.prepare(call));
   calls = calls.map((call, index) => inputs[index]?.call ?? call);
   const display = calls.map((call) => ({ ...call, name: options.tools.canonicalName(call.name) }));
@@ -127,13 +145,35 @@ export async function executeCalls(
   }
 
   const prepare = async (call: ToolCall, callContext: ToolContext): Promise<PreparedCall> => {
+    const protection = callContext.providerProtection;
+    if (protection) {
+      try {
+        const name = options.tools.canonicalName(call.name);
+        const kind = options.tools.source(name) === "builtin" ? name : "external";
+        call = { ...call, args: restoreToolArguments(protection.vault, kind, call.args) };
+      } catch (error) {
+        return {
+          call,
+          context: callContext,
+          hookInput: {
+            sessionId: context.sessionId,
+            cwd: context.cwd,
+            toolName: call.name,
+            toolArgs: call.args,
+          },
+          denied: denied(
+            error instanceof Error ? error.message : "Invalid provider secret reference",
+          ),
+        };
+      }
+    }
     const normalized = options.tools.prepare(call);
     if (normalized.call) call = normalized.call;
     const hookInput = {
       sessionId: context.sessionId,
       cwd: context.cwd,
       toolName: call.name,
-      toolArgs: call.args,
+      toolArgs: protection ? protection.vault.protect(call.args) : call.args,
     };
     if (options.stopSignal?.aborted || callContext.signal.aborted)
       return { call, hookInput, context: callContext, denied: stopped() };
@@ -177,6 +217,9 @@ export async function executeCalls(
   };
 
   const run = async (call: ToolCall, current: ToolContext): Promise<ToolResult> => {
+    const output = current.providerProtection
+      ? new ProtectedOutputBuffer((text) => current.providerProtection?.vault.protect(text) ?? text)
+      : undefined;
     const callContext = {
       ...current,
       invokeTool: async (
@@ -202,9 +245,17 @@ export async function executeCalls(
         );
         return nested[0] ?? { ok: false, output: "", error: "Nested tool did not run" };
       },
-      reportOutput: (text: string) => emit({ type: "tool.output", callId: call.id, text }),
+      reportOutput: (text: string) => {
+        if (output) output.push(text);
+        else emit({ type: "tool.output", callId: call.id, text });
+      },
     };
-    return options.tools.run(call, callContext);
+    try {
+      return await options.tools.run(call, callContext);
+    } finally {
+      const text = output?.finish();
+      if (text) emit({ type: "tool.output", callId: call.id, text });
+    }
   };
 
   const execute = async (prepared: PreparedCall): Promise<ToolResult> => {
@@ -339,10 +390,13 @@ export async function executeCalls(
     try {
       const prepared = await prepare(call, current);
       const result = await execute(prepared);
-      const final = withPermissionReview(
+      const reviewed = withPermissionReview(
         scope?.cancelled() ? cancelled(result) : result,
         prepared.review,
       );
+      const final = current.providerProtection
+        ? current.providerProtection.vault.protect(reviewed)
+        : reviewed;
       emit({ type: "tool.finished", call: shown, result: final });
       return final;
     } finally {

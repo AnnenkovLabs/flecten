@@ -9,15 +9,18 @@ import { scriptedProvider } from "../helpers/fake-provider";
 test("idle compaction translates focus and display while retaining English continuation", async () => {
   const provider = scriptedProvider([]);
   const client = new TranslationClient(scriptedProvider([]), 1000);
-  client.translate = async (text, target) => ({
-    text:
-      target === "en"
-        ? text === "Только тесты."
-          ? "Tests only."
-          : text
-        : "Локализованное саммари.",
-    language: "en",
-  });
+  client.translate = async (text, target, _signal, onUsage) => {
+    onUsage({ usage: { input: 0, output: 0, cached: 0 }, durationMs: 1, reported: false });
+    return {
+      text:
+        target === "en"
+          ? text === "Только тесты."
+            ? "Tests only."
+            : text
+          : "Локализованное саммари.",
+      language: "en",
+    };
+  };
   const history: Message[] = [
     { role: "user", content: "Fix the bug.", workingLanguage: "en", sourceLanguage: "ru" },
   ];
@@ -61,6 +64,12 @@ test("idle compaction translates focus and display while retaining English conti
     (event) => events.push(event),
   );
   expect(result.compacted).toBe(true);
+  expect(
+    events.some((event) => event.type === "usage.unavailable" && event.purpose === "translation"),
+  ).toBe(true);
+  expect(events.some((event) => event.type === "usage" && event.purpose === "translation")).toBe(
+    false,
+  );
   expect(events.find((event) => event.type === "context.compacted")).toMatchObject({
     displaySummary: "Локализованное саммари.",
   });

@@ -260,7 +260,7 @@
     aria-label={ariaLabel}
     aria-haspopup="dialog"
     aria-expanded={open}
-    title={`${activeProvider?.name ?? t("Provider")} · ${model}`}
+    data-tooltip={`${activeProvider?.name ?? t("Provider")} · ${model}`}
     {disabled}
     bind:this={triggerEl}
     onclick={toggle}
@@ -303,7 +303,7 @@
               class="quick-chip"
               type="button"
               data-picker-focus
-              title={`${entry.providerName} · ${entry.model}`}
+              data-tooltip={`${entry.providerName} · ${entry.model}`}
               onclick={() => select(entry.provider, entry.model)}
             >
               <span class="quick-star" aria-hidden="true"><Icon name="star" size={11} /></span>
@@ -327,7 +327,7 @@
               aria-expanded={group.expanded}
               aria-controls={`${pickerId}-models-${group.id}`}
               disabled={searching}
-              title={searching ? t("Search shows all matches") : undefined}
+              data-tooltip={searching ? t("Search shows all matches") : undefined}
               onclick={() => toggleProvider(group.id)}
             >
               <Icon name={group.expanded ? "chevron-down" : "chevron-right"} size={12} />
@@ -354,14 +354,14 @@
                   role="option"
                   tabindex="-1"
                   aria-selected={group.id === provider && id === model}
-                  title={`${group.name} · ${id}`}
+                  data-tooltip={`${group.name} · ${id}`}
                   onclick={() => select(group.id, id)}
                 >
                   <span class="row-name">{info.name ?? formatModelName(id)}</span>
                   {#if capabilities.length > 0}
                     <span class="row-capabilities" aria-label={capabilities.map((capability) => capability.label).join(", ")}>
                       {#each capabilities as capability (capability.label)}
-                        <span title={capability.label}><Icon name={capability.icon} size={13} /></span>
+                        <span data-tooltip={capability.label}><Icon name={capability.icon} size={13} /></span>
                       {/each}
                     </span>
                   {/if}

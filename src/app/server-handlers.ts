@@ -30,9 +30,10 @@ import {
 } from "./server-session-handlers";
 import type { AppService } from "./service";
 import { exportSession } from "./session-export";
+import { STORAGE_COMMANDS, type StorageCommandType } from "./storage-bootstrap";
 import { TWIN_COMMANDS, type TwinCommandType, twinHandlers } from "./twin-handlers";
 import { listWorkspaceFiles } from "./workspace";
-import { changeWorkspaceFile, workspaceDirectories } from "./workspace-files";
+import { changeWorkspaceFile } from "./workspace-files";
 import { workspaceGit } from "./workspace-git";
 import { replaceWorkspace } from "./workspace-replace";
 import { searchWorkspace } from "./workspace-search";
@@ -67,6 +68,7 @@ const APP_COMMANDS = [
   "model.probe",
   "model.set",
   "provider.actualize",
+  "provider.inspect",
   "provider.discover",
   "provider.draft",
   "provider.test",
@@ -101,7 +103,8 @@ export const COMMAND_TYPES = [
   ...MODULE_COMMANDS,
   ...DICTIONARY_COMMANDS,
   ...TWIN_COMMANDS,
-].sort() as readonly CommandType[];
+  ...STORAGE_COMMANDS,
+].sort() as readonly ProtocolCommandType[];
 export type CommandType =
   | (typeof APP_COMMANDS)[number]
   | (typeof SESSION_COMMANDS)[number]
@@ -109,6 +112,7 @@ export type CommandType =
   | ModuleCommandType
   | DictionaryCommandType
   | TwinCommandType;
+export type ProtocolCommandType = CommandType | StorageCommandType;
 
 /** Commands that change what the status line shows; the server sends a fresh one after them. */
 export const REFRESH_AFTER: ReadonlySet<string> = new Set([
@@ -121,7 +125,7 @@ export const REFRESH_AFTER: ReadonlySet<string> = new Set([
   "access.set",
 ]);
 
-export function isCommandType(type: string): type is CommandType {
+export function isCommandType(type: string): type is ProtocolCommandType {
   return (COMMAND_TYPES as readonly string[]).includes(type);
 }
 
@@ -263,6 +267,9 @@ function appHandlers(
       const result = await app.actualizeProvider(required(command, "id"));
       return { result, info: result.info };
     },
+    "provider.inspect": async (command) => ({
+      result: await app.inspectProvider(required(command, "baseUrl").trim()),
+    }),
     "provider.discover": async (command) => {
       const protocol = PROTOCOLS.find((item) => item === command.protocol);
       if (!protocol) throw new Error(`protocol must be ${PROTOCOLS.join(", ")}`);
@@ -327,10 +334,7 @@ function appHandlers(
       });
       return { info };
     },
-    "files.list": async () => ({
-      files: await listWorkspaceFiles(app.info().cwd),
-      directories: await workspaceDirectories(app.info().cwd),
-    }),
+    "files.list": async () => ({ ...(await listWorkspaceFiles(app.info().cwd)) }),
     "files.change": async (command) => {
       await changeWorkspaceFile(app.info().cwd, command);
       return {};

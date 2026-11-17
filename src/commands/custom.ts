@@ -33,9 +33,9 @@ export interface CommandDirectory {
 export function commandDirectories(cwd: string, home: string): CommandDirectory[] {
   return [
     { dir: join(home, ".claude", "commands"), scope: "user" },
-    { dir: join(home, ".liquid", "commands"), scope: "user" },
+    { dir: join(home, ".flecten", "commands"), scope: "user" },
     { dir: join(cwd, ".claude", "commands"), scope: "project" },
-    { dir: join(cwd, ".liquid", "commands"), scope: "project" },
+    { dir: join(cwd, ".flecten", "commands"), scope: "project" },
   ];
 }
 

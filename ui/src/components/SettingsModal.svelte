@@ -16,12 +16,14 @@
   import { closeAction } from "../lib/settings-utils";
   import { searchSettingsSections, type SettingsSectionId } from "../lib/settings/sections";
   import AddProviderModal from "./AddProviderModal.svelte";
+  import ProviderProtectionConsent from "./ProviderProtectionConsent.svelte";
   import Icon from "./Icon.svelte";
   import ProviderEditor from "./ProviderEditor.svelte";
   import ProviderGlyph from "./ProviderGlyph.svelte";
   import ModulesSettings from "./settings/ModulesSettings.svelte";
   import AboutSettings from "./settings/AboutSettings.svelte";
   import GeneralSettings from "./settings/GeneralSettings.svelte";
+  import ModelsSettings from "./settings/ModelsSettings.svelte";
   import HistorySettings from "./settings/HistorySettings.svelte";
   import PermissionsSettings from "./settings/PermissionsSettings.svelte";
   import ServerSettings from "./settings/ServerSettings.svelte";
@@ -145,7 +147,7 @@
         class="st-icon-btn"
         type="button"
         aria-label={t("Close settings")}
-        title={t("Close settings (Esc)")}
+        data-tooltip={t("Close settings (Esc)")}
         onclick={requestClose}
       >
         <Icon name="x" size={17} />
@@ -308,6 +310,8 @@
           {:else if config}
             {#if section === "general"}
               <GeneralSettings />
+            {:else if section === "models"}
+              <ModelsSettings />
             {:else if section === "providers"}
               <ProviderEditor />
             {:else if section === "permissions"}
@@ -372,7 +376,7 @@
               <button
                 class="st-btn st-btn--primary"
                 type="button"
-                title={saveTitle}
+                data-tooltip={saveTitle}
                 disabled={!settings.canSave}
                 onclick={() => settings.save()}
               >
@@ -386,4 +390,5 @@
   </dialog>
 
   <AddProviderModal />
+  <ProviderProtectionConsent />
 {/if}

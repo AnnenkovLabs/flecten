@@ -1,4 +1,11 @@
 export default {
+  "Twin is on": "Twin is on",
+  "Twin is off": "Twin is off",
+  "Twin is saying goodbye…": "Twin is saying goodbye…",
+  "Twin is back with you": "Twin is back with you",
+  "Represents you while you work.": "Represents you while you work.",
+  "Your character stays saved. Turn Twin on whenever you want.":
+    "Your character stays saved. Turn Twin on whenever you want.",
   "No new supported user messages were found. No model request was made.":
     "No new supported user messages were found. No model request was made.",
   "Training finished. No supported traits were found.":

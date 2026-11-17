@@ -30,7 +30,7 @@ afterEach(async () => {
 });
 
 async function workspace(): Promise<string> {
-  const path = await mkdtemp(join(tmpdir(), "liquid-provider-replay-"));
+  const path = await mkdtemp(join(tmpdir(), "flecten-provider-replay-"));
   directories.push(path);
   return path;
 }

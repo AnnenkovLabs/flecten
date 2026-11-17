@@ -1,4 +1,11 @@
 export default {
+  "Twin is on": "Twin 已开启",
+  "Twin is off": "Twin 已关闭",
+  "Twin is saying goodbye…": "Twin 正在告别…",
+  "Twin is back with you": "Twin 又回到你身边了",
+  "Represents you while you work.": "在你工作时代表你。",
+  "Your character stays saved. Turn Twin on whenever you want.":
+    "你的个性设置会保留。随时可以重新开启 Twin。",
   "No new supported user messages were found. No model request was made.":
     "未找到可导入的新用户消息。未向模型发送请求。",
   "Training finished. No supported traits were found.": "学习已完成。未找到有依据的特征。",

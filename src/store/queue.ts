@@ -1,7 +1,9 @@
-import { rm } from "node:fs/promises";
+import { unlink } from "node:fs/promises";
+import { dirname } from "node:path";
 import type { SerializedQueue } from "../core/queue/types";
 import { SerializedQueueSchema } from "../core/queue/types";
 import { atomicWrite } from "../util/atomic";
+import { syncDirectory } from "../util/durable";
 import { readTolerant } from "./events/envelope";
 import { sessionPaths } from "./paths";
 
@@ -28,7 +30,13 @@ export async function saveQueue(
 ): Promise<void> {
   const path = sessionPaths(cwd, sessionId).queue;
   if (queue.items.length === 0) {
-    await rm(path, { force: true });
+    try {
+      await unlink(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
+    await syncDirectory(dirname(path));
     return;
   }
   await atomicWrite(path, `${JSON.stringify(queue)}\n`);

@@ -25,7 +25,7 @@ const limits = {
 const dirs: string[] = [];
 
 async function tempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-tool-logs-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-tool-logs-"));
   dirs.push(dir);
   return dir;
 }
@@ -35,7 +35,7 @@ function context(cwd: string, signal = new AbortController().signal): ToolContex
     sessionId: "s_test",
     cwd,
     signal,
-    logDir: join(cwd, ".liquid/sessions/s_test/logs"),
+    logDir: join(cwd, ".flecten/sessions/s_test/logs"),
     limits,
     reads: new ReadTracker(),
   };
@@ -83,7 +83,7 @@ describe("tool logs", () => {
     const path = result.fullOutputPath ?? "";
 
     expect(result.ok).toBe(true);
-    expect(path.startsWith(join(cwd, ".liquid/sessions/s_test/logs"))).toBe(true);
+    expect(path.startsWith(join(cwd, ".flecten/sessions/s_test/logs"))).toBe(true);
     expect(basename(path)).toContain("echo");
     expect(basename(path)).toContain("call-1");
     expect(other.fullOutputPath).not.toBe(path);

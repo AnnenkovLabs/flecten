@@ -8,6 +8,7 @@ import type { ToolContext } from "../types";
 import { detectEncoding, type Encoding, SAMPLE_BYTES, sampleFile } from "../util/encoding";
 import { displayPath, resolveToolPath } from "../util/paths";
 import { runReadImage } from "./image";
+import { readLineSlice } from "./line-slice";
 import type { ReadArgs } from "./schema";
 
 const MAX_FULL_READ_BYTES = 20 * 1024 * 1024;
@@ -36,6 +37,7 @@ async function streamLines(
   limit: number,
   wantFull: boolean,
   maxOutputBytes: number,
+  signal?: AbortSignal,
 ): Promise<Streamed> {
   const decoder = new TextDecoder(encoding);
   const lines: string[] = [];
@@ -71,6 +73,7 @@ async function streamLines(
     start,
     highWaterMark: CHUNK_BYTES,
   })) {
+    if (signal?.aborted) throw new Error("Read aborted");
     const text = decoder.decode(chunk, { stream: true });
     if (fullText !== undefined) fullText += text;
     let cursor = 0;
@@ -111,6 +114,7 @@ export async function runRead(
     reads: { record(path: string, content: string): void };
   },
 ): Promise<ToolResult> {
+  if (context.signal?.aborted) return { ok: false, output: "", error: "Read aborted" };
   const path = resolveToolPath(context.cwd, args.path);
   let info: Stats;
   try {
@@ -164,16 +168,33 @@ export async function runRead(
     if (args.offset === 0) notes.push("Note: offset 0 was treated as 1.");
     offset = 1;
   }
+  if (args.characterOffset !== undefined)
+    return readLineSlice(
+      path,
+      detected.encoding,
+      detected.bomBytes,
+      offset,
+      args.characterOffset,
+      context.limits.maxOutputBytes,
+      context.signal,
+    );
 
-  const streamed = await streamLines(
-    path,
-    detected.bomBytes,
-    detected.encoding,
-    offset,
-    limit,
-    info.size <= MAX_FULL_READ_BYTES,
-    context.limits.maxOutputBytes,
-  );
+  let streamed: Streamed;
+  try {
+    streamed = await streamLines(
+      path,
+      detected.bomBytes,
+      detected.encoding,
+      offset,
+      limit,
+      info.size <= MAX_FULL_READ_BYTES,
+      context.limits.maxOutputBytes,
+      context.signal,
+    );
+  } catch (error) {
+    if (context.signal?.aborted) return { ok: false, output: "", error: "Read aborted" };
+    throw error;
+  }
   const total = streamed.total;
 
   if (total === 0) {
@@ -199,6 +220,16 @@ export async function runRead(
 
   const numbered = streamed.lines.map((line, index) => `${offset + index}: ${line}`).join("\n");
   const truncation = truncateHead(numbered, limit, context.limits.maxOutputBytes);
+  if (truncation.outputLines === 0 || streamed.clipped)
+    return readLineSlice(
+      path,
+      detected.encoding,
+      detected.bomBytes,
+      offset,
+      0,
+      context.limits.maxOutputBytes,
+      context.signal,
+    );
   const shownEnd = offset + truncation.outputLines - 1;
   const parts = [truncation.text];
   if (streamed.clipped) {

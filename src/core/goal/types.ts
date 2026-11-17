@@ -51,6 +51,7 @@ export type RetryFailureKind =
   | "rate_limit"
   | "quota_5h"
   | "quota_weekly"
+  | "model_quota"
   | "billing"
   | "network"
   | "server"

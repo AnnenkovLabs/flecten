@@ -17,6 +17,7 @@ export class ThreadViewport {
   #width = 0;
   #scroller: HTMLElement | undefined;
   #content: HTMLElement | undefined;
+  #header: HTMLElement | undefined;
   #observer: ResizeObserver | undefined;
   #rows = new Map<string, HTMLElement>();
   #frame = 0;
@@ -57,14 +58,17 @@ export class ThreadViewport {
     content: HTMLElement,
     follows: () => boolean,
     onResize: () => void,
+    header?: HTMLElement,
   ): () => void {
     this.#scroller = scroller;
     this.#content = content;
+    this.#header = header;
     this.#follow = follows;
     this.#onResize = onResize;
     this.#observer = new ResizeObserver(() => this.#schedule());
     this.#observer.observe(scroller);
     this.#observer.observe(content);
+    if (header) this.#observer.observe(header);
     for (const element of this.#rows.values()) this.#observer.observe(element);
     this.scroll();
     this.#schedule();
@@ -77,6 +81,7 @@ export class ThreadViewport {
       this.#adjusting = false;
       this.#scroller = undefined;
       this.#content = undefined;
+      this.#header = undefined;
     };
   }
 
@@ -136,7 +141,8 @@ export class ThreadViewport {
       content.getBoundingClientRect().top -
       scroller.getBoundingClientRect().top +
       scroller.scrollTop +
-      Number.parseFloat(getComputedStyle(content).paddingTop)
+      Number.parseFloat(getComputedStyle(content).paddingTop) +
+      (this.#header?.getBoundingClientRect().height ?? 0)
     );
   }
 

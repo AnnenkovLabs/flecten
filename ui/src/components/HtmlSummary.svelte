@@ -18,7 +18,7 @@
 
   let { html, complete = false, title = t("Summary"), onAction }: Props = $props();
 
-  const TYPE = "liquid-summary";
+  const TYPE = "flecten-summary";
   const VERSION = 1;
   // ponytail: hard cap per artifact. Stream larger reports from disk if they ever need it.
   const MAX_SUMMARY_CHARS = 512 * 1024;
@@ -86,7 +86,7 @@
     return config;
   }
 
-  const summaryUrl = "liquid-summary://shell";
+  const summaryUrl = "flecten-summary://shell";
 
   let frame = $state<HTMLIFrameElement | null>(null);
   let height = $state(0);

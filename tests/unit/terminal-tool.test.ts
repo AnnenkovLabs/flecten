@@ -45,7 +45,7 @@ function context(cwd: string, manager: TerminalManager): ToolContext {
     sessionId: "s-terminal",
     cwd,
     signal: new AbortController().signal,
-    logDir: join(cwd, ".liquid", "logs"),
+    logDir: join(cwd, ".flecten", "logs"),
     limits: {
       maxOutputBytes: 50_000,
       maxOutputLines: 2000,
@@ -60,7 +60,7 @@ function context(cwd: string, manager: TerminalManager): ToolContext {
 
 describe.skipIf(process.platform === "win32")("terminal tool", () => {
   test("a persistent terminal cannot accept another command under a changed boundary", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-boundary-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-terminal-boundary-"));
     dirs.push(cwd);
     const manager = new TerminalManager();
     managers.push(manager);
@@ -74,7 +74,7 @@ describe.skipIf(process.platform === "win32")("terminal tool", () => {
     expect(manager.list()).toHaveLength(0);
   });
   test("runs commands in a persistent shell with exit code", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-tool-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-terminal-tool-"));
     dirs.push(cwd);
     const manager = new TerminalManager();
     managers.push(manager);
@@ -94,7 +94,7 @@ describe.skipIf(process.platform === "win32")("terminal tool", () => {
   }, 20_000);
 
   test("returns new command output when scrollback discards older lines", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-scrollback-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-terminal-scrollback-"));
     dirs.push(cwd);
     const manager = new TerminalManager({ shell: "/bin/sh", scrollback: 6 });
     managers.push(manager);
@@ -121,7 +121,7 @@ describe.skipIf(process.platform === "win32")("terminal tool", () => {
   });
 
   test("can write to an interactive process and kill it", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-interactive-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-terminal-interactive-"));
     dirs.push(cwd);
     const manager = new TerminalManager();
     managers.push(manager);
@@ -139,7 +139,7 @@ describe.skipIf(process.platform === "win32")("terminal tool", () => {
   }, 20_000);
 
   test("an existing terminal keeps its shell protocol after settings change", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-shell-change-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-terminal-shell-change-"));
     dirs.push(cwd);
     const manager = new TerminalManager({ shell: "/bin/sh" });
     managers.push(manager);
@@ -153,7 +153,7 @@ describe.skipIf(process.platform === "win32")("terminal tool", () => {
   });
 
   test("a completed shell is replaced on the next run", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-reopen-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-terminal-reopen-"));
     dirs.push(cwd);
     const manager = new TerminalManager();
     managers.push(manager);
@@ -166,7 +166,7 @@ describe.skipIf(process.platform === "win32")("terminal tool", () => {
   });
 
   test("tool cancellation kills the interactive command's child tree", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-abort-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-terminal-abort-"));
     dirs.push(cwd);
     const manager = new TerminalManager();
     managers.push(manager);
@@ -189,7 +189,7 @@ describe.skipIf(process.platform === "win32")("terminal tool", () => {
 test.skipIf(process.platform !== "win32")(
   "terminal tool runs persistent native Windows commands through ConPTY",
   async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-terminal-windows-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-terminal-windows-"));
     dirs.push(cwd);
     const manager = new TerminalManager({ timeouts: { commandMs: 2000 } });
     managers.push(manager);
@@ -222,7 +222,7 @@ test.skipIf(process.platform !== "win32")(
 
 describe("foreground commands with the native platform shell", () => {
   test("timeout kills children, not only the shell", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-bash-timeout-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-bash-timeout-"));
     dirs.push(cwd);
     const manager = new TerminalManager();
     managers.push(manager);
@@ -241,7 +241,7 @@ describe("foreground commands with the native platform shell", () => {
   });
 
   test("exiting leaves no orphan children", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-bash-orphan-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-bash-orphan-"));
     dirs.push(cwd);
     const manager = new TerminalManager();
     managers.push(manager);

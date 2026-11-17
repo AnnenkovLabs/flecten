@@ -8,7 +8,7 @@ import { ToolRegistry } from "../../src/tools/registry";
 import { scriptedProvider } from "../helpers/fake-provider";
 
 test("removing a queue item already taken for preparation fails without claiming cancellation", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-queue-remove-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-queue-remove-"));
   const gate = Promise.withResolvers<string>();
   const preparing = Promise.withResolvers<void>();
   const finished = Promise.withResolvers<void>();

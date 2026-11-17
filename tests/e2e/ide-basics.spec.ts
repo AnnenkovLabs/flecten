@@ -26,8 +26,8 @@ test("IDE supports everyday file, search, command, split and terminal workflows"
     });
     await page.reload();
     await page.getByRole("button", { name: "IDE", exact: true }).click();
-    await page.locator('.explorer .entry[title="src"]').click();
-    await page.locator('.explorer .entry[title="src/main.ts"]').click();
+    await page.locator('.explorer .entry[data-tooltip="src"]').click();
+    await page.locator('.explorer .entry[data-tooltip="src/main.ts"]').click();
     const editor = page.locator(".editor-columns .cm-content:visible").first();
     await expect(editor).toContainText("answer = 42");
     await page.keyboard.press("ControlOrMeta+g");
@@ -57,7 +57,7 @@ test("IDE supports everyday file, search, command, split and terminal workflows"
     await page.keyboard.insertText("export const local = 'edited';\n");
     await page.keyboard.press("ControlOrMeta+Shift+s");
     await expect.poll(() => readFile(join(cwd, "src/new.ts"), "utf8")).toContain("edited");
-    await page.locator('.explorer .entry[title="src/new.ts"]').click({ button: "right" });
+    await page.locator('.explorer .entry[data-tooltip="src/new.ts"]').click({ button: "right" });
     await page.locator(".file-menu button").filter({ hasText: "Переименовать" }).click();
     const rename = page.getByRole("dialog", { name: "Переименовать", exact: true });
     await rename.locator("input").fill("src/renamed.ts");
@@ -91,7 +91,7 @@ test("IDE supports everyday file, search, command, split and terminal workflows"
     await expect(replacement).toBeHidden();
     await expect(editor).toContainText("salutation");
     await page.getByRole("tab", { name: "Контроль версий", exact: true }).click();
-    await page.locator('.source-control .open-diff[title="src/main.ts"]').click();
+    await page.locator('.source-control .open-diff[data-tooltip="src/main.ts"]').click();
     await expect(page.locator(".git-diff")).toContainText("+export const salutation");
     await page.getByRole("button", { name: "Добавить в коммит src/main.ts", exact: true }).click();
     await expect.poll(() => git("diff", "--cached", "--name-only")).toBe("src/main.ts\n");

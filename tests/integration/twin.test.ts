@@ -23,8 +23,8 @@ async function fixture() {
       const body = (await request.json()) as Record<string, unknown>;
       requests.push(body);
       const sources = JSON.stringify(body);
-      const index = sources.indexOf("source-liquid-");
-      const sourceMessageId = index >= 0 ? sources.slice(index, index + 38) : "missing";
+      const index = sources.indexOf("source-flecten-");
+      const sourceMessageId = index >= 0 ? sources.slice(index, index + 39) : "missing";
       const learning = sources.includes("Twin: learn from user evidence");
       const consultation = sources.includes("Twin: consult the confirmed profile");
       const result = learning
@@ -78,9 +78,9 @@ async function fixture() {
       },
     }),
   );
-  await mkdir(join(cwd, ".liquid/dictionary"), { recursive: true });
+  await mkdir(join(cwd, ".flecten/dictionary"), { recursive: true });
   await Bun.write(
-    join(cwd, ".liquid/dictionary/public.json"),
+    join(cwd, ".flecten/dictionary/public.json"),
     JSON.stringify({
       schemaVersion: 1,
       syncedAt: new Date().toISOString(),
@@ -90,7 +90,7 @@ async function fixture() {
     }),
   );
   await Bun.write(
-    join(cwd, ".liquid/sessions/source/events.jsonl"),
+    join(cwd, ".flecten/sessions/source/events.jsonl"),
     [
       {
         event: {
@@ -148,12 +148,12 @@ test("Twin automatically learns emotional voice from exact reactions plus preced
   expect((await f.app.twin.get()).sources).toHaveLength(9);
   expect(f.requests).toHaveLength(0);
   const scan = snapshot((await f.handlers["twin.scan"]({ type: "twin.scan" }))?.twin);
-  expect(scan.sources.find((source) => source.id === "liquid")).toMatchObject({
+  expect(scan.sources.find((source) => source.id === "flecten")).toMatchObject({
     sessions: 1,
     status: "ready",
   });
   const started = snapshot(
-    (await f.handlers["twin.train"]({ type: "twin.train", sourceIds: ["liquid"] }))?.twin,
+    (await f.handlers["twin.train"]({ type: "twin.train", sourceIds: ["flecten"] }))?.twin,
   );
   expect(["reading", "learning"]).toContain(started.training.state);
   const trained = await f.settled();
@@ -166,8 +166,8 @@ test("Twin automatically learns emotional voice from exact reactions plus preced
   expect(trained.entries[0]?.evidence[0]?.precedingAssistant).toContain("five-step checkout");
   expect(JSON.stringify(f.requests[0])).not.toContain("Ignore this internal instruction");
   expect(JSON.stringify(f.requests[0])).toContain("five-step checkout");
-  expect(await Bun.file(join(f.cwd, ".liquid/memory.json")).exists()).toBe(false);
-  await f.handlers["twin.train"]({ type: "twin.train", sourceIds: ["liquid"] });
+  expect(await Bun.file(join(f.cwd, ".flecten/memory.json")).exists()).toBe(false);
+  await f.handlers["twin.train"]({ type: "twin.train", sourceIds: ["flecten"] });
   await f.settled();
   expect(f.requests).toHaveLength(1);
   const entry = trained.entries[0];
@@ -233,9 +233,9 @@ test("Twin automatically learns emotional voice from exact reactions plus preced
   });
   await f.app.twin.forget({ id: entry.id, expectedRevision: 2 });
   expect((await f.app.twin.get()).entries).toHaveLength(0);
-  const disk = await Bun.file(join(f.cwd, ".liquid/twin.json")).json();
+  const disk = await Bun.file(join(f.cwd, ".flecten/twin.json")).json();
   expect(disk.version).toBe(2);
-  expect(await Bun.file(join(f.cwd, ".liquid/memory.json")).exists()).toBe(false);
+  expect(await Bun.file(join(f.cwd, ".flecten/memory.json")).exists()).toBe(false);
 });
 
 test("Twin rejects fabricated evidence atomically, accepts explicit teaching without a request and delegates raw intent with an empty profile", async () => {
@@ -254,7 +254,7 @@ test("Twin rejects fabricated evidence atomically, accepts explicit teaching wit
   expect(initial.verdict).toBe("revise");
   expect(initial.entryIds).toHaveLength(0);
   f.setFabricated();
-  await f.handlers["twin.train"]({ type: "twin.train", sourceIds: ["liquid"] });
+  await f.handlers["twin.train"]({ type: "twin.train", sourceIds: ["flecten"] });
   const failed = await f.settled();
   expect(failed.training.state).toBe("error");
   expect(failed.training.message).toContain("quote");

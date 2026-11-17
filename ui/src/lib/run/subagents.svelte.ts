@@ -110,6 +110,22 @@ export class SubagentsView {
         return;
     }
   }
+  syncActions(thread: ThreadView): void {
+    for (const item of this.items) {
+      const action = this.action(item);
+      for (const row of thread.items) {
+        const actions =
+          row.kind === "run" ? row.summary.list : row.kind === "worker" ? row.actions : [];
+        const index = actions.findIndex((entry) => entry.id === item.callId);
+        if (index >= 0) actions[index] = action;
+        if (row.kind === "run")
+          for (const turn of row.summary.turns) {
+            const position = turn.actions.findIndex((entry) => entry.id === item.callId);
+            if (position >= 0) turn.actions[position] = action;
+          }
+      }
+    }
+  }
   action(item: SubagentView): RunAction {
     const call: AgentToolCall = {
       id: item.callId,

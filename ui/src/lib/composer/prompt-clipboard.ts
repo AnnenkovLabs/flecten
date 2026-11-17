@@ -1,9 +1,9 @@
 import { z } from "zod";
 import type { PromptSnapshot } from "./prompt-document";
 
-export const PROMPT_CLIPBOARD_TYPE = "application/x-liquid-prompt";
+export const PROMPT_CLIPBOARD_TYPE = "application/x-flecten-prompt";
 
-const snapshotSchema = z
+export const snapshotSchema = z
   .object({
     text: z.string().max(1_000_000),
     mentions: z

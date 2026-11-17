@@ -14,7 +14,7 @@ import type {
 
 /** Settings and secrets: undo never rewrites them unless the user picks them explicitly. */
 const PROTECTED_ROOT_FILES = new Set(["flecten.config.json", "liquid.config.json"]);
-const PROTECTED_ROOT_DIRS = [".liquid/"];
+const PROTECTED_ROOT_DIRS = [".flecten/", ".liquid/", ".flecten-migration/"];
 const PROTECTED_NAMES = new Set([
   ".env",
   ".env.local",

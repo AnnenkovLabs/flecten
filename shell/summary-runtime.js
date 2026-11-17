@@ -1,5 +1,5 @@
 (() => {
-  const TYPE = "liquid-summary";
+  const TYPE = "flecten-summary";
   const VERSION = 1;
   const SVG = "http://www.w3.org/2000/svg";
   const root = document.getElementById("summary-root");
@@ -182,7 +182,7 @@
       scriptTypes.set(element, element.getAttribute("type") || "");
       // A connected empty script executes when its streamed text is appended. Keep it
       // inert until finish(), otherwise runScripts() executes the model's code twice.
-      element.setAttribute("type", "application/x-liquid-pending");
+      element.setAttribute("type", "application/x-flecten-pending");
     }
     current().appendChild(element);
     if (!token.selfClosing && !VOID.has(name)) {

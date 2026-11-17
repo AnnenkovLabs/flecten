@@ -19,7 +19,7 @@
     {#each rows as row}
       <div>
         <dt>{row.label}</dt>
-        <dd title={row.value?.toLocaleString()}>{row.value === undefined ? t("Not reported") : shortTokens(row.value)}</dd>
+        <dd data-tooltip={row.value?.toLocaleString()}>{row.value === undefined ? t("Not reported") : shortTokens(row.value)}</dd>
       </div>
     {/each}
   </dl>
@@ -31,8 +31,8 @@
     <ul class="lh-context-models" aria-label={t("Usage by model")}>
       {#each details.models as entry}
         <li>
-          <span class="lh-context-model" title={`${entry.provider} / ${entry.model}`}>{entry.role ? `${entry.role} · ` : ""}{entry.model || t("Model")}</span>
-          <span class="lh-context-model-tokens" title={t("Input / output tokens")}>
+          <span class="lh-context-model" data-tooltip={`${entry.provider} / ${entry.model}`}>{entry.role ? `${entry.role} · ` : ""}{entry.model || t("Model")}</span>
+          <span class="lh-context-model-tokens" data-tooltip={t("Input / output tokens")}>
             ↑ {shortTokens(entry.input)} <span>↓ {shortTokens(entry.output)}</span>
           </span>
           <span>{usageMoney(entry.cost) ?? t("Not reported")}</span>

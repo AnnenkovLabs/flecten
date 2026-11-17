@@ -69,7 +69,7 @@ export async function previewFile(cwd: string, path: string): Promise<FilePrevie
     readOnlyReason = "Редактирование доступно для файлов UTF-8.";
   else if (safeText !== text)
     readOnlyReason = "Секреты скрыты. Откройте исходный файл во внешнем редакторе.";
-  else if (internal === ".git" || internal === ".liquid")
+  else if ([".git", ".flecten", ".liquid", ".flecten-migration"].includes(internal ?? ""))
     readOnlyReason = "Служебный файл доступен только для просмотра.";
   else {
     try {

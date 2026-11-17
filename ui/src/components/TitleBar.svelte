@@ -84,13 +84,13 @@
       class="tb-btn"
       type="button"
       aria-label={sidebarLabel}
-      title={`${sidebarLabel} (${modLabel}+B)`}
+      data-tooltip={`${sidebarLabel} (${modLabel}+B)`}
       onclick={onToggleSidebar}
     >
       <Icon name="panel-left" />
     </button>
     {#if mode === "ide" || sidebarHidden}
-      <button class="tb-btn" type="button" aria-label={t("Settings")} title={t("Settings")} onclick={onOpenSettings}>
+      <button class="tb-btn" type="button" aria-label={t("Settings")} data-tooltip={t("Settings")} onclick={onOpenSettings}>
         <Icon name="settings" />
       </button>
     {/if}
@@ -101,7 +101,7 @@
         class:error={updaterStatus.state === "error"}
         type="button"
         aria-label={updateTitle(updaterStatus)}
-        title={updateTitle(updaterStatus)}
+        data-tooltip={updateTitle(updaterStatus)}
         disabled={updaterStatus.state === "checking" || updaterStatus.state === "downloading"}
         onclick={onUpdateClick}
       >

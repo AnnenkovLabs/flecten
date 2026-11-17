@@ -90,7 +90,7 @@ describe("openai chat recovery", () => {
     const provider = createOpenAiChat(runtime(`${url}/v1`));
     const events = await collect(provider.stream(request(), new AbortController().signal));
 
-    expect(events.at(-1)).toEqual({ type: "done", reason: "end" });
+    expect(events.at(-1)).toMatchObject({ type: "done", reason: "end" });
   });
 
   test("EOF without [DONE] is a provider failure", async () => {
@@ -131,7 +131,7 @@ describe("openai chat recovery", () => {
     const events = await collect(provider.stream(request(), new AbortController().signal));
 
     expect(events.some((event) => event.type === "tool_call")).toBe(true);
-    expect(events.at(-1)).toEqual({ type: "done", reason: "max_tokens" });
+    expect(events.at(-1)).toMatchObject({ type: "done", reason: "max_tokens" });
   });
 
   test("content filter refuses the stream", async () => {

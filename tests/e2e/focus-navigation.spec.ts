@@ -15,7 +15,7 @@ test("focus rings follow intentional keyboard navigation in dialogs and popovers
       },
     },
   });
-  const artifacts = join(repoRoot, ".liquid/focus-navigation-review");
+  const artifacts = join(repoRoot, ".flecten/focus-navigation-review");
   mkdirSync(artifacts, { recursive: true });
   try {
     const { page, app } = harness;

@@ -50,7 +50,7 @@ function run(command, args, options = {}) {
   });
 }
 
-const workdir = realpathSync.native(mkdtempSync(join(tmpdir(), "liquid-smoke-")));
+const workdir = realpathSync.native(mkdtempSync(join(tmpdir(), "flecten-smoke-")));
 const out = join(workdir, "status.json");
 const executable = process.env.FLECTEN_SMOKE_EXECUTABLE
   ? resolve(process.env.FLECTEN_SMOKE_EXECUTABLE)

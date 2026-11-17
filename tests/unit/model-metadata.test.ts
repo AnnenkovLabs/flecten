@@ -35,7 +35,7 @@ async function setup(data: unknown[], catalogModels: Record<string, unknown> = {
     },
   });
   servers.push(server);
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-model-metadata-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-model-metadata-"));
   dirs.push(cwd);
   const config = HarnessConfigSchema.parse({
     useDefaults: false,
@@ -53,7 +53,7 @@ async function setup(data: unknown[], catalogModels: Record<string, unknown> = {
       },
     },
   });
-  const cache = join(cwd, ".liquid", "cache");
+  const cache = join(cwd, ".flecten", "cache");
   await mkdir(cache, { recursive: true });
   await writeFile(
     join(cache, "models-dev.json"),

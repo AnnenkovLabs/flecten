@@ -13,7 +13,7 @@ test.skipIf(!process.env.FLECTEN_VOICE_SMOKE_AUDIO || !process.env.FLECTEN_VOICE
       await Bun.file(process.env.FLECTEN_VOICE_SMOKE_AUDIO ?? "").arrayBuffer(),
     ).toString("base64");
     for (const engine of ["vosk", "faster-whisper"] as const) {
-      const cwd = await mkdtemp(join(tmpdir(), "liquid-local-speech-"));
+      const cwd = await mkdtemp(join(tmpdir(), "flecten-local-speech-"));
       await Bun.write(
         join(cwd, "flecten.config.json"),
         JSON.stringify({

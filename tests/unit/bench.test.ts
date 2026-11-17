@@ -10,7 +10,7 @@ import { loadTasks, TASK_GROUPS } from "../../bench/schema";
 
 describe("benchmark suite", () => {
   test("baseline does not score file state that depends on an unavailable restore", async () => {
-    const cwd = await mkdtemp(join(tmpdir(), "liquid-bench-unobserved-"));
+    const cwd = await mkdtemp(join(tmpdir(), "flecten-bench-unobserved-"));
     try {
       await writeFile(join(cwd, "value.txt"), "changed");
       const checks = await evaluateChecks(
@@ -41,7 +41,7 @@ describe("benchmark suite", () => {
   });
 
   test("runs a tiny fixture subset offline and writes both reports", async () => {
-    const outDir = await mkdtemp(join(tmpdir(), "liquid-bench-report-"));
+    const outDir = await mkdtemp(join(tmpdir(), "flecten-bench-report-"));
     try {
       const result = await runBench({
         filter: ["read-config", "edit-version"],
@@ -95,7 +95,7 @@ describe("benchmark suite", () => {
     const missing = await runBaseline(tasks, {
       env: {
         BENCH_CODEX_CLI: "1",
-        BENCH_CODEX_BIN: "liquid-bench-codex-does-not-exist",
+        BENCH_CODEX_BIN: "flecten-bench-codex-does-not-exist",
       },
     });
     expect(missing.status).toBe("skipped");
@@ -104,7 +104,7 @@ describe("benchmark suite", () => {
   });
 
   test("compaction summaries do not consume the scripted worker turns", async () => {
-    const outDir = await mkdtemp(join(tmpdir(), "liquid-bench-compact-"));
+    const outDir = await mkdtemp(join(tmpdir(), "flecten-bench-compact-"));
     try {
       const { report } = await runBench({
         filter: ["compact-prune", "compact-request-summary", "compact-summary"],
@@ -125,7 +125,7 @@ describe("benchmark suite", () => {
     const tasks = await loadTasks();
     const task = tasks.find((entry) => entry.id === "bash-writes-file");
     if (task === undefined) throw new Error("bash-writes-file task is missing");
-    const dir = await mkdtemp(join(tmpdir(), "liquid-bench-codex-"));
+    const dir = await mkdtemp(join(tmpdir(), "flecten-bench-codex-"));
     try {
       const bin = join(dir, process.platform === "win32" ? "codex.exe" : "codex");
       await Bun.build({

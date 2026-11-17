@@ -31,12 +31,17 @@ export function budgetMeters(budget: AgentBudget): BudgetMeter[] {
     });
   }
   if (limits.costUsd) {
-    const cost = spent.costUsd ?? 0;
+    const cost = spent.costUsd;
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Dictionary key uses numbered placeholders.
+    const costKey = "${0} of ${1}";
+    const label =
+      cost === undefined
+        ? t("Cost unavailable")
+        : t(costKey, [cost.toFixed(2), limits.costUsd.toFixed(2)]);
     meters.push({
       kind: "cost",
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: This dictionary key uses numbered placeholders.
-      label: t("${0} of ${1}", [cost.toFixed(2), limits.costUsd.toFixed(2)]),
-      ratio: share(cost, limits.costUsd),
+      label,
+      ratio: cost === undefined ? 0 : share(cost, limits.costUsd),
     });
   }
   if (limits.wallClockMs) {

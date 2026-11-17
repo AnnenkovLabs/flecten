@@ -44,10 +44,13 @@ export async function withShellCheckpoint(
   const shell = context.shellCheckpoints;
   if (!shell) return run();
   const include = deletedPaths(step.command, step.cwd, context.cwd);
+  const command = context.providerProtection
+    ? context.providerProtection.vault.protect(step.command)
+    : step.command;
   const handle = await shell.begin({
     tool: step.tool,
-    label: label(step.tool, step.command),
-    command: step.command,
+    label: label(step.tool, command),
+    command,
     sessionId: context.sessionId,
     ...(include.length > 0 ? { include } : {}),
   });

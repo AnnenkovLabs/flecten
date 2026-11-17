@@ -15,7 +15,7 @@ function isTrustedSenderUrl(url, devOrigin = null) {
   if (typeof url !== "string" || url.length === 0) return false;
   try {
     const target = new URL(url);
-    if (target.protocol === "liquid:" && target.host === "app") return true;
+    if (target.protocol === "flecten:" && target.host === "app") return true;
     return isHttpOrigin(devOrigin) && target.origin === devOrigin;
   } catch {
     return false;
@@ -69,14 +69,14 @@ if (isRenderer) {
       webFrame.setZoomFactor(percentage / 100);
     },
     control: (action) => ipcRenderer.send("window:control", action),
-    chooseProject: () => ipcRenderer.invoke("liquid:choose-project"),
-    selectProject: (path, sessionId) => ipcRenderer.invoke("liquid:select-project", path, sessionId),
-    removeProject: (path) => ipcRenderer.invoke("liquid:remove-project", path),
-    pickAttachments: () => ipcRenderer.invoke("liquid:pick-attachments"),
-    pasteImage: () => ipcRenderer.invoke("liquid:paste-image"),
-    describePaths: (paths) => ipcRenderer.invoke("liquid:describe-paths", paths),
-    findInPage: (text) => ipcRenderer.invoke("liquid:find-in-page", text),
-    openExternal: (url) => ipcRenderer.invoke("liquid:open-external", url),
+    chooseProject: () => ipcRenderer.invoke("flecten:choose-project"),
+    selectProject: (path, sessionId) => ipcRenderer.invoke("flecten:select-project", path, sessionId),
+    removeProject: (path) => ipcRenderer.invoke("flecten:remove-project", path),
+    pickAttachments: () => ipcRenderer.invoke("flecten:pick-attachments"),
+    pasteImage: () => ipcRenderer.invoke("flecten:paste-image"),
+    describePaths: (paths) => ipcRenderer.invoke("flecten:describe-paths", paths),
+    findInPage: (text) => ipcRenderer.invoke("flecten:find-in-page", text),
+    openExternal: (url) => ipcRenderer.invoke("flecten:open-external", url),
     pathForFile: (file) => {
       try {
         return webUtils.getPathForFile(file);

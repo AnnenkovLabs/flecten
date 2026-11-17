@@ -18,7 +18,7 @@ test("tools explain their purpose and subagents show tasks and readable reports"
     },
   });
   const { app, page, cwd } = harness;
-  const out = join(process.cwd(), ".liquid/tool-ux");
+  const out = join(process.cwd(), ".flecten/tool-ux");
   await mkdir(out, { recursive: true });
   try {
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -30,7 +30,7 @@ test("tools explain their purpose and subagents show tasks and readable reports"
     await page.locator("#prompt").press("Enter");
     await expect(page.locator(".run-check")).toBeVisible();
     for (const dismiss of await page.locator(".toast-dismiss").all()) await dismiss.click();
-    const entries = await readdir(join(cwd, ".liquid/sessions"), { withFileTypes: true });
+    const entries = await readdir(join(cwd, ".flecten/sessions"), { withFileTypes: true });
     const sessionId = entries.find((entry) => entry.isDirectory())?.name;
     if (!sessionId) throw new Error("No fixture session");
     const emit = async (events: AgentEvent[]) =>

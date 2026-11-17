@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { chooseSelect, selectOptions } from "./custom-select";
 import { environmentProblem, launchApp } from "./fixtures";
 
 test.skip(Boolean(environmentProblem()), environmentProblem());
@@ -12,11 +13,15 @@ test("local speech settings expose models, check missing installs and persist en
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
     const dialog = page.locator("dialog.settings-dialog");
     const engine = dialog.getByLabel("Движок распознавания", { exact: true });
-    await engine.selectOption("faster-whisper");
+    await chooseSelect(engine, "faster-whisper");
     const whisper = dialog.getByLabel("Локальная модель faster-whisper", { exact: true });
-    await expect(whisper.locator("option")).toHaveCount(6);
-    await whisper.selectOption("large-v3-turbo");
-    await expect(dialog.getByLabel("Устройство для распознавания речи")).toHaveValue("cpu");
+    await expect(await selectOptions(whisper)).toHaveCount(6);
+    await page.keyboard.press("Escape");
+    await chooseSelect(whisper, "large-v3-turbo");
+    await expect(dialog.getByLabel("Устройство для распознавания речи")).toHaveAttribute(
+      "value",
+      "cpu",
+    );
     await expect(dialog.getByLabel("Модель распознавания", { exact: true })).toHaveCount(0);
     await dialog.getByRole("button", { name: "Проверить установку", exact: true }).click();
     await expect(
@@ -37,18 +42,19 @@ test("local speech settings expose models, check missing installs and persist en
       );
       await page.setViewportSize({ width, height });
       for (const current of ["faster-whisper", "vosk"] as const) {
-        await engine.selectOption(current);
+        await chooseSelect(engine, current);
         await engine.evaluate((el) => el.closest(".st-group")?.scrollIntoView({ block: "start" }));
         if (current === "vosk") {
           const vosk = dialog.getByLabel("Локальная модель Vosk", { exact: true });
-          await expect(vosk.locator("option")).toHaveCount(3);
-          await vosk.selectOption("vosk-model-small-uk-v3-nano");
+          await expect(await selectOptions(vosk)).toHaveCount(3);
+          await page.keyboard.press("Escape");
+          await chooseSelect(vosk, "vosk-model-small-uk-v3-nano");
           await expect(dialog.getByLabel("Язык речи", { exact: true })).toHaveCount(0);
         }
         expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
           false,
         );
-        await page.screenshot({ path: `.liquid/local-voice-${current}-${width}x${height}.png` });
+        await page.screenshot({ path: `.flecten/local-voice-${current}-${width}x${height}.png` });
         await dialog
           .getByRole("button", { name: "Установить движок и модель", exact: true })
           .scrollIntoViewIfNeeded();
@@ -71,8 +77,9 @@ test("local speech settings expose models, check missing installs and persist en
     await dialog.getByRole("button", { name: "Закрыть", exact: true }).click();
     await page.reload();
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
-    await expect(engine).toHaveValue("vosk");
-    await expect(dialog.getByLabel("Локальная модель Vosk", { exact: true })).toHaveValue(
+    await expect(engine).toHaveAttribute("value", "vosk");
+    await expect(dialog.getByLabel("Локальная модель Vosk", { exact: true })).toHaveAttribute(
+      "value",
       "vosk-model-small-uk-v3-nano",
     );
     expect(h.consoleErrors).toEqual([]);
@@ -95,10 +102,11 @@ test("installed Vosk converts the recorded microphone audio and inserts real rec
     const { page } = h;
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
     const dialog = page.locator("dialog.settings-dialog");
-    await dialog.getByLabel("Движок распознавания", { exact: true }).selectOption("vosk");
-    await dialog
-      .getByLabel("Локальная модель Vosk", { exact: true })
-      .selectOption("vosk-model-small-en-us-0.15");
+    await chooseSelect(dialog.getByLabel("Движок распознавания", { exact: true }), "vosk");
+    await chooseSelect(
+      dialog.getByLabel("Локальная модель Vosk", { exact: true }),
+      "vosk-model-small-en-us-0.15",
+    );
     await dialog.getByRole("button", { name: "Проверить установку", exact: true }).click();
     await expect(
       dialog.getByRole("status").filter({ hasText: "Движок и модель готовы" }),
@@ -115,7 +123,7 @@ test("installed Vosk converts the recorded microphone audio and inserts real rec
     await page.getByRole("button", { name: "Остановить голосовой ввод" }).click();
     await expect(editor).toContainText("one zero", { timeout: 30_000 });
     await expect(page.locator(".voice-glow")).toHaveCount(0);
-    await page.screenshot({ path: ".liquid/local-voice-real-result.png" });
+    await page.screenshot({ path: ".flecten/local-voice-real-result.png" });
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();

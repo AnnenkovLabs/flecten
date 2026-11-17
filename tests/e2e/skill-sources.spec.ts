@@ -54,7 +54,7 @@ test("skill sources can be selected, saved and discarded at both window sizes", 
       );
       await page.setViewportSize({ width, height });
       await section.scrollIntoViewIfNeeded();
-      await page.screenshot({ path: `.liquid/skills-preview/after-${width}.png` });
+      await page.screenshot({ path: `.flecten/skills-preview/after-${width}.png` });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       );

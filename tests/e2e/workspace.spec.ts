@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { type ElectronApplication, launchApp, type Page } from "./fixtures";
 
-const LAYOUT_KEY = "liquid.workspace-layout";
+const LAYOUT_KEY = "flecten.workspace-layout";
 
 async function resize(
   app: ElectronApplication,

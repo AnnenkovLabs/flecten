@@ -3,6 +3,7 @@ import type { IconName } from "../icons";
 
 export type SettingsSectionId =
   | "general"
+  | "models"
   | "providers"
   | "permissions"
   | "tools"
@@ -41,6 +42,23 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
         t("Interface language"),
         t("Interface Scale"),
         t("English 简体中文 Português Español 日本語 Українська Русский"),
+      ];
+    },
+  },
+  {
+    id: "models",
+    get label() {
+      return t("Models");
+    },
+    icon: "brain",
+    get fields() {
+      return [
+        t("Main model"),
+        t("Talker and Worker"),
+        t("Subagent models"),
+        t("Image understanding"),
+        "reasoning",
+        "vision",
       ];
     },
   },

@@ -1,5 +1,6 @@
 import type { ModelConfig, ProviderConfig } from "../config/schema";
 import type { Message, ReasoningEffort, ToolCall } from "../core/types";
+import type { ProviderResponse } from "./response";
 import type { ProviderFetch } from "./transport";
 
 export type StopReason = "end" | "tool_use" | "max_tokens";
@@ -24,6 +25,7 @@ export interface ModelRequest {
 }
 
 export type ModelEvent =
+  | { type: "response"; response: ProviderResponse }
   | { type: "text"; delta: string }
   | { type: "reasoning"; delta: string }
   | { type: "tool_call"; id: string; name: string; args: unknown; extraContent?: unknown }
@@ -36,6 +38,9 @@ export type ModelEvent =
     }
   | {
       type: "usage";
+      provider?: string;
+      model?: string;
+      attemptId?: string;
       input: number;
       output: number;
       cached: number;
@@ -44,11 +49,13 @@ export type ModelEvent =
     }
   /** Failover moved the request to a fallback model; it comes right before that model's output. */
   | { type: "route"; provider: string; model: string; reason: string }
-  | { type: "done"; reason: StopReason };
+  | { type: "done"; reason: StopReason; response?: ProviderResponse };
 
 export interface ModelProvider {
   readonly id: string;
   readonly model: string;
+  /** Selected by the trusted provider registry, never by provider response fields. */
+  readonly protection?: import("../security/provider-protection").ProviderProtection | undefined;
   stream(request: ModelRequest, signal: AbortSignal): AsyncIterable<ModelEvent>;
 }
 

@@ -1,6 +1,8 @@
 import type { ToolResult } from "../../core/types";
 import type { ToolContext } from "../types";
+import { runRemoteJob, savedRemoteJobs } from "./remote";
 import type { JobsArgs } from "./schema";
+import type { prepareSshCapability } from "./ssh-capability";
 import { jobLine, jobView, tail } from "./view";
 
 const DEFAULT_LINES = 80;
@@ -10,16 +12,30 @@ function failure(error: string): ToolResult {
   return { ok: false, output: "", error };
 }
 
-export async function runJobs(args: JobsArgs, context: ToolContext): Promise<ToolResult> {
+export async function runJobs(
+  args: JobsArgs,
+  context: ToolContext,
+  prepareSsh?: typeof prepareSshCapability,
+): Promise<ToolResult> {
+  const remote = await runRemoteJob(args, context, prepareSsh);
+  if (remote) return remote;
   const manager = context.terminals;
   if (!manager) return failure("Background jobs are not available in this session");
 
   if (args.op === "list") {
     const jobs = manager.listJobs().map((job) => jobView(job.snapshot()));
+    const remoteJobs = await savedRemoteJobs(context);
     return {
       ok: true,
-      output: jobs.length === 0 ? "No background jobs." : jobs.map(jobLine).join("\n"),
-      data: { kind: "jobs", jobs },
+      output:
+        [
+          ...jobs.map(jobLine),
+          ...remoteJobs.map(
+            (job) =>
+              `${job.id} ${job.state?.status ?? "unconfirmed"} at ${job.target.host} (saved state; use status to reconcile)`,
+          ),
+        ].join("\n") || "No background jobs.",
+      data: { kind: "jobs", jobs, remoteJobs },
     };
   }
 
@@ -27,6 +43,12 @@ export async function runJobs(args: JobsArgs, context: ToolContext): Promise<Too
   const job = manager.getJob(args.id);
   if (!job) return failure(`Job ${args.id} not found. Use op=list to see job ids.`);
   const lines = args.lines ?? DEFAULT_LINES;
+  if (args.op === "status")
+    return {
+      ok: true,
+      output: jobLine(jobView(job.snapshot())),
+      data: { kind: "jobs", job: jobView(job.snapshot()) },
+    };
 
   if (args.op === "output") {
     const snapshot = job.snapshot();

@@ -4,7 +4,7 @@
   import type { ErrorItem } from "../lib/run-errors";
   import Icon from "./Icon.svelte";
 
-  let { item, onRepeat }: { item: ErrorItem; onRepeat: (prompt?: string) => void } = $props();
+  let { item, onRepeat }: { item: ErrorItem; onRepeat?: ((prompt?: string) => void) | undefined } = $props();
 </script>
 
   <div class="error-card" role="alert">
@@ -16,12 +16,14 @@
       <summary>{t("Details")}</summary>
       <pre>{item.text || t("No details")}</pre>
     </details>
+    {#if onRepeat}
     {#if canContinue(item)}
       <button class="error-retry" type="button" onclick={() => onRepeat("/continue")}>
         <Icon name="chevron-right" size={14} /> {t("Continue")} </button>
     {:else}
       <button class="error-retry" type="button" onclick={() => onRepeat()}>
         <Icon name="refresh" size={14} /> {t("Retry")} </button>
+    {/if}
     {/if}
   </div>
 

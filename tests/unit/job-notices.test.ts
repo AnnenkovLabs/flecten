@@ -33,7 +33,7 @@ const end = (text: string): ModelEvent[] => [
 ];
 
 async function jobSession(scripts: ModelEvent[][], hooks?: HooksConfig) {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-job-notices-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-job-notices-"));
   for (const script of scripts)
     for (const event of script) {
       if (event.type !== "tool_call" || event.name !== "bash") continue;
@@ -53,7 +53,7 @@ async function jobSession(scripts: ModelEvent[][], hooks?: HooksConfig) {
     context: { window: 100_000, reserve: 1000 },
     loop: { maxTurns: 6, continuations: 0, parallelTools: false },
     ...(hooks ? { hooks } : {}),
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
   });
   const events: Event[] = [];
   session.subscribe((event) => events.push(event));

@@ -20,7 +20,7 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 async function workspace() {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-prompt-contract-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-prompt-contract-"));
   dirs.push(cwd);
   return cwd;
 }
@@ -250,7 +250,7 @@ test.each(["deny", "ask", "skill"] as const)(
       cwd,
       sessionId: "parent",
       signal: new AbortController().signal,
-      logDir: join(cwd, ".liquid/logs"),
+      logDir: join(cwd, ".flecten/logs"),
       limits: config.tools,
       reads: new ReadTracker(),
       permissions,

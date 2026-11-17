@@ -23,6 +23,17 @@ const summarySource = uiFile("components/HtmlSummary.svelte");
 const mermaidSource = uiFile("lib/markdown/mermaid.ts");
 
 describe("renderMarkdown", () => {
+  it("renders link and image hints through the shared custom tooltip", () => {
+    const html = renderMarkdown(
+      '[Docs](https://example.com "Read docs")\n\n![Preview](https://example.com/a.png "Image details")',
+    );
+    expect(html).toContain('data-tooltip="Read docs"');
+    expect(html).toContain('data-tooltip="Image details"');
+    expect(html).not.toContain(" title=");
+    expect(sanitizeHtml('<span title="Full value">Short</span>')).toContain(
+      'data-tooltip="Full value"',
+    );
+  });
   it("renders headings and paragraphs", () => {
     const html = renderMarkdown("# Title\n\nBody");
     expect(html).toContain("<h1>Title</h1>");
@@ -187,12 +198,12 @@ describe("sanitizeHtml", () => {
 describe("summary messages", () => {
   it("accepts a bounded height message", () => {
     expect(
-      parseSummaryMessage({ type: "liquid-summary", version: 1, kind: "height", height: 480.4 }),
-    ).toEqual({ type: "liquid-summary", version: 1, kind: "height", height: 481 });
+      parseSummaryMessage({ type: "flecten-summary", version: 1, kind: "height", height: 480.4 }),
+    ).toEqual({ type: "flecten-summary", version: 1, kind: "height", height: 481 });
   });
 
   it("rejects invalid height messages", () => {
-    const base = { type: "liquid-summary", version: 1, kind: "height" };
+    const base = { type: "flecten-summary", version: 1, kind: "height" };
     expect(parseSummaryMessage({ ...base, height: -1 })).toBeNull();
     expect(parseSummaryMessage({ ...base, height: Number.NaN })).toBeNull();
     expect(parseSummaryMessage({ ...base, height: "480" })).toBeNull();
@@ -205,7 +216,7 @@ describe("summary messages", () => {
 
   it("accepts only known actions with a bounded payload", () => {
     const message = {
-      type: "liquid-summary",
+      type: "flecten-summary",
       version: 1,
       kind: "action",
       action: "copy",
@@ -218,7 +229,7 @@ describe("summary messages", () => {
   });
 
   it("accepts ready and content notifications from the frame", () => {
-    const base = { type: "liquid-summary", version: 1 } as const;
+    const base = { type: "flecten-summary", version: 1 } as const;
     expect(parseSummaryMessage({ ...base, kind: "ready" })).toEqual({ ...base, kind: "ready" });
     expect(parseSummaryMessage({ ...base, kind: "content" })).toEqual({
       ...base,
@@ -246,7 +257,7 @@ describe("summary messages", () => {
     expect(SUMMARY_CSP).not.toContain("img-src data: blob: https:");
     const shell = await Bun.file(new URL("../../shell/main.mjs", import.meta.url)).text();
     expect(shell).toContain(SUMMARY_CSP);
-    expect(shell).toContain('protocol.handle("liquid-summary"');
+    expect(shell).toContain('protocol.handle("flecten-summary"');
   });
 });
 

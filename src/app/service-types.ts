@@ -74,6 +74,7 @@ export interface ShellCheckpointState {
 export interface SettingsPayload {
   config: HarnessConfig;
   info: AppInfo;
+  subagentRoles?: Array<{ id: string; name: string; description: string }>;
 }
 
 export interface CatalogSummary {
@@ -142,6 +143,9 @@ export interface AppService {
     input?: { confirm?: boolean } | boolean,
   ): Promise<{ id: string; trash: string }>;
   forkSession(id: string, options?: ForkSessionOptions): Promise<SessionSummary>;
+  inspectProvider(
+    baseUrl: string,
+  ): Promise<import("../../shared/provider-protection").ProviderGatewayInspection>;
   discover(input: {
     protocol: ProviderConfig["protocol"];
     baseUrl: string;

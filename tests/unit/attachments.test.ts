@@ -13,7 +13,7 @@ afterEach(async () => {
 });
 
 async function workspace(): Promise<string> {
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-attachments-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-attachments-"));
   dirs.push(cwd);
   return cwd;
 }

@@ -1,12 +1,16 @@
 const {
+  closeSync,
+  fsyncSync,
   mkdirSync,
+  openSync,
   readFileSync,
   realpathSync,
   renameSync,
+  rmSync,
   statSync,
   writeFileSync,
 } = require("node:fs");
-const { basename, isAbsolute, join, resolve } = require("node:path");
+const { basename, dirname, isAbsolute, join, resolve } = require("node:path");
 const { randomUUID } = require("node:crypto");
 const { z } = require("zod");
 
@@ -42,12 +46,46 @@ function readProjectIndex(profile) {
 
 function saveProjectIndex(profile, index) {
   const parsed = indexSchema.parse(index);
-  mkdirSync(profile, { recursive: true, mode: 0o700 });
+  const created = mkdirSync(profile, { recursive: true, mode: 0o700 });
+  if (created) {
+    const boundary = dirname(resolve(created));
+    for (let directory = resolve(profile); ; directory = dirname(directory)) {
+      syncPath(directory, true);
+      if (directory === boundary) break;
+    }
+  }
   const path = join(profile, "projects.json");
   const temp = `${path}.${randomUUID()}.tmp`;
-  writeFileSync(temp, `${JSON.stringify(parsed, null, 2)}\n`, { mode: 0o600 });
-  renameSync(temp, path);
+  try {
+    writeFileSync(temp, `${JSON.stringify(parsed, null, 2)}\n`, { mode: 0o600, flag: "wx" });
+    syncPath(temp, false);
+    renameSync(temp, path);
+    syncPath(profile, true);
+  } catch (error) {
+    rmSync(temp, { force: true });
+    throw error;
+  }
   return parsed;
+}
+
+function syncPath(path, directory) {
+  try {
+    const handle = openSync(path, "r");
+    try {
+      fsyncSync(handle);
+    } finally {
+      closeSync(handle);
+    }
+  } catch (error) {
+    // ponytail: unsupported Windows directory sync keeps file durability; verify names on reopen.
+    if (
+      directory &&
+      process.platform === "win32" &&
+      ["EISDIR", "EINVAL", "ENOTSUP", "ENOSYS"].includes(error.code)
+    )
+      return;
+    throw error;
+  }
 }
 
 function selectProject(profile, path) {

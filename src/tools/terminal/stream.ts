@@ -1,3 +1,4 @@
+import { ProtectedOutputBuffer } from "../../security/provider-secrets/output-buffer";
 import type { TerminalSession } from "../../terminal/session";
 import { RedactionStream } from "../../util/redaction-stream";
 import type { ToolContext } from "../types";
@@ -5,6 +6,18 @@ import type { ToolContext } from "../types";
 /** Same redaction boundary as streamed bash output, including secrets split over PTY chunks. */
 export function streamTerminal(session: TerminalSession, context: ToolContext): () => void {
   if (!context.reportOutput) return () => {};
+  const protection = context.providerProtection;
+  if (protection) {
+    const buffer = new ProtectedOutputBuffer((text) => protection.vault.protect(text));
+    const unsubscribe = session.onEvent((event) => {
+      if (event.type === "data") buffer.push(event.data);
+    });
+    return () => {
+      unsubscribe();
+      const safe = buffer.finish();
+      if (safe) context.reportOutput?.(safe);
+    };
+  }
   const redactor = new RedactionStream(context.secrets);
   const unsubscribe = session.onEvent((event) => {
     if (event.type !== "data") return;

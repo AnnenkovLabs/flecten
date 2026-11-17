@@ -94,12 +94,12 @@ afterEach(() => {
 });
 
 function fixture(): string {
-  const dir = mkdtempSync(join(tmpdir(), "liquid-sbom-"));
+  const dir = mkdtempSync(join(tmpdir(), "flecten-sbom-"));
   dirs.push(dir);
   mkdirSync(join(dir, "node_modules", "left-pad"), { recursive: true });
   writeFileSync(
     join(dir, "package.json"),
-    JSON.stringify({ name: "liquid-fixture", version: "9.9.9", license: "MIT" }),
+    JSON.stringify({ name: "flecten-fixture", version: "9.9.9", license: "MIT" }),
   );
   writeFileSync(
     join(dir, "node_modules", "left-pad", "package.json"),
@@ -121,17 +121,17 @@ function fixture(): string {
 
 describe("updater URL validation", () => {
   test("accepts https and loopback http feeds", () => {
-    expect(parseUpdateUrl("https://updates.example.test/liquid/")).toBe(
-      "https://updates.example.test/liquid/",
+    expect(parseUpdateUrl("https://updates.example.test/flecten/")).toBe(
+      "https://updates.example.test/flecten/",
     );
     expect(parseUpdateUrl("http://127.0.0.1:8080/feed")).toBe("http://127.0.0.1:8080/feed");
     expect(parseUpdateUrl("http://localhost/feed")).toBe("http://localhost/feed");
   });
 
   test("rejects remote http, credentials and malformed values", () => {
-    expect(parseUpdateUrl("http://updates.example.test/liquid")).toBeNull();
-    expect(parseUpdateUrl("ftp://updates.example.test/liquid")).toBeNull();
-    expect(parseUpdateUrl("https://user:secret@updates.example.test/liquid")).toBeNull();
+    expect(parseUpdateUrl("http://updates.example.test/flecten")).toBeNull();
+    expect(parseUpdateUrl("ftp://updates.example.test/flecten")).toBeNull();
+    expect(parseUpdateUrl("https://user:secret@updates.example.test/flecten")).toBeNull();
     expect(parseUpdateUrl("not a url")).toBeNull();
     expect(parseUpdateUrl("")).toBeNull();
     expect(parseUpdateUrl(undefined)).toBeNull();
@@ -280,7 +280,7 @@ describe("SBOM generation", () => {
     const dir = fixture();
     const lockText = readFileSync(join(dir, "bun.lock"), "utf8");
     const sbom = buildSbom({
-      packageJson: { name: "liquid-fixture", version: "9.9.9", license: "MIT" },
+      packageJson: { name: "flecten-fixture", version: "9.9.9", license: "MIT" },
       lockText,
       rootDir: dir,
       now: new Date("2026-10-25T00:00:00.000Z"),
@@ -291,7 +291,7 @@ describe("SBOM generation", () => {
     expect(sbom.serialNumber?.startsWith("urn:uuid:")).toBe(true);
     expect(sbom.metadata?.timestamp).toBe("2026-10-25T00:00:00.000Z");
     expect(sbom.metadata?.component).toMatchObject({
-      name: "liquid-fixture",
+      name: "flecten-fixture",
       version: "9.9.9",
     });
     expect(sbom.components).toHaveLength(2);

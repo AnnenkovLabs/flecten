@@ -11,10 +11,14 @@
 | Путь | Ответственность |
 |---|---|
 | `src/app/server.ts`, `server-handlers.ts` | sidecar JSONL protocol, проверка команд и ответы |
+| `shared/storage-migration.ts`, `src/app/storage-bootstrap.ts`, `src/store/storage-migration/` | обязательный startup gate, typed progress, проверенные оригиналы, resumable публикация и отдельное принятие |
+| `ui/src/components/StorageMigration.svelte`, `ui/src/lib/run/storage-migration.svelte.ts` | незакрываемый экран обновления, повтор после ошибки и ожидание настоящего runtime status |
 | `shared/twin*.ts`, `src/twin/`, `src/app/twin.ts`, `twin-handlers.ts`, `conversation-twin.ts`, `twin-question.ts` | отдельная персона, источники, обучение, направление Worker, приёмка, ответы от лица пользователя и typed dialogue; [TWIN.md](TWIN.md) |
 | `src/app/service.ts`, `service-types.ts` | сборка зависимостей и публичный API приложения |
 | `shared/access-mode.ts`, `src/app/access.ts` | общий каталог режимов доступа, определение custom и проверенное изменение security-полей конфига |
 | `src/app/conversation.ts`, `conversation-options.ts`, `worker-tool.ts`, `worker-references.ts` | независимые Talker/Worker, управление, роли, scoped ссылки и события Worker |
+| `src/app/conversation-budget.ts`, `single-session.ts`, `twin-accounting.ts`, `src/core/session/run-accounting.ts` | общий durable бюджет чата, учёт основных и вспомогательных запросов и неизвестных receipts |
+| `src/app/worker-recovery.ts`, `conversation-restore.ts` | операционное восстановление, handles, неопределённые эффекты и сохранённый частичный результат |
 | `src/app/session-pool.ts`, `recovery.ts`, `session-replay.ts` | параллельные задачи, восстановление и история модели |
 | `shared/model-choice.ts`, `src/app/session-models.ts`, `session-model-options.ts` | выбор модели, reasoning и варианта отдельно для каждого чата, durable восстановление и согласованные параметры провайдера |
 | `src/app/event-journal.ts`, `session-logs.ts` | live replay с курсором и durable запись |
@@ -47,11 +51,16 @@
 | `src/core/services/`, `src/app/session-storage.ts` | replace/wrap/provide/require, schema-defined сервисы, leases и единый backend журнала/индекса |
 | `src/core/types/event-schema.ts` | общие схемы событий для native drivers и durable read |
 | `src/commands/` | пользовательские и проектные slash-команды |
+| `src/security/provider-protection.ts`, `src/security/provider-secrets/`, `shared/provider-protection.ts` | защита выбранных провайдеров, обратимые теги секретов и ограниченные проверки ответов; [описание](PROVIDER-PROTECTION.md) |
+| `src/providers/gateway-detection.ts`, `gateway-signals.ts` | ограниченная проверка публичных признаков New API / One API без учётных данных |
 | `src/providers/` | четыре адаптера, HTTP/SSE, auth, каталог, probe, discovery и failover |
 | `src/providers/model-metadata.ts`, `ui/src/lib/settings/model-metadata.ts` | получение характеристик из API и каталога, добавление и обновление черновика модели без генерации |
 | `src/providers/model-identity.ts` | сопоставление ID, canonical aliases и производных uncensored/abliterated; версия и checkpoint сохраняются, API endpoint имеет приоритет |
 | `src/translation/`, `src/app/translation.ts` | перевод текстовых узлов, кэш, рабочий язык сессии, локализованный поток и выбранный провайдер |
 | `src/tools/` | реестр, repair, budgets, logs и встроенные инструменты |
+| `src/tools/catalog.ts`, `registry.ts` | явная активация MCP schemas в сессии и восстановление из успешных вызовов и checkpoint |
+| `src/tools/jobs/remote.ts`, `remote-runner.py`, `ssh-capability.ts` | durable remote jobs, идентичность процесса, reconnect и ограниченная SSH capability |
+| `src/tools/util/scratch.ts`, `src/security/session-grant.ts` | постоянный scratch чата и точные grants с владельцем и ревизией политики |
 | `src/tools/grep/line-matcher.ts`, `glob/gitignore.ts`, `read/run.ts` | прерываемый regex worker, вложенные ignore scopes и bounded чтение |
 | `src/terminal/` | PTY, jobs, process tree, ограничения ресурсов |
 | `src/terminal/command-completion.ts` | явный статус команды выбранной оболочки, frame с nonce/exit code и целым окончанием строки |
@@ -80,10 +89,12 @@
 | `ui/src/app.css` | единственные токены, шрифт и базовые стили |
 | `ui/src/lib/interface-scale.svelte.ts`, `components/settings/InterfaceScale.svelte` | масштаб интерфейса 75–125%, сохранённый в профиле окна; preload применяет native zoom ко всему layout, включая чат и композер |
 | `ui/src/controls.css` | общие кнопки, поля и переключатели всех поверхностей |
+| `ui/src/custom-controls.css`, `ui/src/components/controls/`, `ui/src/lib/tooltip.ts` | оформление checkbox, slider и progress; общие select/combobox и подсказки через существующий floating layer |
 | `ui/src/lib/modal.ts`, `clipboard.svelte.ts` | единый lifecycle модальных окон и подтверждённое копирование |
 | `ui/src/lib/run.svelte.ts`, `run/` | проекция канонических событий и ответов для экрана |
 | `ui/src/lib/run/model.ts` | выбор модели текущего чата, отдельные общие defaults и сериализация изменений без отката от чужого статуса |
 | `ui/src/lib/run/message-history.svelte.ts`, `composer/drafts.svelte.ts`, `composer/attachment-draft.ts` | режим редактирования в основном композере, отдельный черновик и асинхронные вложения своего сообщения |
+| `ui/src/lib/composer/draft-storage.ts` | проверенные записи черновиков в профиле окна, ограниченная частота записи, сохранение при уходе и восстановление фокуса чата |
 | `ui/src/lib/updater.svelte.ts` | единый live-статус обновлений для чипа заголовка и карточки в настройках |
 | `ui/src/lib/tool-presentation.ts`, `subagent-report.ts` | понятные названия и состояния вызовов, проверка и представление отчётов субагентов |
 | `ui/src/lib/run/subagents.svelte.ts`, `SubagentPane.svelte`, `SubagentAvatar.svelte` | отдельные вкладки, live журнал, остановка и согласованные персонажи субагентов |
@@ -133,6 +144,6 @@
 
 Базовые действия IDE: `workspace-files.ts` проверяет файловые операции, `workspace-search.ts` ищет по файлам, `workspace-replace.ts` применяет проверенный план замены, `workspace-git.ts` управляет Git, `ide-terminal.ts` владеет пользовательской PTY. В renderer `ide/commands.ts` задаёт команды и shortcuts, `layout.svelte.ts` хранит предпочтения, `search.svelte.ts` проверяет поиск и замену, `git.svelte.ts` хранит Git-представление. Компоненты IDE получают workspace через props и не обращаются к файловой системе.
 
-Talker/Worker отображаются через `ui/src/lib/run/worker.svelte.ts`, `markdown/tool-references.ts`, `WorkerActivity.svelte` и `MirroredMarkdown.svelte`. Они используют существующую карточку `RunActionRow.svelte` и общий поток событий.
+Talker/Worker отображаются через `ui/src/lib/run/worker.svelte.ts`, `markdown/tool-references.ts`, `WorkerPane.svelte` и `MirroredMarkdown.svelte`. Оба используют `ThreadView` и `Thread.svelte` для сообщений, рассуждений, действий и live-статуса. Композер остаётся только в диалоге Talker.
 
 Twin UI: `ui/src/components/twin/`, `ui/src/lib/twin.svelte.ts` и `ui/src/lib/run/twin-view.svelte.ts` показывают источники, характер, обучение и реплики. `ui/src/lib/twin/` разделяет rig, lifecycle интерактивной сцены и WebGL2-рендер исходной 3D-геометрии и шерсти трейлера. Канонический shader находится там же; `scripts/twin/render-assets.mjs` создаёт из него fallback в `ui/public/twin/`.

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { AgentEvent } from "../../ui/src/lib/types";
+import { chooseSelect } from "./custom-select";
 import { environmentProblem, launchApp, type Page } from "./fixtures";
 
 async function readSettings(page: Page) {
@@ -32,10 +33,10 @@ test("choosing a folder preserves all global settings and asks for folder trust"
   try {
     const { page } = h;
     await writeFile(join(second, "README.md"), "# Second workspace\n");
-    await mkdir(join(h.cwd, ".liquid/sessions/previous-workspace"), { recursive: true });
+    await mkdir(join(h.cwd, ".flecten/sessions/previous-workspace"), { recursive: true });
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     const settings = page.locator("dialog.settings-dialog");
-    await page.getByLabel("Send message", { exact: true }).selectOption("modifier-enter");
+    await chooseSelect(page.getByLabel("Send message", { exact: true }), "modifier-enter");
     await settings.getByRole("button", { name: "Providers", exact: true }).click();
     await settings.locator('[data-provider-id="e2e"]').click();
     await page

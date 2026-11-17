@@ -1,5 +1,5 @@
 import type { AgentEvent } from "./agent-protocol";
-import { clearComposerDraft } from "./composer/drafts.svelte";
+import { clearComposerDraft, composerTaskKey } from "./composer/drafts.svelte";
 import { requestAgent } from "./desktop";
 import { t } from "./i18n.svelte";
 import { mergedSessions } from "./run/sessions";
@@ -13,7 +13,7 @@ import {
   type TaskRenameDetail,
 } from "./ui-polish";
 
-const TASK_FORK_EVENT = "liquid:task-fork";
+const TASK_FORK_EVENT = "flecten:task-fork";
 
 type Response = Extract<AgentEvent, { type: "response" }>;
 
@@ -101,6 +101,7 @@ export async function deleteTask(
   detail: TaskDeleteDetail | undefined,
 ): Promise<void> {
   if (!detail || typeof detail.id !== "string") return;
+  const draftKey = composerTaskKey(detail.id);
   if (host.isRunning(detail.id)) {
     toast.show(t("The task is still running. Stop it first"));
     return;
@@ -113,7 +114,7 @@ export async function deleteTask(
     });
     host.sessions = host.sessions.filter((session) => session.id !== detail.id);
     if (detail.id === host.activeTask) host.newTask();
-    clearComposerDraft(detail.id);
+    clearComposerDraft(draftKey);
     focusComposer();
     toast.show(t("Task moved to trash"));
   } catch (error) {

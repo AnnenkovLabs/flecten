@@ -25,7 +25,7 @@ test("five named children have live tabs and survive parent stop with independen
     })),
   });
   const { app, page } = harness;
-  const out = join(process.cwd(), ".liquid/tool-ux");
+  const out = join(process.cwd(), ".flecten/tool-ux");
   await mkdir(out, { recursive: true });
   try {
     await page.emulateMedia({ reducedMotion: "reduce" });

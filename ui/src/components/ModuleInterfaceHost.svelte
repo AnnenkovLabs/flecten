@@ -74,7 +74,7 @@
 {#if snapshot.interfaces.length || paused || error}
   <div class="module-recovery" data-module-recovery="true">
     {#if error}<span role="alert">{error}</span>{/if}
-    <button type="button" onclick={paused ? resume : pause} title="Ctrl+Shift+F12">{paused ? t("Resume module interfaces") : t("Restore native interface")}</button>
+    <button type="button" onclick={paused ? resume : pause} data-tooltip="Ctrl+Shift+F12">{paused ? t("Resume module interfaces") : t("Restore native interface")}</button>
   </div>
 {/if}
 <style>

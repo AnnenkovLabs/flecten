@@ -239,6 +239,7 @@ export type CompactionOptions = Pick<
   | "system"
   | "tools"
   | "contextWindow"
+  | "workingSetTokens"
   | "reserveTokens"
   | "compactionState"
   | "pageWriter"
@@ -318,15 +319,22 @@ async function defaultCompaction(
 
   const toolTokens = estimateTokens(JSON.stringify(options.tools.specs()), PROFILE_4).tokens;
   const used = estimateContext(system, toContextMessages(messages), toolTokens);
+  const apiLimit = options.contextWindow - options.reserveTokens;
+  const limit = Math.min(apiLimit, options.workingSetTokens ?? apiLimit);
+  const fixedTokens = estimateTokens(system, PROFILE_4).tokens + toolTokens;
+  if (!Number.isFinite(limit) || limit <= fixedTokens)
+    throw new HarnessError(
+      "context_overflow",
+      "Role working set cannot fit its system prompt and tool schemas",
+    );
   await applyToolOutputBudgets(messages, {
-    contextWindow: options.contextWindow,
+    contextWindow: limit + options.reserveTokens,
     reserveTokens: options.reserveTokens,
     usedTokens: used,
     logDir: options.toolContext.logDir,
   });
 
   const estimate = estimateContext(system, toContextMessages(messages), toolTokens);
-  const limit = options.contextWindow - options.reserveTokens;
   const request = options.takeCompactionRequest?.();
   if (!request && estimate <= limit) {
     emitUsage(options, estimate);
@@ -343,6 +351,7 @@ async function defaultCompaction(
   const activePage = new PageRuntime(messages).active();
   const summaryContext = (context: SummarizeContext): SummarizeContext => ({
     ...context,
+    activeMcpTools: options.tools.activeMcpTools(),
     ...(activePage ? { activePage } : {}),
   });
   const summarize = writer
@@ -355,7 +364,7 @@ async function defaultCompaction(
   const input = {
     system,
     messages: contextMessages,
-    budget: options.contextWindow,
+    budget: limit + options.reserveTokens - toolTokens,
     reserve: options.reserveTokens,
     summarize,
     signal: options.signal,
@@ -375,7 +384,7 @@ async function defaultCompaction(
     );
   }
   if (request?.reason !== "page_checkpoint" && ((outcome.ok && !outcome.compacted) || tooBig)) {
-    const keep = Math.floor(options.contextWindow * DEEP_KEEP_SHARE);
+    const keep = Math.floor(limit * DEEP_KEEP_SHARE);
     outcome = await compactMessages(
       { ...input, pageStart: deepCutIndex(contextMessages, keep) },
       state,

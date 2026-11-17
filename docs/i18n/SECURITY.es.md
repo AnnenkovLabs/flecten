@@ -14,7 +14,7 @@ Espera una respuesta en un plazo de 7 días. La corrección y la divulgación de
 
 ## Qué revisar primero
 
-- path traversal en el protocolo `liquid://`;
+- path traversal en el protocolo `flecten://`;
 - el puente `preload` y el acceso a `ipcRenderer`;
 - `contextIsolation`, `sandbox` y `nodeIntegration` en la ventana;
 - CSP y la carga de recursos externos;

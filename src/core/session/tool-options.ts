@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { allowedEnv } from "./failure";
 import type { SessionOptions } from "./options";
 
@@ -5,12 +6,14 @@ import type { SessionOptions } from "./options";
 export function sessionToolOptions(options: SessionOptions, sessionId: string) {
   return {
     sessionId,
+    ...(options.taskBudget ? { taskBudget: options.taskBudget } : {}),
     ...(options.approvalSessionId ? { approvalSessionId: options.approvalSessionId } : {}),
     ...(options.permissionActor ? { permissionActor: options.permissionActor } : {}),
     ...(options.permissionIntent ? { permissionIntent: options.permissionIntent } : {}),
     services: options.modules?.services?.(sessionId),
     cwd: options.cwd,
     logDir: options.logDir(sessionId),
+    scratchDir: join(options.cwd, ".flecten-scratch", sessionId),
     limits: options.limits,
     ...(options.permissions ? { permissions: options.permissions } : {}),
     ...(options.security ? { security: options.security } : {}),

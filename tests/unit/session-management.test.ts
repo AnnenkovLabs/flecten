@@ -54,7 +54,7 @@ async function readIndex(
 }
 
 async function tempProject(): Promise<string> {
-  return mkdtemp(join(tmpdir(), "liquid-session-management-"));
+  return mkdtemp(join(tmpdir(), "flecten-session-management-"));
 }
 
 describe("session management", () => {
@@ -135,7 +135,7 @@ describe("session management", () => {
       await listSessions(cwd);
 
       const result = await deleteSession(cwd, "s-gone");
-      expect(result.trash).toBe(join(cwd, ".liquid", "trash", "s-gone"));
+      expect(result.trash).toBe(join(cwd, ".flecten", "trash", "s-gone"));
       expect(await stat(paths.session).catch(() => undefined)).toBeUndefined();
       expect(await Bun.file(join(result.trash, "events.jsonl")).exists()).toBe(true);
       expect(await Bun.file(join(result.trash, "logs", "run.log")).text()).toBe("log body");
@@ -208,7 +208,7 @@ describe("session management", () => {
   test("searches and paginates from the index without event files", async () => {
     const cwd = await tempProject();
     try {
-      await mkdir(join(cwd, ".liquid", "sessions"), { recursive: true });
+      await mkdir(join(cwd, ".flecten", "sessions"), { recursive: true });
       const sessions = ["s-a", "s-b", "s-c", "s-d"].map((id, index) => ({
         id,
         title: `Alpha ${index}`,

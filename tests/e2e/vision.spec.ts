@@ -64,6 +64,7 @@ test("Ctrl+V inserts editable image atoms and vision settings reuse the searchab
       await page.screenshot({ path: test.info().outputPath(`image-composer-${width}.png`) });
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       const settings = page.locator("dialog.settings-dialog");
+      await settings.getByRole("button", { name: "Models", exact: true }).click();
       const vision = settings.locator(".vision-settings");
       await vision.scrollIntoViewIfNeeded();
       await vision.getByRole("button", { name: "Image description model", exact: true }).click();

@@ -13,7 +13,7 @@
   import { VoiceInput } from "../lib/composer/voice-input.svelte";
   import type { ContextView } from "../lib/context-meter.svelte";
   import { describeDroppedFiles } from "../lib/desktop";
-  import { composerDrafts, writeComposerAttachments, writeComposerDraft } from "../lib/composer/drafts.svelte";
+  import { clearComposerDraft, composerDrafts, writeComposerAttachments, writeComposerDraft } from "../lib/composer/drafts.svelte";
   import { toast } from "../lib/toast.svelte";
   import type { ProviderInfo, ReasoningChoice } from "../lib/types";
   import type { ComposerEdit } from "../lib/message-types";
@@ -280,8 +280,7 @@
     text = "";
     mentions = [];
     // Clear the saved draft now: the hero composer unmounts before its draft effect would run.
-    writeComposerDraft("");
-    writeComposerAttachments(composerDrafts.task, []);
+    clearComposerDraft(composerDrafts.task);
     attachments = [];
     closeMention();
     slashOpen = false;
@@ -314,6 +313,8 @@
   }
 
   function updateComposerHints(): void {
+    // Publish before navigation or teardown can replace the controlled editor.
+    if (activeDraft === draftTask) writeComposerDraft(text, mentions, draftTask);
     if (!editing && text.startsWith("/") && !text.includes("\n")) {
       slashOpen = true;
       closeMention();

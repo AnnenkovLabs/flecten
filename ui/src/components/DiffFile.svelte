@@ -74,8 +74,8 @@
 <article class="diff-file" class:is-collapsed={collapsed}>
   <header class="diff-head">
     <FileTypeBadge kind={file.kind} />
-    <span class="diff-path" title={file.path}>{file.path}</span>
-    <span class="file-state {stateClass}" title={stateLabel}>{fileState}</span>
+    <span class="diff-path" data-tooltip={file.path}>{file.path}</span>
+    <span class="file-state {stateClass}" data-tooltip={stateLabel}>{fileState}</span>
     <span class="add">+{file.add}</span>
     {#if file.del}
       <span class="del">−{file.del}</span>
@@ -85,7 +85,7 @@
         class="head-btn"
         type="button"
         aria-label={t("Open file")}
-        title={t("Open file in the built-in viewer")}
+        data-tooltip={t("Open file in the built-in viewer")}
         onclick={() => void fileViewer.open(file.path)}
       >
         <Icon name="file" size={13} />
@@ -98,7 +98,7 @@
       aria-label={collapsed ? t("Expand file") : t("Collapse file")}
       aria-expanded={!collapsed}
       aria-controls={bodyId}
-      title={collapsed ? t("Expand file") : t("Collapse file")}
+      data-tooltip={collapsed ? t("Expand file") : t("Collapse file")}
       onclick={() => (collapsed = !collapsed)}
     >
       <span class="file-chevron" class:is-collapsed={collapsed}>
@@ -129,7 +129,7 @@
           <span class="hunk-chevron" class:is-folded={folded}>
             <Icon name="chevron-down" size={12} />
           </span>
-          <span class="hunk-title" title={hunk.header}>{hunk.header}</span>
+          <span class="hunk-title" data-tooltip={hunk.header}>{hunk.header}</span>
           <span class="hunk-stat">
             <span class="add">+{stat.add}</span>
             <span class="del">−{stat.del}</span>

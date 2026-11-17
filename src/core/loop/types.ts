@@ -1,4 +1,5 @@
 import type { CompactionState, ContextSummary } from "../../context";
+import type { ProviderResponse } from "../../providers/response";
 import type { ModelProvider } from "../../providers/types";
 import type { ToolRegistry } from "../../tools/registry";
 import type { ToolContext } from "../../tools/types";
@@ -19,8 +20,16 @@ import type { ToolCalls } from "./calls";
 import type { CompactionRequest } from "./context";
 
 export type LoopEvent =
+  | {
+      type: "usage.unavailable";
+      purpose?: "translation" | "vision" | "compaction";
+      provider?: string;
+      model?: string;
+    }
+  | { type: "provider.response"; response: ProviderResponse }
   | ({ type: "memory.context" } & MemoryDelivery)
   | { type: "translation.failed"; message: string }
+  | { type: "context.summary.failed"; stage: "provider" | "schema" | "disabled"; reason: string }
   | { type: "turn.started"; turn: number }
   | { type: "message.started" }
   | { type: "message.delta"; text: string }
@@ -100,7 +109,7 @@ export type LoopEvent =
   | {
       type: "usage";
       usage: Usage;
-      purpose?: "translation" | "vision";
+      purpose?: "translation" | "vision" | "compaction";
       provider?: string;
       model?: string;
       durationMs?: number;
@@ -123,6 +132,7 @@ export interface LoopOptions {
   tools: ToolRegistry;
   system: string;
   responseFormat?: "summary" | "structured" | "conversation";
+  completionGuard?(): string | undefined;
   signal: AbortSignal;
   /** Finish in-flight work, close tool results, then stop before another request. */
   stopSignal?: AbortSignal;
@@ -144,6 +154,8 @@ export interface LoopOptions {
   maxTurns: number;
   maxTokens: number;
   contextWindow: number;
+  /** Input working set for this role; independent from provider API capacity. */
+  workingSetTokens?: number;
   reserveTokens: number;
   reasoning?: ReasoningEffort;
   variant?: string;

@@ -26,6 +26,17 @@ export interface ContextToolCall {
 export interface ContextSummary {
   readonly page: number;
   readonly fields: Record<"changed" | "where" | "rules" | "next" | "risks", string>;
+  /** Exact latest completed result revision; model-facing fields may be bounded. */
+  readonly activeMcpTools?: string[];
+  readonly checkpoint?: {
+    readonly summary: string;
+    readonly evidence: string[];
+    readonly next: string;
+    readonly findings?: string[] | undefined;
+    readonly openRisks?: string[] | undefined;
+    readonly result?: string | undefined;
+    readonly finalResult?: string | undefined;
+  };
   readonly originalRequest?: string;
   readonly latestRequest?: string;
   /** An unfinished semantic block survives an emergency context-window checkpoint. */
@@ -68,6 +79,7 @@ export interface SummarizeContext {
   readonly signal?: AbortSignal;
   /** Full span before summary-only pruning, for lossless session archives. */
   readonly archiveMessages?: readonly ContextMessage[];
+  readonly activeMcpTools?: string[];
   readonly activePage?: ContextSummary["activePage"];
 }
 

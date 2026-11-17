@@ -158,8 +158,8 @@ test("IDE edits real files safely, preserves work between modes and reviews agen
       "true",
     );
     await expect(page.getByRole("complementary", { name: "Файлы проекта" })).toBeVisible();
-    await page.locator('.explorer .entry[title="src"]').click();
-    await page.locator('.explorer .entry[title="src/main.ts"]').click();
+    await page.locator('.explorer .entry[data-tooltip="src"]').click();
+    await page.locator('.explorer .entry[data-tooltip="src/main.ts"]').click();
     const editor = page.locator(".ide .cm-content:visible");
     await expect(editor).toHaveText(SOURCE.trim());
     await replaceEditor(page, EDITED);
@@ -203,7 +203,7 @@ test("IDE edits real files safely, preserves work between modes and reviews agen
     await expect(page.getByRole("tab", { name: "main.ts", exact: true })).toHaveCount(0);
     expect(await readFile(sourcePath, "utf8")).toBe(EDITED);
 
-    await page.locator('.explorer .entry[title="src/main.ts"]').click();
+    await page.locator('.explorer .entry[data-tooltip="src/main.ts"]').click();
     await expect(editor).toHaveText(EDITED.trim());
     await replaceEditor(page, "export const answer: number = 77;\n");
     await writeFile(sourcePath, EXTERNAL);
@@ -237,7 +237,7 @@ test("IDE edits real files safely, preserves work between modes and reviews agen
     await page.getByRole("tab", { name: "Изменения агента", exact: true }).click();
     const changes = page.getByRole("complementary", { name: "Изменения агента" });
     await expect(changes).toBeVisible();
-    await changes.locator('button[title="src/agent-created.ts"]').click();
+    await changes.locator('button[data-tooltip="src/agent-created.ts"]').click();
     await expect(
       page.getByRole("region", { name: "Изменения в файле", exact: true }),
     ).toContainText("Hello from the agent");

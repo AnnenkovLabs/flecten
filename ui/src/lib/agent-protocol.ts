@@ -2,8 +2,10 @@ import type { DictionaryEntry, DictionarySnapshot } from "../../../shared/dictio
 import type { SessionState } from "../../../shared/session-state";
 import type { SubagentEnvelope } from "../../../shared/subagents";
 import type { TwinAnswer, TwinSnapshot } from "../../../shared/twin";
+import type { AccountingEvent } from "./accounting-protocol";
 import type { AgentMemoryContext, AgentNotice } from "./agent-types";
 import type { ContextReference } from "./composer/context-types";
+import type { ContextUsage } from "./context-usage";
 import type { ModuleCommand, ModuleResponse } from "./modules/protocol";
 import type { LimitKind } from "./run-errors";
 import type { ModelMetadataResult, ProviderCommand } from "./settings/provider-protocol";
@@ -31,13 +33,8 @@ import type {
   ProviderTestResult,
   ReasoningEffort,
 } from "./types";
-export type ContextSource = "estimate" | "provider";
-export interface ContextUsage {
-  used: number;
-  window: number;
-  reserve: number;
-  source: ContextSource;
-}
+
+export type { ContextSource, ContextUsage } from "./context-usage";
 export interface CustomCommandInfo {
   name: string;
   description?: string;
@@ -64,10 +61,17 @@ type AgentEventBody =
   | { type: "worker.event"; sessionId: string; event: WorkerSessionEvent };
 type AgentChildEvent = Extract<AgentLeafEvent, { sessionId?: string }>;
 type AgentLeafEvent =
+  | import("./run/diagnostic-events").DiagnosticEvent
+  | import("../../../shared/storage-migration").StorageMigrationEvent
   | import("../../../shared/model-choice").ModelSelected
   | import("../../../shared/message-branches").HistoryEdited
   | import("../../../shared/message-branches").HistorySelected
   | import("../../../shared/twin-activity").TwinActivityEvent
+  | {
+      type: "worker.acceptance";
+      sessionId: string;
+      acceptance: import("../../../shared/worker-assignment").WorkerAcceptance;
+    }
   | { type: "session.state"; sessionId: string; state: SessionState }
   | {
       type: "session.started";
@@ -94,7 +98,7 @@ type AgentLeafEvent =
       /** Set when the job's file changes were saved as a checkpoint. */
       checkpoint?: unknown;
     }
-  | { type: "budget"; sessionId: string; budget: AgentBudget }
+  | AccountingEvent
   | { type: "run.interrupted"; sessionId: string; at: number; reason: string }
   | { type: "approval.requested"; sessionId: string; approval: AgentPendingApproval }
   | {
@@ -168,7 +172,7 @@ type AgentLeafEvent =
       usage: AgentUsage;
       provider?: string;
       model?: string;
-      purpose?: "translation" | "vision";
+      purpose?: "translation" | "vision" | "compaction";
     }
   | ({ type: "context.usage"; sessionId: string } & ContextUsage)
   | {
@@ -189,6 +193,7 @@ type AgentLeafEvent =
   | (ModuleResponse & {
       type: "response";
       directories?: string[];
+      limited?: boolean;
       dictionary?: DictionarySnapshot;
       twin?: TwinSnapshot;
       answer?: TwinAnswer;
@@ -198,6 +203,7 @@ type AgentLeafEvent =
       terminal?: unknown;
       requestId: string;
       ok: boolean;
+      migration?: import("../../../shared/storage-migration").StorageMigrationState | null;
       error?: string;
       text?: string;
       diagnostics?: { path: string; report: unknown };
@@ -211,11 +217,16 @@ type AgentLeafEvent =
       attachedContext?: import("./settings/extension-types").ExtensionContext;
       voice?: import("./voice-settings").VoiceDestination & { provider: string };
       voiceSetup?: { ready: boolean; message: string };
-      settings?: { config: HarnessSettings; info: AgentInfo };
+      settings?: {
+        config: HarnessSettings;
+        info: AgentInfo;
+        subagentRoles?: { id: string; name: string; description: string }[];
+      };
       providers?: CatalogSummary[];
       provider?: CatalogProviderInfo;
       status?: CatalogStatus;
       result?:
+        | import("../../../shared/provider-protection").ProviderGatewayInspection
         | DiscoverResult
         | ProviderTestResult
         | ProbeResult
@@ -251,6 +262,7 @@ type AgentLeafEvent =
   | { type: "session.open"; id: string };
 
 export type AgentCommand =
+  | (import("../../../shared/storage-migration").StorageMigrationCommand & { requestId: string })
   | ModuleCommand
   | ProviderCommand
   | import("../../../shared/twin-protocol").TwinCommand

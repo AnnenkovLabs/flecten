@@ -123,7 +123,7 @@
       class="attach"
       type="button"
       aria-label={t("Attach files")}
-      title={t("Attach files, folders, images, or PDFs")}
+      data-tooltip={t("Attach files, folders, images, or PDFs")}
       onclick={onAttach}
       disabled={editPending}
     >
@@ -150,7 +150,7 @@
     <ContextMeter view={context} {running} {onCompact} />
     {#if voiceActive}
       <button class="stop" type="button" aria-label={t("Cancel")}
-        title={t("Cancel voice input (Escape)")} onclick={onVoiceCancel}>
+        data-tooltip={t("Cancel voice input (Escape)")} onclick={onVoiceCancel}>
         <Icon name="x" size={15} />
       </button>
     {/if}
@@ -160,39 +160,39 @@
       type="button"
       aria-label={voiceListening ? t("Stop voice input") : t("Voice input")}
       aria-pressed={voiceListening}
-      title={voiceTitle}
+      data-tooltip={voiceTitle}
       disabled={!voiceSupported || running || voicePending || editPending}
       onclick={voiceListening ? onVoiceStop : onVoiceStart}
     >
       <Icon name="mic" size={14} />
     </button>
     {#if editing}
-      <button class="send" type="submit" aria-label={t("Save & send")} title={editPending ? t("Saving…") : t("Save & send")} disabled={!canSend || editPending}>
+      <button class="send" type="submit" aria-label={t("Save & send")} data-tooltip={editPending ? t("Saving…") : t("Save & send")} disabled={!canSend || editPending}>
         <span class="send-face"><Icon name="arrow-up" size={16} stroke={2} /></span>
       </button>
     {:else if running}
       <div class="composer-actions" class:is-split={hasDraft} role="group" aria-label={t("Agent actions")}>
         <button class="stop" class:is-stopping={stopping} type="button" aria-label={stopLabel}
-          title={stopping ? t("Waiting for the current step to finish. Click again to stop immediately") : t("Stop after the current response or command")}
+          data-tooltip={stopping ? t("Waiting for the current step to finish. Click again to stop immediately") : t("Stop after the current response or command")}
           disabled={controlCooldown} onclick={onStop}>
           <Icon name="stop" size={16} stroke={2} />
         </button>
         {#if hasDraft}
-          <button class="queue-send" type="button" aria-label={t("Add to queue")} title={t("Queue: send when the current run finishes")}
+          <button class="queue-send" type="button" aria-label={t("Add to queue")} data-tooltip={t("Queue: send when the current run finishes")}
             disabled={!canSend} onclick={() => onSend("queue")}><Icon name="tasks" size={16} /></button>
-          <button class="steer-send" type="button" aria-label={t("Guide now")} title={t("Guide now: send at the next safe point")}
+          <button class="steer-send" type="button" aria-label={t("Guide now")} data-tooltip={t("Guide now: send at the next safe point")}
             disabled={!canSend} onclick={() => onSend("steer")}><Icon name="spark" size={16} /></button>
         {/if}
       </div>
       <span class="sr-only" role="status">{stopping ? t("Stopping after the current step. Click again to stop it immediately.") : ""}</span>
     {:else if canContinue && !hasDraft}
       <button class="send continue" type="button" aria-label={t("Continue")}
-        title={t("Continue the task where it stopped without starting over")}
+        data-tooltip={t("Continue the task where it stopped without starting over")}
         disabled={controlCooldown || voiceActive} onclick={onContinue}>
         <span class="send-face"><Icon name="continue" size={17} stroke={2} /></span>
       </button>
     {:else}
-      <button class="send" type="submit" aria-label={t("Send")} title={t("Send")} disabled={!canSend}>
+      <button class="send" type="submit" aria-label={t("Send")} data-tooltip={t("Send")} disabled={!canSend}>
         <span class="send-face"><Icon name="arrow-up" size={16} stroke={2} /></span>
       </button>
     {/if}

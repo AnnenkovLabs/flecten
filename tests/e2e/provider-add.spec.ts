@@ -79,11 +79,12 @@ test("custom providers can skip discovery and persist manual models after a 401"
   test.skip(Boolean(problem), problem);
   const requests: Array<{ method: string; url: string; authorization: string }> = [];
   const server = createServer((request, response) => {
-    requests.push({
-      method: request.method ?? "",
-      url: request.url ?? "",
-      authorization: request.headers.authorization ?? "",
-    });
+    if (request.url?.endsWith("/models") || request.method !== "GET")
+      requests.push({
+        method: request.method ?? "",
+        url: request.url ?? "",
+        authorization: request.headers.authorization ?? "",
+      });
     request.resume();
     if (request.method === "GET") {
       response.writeHead(401, { "content-type": "application/json" });

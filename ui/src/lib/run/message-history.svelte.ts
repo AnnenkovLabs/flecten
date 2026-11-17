@@ -3,6 +3,7 @@ import type { ContextReference } from "../composer/context-types";
 import {
   clearComposerDraft,
   composerDrafts,
+  composerEditKey,
   writeComposerAttachments,
   writeComposerDraft,
 } from "../composer/drafts.svelte";
@@ -43,7 +44,7 @@ export class MessageHistory {
       return;
     }
     this.cancel();
-    const key = uniqueId("edit");
+    const key = composerEditKey(uniqueId("edit"));
     writeComposerDraft(text, [], key);
     writeComposerAttachments(key, message.attachments ?? []);
     this.#edits[id] = { key, messageId };

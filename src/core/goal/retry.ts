@@ -4,6 +4,7 @@ const FAILURE_KINDS: readonly RetryFailureKind[] = [
   "rate_limit",
   "quota_5h",
   "quota_weekly",
+  "model_quota",
   "billing",
   "network",
   "server",
@@ -112,6 +113,7 @@ const LIMIT_KINDS: Record<string, RetryFailureKind> = {
   five_hour: "quota_5h",
   weekly: "quota_weekly",
   billing: "billing",
+  model_quota: "model_quota",
 };
 
 /** Provider error codes that mean the request does not fit the context window. */
@@ -182,7 +184,12 @@ function windowOf(failure: RetryFailure, now: number): number | undefined {
 const NOT_RETRYABLE = new Set<RetryFailureKind>(["auth", "bad_request", "unknown", "billing"]);
 
 function isLimit(kind: RetryFailureKind): boolean {
-  return kind === "rate_limit" || kind === "quota_5h" || kind === "quota_weekly";
+  return (
+    kind === "rate_limit" ||
+    kind === "quota_5h" ||
+    kind === "quota_weekly" ||
+    kind === "model_quota"
+  );
 }
 
 export class RetryPolicy {
@@ -289,8 +296,8 @@ export class RetryPolicy {
     const kind = failure.kind;
     const now = this.now();
     const window = windowOf(failure, now);
-    if (kind === "quota_weekly" && window === undefined) {
-      return { retry: false, delayMs: 0, reason: "weekly limit without a reset time", kind };
+    if ((kind === "quota_weekly" || kind === "model_quota") && window === undefined) {
+      return { retry: false, delayMs: 0, reason: "quota exhausted without a reset time", kind };
     }
     const delayMs = window ?? (kind === "rate_limit" ? this.rateLimitWindowMs : this.quotaWindowMs);
     if (delayMs > this.maxLimitWaitMs) {

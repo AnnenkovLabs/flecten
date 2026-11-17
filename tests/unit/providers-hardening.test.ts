@@ -213,7 +213,7 @@ describe("catalog sources", () => {
     const forced = await loadModelsDev(cwd, true, { url: `${base}/models` });
     expect(Object.keys(forced)).toEqual(["local"]);
     expect(catalogLastError("models.dev")).toContain("no models");
-    const cache = (await Bun.file(join(cwd, ".liquid", "cache", "models-dev.json")).json()) as {
+    const cache = (await Bun.file(join(cwd, ".flecten", "cache", "models-dev.json")).json()) as {
       local?: unknown;
     };
     expect(cache.local).toBeDefined();
@@ -241,7 +241,7 @@ describe("catalog sources", () => {
     const forced = await loadModelsDev(cwd, true, { url: `${base}/models` });
     expect(forced.local?.models["model-a"]).toBeDefined();
     expect(catalogLastError("models.dev")).toContain("schema mismatch");
-    const cache = (await Bun.file(join(cwd, ".liquid", "cache", "models-dev.json")).json()) as {
+    const cache = (await Bun.file(join(cwd, ".flecten", "cache", "models-dev.json")).json()) as {
       local?: { models?: Record<string, unknown> };
     };
     expect(cache.local?.models?.["model-a"]).toBeDefined();
@@ -310,7 +310,7 @@ describe("catalog sources", () => {
     empty = true;
     const forced = await loadAgentOne(cwd, true, { url: `${base}/list` });
     expect(forced["model-a"]?.output).toBe(8_000);
-    const cache = (await Bun.file(join(cwd, ".liquid", "cache", "agent-one.json")).json()) as {
+    const cache = (await Bun.file(join(cwd, ".flecten", "cache", "agent-one.json")).json()) as {
       "model-a"?: unknown;
     };
     expect(cache["model-a"]).toBeDefined();

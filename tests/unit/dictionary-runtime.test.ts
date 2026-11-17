@@ -72,7 +72,7 @@ async function fixture(
     responseFormat: "conversation",
     dictionary: { list: async () => entries },
     memory: store,
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     ...overrides,
   });
   const events: Event[] = [];
@@ -289,7 +289,7 @@ describe("dictionary request context", () => {
       permissions,
       sandbox: new SandboxPolicy({
         workspaceRoot: run.cwd,
-        readDenyPrefixes: [".liquid/memory.json"],
+        readDenyPrefixes: [".flecten/memory.json"],
       }),
     });
     await run.session.send({ type: "run", prompt: "Liquid Glass" });

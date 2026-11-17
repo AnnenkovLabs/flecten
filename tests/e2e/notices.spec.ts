@@ -85,7 +85,7 @@ test("a second window on the same project says why and does not restart its core
     await expect(
       first.page.getByRole("region", { name: "Новая задача", exact: true }),
     ).toBeVisible();
-    await expect.poll(() => existsSync(join(first.cwd, ".liquid", "sidecar.lock"))).toBe(true);
+    await expect.poll(() => existsSync(join(first.cwd, ".flecten", "sidecar.lock"))).toBe(true);
 
     const second = await launchApp({ cwd: first.cwd });
     try {

@@ -13,9 +13,9 @@
   const readOnly = $derived(!document.file?.hash || !!document.file.readOnlyReason);
 </script>
 <div class="document-view" onfocusin={onFocus}>
-  <div class="file-toolbar"><span class="breadcrumb" title={document.path}><Icon name="file" size={12} /><span class="dir">{parts.dir}</span><span class="name">{parts.name}</span></span>
-    <button type="button" title={t("Reload from disk")} aria-label={t("Reload from disk")} onclick={() => void ide.reload(document.path)}><Icon name="refresh" size={14} /></button>
-    <button class="save-file" type="button" disabled={readOnly || !isDirty(document) || document.saving} title={t("Save ({0}+S)", [modLabel])} onclick={() => void ide.save(document.path)}>{document.saving ? t("Saving…") : t("Save")}</button>
+  <div class="file-toolbar"><span class="breadcrumb" data-tooltip={document.path}><Icon name="file" size={12} /><span class="dir">{parts.dir}</span><span class="name">{parts.name}</span></span>
+    <button type="button" data-tooltip={t("Reload from disk")} aria-label={t("Reload from disk")} onclick={() => void ide.reload(document.path)}><Icon name="refresh" size={14} /></button>
+    <button class="save-file" type="button" disabled={readOnly || !isDirty(document) || document.saving} data-tooltip={t("Save ({0}+S)", [modLabel])} onclick={() => void ide.save(document.path)}>{document.saving ? t("Saving…") : t("Save")}</button>
     {#if onClose}<button type="button" aria-label={t("Close split")} onclick={onClose}><Icon name="x" size={14} /></button>{/if}
   </div>
   {#if document.changedOnDisk}<div class="file-notice" role="status">{t("The file changed on disk. Your edits are still in the editor.")}<button type="button" onclick={() => void ide.reload(document.path)}>{t("Reload")}</button></div>{/if}

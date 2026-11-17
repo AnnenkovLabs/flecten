@@ -38,11 +38,11 @@ test("model settings import current metadata and leave unknown limits blank", as
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Missing metadata provider port");
-  const cwd = await mkdtemp(join(tmpdir(), "liquid-model-metadata-"));
+  const cwd = await mkdtemp(join(tmpdir(), "flecten-model-metadata-"));
   const path = join(cwd, "flecten.config.json");
-  await mkdir(join(cwd, ".liquid", "cache"), { recursive: true });
-  await writeFile(join(cwd, ".liquid", "cache", "models-dev.json"), "{}");
-  await writeFile(join(cwd, ".liquid", "cache", "agent-one.json"), "{}");
+  await mkdir(join(cwd, ".flecten", "cache"), { recursive: true });
+  await writeFile(join(cwd, ".flecten", "cache", "models-dev.json"), "{}");
+  await writeFile(join(cwd, ".flecten", "cache", "agent-one.json"), "{}");
   await writeFile(
     path,
     JSON.stringify({
@@ -107,6 +107,7 @@ test("model settings import current metadata and leave unknown limits blank", as
     await page.getByRole("button", { name: "Add model", exact: true }).click();
     await expect(sheet.getByLabel("Context (tokens)", { exact: true })).toHaveValue("");
     await expect(sheet.getByLabel("Response limit (tokens)", { exact: true })).toHaveValue("");
+    await expect(sheet.getByRole("combobox", { name: "Mode", exact: true })).toHaveText("Auto");
     await expect(sheet.locator(".st-chip.is-on")).toHaveCount(0);
     await expect(sheet.getByRole("checkbox").first()).not.toBeChecked();
     await expect(

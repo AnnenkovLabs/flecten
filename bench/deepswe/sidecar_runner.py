@@ -201,7 +201,7 @@ def run(args):
                 for reader in readers:
                     reader.join(timeout=2)
                 summary["sidecarExitCode"] = process.returncode
-            sessions = Path.cwd() / ".liquid/sessions"
+            sessions = Path.cwd() / ".flecten/sessions"
             if sessions.is_dir():
                 for source in sessions.rglob("*"):
                     if source.is_file() and not source.is_symlink():

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { t } from "../../lib/i18n.svelte";
   import { requestAgent } from "../../lib/desktop";
   import packageJson from "../../../../package.json?raw";
@@ -160,10 +161,8 @@
       </div>
       <label class="st-field">
         <span class="st-label">{t("Update channel")}</span>
-        <select class="st-input" value={config.update?.channel ?? "beta"} onchange={(event) => patchUpdate({ channel: event.currentTarget.value === "beta" ? "beta" : "stable" })}>
-          <option value="stable">{t("Stable")}</option>
-          <option value="beta">{t("Beta")}</option>
-        </select>
+        <Select class="st-input" value={config.update?.channel ?? "beta"} onchange={(value) => patchUpdate({ channel: value === "beta" ? "beta" : "stable" })}
+          options={[{ value: "stable", label: t("Stable") }, { value: "beta", label: t("Beta") }]} />
       </label>
       <label class="st-switch">
         <span class="st-switch-copy"><strong>{t("Check for updates automatically")}</strong></span>

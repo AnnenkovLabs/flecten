@@ -27,7 +27,7 @@ function expectNoSecrets(text: string): void {
 }
 
 async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), "liquid-redact-"));
+  const dir = await mkdtemp(join(tmpdir(), "flecten-redact-"));
   try {
     await run(dir);
   } finally {
@@ -80,6 +80,18 @@ describe("token format redaction", () => {
 });
 
 describe("sensitive key redaction", () => {
+  test.each([
+    'apiKey="abcdefghijklmnopqrstu"',
+    "token='abcdefghijklmnopqrstu'",
+    'password: "abcdefghijklmnopqrstu"',
+    "\"secret\" = 'abcdefghijklmnopqrstu'",
+    '{apiKey:"abcdefghijklmnopqrstu"}',
+  ])("masks quoted credential assignment %s", (input) => {
+    const output = input.replace("abcdefghijklmnopqrstu", "[redacted:abcd…rstu]");
+    expect(redact(input)).toBe(output);
+    expect(redact(output)).toBe(output);
+  });
+
   test("masks values by key name without breaking JSON", () => {
     const input = JSON.stringify({
       authorization: "Bearer header-secret-value",

@@ -2,6 +2,7 @@
   import { t } from "../lib/i18n.svelte";
   import { settings } from "../lib/settings.svelte";
   import Icon from "./Icon.svelte";
+  import Select from "./controls/Select.svelte";
 
   interface Props {
     providerId: string;
@@ -140,61 +141,38 @@
         <div class="st-grid">
           <label class="st-field">
             <span class="st-label">{t("Resend reasoning")}</span>
-            <select class="st-select" bind:value={provider.reasoningReplay}>
-              <option value="auto">{t("Auto")}</option>
-              <option value="always">reasoning_content</option>
-              <option value="alias">reasoning</option>
-              <option value="never">{t("Do not send")}</option>
-            </select>
+            <Select class="st-select" bind:value={provider.reasoningReplay} aria-label={t("Resend reasoning")}
+              options={[{ value: "auto", label: t("Auto") }, { value: "always", label: "reasoning_content" }, { value: "alias", label: "reasoning" }, { value: "never", label: t("Do not send") }]} />
           </label>
           <label class="st-field">
             <span class="st-label">{t("Reasoning details")}</span>
-            <select class="st-select" bind:value={provider.reasoningDetails}>
-              <option value="auto">{t("Auto")}</option>
-              <option value="always">{t("Always")}</option>
-              <option value="never">{t("Never")}</option>
-            </select>
+            <Select class="st-select" bind:value={provider.reasoningDetails} aria-label={t("Reasoning details")}
+              options={[{ value: "auto", label: t("Auto") }, { value: "always", label: t("Always") }, { value: "never", label: t("Never") }]} />
           </label>
           <label class="st-field">
             <span class="st-label">{t("Reasoning mode")}</span>
-            <select class="st-select" bind:value={provider.thinking}>
-              <option value="auto">{t("Auto")}</option>
-              <option value="enabled">{t("On")}</option>
-              <option value="disabled">{t("Off")}</option>
-            </select>
+            <Select class="st-select" bind:value={provider.thinking} aria-label={t("Reasoning mode")}
+              options={[{ value: "auto", label: t("Auto") }, { value: "enabled", label: t("On") }, { value: "disabled", label: t("Off") }]} />
           </label>
           <label class="st-field">
             <span class="st-label">{t("thinking parameter")}</span>
-            <select class="st-select" bind:value={provider.thinkingParam}>
-              <option value="auto">{t("Auto")}</option>
-              <option value="thinking">thinking</option>
-              <option value="enable_thinking">enable_thinking</option>
-              <option value="none">{t("None")}</option>
-            </select>
+            <Select class="st-select" bind:value={provider.thinkingParam} aria-label={t("thinking parameter")}
+              options={[{ value: "auto", label: t("Auto") }, { value: "thinking", label: "thinking" }, { value: "enable_thinking", label: "enable_thinking" }, { value: "none", label: t("None") }]} />
           </label>
           <label class="st-field">
             <span class="st-label">{t("Store reasoning")}</span>
-            <select class="st-select" bind:value={provider.thinkingKeep}>
-              <option value="auto">{t("Auto")}</option>
-              <option value="all">{t("Full history")}</option>
-              <option value="none">{t("Do not store")}</option>
-            </select>
+            <Select class="st-select" bind:value={provider.thinkingKeep} aria-label={t("Store reasoning")}
+              options={[{ value: "auto", label: t("Auto") }, { value: "all", label: t("Full history") }, { value: "none", label: t("Do not store") }]} />
           </label>
           <label class="st-field">
             <span class="st-label">{t("Clear reasoning (GLM)")}</span>
-            <select class="st-select" bind:value={provider.clearThinking}>
-              <option value="auto">{t("Auto")}</option>
-              <option value="keep">{t("Keep")}</option>
-              <option value="clear">{t("Clear")}</option>
-            </select>
+            <Select class="st-select" bind:value={provider.clearThinking} aria-label={t("Clear reasoning (GLM)")}
+              options={[{ value: "auto", label: t("Auto") }, { value: "keep", label: t("Keep") }, { value: "clear", label: t("Clear") }]} />
           </label>
           <label class="st-field">
             <span class="st-label">{t("Preserve reasoning (Qwen)")}</span>
-            <select class="st-select" bind:value={provider.preserveThinking}>
-              <option value="auto">{t("Auto")}</option>
-              <option value="on">{t("On")}</option>
-              <option value="off">{t("Off")}</option>
-            </select>
+            <Select class="st-select" bind:value={provider.preserveThinking} aria-label={t("Preserve reasoning (Qwen)")}
+              options={[{ value: "auto", label: t("Auto") }, { value: "on", label: t("On") }, { value: "off", label: t("Off") }]} />
           </label>
         </div>
       </div>
@@ -206,23 +184,16 @@
         </div>
         <label class="st-field">
           <span class="st-label">{t("Parallel tool calls")}</span>
-          <select
+          <Select
             class="st-select"
-            value={provider.parallelToolCalls === undefined
-              ? "auto"
-              : provider.parallelToolCalls
-                ? "on"
-                : "off"}
-            onchange={(event) => {
-              const value = event.currentTarget.value;
-              if (value === "auto") delete provider.parallelToolCalls;
-              else provider.parallelToolCalls = value === "on";
+            aria-label={t("Parallel tool calls")}
+            value={provider.parallelToolCalls}
+            options={[{ value: undefined, label: t("Auto") }, { value: true, label: t("On") }, { value: false, label: t("Off") }]}
+            onchange={(value) => {
+              if (value === undefined) delete provider.parallelToolCalls;
+              else provider.parallelToolCalls = value;
             }}
-          >
-            <option value="auto">{t("Auto")}</option>
-            <option value="on">{t("On")}</option>
-            <option value="off">{t("Off")}</option>
-          </select>
+          />
         </label>
         <label class="st-switch">
           <span class="st-switch-copy">

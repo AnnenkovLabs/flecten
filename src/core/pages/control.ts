@@ -9,15 +9,21 @@ export const ActivePageSchema = z
   .strict();
 
 const begin = ActivePageSchema.extend({ op: z.literal("begin") });
-const report = z
+export const PageReportSchema = z
   .object({
     summary: z.string().trim().min(1).max(8000),
     evidence: z.array(z.string().trim().min(1).max(2000)).min(1).max(20),
     next: z.string().trim().min(1).max(4000),
+    findings: z.array(z.string().trim().min(1).max(12000)).max(30).optional(),
+    openRisks: z.array(z.string().trim().min(1).max(2000)).max(20).optional(),
+    result: z.string().trim().min(1).max(100000).optional(),
   })
   .strict();
-const complete = report.extend({ op: z.literal("complete") });
-const block = report.extend({ op: z.literal("block") });
+const complete = PageReportSchema.extend({
+  op: z.literal("complete"),
+  finalResult: z.string().trim().min(1).max(100000).optional(),
+});
+const block = PageReportSchema.extend({ op: z.literal("block") });
 
 export const PageCommandSchema = z.discriminatedUnion("op", [
   begin,
@@ -40,5 +46,5 @@ export const PageToolSchema = z
   .strict();
 
 export type ActivePage = z.infer<typeof ActivePageSchema>;
-export type PageReport = z.infer<typeof report>;
+export type PageReport = z.infer<typeof PageReportSchema>;
 export type PageCommand = z.infer<typeof PageCommandSchema>;

@@ -1,5 +1,6 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Cost unavailable": "費用は不明です",
   Profile: "プロフィール",
   "Change name": "名前を変更",
   "Could not save name. Try again.": "名前を保存できませんでした。もう一度お試しください。",

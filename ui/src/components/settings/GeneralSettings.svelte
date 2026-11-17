@@ -1,14 +1,12 @@
 <script lang="ts">
+  import Select from "../controls/Select.svelte";
   import { i18n, setLocale, t } from "../../lib/i18n.svelte";
   import { locales } from "../../lib/i18n/locales";
   import { shortcutLabel } from "../../lib/platform";
   import { settings } from "../../lib/settings.svelte";
-  import Icon from "../Icon.svelte";
   import SettingsNumber from "./SettingsNumber.svelte";
   import SettingsRow from "./SettingsRow.svelte";
   import VoiceSettings from "./VoiceSettings.svelte";
-  import VisionSettings from "./VisionSettings.svelte";
-  import TranslationSettings from "./TranslationSettings.svelte";
   import InterfaceScale from "./InterfaceScale.svelte";
 
   const config = $derived(settings.settings);
@@ -22,12 +20,9 @@
       <div class="st-card">
         <SettingsRow title={t("Interface language")}
           description={t("The language of buttons, menus, and app messages. The language of agent replies is set separately.")}>
-          <select class="st-input" aria-label={t("Interface language")} value={i18n.locale}
-            onchange={(event) => setLocale(event.currentTarget.value)}>
-            {#each locales as locale (locale.id)}
-              <option value={locale.id} lang={locale.id}>{locale.name}</option>
-            {/each}
-          </select>
+          <Select class="st-input" aria-label={t("Interface language")} value={i18n.locale}
+            options={locales.map((locale) => ({ value: locale.id, label: locale.name, lang: locale.id }))}
+            onchange={(value) => setLocale(value)} />
         </SettingsRow>
         <InterfaceScale />
       </div>
@@ -37,31 +32,25 @@
       <h3 class="st-group-title">{t("Messages")}</h3>
       <div class="st-card">
         <SettingsRow title={t("Send message")} description={t("Shift+Enter always adds a new line.")}>
-          <select class="st-input" aria-label={t("Send message")}
+          <Select class="st-input" aria-label={t("Send message")}
             value={config.ui?.sendShortcut ?? "enter"}
-            onchange={(event) => {
+            options={[{ value: "enter", label: "Enter" }, { value: "modifier-enter", label: shortcutLabel("Enter") }]}
+            onchange={(value) => {
               config.ui ??= { sendShortcut: "enter", followUpBehavior: "queue" };
-              config.ui.sendShortcut = event.currentTarget.value as "enter" | "modifier-enter";
-            }}>
-            <option value="enter">Enter</option>
-            <option value="modifier-enter">{shortcutLabel("Enter")}</option>
-          </select>
+              config.ui.sendShortcut = value as "enter" | "modifier-enter";
+            }} />
         </SettingsRow>
         <SettingsRow title={t("Messages while working")}>
-          <select class="st-input" aria-label={t("Messages while working")}
+          <Select class="st-input" aria-label={t("Messages while working")}
             value={config.ui?.followUpBehavior ?? "queue"}
-            onchange={(event) => {
+            options={[{ value: "queue", label: t("After the current task") }, { value: "steer", label: t("Guide the current task") }]}
+            onchange={(value) => {
               config.ui ??= { sendShortcut: "enter", followUpBehavior: "queue" };
-              config.ui.followUpBehavior = event.currentTarget.value as "queue" | "steer";
-            }}>
-            <option value="queue">{t("After the current task")}</option>
-            <option value="steer">{t("Guide the current task")}</option>
-          </select>
+              config.ui.followUpBehavior = value as "queue" | "steer";
+            }} />
         </SettingsRow>
       </div>
     </div>
-
-    <VisionSettings {config} />
 
     <VoiceSettings />
 
@@ -84,21 +73,5 @@
       </div>
     {/if}
 
-    <details class="st-details">
-      <summary>{t("Advanced settings")}<Icon name="chevron-down" size={14} class="st-chevron" /></summary>
-      <div class="st-details-body">
-        <div class="st-group">
-          <h3 class="st-group-title">{t("Talker and Worker")}</h3>
-          <div class="st-card">
-            <label class="st-switch st-row">
-              <span class="st-switch-copy"><strong>{t("Separate conversation from execution")}</strong><span>{t("New chats use a Talker and an independent Worker. Both use the selected model. English handoffs replace automatic translation; tool output stays live.")}</span></span>
-              <input type="checkbox" checked={config.conversation?.enabled ?? true} onchange={(event) => { config.conversation = { enabled: event.currentTarget.checked }; }} />
-              <span class="st-switch-track" aria-hidden="true"></span>
-            </label>
-          </div>
-        </div>
-        {#if config.conversation?.enabled === false}<TranslationSettings {config} />{/if}
-      </div>
-    </details>
   </section>
 {/if}

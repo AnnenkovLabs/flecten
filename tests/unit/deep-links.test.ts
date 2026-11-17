@@ -48,7 +48,7 @@ test("links queue for the listening renderer, then select sessions without runni
     },
     automated: false,
     argv: [
-      `flecten://session/missing?project=${encodeURIComponent(`${tmpdir()}/liquid-missing-${crypto.randomUUID()}`)}`,
+      `flecten://session/missing?project=${encodeURIComponent(`${tmpdir()}/flecten-missing-${crypto.randomUUID()}`)}`,
       link,
     ],
     openProject: (project: string) => projects.push(project),

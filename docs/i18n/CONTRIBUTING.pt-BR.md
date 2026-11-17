@@ -53,7 +53,7 @@ Uma nova dependência exige um registro de decisão: contexto, decisão, consequ
 
 ## Commits
 
-Um commit é uma mudança de significado. Mensagem no imperativo: `add spec parsing`, `fix page boundary`. Segredos e `.liquid/` nunca são commitados.
+Um commit é uma mudança de significado. Mensagem no imperativo: `add spec parsing`, `fix page boundary`. Segredos e `.flecten/` nunca são commitados.
 
 ## Comportamento
 

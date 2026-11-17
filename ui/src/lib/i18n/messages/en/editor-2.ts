@@ -1,5 +1,7 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Only part of this folder is shown. Open a project folder to see its files.":
+    "Only part of this folder is shown. Open a project folder to see its files.",
   "Reopen closed file": "Reopen closed file",
   "Replace in file": "Replace in file",
   "Find in project": "Find in project",

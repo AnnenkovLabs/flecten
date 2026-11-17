@@ -1,5 +1,7 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
+  "Could not save your draft. Keep this window open and free up storage, then try again.":
+    "无法保存草稿。请保持此窗口打开，释放存储空间后重试。",
   "Stop voice input": "停止语音输入",
   "Agent actions": "AI 助手操作",
   "Waiting for the current step to finish. Click again to stop immediately":

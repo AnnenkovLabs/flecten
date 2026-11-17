@@ -15,11 +15,31 @@ export function runVision(
   return async (image, focus, signal) => {
     if (!options.vision)
       throw new Error("Image description is unavailable. Configure a vision model in Settings.");
-    return options.vision.describe(image, focus, signal, ({ usage, price, ...target }) => {
-      state.usage = addUsage(state.usage, usage);
-      emit({ type: "usage", sessionId: state.sessionId, usage, purpose: "vision", ...target });
-      emit({ type: "budget", sessionId: state.sessionId, budget: state.budget.add(usage, price) });
-      if (state.budget.exhausted()) state.controller.abort(BUDGET_ABORT);
-    });
+    return options.vision.describe(
+      image,
+      focus,
+      signal,
+      ({ usage, price, reported, ...target }) => {
+        if (reported === false) {
+          emit({
+            type: "usage.unavailable",
+            sessionId: state.sessionId,
+            purpose: "vision",
+            provider: target.provider,
+            model: target.model,
+          });
+          emit({ type: "budget", sessionId: state.sessionId, budget: state.budget.unavailable() });
+          return;
+        }
+        state.usage = addUsage(state.usage, usage);
+        emit({ type: "usage", sessionId: state.sessionId, usage, purpose: "vision", ...target });
+        emit({
+          type: "budget",
+          sessionId: state.sessionId,
+          budget: state.budget.add(usage, price),
+        });
+        if (state.budget.exhausted()) state.controller.abort(BUDGET_ABORT);
+      },
+    );
   };
 }

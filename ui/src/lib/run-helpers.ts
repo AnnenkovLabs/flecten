@@ -1,8 +1,9 @@
+import { readPreference } from "./preference-storage";
 import type { ReasoningChoice } from "./types";
 
 /** Small run-store helpers: stable item ids and the remembered reasoning choice. */
 
-const REASONING_KEY = "liquid.reasoning";
+const REASONING_KEY = "flecten.reasoning";
 const REASONING_VALUES = new Set([
   "auto",
   "none",
@@ -16,13 +17,13 @@ const REASONING_VALUES = new Set([
 
 export function storedReasoning(): ReasoningChoice {
   if (typeof localStorage === "undefined") return "auto";
-  const value = localStorage.getItem(REASONING_KEY);
+  const value = readPreference(REASONING_KEY, "liquid.reasoning");
   return value && REASONING_VALUES.has(value) ? (value as ReasoningChoice) : "auto";
 }
 
 export function hasStoredReasoning(): boolean {
   if (typeof localStorage === "undefined") return false;
-  const value = localStorage.getItem(REASONING_KEY);
+  const value = readPreference(REASONING_KEY, "liquid.reasoning");
   return value !== null && REASONING_VALUES.has(value);
 }
 

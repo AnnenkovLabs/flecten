@@ -27,10 +27,10 @@
   <div class="st-details-body catalog">
     {#each tools as tool (tool.name)}<p class="st-hint"><strong>{tool.name}</strong>: {tool.description}</p>{/each}
     {#each catalog?.resources ?? [] as resourceEntry (resourceEntry.uri)}
-      <button class="st-btn st-btn--quiet catalog-item" type="button" title={resourceEntry.description ?? resourceEntry.uri} onclick={() => resource(resourceEntry.uri)}>{t("Attach resource: {0}", [resourceEntry.name])}</button>
+      <button class="st-btn st-btn--quiet catalog-item" type="button" data-tooltip={resourceEntry.description ?? resourceEntry.uri} onclick={() => resource(resourceEntry.uri)}>{t("Attach resource: {0}", [resourceEntry.name])}</button>
     {/each}
     {#each catalog?.prompts ?? [] as entry (entry.name)}
-      <button class="st-btn st-btn--quiet catalog-item" type="button" title={entry.description ?? entry.name} onclick={() => { prompt = entry; args = {}; attached = false; }}>{t("Prompt: {0}", [entry.name])}</button>
+      <button class="st-btn st-btn--quiet catalog-item" type="button" data-tooltip={entry.description ?? entry.name} onclick={() => { prompt = entry; args = {}; attached = false; }}>{t("Prompt: {0}", [entry.name])}</button>
     {/each}
     {#if prompt}
       <form onsubmit={(event) => { event.preventDefault(); void invoke(); }}>

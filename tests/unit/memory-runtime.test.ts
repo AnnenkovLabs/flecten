@@ -59,7 +59,7 @@ async function fixture(
   overrides: Partial<SessionOptions> = {},
   existing?: { cwd: string; store: MemoryStore },
 ) {
-  const cwd = existing?.cwd ?? (await mkdtemp(join(tmpdir(), "liquid-memory-runtime-")));
+  const cwd = existing?.cwd ?? (await mkdtemp(join(tmpdir(), "flecten-memory-runtime-")));
   if (!existing) directories.push(cwd);
   const store = existing?.store ?? new MemoryStore({ cwd });
   const provider = scriptedProvider(scripts);
@@ -75,7 +75,7 @@ async function fixture(
     context: { window: 100_000, reserve: 2000 },
     loop: { maxTurns: 12, continuations: 0, parallelTools: false },
     responseFormat: "conversation",
-    logDir: (id) => join(cwd, ".liquid", "sessions", id, "logs"),
+    logDir: (id) => join(cwd, ".flecten", "sessions", id, "logs"),
     memory: store,
     ...overrides,
   });

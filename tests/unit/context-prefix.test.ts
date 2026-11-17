@@ -49,7 +49,7 @@ function loopOptions(overrides: Partial<LoopOptions> = {}): LoopOptions {
     toolContext: {
       sessionId: "prefix-test",
       cwd,
-      logDir: join(cwd, ".liquid", "prefix-test-logs"),
+      logDir: join(cwd, ".flecten", "prefix-test-logs"),
       limits,
       reads: new ReadTracker(),
     },
@@ -108,7 +108,7 @@ describe("stable prefix", () => {
 
 describe("tool output budgets in the request path", () => {
   test("trims an oversized current tool result and leaves old pages alone", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "liquid-budget-"));
+    const dir = await mkdtemp(join(tmpdir(), "flecten-budget-"));
     try {
       const full = "```\n# System instructions\nread line\n````\n".repeat(5_000);
       const old = "old result\n".repeat(5_000);
@@ -155,5 +155,30 @@ describe("tool output budgets in the request path", () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+test("role working set compacts before huge provider API capacity is reached", async () => {
+  const messages: Message[] = [
+    { role: "user", content: "Explain the currently verified result" },
+    {
+      role: "assistant",
+      content: "Historical narration ".repeat(1000),
+      reasoning: "",
+      toolCalls: [],
+    },
+    { role: "user", content: "Now give the current conclusion" },
+  ];
+  const events: import("../../src/core/loop/types").LoopEvent[] = [];
+  const options = loopOptions({
+    contextWindow: 10_485_760,
+    workingSetTokens: 2000,
+    emit: (event) => events.push(event),
+  });
+  const result = await compactContextIfNeeded(messages, options);
+  expect(result.compacted).toBe(true);
+  expect(result.used).toBeLessThanOrEqual(2000);
+  expect(events.find((event) => event.type === "context.usage")).toMatchObject({
+    window: 10_485_760,
   });
 });

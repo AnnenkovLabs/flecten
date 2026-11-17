@@ -126,7 +126,7 @@ test("community catalogs persist, validate package hashes and paths, and disconn
     await expect(f.app.modules.marketplace(install)).rejects.toThrow("does not match");
     expect(
       await Bun.file(
-        join(f.cwd, ".liquid/modules/community-guide/.flecten-module/module.json"),
+        join(f.cwd, ".flecten/modules/community-guide/.flecten-module/module.json"),
       ).exists(),
     ).toBe(false);
     bundle = { schemaVersion: 1, files: { "../escape": "YQ==" } };
@@ -237,7 +237,7 @@ test("an explicit HTTPS catalog installs dependencies without trusting them and 
         enabled: false,
       });
     }
-    const path = join(f.cwd, ".liquid/modules/frame-workflow");
+    const path = join(f.cwd, ".flecten/modules/frame-workflow");
     const original = await readModule(path);
     await expect(f.app.modules.marketplace({ action: "install", ...workflow })).rejects.toThrow(
       "already installed",

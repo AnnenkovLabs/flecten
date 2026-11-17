@@ -4,8 +4,10 @@ import {
   grantLabel,
   matchesPermissionRule,
   permissionPath,
+  permissionPolicyKey,
   permissionRequestKey,
 } from "./permission-request-key";
+import { type SessionGrant, SessionGrantSchema, sessionGrantFor } from "./session-grant";
 import type {
   ApprovalChoice,
   ApprovalDecision,
@@ -32,6 +34,7 @@ export class PermissionEngine {
   private readonly saving = new Map<string, AbortController>();
   private readonly listeners = new Set<() => void>();
   private version = 0;
+  private grantEpoch: string | undefined;
   get revision(): string {
     return `${this.version}:${this.parent?.revision ?? ""}`;
   }
@@ -42,14 +45,27 @@ export class PermissionEngine {
     this.now = options.now ?? Date.now;
     this.onRemember = options.onRemember;
     this.parent = parent;
+    this.grantEpoch = options.grantEpoch;
   }
 
   /** Security changes apply to the next action in an already running session. */
-  replaceRules(options: Pick<PermissionEngineOptions, "rules" | "destructive">): void {
+  replaceRules(
+    options: Pick<PermissionEngineOptions, "rules" | "destructive" | "grantEpoch">,
+  ): void {
+    if (
+      this.grantEpoch &&
+      options.grantEpoch === this.grantEpoch &&
+      permissionPolicyKey({
+        rules: options.rules ?? [],
+        destructive: options.destructive ?? "ask",
+      }) === permissionPolicyKey({ rules: this.rules, destructive: this.destructive })
+    )
+      return;
     for (const controller of this.saving.values())
       controller.abort(new Error("Permission policy changed while saving the grant"));
     this.rules = structuredClone(options.rules ?? []);
     this.destructive = options.destructive ?? "ask";
+    this.grantEpoch = options.grantEpoch;
     this.sessionGrants.clear();
     this.directoryGrants.clear();
     this.version += 1;
@@ -146,7 +162,6 @@ export class PermissionEngine {
     this.pendingApprovals.set(approval.id, approval);
     return { policy: "ask", reason, approvalId: approval.id, ...metadata };
   }
-
   private actionPolicy(request: PermissionRequest, path?: string): PermissionDecision {
     const matches = [
       ...this.rules,
@@ -157,6 +172,12 @@ export class PermissionEngine {
     ].filter((rule) => rule.risk === undefined && matchesPermissionRule(rule, request, path));
     const denied = matches.find((rule) => rule.policy === "deny");
     if (denied) return { policy: "deny", reason: this.explain(denied, request) };
+    if (request.humanOnly)
+      return {
+        policy: "ask",
+        reason: "Provider protection requires human approval for this exact operation.",
+        humanOnly: true,
+      };
     const checkpoint = matches.find((rule) => rule.policy === "ask" && rule.checkpoint);
     if (checkpoint)
       return { policy: "ask", reason: this.explain(checkpoint, request), humanOnly: true };
@@ -180,7 +201,6 @@ export class PermissionEngine {
       };
     return { policy: rule.policy, reason: this.explain(rule, request) };
   }
-
   private sharedDirectoryRules(sessionId: string): PermissionRule[] {
     return [
       ...this.rules.filter(
@@ -349,6 +369,55 @@ export class PermissionEngine {
     }
     this.parent?.grantSession(request);
     this.notify();
+  }
+
+  private get policyIdentity(): string {
+    return permissionPolicyKey({
+      rules: this.rules,
+      destructive: this.destructive,
+      parent: this.parent?.policyIdentity,
+      epoch: this.grantEpoch,
+    });
+  }
+
+  /** Capture only an effective session grant, using the shared authority's policy identity. */
+  sessionGrant(request: PermissionRequest): SessionGrant | undefined {
+    if (this.parent) return this.parent.sessionGrant(request);
+    if (!request.sessionId || this.check(request).policy !== "allow") return undefined;
+    return sessionGrantFor({ ...request, sessionId: request.sessionId }, this.policyIdentity);
+  }
+
+  /** Replays a human grant only in the same chat and unchanged policy; denies always win. */
+  restoreSessionGrant(value: unknown, owner: string): boolean {
+    if (this.parent) return this.parent.restoreSessionGrant(value, owner);
+    const parsed = SessionGrantSchema.safeParse(value);
+    if (
+      !parsed.success ||
+      parsed.data.owner !== owner ||
+      parsed.data.policy !== this.policyIdentity
+    )
+      return false;
+    const grant = parsed.data;
+    if (grant.kind === "directory") {
+      if (permissionPath(canonicalPath(grant.path), grant.cwd) !== grant.path) return false;
+      const request: PermissionRequest = {
+        action: "external_path",
+        tool: "directory",
+        cwd: grant.cwd,
+        path: grant.path,
+        sessionId: owner,
+        safety: "bounded",
+      };
+      const decision = this.check(request);
+      if (decision.policy === "deny" || decision.humanOnly) return false;
+      this.grantSession(request);
+    } else {
+      const grants = this.sessionGrants.get(owner) ?? new Set<string>();
+      grants.add(grant.requestKey);
+      this.sessionGrants.set(owner, grants);
+      this.notify();
+    }
+    return true;
   }
 
   private async saveRules(

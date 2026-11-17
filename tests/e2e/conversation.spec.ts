@@ -11,31 +11,31 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
     const dialog = page.locator("dialog.settings-dialog");
+    await dialog.getByRole("button", { name: "Модели", exact: true }).click();
     const conversation = dialog.getByRole("checkbox", {
       name: "Отделить общение от выполнения",
       includeHidden: true,
     });
     await expect(conversation).toBeChecked();
-    await expect(conversation).toBeHidden();
-    await dialog.locator("summary").filter({ hasText: "Дополнительные параметры" }).click();
     await expect(conversation).toBeVisible();
     await dialog.getByRole("button", { name: "Закрыть", exact: true }).click();
     await page.locator("#prompt").fill("Проверь проект, сохрани API");
     await page.getByRole("button", { name: "Отправить", exact: true }).click();
+    const talker = page.locator("#pane-thread");
     const workerTab = page.getByRole("tab", { name: /^Действия Worker/ });
     const conversationTab = page.getByRole("tab", { name: "Диалог", exact: true });
     const activity = page
       .locator("#pane-worker")
       .getByRole("region", { name: "Действия Worker", includeHidden: true });
-    await expect(page.locator(".thread .tool-mirror")).toHaveCount(4);
-    const intro = page.locator(".answer").filter({ hasText: "Сначала проверю документацию." });
-    const progress = page
+    await expect(talker.locator(".thread .tool-mirror")).toHaveCount(4);
+    const intro = talker.locator(".answer").filter({ hasText: "Сначала проверю документацию." });
+    const progress = talker
       .locator(".answer")
       .filter({ hasText: "Документация прочитана. Теперь сверю реализацию." });
     await expect(intro).toHaveCount(1);
     await expect(progress).toHaveCount(1);
     const order = () =>
-      page.locator(".thread-item").evaluateAll((nodes) =>
+      talker.locator(".thread-item").evaluateAll((nodes) =>
         nodes.flatMap((node) => {
           const answer = node.querySelector(".answer");
           if (answer) {
@@ -54,7 +54,7 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
     expect(position("Сначала проверю")).toBeLessThan(position("README.md"));
     expect(position("*.md")).toBeLessThan(position("Документация прочитана"));
     expect(position("Документация прочитана")).toBeLessThan(position("WORKER_STREAM_BEGIN"));
-    const gap = await page
+    const gap = await talker
       .locator(".thread .tool-mirror .action-line")
       .evaluateAll(
         (nodes) =>
@@ -65,24 +65,26 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
     expect(gap).toBeLessThanOrEqual(4);
     await expect(workerTab).toBeVisible();
     await expect(activity).toBeHidden();
-    await expect(page.locator(".thread .worker-activity")).toHaveCount(0);
+    await expect(talker.locator(".thread .worker-activity")).toHaveCount(0);
     const actions = page.getByRole("group", { name: "Действия агента" });
     await expect(actions.getByRole("button")).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Отправить", exact: true })).toHaveCount(0);
-    await expect(page.locator(".summary-frame")).toHaveCount(0);
-    await expect(page.locator(".answer-actions")).toHaveCount(0);
-    await expect(page.locator(".answer-foot")).toHaveCount(0);
+    await expect(talker.locator(".summary-frame")).toHaveCount(0);
+    await expect(talker.locator(".answer-actions")).toHaveCount(0);
+    await expect(talker.locator(".answer-foot")).toHaveCount(0);
     await expect(intro).toHaveCount(1);
     await expect(progress).toHaveCount(1);
     await page.locator("#prompt").fill("Ты можешь отвечать, пока идёт проверка?");
     await expect(actions.getByRole("button")).toHaveCount(3);
     await actions.getByRole("button", { name: "Уточнить сейчас", exact: true }).click();
-    await expect(page.locator(".answer").last()).toContainText("Можем общаться во время работы.");
+    await expect(talker.locator(".answer").last()).toContainText("Можем общаться во время работы.");
     await expect(actions.getByRole("button")).toHaveCount(1);
-    await expect(page.locator(".summary-frame")).toHaveCount(0);
-    await expect(page.locator(".answer-actions")).toHaveCount(0);
-    await expect(page.locator(".answer-foot")).toHaveCount(0);
-    const mirror = page.locator(".thread .tool-mirror").filter({ hasText: "WORKER_STREAM_BEGIN" });
+    await expect(talker.locator(".summary-frame")).toHaveCount(0);
+    await expect(talker.locator(".answer-actions")).toHaveCount(0);
+    await expect(talker.locator(".answer-foot")).toHaveCount(0);
+    const mirror = talker
+      .locator(".thread .tool-mirror")
+      .filter({ hasText: "WORKER_STREAM_BEGIN" });
     await expect(mirror).toBeVisible();
     await mirror.locator("button.action").click();
     await expect(mirror.locator(".detail")).toContainText("WORKER_LIVE_OUTPUT");
@@ -90,7 +92,17 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
     const reference = await mirror.getAttribute("data-tool-reference");
     await workerTab.click();
     await expect(activity).toBeVisible();
-    await expect(activity.locator("button.action")).toHaveCount(4);
+    const acceptance = activity.locator(".worker-acceptance");
+    await expect(acceptance).toHaveCount(1);
+    await acceptance.locator("summary").click();
+    await expect(acceptance).toContainText("Ожидает проверки");
+    await activity.locator(".run-summary").click();
+    await activity.locator(".group-line").click();
+    await expect(activity.locator("button.action:visible")).toHaveCount(4);
+    await expect(activity.locator(".thread")).toHaveCount(1);
+    await expect(activity.locator('#prompt, [contenteditable="true"]')).toHaveCount(0);
+    await expect(page.locator("#prompt")).toHaveCount(1);
+    await expect(activity.locator(".live-run")).toContainText("Работаю");
     await expect(
       activity.getByRole("button", { name: "Остановить Worker", exact: true }),
     ).toBeVisible();
@@ -110,7 +122,7 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
       await page.setViewportSize({ width, height });
       await mirror.scrollIntoViewIfNeeded();
       expect(
-        await page
+        await talker
           .locator(".thread")
           .evaluate((element) => element.scrollWidth <= element.clientWidth + 1),
       ).toBe(true);
@@ -146,24 +158,23 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
     ).toHaveCount(0);
     await expect(mirror.locator(".detail")).toContainText("WORKER_STREAM_END");
     await expect(mirror.locator(".action-cancel")).toBeDisabled();
-    await page.locator(".thread").evaluate((element) => {
+    await talker.locator(".thread").evaluate((element) => {
       element.scrollTop = element.scrollHeight;
     });
-    await expect(page.locator(".summary-frame")).toHaveCount(1);
-    await expect(page.locator(".thread .tool-mirror")).toHaveCount(5);
-    const workerId = (await readdir(join(h.cwd, ".liquid/sessions"))).find((id) =>
+    await expect(talker.locator(".summary-frame")).toHaveCount(1);
+    await expect(acceptance.locator("summary")).toContainText("1/1");
+    await expect(talker.locator(".thread .tool-mirror")).toHaveCount(5);
+    const workerId = (await readdir(join(h.cwd, ".flecten/sessions"))).find((id) =>
       id.endsWith("_worker"),
     );
     expect(workerId).toBeDefined();
     if (!workerId) throw new Error("Worker session archive was not created");
-    const pages = join(h.cwd, ".liquid/sessions", workerId, "pages");
-    expect(await readFile(join(pages, "1.md"), "utf8")).toContain(
-      "Preserve the requested public API",
-    );
+    const pages = join(h.cwd, ".flecten/sessions", workerId, "pages");
+    expect(await readFile(join(pages, "1.md"), "utf8")).toContain("Preserve the public API");
     expect(await readFile(join(pages, "1.transcript.md"), "utf8")).toContain("WORKER_STREAM_END");
-    const summaryAnswer = page.locator(".answer").filter({ has: page.locator(".summary-frame") });
-    await expect(page.locator(".answer-actions")).toHaveCount(1);
-    await expect(page.locator(".answer-foot")).toHaveCount(1);
+    const summaryAnswer = talker.locator(".answer").filter({ has: page.locator(".summary-frame") });
+    await expect(talker.locator(".answer-actions")).toHaveCount(1);
+    await expect(talker.locator(".answer-foot")).toHaveCount(1);
     await expect(summaryAnswer.locator(".answer-time")).toBeVisible();
     await expect(
       summaryAnswer.getByRole("button", { name: "Скопировать ответ", exact: true }),
@@ -199,13 +210,18 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
     await expect(task).toBeVisible();
     await task.click();
     await expect(page.locator(`[data-tool-reference="${reference}"]`).first()).toBeVisible();
-    await expect(page.locator(".thread .tool-mirror")).toHaveCount(5);
-    await expect(page.locator(".summary-frame")).toHaveCount(1);
-    await expect(page.locator(".answer-actions")).toHaveCount(1);
-    await expect(page.locator(".answer-foot")).toHaveCount(1);
+    await expect(talker.locator(".thread .tool-mirror")).toHaveCount(5);
+    await expect(talker.locator(".summary-frame")).toHaveCount(1);
+    await workerTab.click();
+    await expect(activity.locator(".worker-acceptance summary")).toContainText("1/1");
+    await activity.locator(".worker-acceptance summary").click();
+    await expect(activity.locator(".worker-acceptance")).toContainText("Утверждение модели");
+    await conversationTab.click();
+    await expect(talker.locator(".answer-actions")).toHaveCount(1);
+    await expect(talker.locator(".answer-foot")).toHaveCount(1);
     expect(await order()).toEqual(completedOrder);
     await expect(
-      page
+      talker
         .locator(".msg.user .bubble")
         .filter({ hasText: "Ты можешь отвечать, пока идёт проверка?" }),
     ).toHaveCount(1);

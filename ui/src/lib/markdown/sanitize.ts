@@ -8,7 +8,7 @@ const ALLOWED_TAGS = new Set(
   ),
 );
 const ALLOWED_ATTR = new Set(
-  "align alt aria-label checked class colspan disabled href rowspan scope src start title type".split(
+  "align alt aria-label checked class colspan data-tooltip disabled href rowspan scope src start title type".split(
     " ",
   ),
 );
@@ -97,23 +97,23 @@ export const SUMMARY_CSP =
 
 export type SummaryAction = "copy" | "navigate";
 export type SummaryHeightMessage = {
-  type: "liquid-summary";
+  type: "flecten-summary";
   version: 1;
   kind: "height";
   height: number;
 };
 export type SummaryActionMessage = {
-  type: "liquid-summary";
+  type: "flecten-summary";
   version: 1;
   kind: "action";
 } & ({ action: "copy"; payload: string } | { action: "navigate"; destination: SummaryDestination });
 export type SummaryReadyMessage = {
-  type: "liquid-summary";
+  type: "flecten-summary";
   version: 1;
   kind: "ready";
 };
 export type SummaryContentMessage = {
-  type: "liquid-summary";
+  type: "flecten-summary";
   version: 1;
   kind: "content";
 };
@@ -128,16 +128,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function parseSummaryMessage(data: unknown): SummaryMessage | null {
-  if (!isRecord(data) || data.type !== "liquid-summary" || data.version !== 1) return null;
+  if (!isRecord(data) || data.type !== "flecten-summary" || data.version !== 1) return null;
   if (data.kind === "ready" || data.kind === "content") {
-    return { type: "liquid-summary", version: 1, kind: data.kind };
+    return { type: "flecten-summary", version: 1, kind: data.kind };
   }
   if (data.kind === "height") {
     const height = data.height;
     if (typeof height !== "number" || !Number.isFinite(height) || height < 0 || height > 20000) {
       return null;
     }
-    return { type: "liquid-summary", version: 1, kind: "height", height: Math.ceil(height) };
+    return { type: "flecten-summary", version: 1, kind: "height", height: Math.ceil(height) };
   }
   if (data.kind !== "action") return null;
   const action = data.action;
@@ -146,12 +146,12 @@ export function parseSummaryMessage(data: unknown): SummaryMessage | null {
   if (action === "navigate") {
     const destination = parseSummaryDestination(payload);
     return destination
-      ? { type: "liquid-summary", version: 1, kind: "action", action, destination }
+      ? { type: "flecten-summary", version: 1, kind: "action", action, destination }
       : null;
   }
   if (action !== "copy") return null;
   return {
-    type: "liquid-summary",
+    type: "flecten-summary",
     version: 1,
     kind: "action",
     action,
@@ -164,6 +164,10 @@ function browserPurifier(): DOMPurify | null {
   const purifier = createDOMPurify(root as WindowLike);
   if (!purifier.isSupported) return null;
   purifier.addHook("afterSanitizeAttributes", (node) => {
+    if (node.hasAttribute("title")) {
+      node.setAttribute("data-tooltip", (node.getAttribute("title") ?? "").slice(0, 2048));
+      node.removeAttribute("title");
+    }
     if (node.tagName !== "A") return;
     node.setAttribute("target", "_blank");
     node.setAttribute("rel", "noreferrer noopener");
@@ -243,7 +247,8 @@ function cleanAttribute(tag: string, name: string, value: string): [string, stri
     const url = isSafeUrl(value, "image");
     return url ? [name, url] : null;
   }
-  if (name === "alt" || name === "title") return [name, value.slice(0, 2048)];
+  if (name === "title") return ["data-tooltip", value.slice(0, 2048)];
+  if (name === "alt" || name === "data-tooltip") return [name, value.slice(0, 2048)];
   if (name === "aria-label") return tag === "button" ? [name, value.slice(0, 200)] : null;
   if (name === "class") {
     const classes = value.split(/\s+/).filter((item) => /^[a-z0-9_-]{1,40}$/i.test(item));

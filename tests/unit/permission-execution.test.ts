@@ -44,7 +44,7 @@ async function fixture(rules: PermissionRule[], tools = builtinTools()) {
   const context: ToolContext = {
     sessionId: "test-session",
     cwd,
-    logDir: join(cwd, ".liquid/logs"),
+    logDir: join(cwd, ".flecten/logs"),
     signal: new AbortController().signal,
     limits,
     reads: new ReadTracker(),

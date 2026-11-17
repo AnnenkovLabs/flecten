@@ -19,6 +19,7 @@ const SECRET_HEADER_NAMES = new Set([
 export type TransportErrorReason = "proxy" | "timeout" | "aborted" | "network" | "http";
 
 export interface TransportErrorOptions {
+  requested?: boolean;
   reason: TransportErrorReason;
   code?: ErrorCode | undefined;
   status?: number | undefined;
@@ -34,6 +35,7 @@ export interface TransportErrorOptions {
 }
 
 export class TransportError extends HarnessError {
+  readonly requested: boolean | undefined;
   readonly reason: TransportErrorReason;
   readonly status: number | undefined;
   readonly retryable: boolean;
@@ -50,6 +52,7 @@ export class TransportError extends HarnessError {
       options.cause === undefined ? undefined : { cause: options.cause },
     );
     this.name = "TransportError";
+    this.requested = options.requested;
     this.reason = options.reason;
     this.status = options.status;
     this.retryable = options.retryable ?? false;

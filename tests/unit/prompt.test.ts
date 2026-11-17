@@ -18,7 +18,7 @@ function locations(overrides: Partial<InstructionLocations> = {}): InstructionLo
 }
 
 async function tempProject(): Promise<string> {
-  return mkdtemp(join(tmpdir(), "liquid-prompt-"));
+  return mkdtemp(join(tmpdir(), "flecten-prompt-"));
 }
 
 describe("summary presentation", () => {

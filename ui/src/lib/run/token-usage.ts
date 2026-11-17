@@ -84,6 +84,14 @@ export function tokenUsageEvent(state: TokenUsageDetails, event: AgentEvent): To
         completedCost: addCost(state.completedCost, usage.costUsd),
       };
     }
+    case "usage.unavailable":
+      return {
+        ...state,
+        completedCost: undefined,
+        runCost: undefined,
+        lastTurnCost: undefined,
+        pending: undefined,
+      };
     case "session.started":
       return {
         ...state,

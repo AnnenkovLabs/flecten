@@ -11,6 +11,7 @@
   import Icon from "./Icon.svelte";
   import ModelAdvanced from "./ModelAdvanced.svelte";
   import ModelFeatures from "./ModelFeatures.svelte";
+  import Select from "./controls/Select.svelte";
 
   interface Props {
     providerId: string;
@@ -102,7 +103,7 @@
           class="st-icon-btn"
           type="button"
           aria-label={t("Close model")}
-          title={t("Close model")}
+          data-tooltip={t("Close model")}
           onclick={onClose}
         >
           <Icon name="x" size={16} />
@@ -135,7 +136,7 @@
               <button
                 class="st-btn st-btn--quiet st-btn--sm"
                 type="button"
-                title={t("Generate name from ID")}
+                data-tooltip={t("Generate name from ID")}
                 onclick={() => settings.applyName(providerId, modelId)}
               > {t("From ID")} </button>
             </div>
@@ -158,12 +159,8 @@
         <div class="st-grid">
           <label class="st-field">
             <span class="st-label">{t("Mode")}</span>
-            <select class="st-select" bind:value={model.reasoningMode}>
-              <option value="effort">{t("Effort")}</option>
-              <option value="budget">{t("Token budget")}</option>
-              <option value="toggle">{t("On/off")}</option>
-              <option value="none">{t("None")}</option>
-            </select>
+            <Select class="st-select" bind:value={model.reasoningMode} aria-label={t("Mode")}
+              options={[{ value: undefined, label: t("Auto") }, { value: "effort", label: t("Effort") }, { value: "budget", label: t("Token budget") }, { value: "toggle", label: t("On/off") }, { value: "none", label: t("None") }]} />
           </label>
           <label class="st-field">
             <span class="st-label">{t("Budget (tokens)")}</span>
@@ -239,7 +236,7 @@
           class="st-btn st-btn--danger st-btn--sm"
           type="button"
           disabled={!canRemove}
-          title={canRemove ? undefined : t("Keep at least one model for this provider")}
+          data-tooltip={canRemove ? undefined : t("Keep at least one model for this provider")}
           onclick={() => (confirmDelete = true)}
         >
           <Icon name="trash" size={13} /> {t("Delete model")} </button>

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readdir, realpath, rename, writeFile } from "node:fs/promises";
+import { lstat, mkdir, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { isInside } from "../tools/util/paths";
@@ -26,15 +26,17 @@ async function checkedPath(root: string, path: string): Promise<string> {
   if (
     !isInside(root, target) ||
     target === root ||
-    [".git", ".liquid"].includes(relative.split("/")[0] ?? "")
+    [".git", ".flecten", ".liquid", ".flecten-migration"].includes(relative.split("/")[0] ?? "")
   )
-    throw new Error("Выберите файл или папку внутри проекта, вне .git и .liquid.");
+    throw new Error("Выберите файл или папку внутри проекта, вне .git и .flecten.");
   const parent = await realpath(dirname(target));
   if (!isInside(root, parent)) throw new Error("Папка находится вне проекта.");
   const canonical = join(parent, basename(target));
   if (
     !isInside(root, canonical) ||
-    [".git", ".liquid"].includes(canonical.slice(root.length + 1).split("/")[0] ?? "")
+    [".git", ".flecten", ".liquid", ".flecten-migration"].includes(
+      canonical.slice(root.length + 1).split("/")[0] ?? "",
+    )
   )
     throw new Error("Служебные папки нельзя менять из проводника.");
   return canonical;
@@ -70,30 +72,10 @@ export async function changeWorkspaceFile(cwd: string, input: unknown): Promise<
       // ponytail: serialized IDE operations; OS-level no-replace rename is needed against external writers.
       await rename(target, destination);
     } else {
-      const trash = resolve(root, ".liquid/ide-trash");
+      const trash = resolve(root, ".flecten/ide-trash");
       await mkdir(trash, { recursive: true, mode: 0o700 });
       if (!isInside(root, await realpath(trash))) throw new Error("Корзина находится вне проекта.");
       await rename(target, join(trash, `${randomUUID()}-${basename(target)}`));
     }
   });
-}
-
-const SKIP = new Set(["node_modules", ".git", ".liquid", "dist", "release", "coverage", ".cache"]);
-
-/** Empty directories are real explorer entries too. */
-export async function workspaceDirectories(cwd: string): Promise<string[]> {
-  const result: string[] = [];
-  async function visit(path: string, prefix: string): Promise<void> {
-    if (result.length >= 2000) return;
-    const entries = await readdir(path, { withFileTypes: true }).catch(() => []);
-    for (const entry of entries) {
-      if (result.length >= 2000) break;
-      if (!entry.isDirectory() || SKIP.has(entry.name)) continue;
-      const name = prefix ? `${prefix}/${entry.name}` : entry.name;
-      result.push(name);
-      await visit(join(path, entry.name), name);
-    }
-  }
-  await visit(cwd, "");
-  return result.sort();
 }
