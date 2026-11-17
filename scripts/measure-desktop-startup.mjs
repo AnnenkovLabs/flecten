@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron } from "@playwright/test";
+import { probeRenderer } from "../shell/packaged-smoke.mjs";
 import { ITERATIONS, P95_BUDGET_MS, summarizeStartup } from "./measure-startup.mjs";
 
 const executablePath = process.argv[2];
@@ -58,8 +59,8 @@ for (let run = 0; run < ITERATIONS; run += 1) {
       timeout: 20_000,
     });
     const page = await app.firstWindow();
-    await page.locator(".model-button", { hasText: "Startup ready" }).waitFor({ timeout: 20_000 });
-    await page.locator('[contenteditable="true"]').waitFor({ timeout: 20_000 });
+    const ready = await page.evaluate(probeRenderer);
+    if (ready.status.model !== model) throw new Error("Unexpected startup model");
     await page.evaluate(async () => {
       await document.fonts.ready;
       await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));

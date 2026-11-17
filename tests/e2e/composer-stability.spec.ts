@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { environmentProblem, launchApp } from "./fixtures";
+import { hiddenScreenshot } from "./hidden-screenshot";
 
 test.skip(Boolean(environmentProblem()), environmentProblem());
 
@@ -38,17 +39,17 @@ test("dictation, queue and run updates preserve composer geometry", async () => 
       await prompt.fill("Задача:");
       const idle = await geometry(page);
       const microphone = await page.locator(".voice .icon").elementHandle();
-      await page.screenshot({ path: test.info().outputPath(`idle-${size.width}.png`) });
+      await hiddenScreenshot(h, test.info().outputPath(`idle-${size.width}.png`));
       await page.getByRole("button", { name: "Голосовой ввод", exact: true }).click();
       await expect(page.locator(".voice")).toHaveAttribute("aria-pressed", "true");
       expect(await geometry(page)).toEqual(idle);
       expect(await microphone?.evaluate((element) => element.isConnected)).toBe(true);
-      await expect(page.locator(".voice")).toHaveAttribute("title", /Запись/);
-      await page.screenshot({ path: test.info().outputPath(`recording-${size.width}.png`) });
+      await expect(page.locator(".voice")).toHaveAttribute("data-tooltip", /Запись/);
+      await hiddenScreenshot(h, test.info().outputPath(`recording-${size.width}.png`));
       await page.getByRole("button", { name: "Остановить голосовой ввод" }).click();
       await expect(page.locator(".voice-status")).toHaveText("Распознавание речи…");
       expect(await geometry(page)).toEqual(idle);
-      await page.screenshot({ path: test.info().outputPath(`processing-${size.width}.png`) });
+      await hiddenScreenshot(h, test.info().outputPath(`processing-${size.width}.png`));
       await expect(prompt).toHaveText("Задача: Добавь голосовой ввод.");
       expect(await geometry(page)).toEqual(idle);
 
@@ -73,7 +74,7 @@ test("dictation, queue and run updates preserve composer geometry", async () => 
     expect(await editor?.evaluate((element) => element.isConnected)).toBe(true);
     const queueBox = await queue.boundingBox();
     expect(queueBox && queueBox.y + queueBox.height).toBeLessThan(running[0]?.y ?? 0);
-    await page.screenshot({ path: test.info().outputPath("queue-1180.png") });
+    await hiddenScreenshot(h, test.info().outputPath("queue-1180.png"));
 
     await queue.getByRole("button", { name: "Изменить сообщение" }).click();
     await queue.getByRole("textbox", { name: "Текст сообщения" }).fill("Изменённое сообщение");
@@ -100,7 +101,7 @@ test("dictation, queue and run updates preserve composer geometry", async () => 
         .evaluate((el) => el.getAnimations({ subtree: true }).length),
     ).toBe(0);
     await page.keyboard.press("Escape");
-    await page.screenshot({ path: test.info().outputPath("finished-1180.png") });
+    await hiddenScreenshot(h, test.info().outputPath("finished-1180.png"));
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
       false,
     );

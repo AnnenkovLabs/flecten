@@ -15,7 +15,7 @@ import { redact } from "../util/redact";
 export const STORAGE_COMMANDS = ["storage.migrate", "storage.accept", "storage.status"] as const;
 export type StorageCommandType = (typeof STORAGE_COMMANDS)[number];
 
-/** Discover only explicitly selected and remembered roots. Missing projects stay missing. */
+/** Unavailable remembered projects wait until opening; explicitly selected roots stay strict. */
 export async function storageRoots(cwd: string): Promise<string[]> {
   const roots = new Set([await realpath(cwd)]);
   if (productEnv("CONFIG")?.trim()) return [...roots];
@@ -27,7 +27,13 @@ export async function storageRoots(cwd: string): Promise<string[]> {
       try {
         if ((await stat(project.path)).isDirectory()) roots.add(await realpath(project.path));
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        // Optional remembered folders can be offline or inaccessible; selected roots stay strict.
+        if (
+          !["ENOENT", "ENOTDIR", "EACCES", "EPERM"].includes(
+            (error as NodeJS.ErrnoException).code ?? "",
+          )
+        )
+          throw error;
       }
     }
   } else roots.add(homedir());

@@ -41,6 +41,59 @@ async function child(script: string) {
   return JSON.parse(stdout);
 }
 
+test("unavailable remembered projects do not block startup and selected roots stay strict", async () => {
+  const directory = await root();
+  const profile = await root();
+  const remembered = await root();
+  const denied = join(directory, "denied");
+  const forbidden = join(directory, "forbidden");
+  const notDirectory = join(directory, "file", "old-project");
+  await file(directory, "file", "this parent is no longer a directory");
+  await file(
+    profile,
+    "projects.json",
+    JSON.stringify({
+      version: 1,
+      selected: directory,
+      projects: [remembered, denied, forbidden, notDirectory].map((path) => ({
+        path,
+        name: "remembered",
+        trust: "unknown",
+      })),
+    }),
+  );
+  const result = await child(`
+    import { mock } from "bun:test";
+    const actual = { ...await import("node:fs/promises") };
+    const unavailable = new Map(${JSON.stringify([
+      [denied, "EACCES"],
+      [forbidden, "EPERM"],
+    ])});
+    const check = (path) => {
+      const code = unavailable.get(String(path));
+      if (code) throw Object.assign(new Error("Project unavailable"), { code });
+    };
+    mock.module("node:fs/promises", () => ({ ...actual,
+      stat: async (path, ...args) => { check(path); return actual.stat(path, ...args); },
+      realpath: async (path, ...args) => { check(path); return actual.realpath(path, ...args); },
+    }));
+    process.env.FLECTEN_CONFIG = "";
+    process.env.FLECTEN_PROFILE = ${JSON.stringify(profile)};
+    const { storageRoots } = await import(${JSON.stringify(bootstrap)});
+    const roots = await storageRoots(${JSON.stringify(directory)});
+    const selectedErrors = [];
+    for (const selected of ${JSON.stringify([denied, forbidden, notDirectory])}) {
+      try { await storageRoots(selected); }
+      catch (error) { selectedErrors.push(error.code); }
+    }
+    process.stdout.write(JSON.stringify({ roots, selectedErrors }));
+  `);
+  expect(result.roots.sort()).toEqual(
+    [directory, profile, join(profile, "projectless"), remembered].sort(),
+  );
+  expect(result.selectedErrors).toEqual(["EACCES", "EPERM", "ENOTDIR"]);
+});
+
 test("migration preserves rebuildable originals by rename without walking, hashing or copying them", async () => {
   const directory = await root();
   const p = paths(directory);

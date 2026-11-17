@@ -45,16 +45,16 @@ test("activity stays compact until inspected and failed actions remain accessibl
       spent: { tokens: 20_000, costUsd: 0.2, wallClockMs: 1000 },
       remaining: {},
     };
-    await emit(app, [{ type: "budget", sessionId, budget: calmBudget }]);
+    await emit(app, [{ type: "task.budget", sessionId, budget: calmBudget }]);
     await expect(page.locator(".budget")).toHaveCount(0);
     const warningBudget = { ...calmBudget, spent: { ...calmBudget.spent, tokens: 85_000 } };
-    await emit(app, [{ type: "budget", sessionId, budget: warningBudget }]);
+    await emit(app, [{ type: "task.budget", sessionId, budget: warningBudget }]);
     await expect(page.locator(".budget summary")).toHaveText("Лимит почти достигнут");
     await expect(page.locator(".budget-details")).toBeHidden();
     await page.locator(".budget summary").click();
     await expect(page.locator(".budget-details")).toBeVisible();
     await expect(page.locator(".budget .meter")).toHaveCount(1);
-    await emit(app, [{ type: "budget", sessionId, budget: calmBudget }]);
+    await emit(app, [{ type: "task.budget", sessionId, budget: calmBudget }]);
     await expect(page.locator(".budget")).toHaveCount(0);
     const reasoning = Array.from(
       { length: 30 },

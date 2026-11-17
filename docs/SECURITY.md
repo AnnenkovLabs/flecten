@@ -18,7 +18,7 @@ Renderer не читает файлы и не вызывает модель. Ele
 - `.flecten/secrets.json` и атомарные временные файлы имеют режим 0600. `.env`, `.flecten/`, logs и приватные выгрузки исключены из git.
 - Redaction работает до live UI, listeners, событий, replay и полных tool logs. Он учитывает заданные секреты и стандартные форматы AWS, Google, GitHub, JWT и PEM, включая разрыв между chunks.
 
-Защита отдельных API-провайдеров, обратимые теги секретов и обязательные подтверждения описаны в [PROVIDER-PROTECTION.md](PROVIDER-PROTECTION.md). Исходники и признаки New API / One API разобраны в [PROVIDER-GATEWAY-RESEARCH.md](PROVIDER-GATEWAY-RESEARCH.md).
+Защита отдельных API-провайдеров, обратимые теги секретов и обязательные подтверждения описаны в [PROVIDER-PROTECTION.md](PROVIDER-PROTECTION.md). Исходники и признаки New API / One API разобраны во внутренних материалах PROVIDER-GATEWAY-RESEARCH.md.
 
 ## Права и запись файлов
 

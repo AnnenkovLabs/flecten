@@ -92,7 +92,10 @@ test("renderer probe requires preload, receives status over its bridge and obser
       querySelector: (selector: string) =>
         selector.startsWith("#prompt")
           ? { getBoundingClientRect: () => ({ width: 300 }) }
-          : { getAttribute: () => "Smoke · smoke-model" },
+          : {
+              getAttribute: (attribute: string) =>
+                attribute === "data-tooltip" ? "Smoke · smoke-model" : null,
+            },
     },
     MutationObserver: class {
       observe() {}
@@ -115,4 +118,62 @@ test("renderer probe requires preload, receives status over its bridge and obser
       webContents: { executeJavaScript: (script) => runInNewContext(script, { window: {} }) },
     }),
   ).rejects.toThrow("preload");
+});
+
+test("renderer probe accepts storage migration before requiring a composer", async () => {
+  const commands: string[] = [];
+  let listener: ((event: unknown) => void) | undefined;
+  let ready = false;
+  const status = { type: "status", model: "smoke-model" };
+  const context = {
+    window: {
+      desktop: {
+        agent: {
+          onEvent: (next: (event: unknown) => void) => {
+            listener = next;
+            return () => {
+              listener = undefined;
+            };
+          },
+          send: (command: { type: string }) => {
+            commands.push(command.type);
+            queueMicrotask(() => {
+              if (command.type === "hello")
+                listener?.({ type: "storage.migration", migration: { phase: "required" } });
+              else if (command.type === "storage.migrate")
+                listener?.({ type: "storage.migration", migration: { phase: "complete" } });
+              else if (command.type === "storage.accept") {
+                ready = true;
+                listener?.(status);
+              }
+            });
+          },
+        },
+      },
+    },
+    document: {
+      documentElement: {},
+      querySelector: (selector: string) =>
+        selector.startsWith("#prompt")
+          ? ready
+            ? { getBoundingClientRect: () => ({ width: 300 }) }
+            : null
+          : {
+              getAttribute: (attribute: string) =>
+                attribute === "data-tooltip" ? "Smoke · smoke-model" : null,
+            },
+    },
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    setTimeout,
+    clearTimeout,
+  };
+  const result = await smokeRenderer({
+    webContents: { executeJavaScript: (script) => runInNewContext(script, context) },
+  });
+  expect(commands).toEqual(["hello", "storage.migrate", "storage.accept"]);
+  expect(listener).toBeUndefined();
+  expect(result).toMatchObject({ status, renderer: { composer: true } });
 });

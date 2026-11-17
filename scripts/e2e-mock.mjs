@@ -161,6 +161,10 @@ const server = Bun.serve({
             },
             "tool_calls",
           ),
+          // Configured usage belongs to the final response; earlier fixture turns report zero.
+          ...(usage
+            ? [chunk({ choices: [], usage: { prompt_tokens: 0, completion_tokens: 0 } })]
+            : []),
           "data: [DONE]\n\n",
         ].join(""),
       );

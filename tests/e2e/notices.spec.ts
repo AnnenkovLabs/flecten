@@ -87,7 +87,8 @@ test("a second window on the same project says why and does not restart its core
     ).toBeVisible();
     await expect.poll(() => existsSync(join(first.cwd, ".flecten", "sidecar.lock"))).toBe(true);
 
-    const second = await launchApp({ cwd: first.cwd });
+    // This window must stop at project_locked, so it will never emit a ready status.
+    const second = await launchApp({ cwd: first.cwd, migration: "manual" });
     try {
       const card = second.page
         .locator(".error-card")

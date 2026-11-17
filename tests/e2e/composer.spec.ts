@@ -22,7 +22,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
   for (let index = 0; index < 30; index += 1) {
     models[index === 0 ? "e2e-model" : `model-${index}`] = {
       name: index === 0 ? "E2E Reasoning" : `Модель с длинным названием ${index}`,
-      context: 32768,
+      context: 131072,
       output: 4096,
       tools: true,
       reasoning: true,
@@ -134,6 +134,7 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
     await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeHidden({
       timeout: 45000,
     });
+    await expect(page.locator(".answer").last()).toBeVisible();
     const user = page.locator(".msg.user").first();
     await expect(user).toContainText(`@${path}`);
     const sessions = join(cwd, ".flecten/sessions");
@@ -145,6 +146,19 @@ test("compact composer: menus, atomic mentions, drafts, attachments and submissi
     expect(events).toContain("Keep focus visible.");
 
     // A dock draft keeps its structured chip when leaving and reopening the task.
+    await app.evaluate(({ BrowserWindow }, sessionId) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send("agent:event", {
+        type: "task.budget",
+        sessionId,
+        budget: {
+          limits: {},
+          spent: { tokens: 0, wallClockMs: 0 },
+          remaining: {},
+          accounting: { status: "unavailable", missingRequests: 1, unpricedRequests: 0 },
+        },
+      });
+    }, session);
+    await expect(page.locator(".strip")).toContainText("Расход неизвестен");
     await prompt.fill("Дальше @focus-and");
     const fileOption = page.getByRole("option").filter({
       has: page.locator(".lh-mention-name", { hasText: /^focus-and-keyboard\.md$/ }),

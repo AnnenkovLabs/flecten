@@ -121,7 +121,16 @@ describe("startup measurement", () => {
     const dir = mkdtempSync(join(tmpdir(), "flecten-startup-fake-"));
     dirs.push(dir);
     const fake = join(dir, "fake-sidecar.mjs");
-    writeFileSync(fake, 'setTimeout(() => process.stdout.write(\'{"type":"status"}\\n\'), 25);\n');
+    writeFileSync(
+      fake,
+      [
+        'import { existsSync } from "node:fs";',
+        'import { join } from "node:path";',
+        'const config = join(process.cwd(), "flecten.config.json");',
+        'if (process.env.FLECTEN_CONFIG !== config || !existsSync(config)) throw new Error("startup config is not isolated");',
+        'setTimeout(() => process.stdout.write(\'{"type":"status"}\\n\'), 25);',
+      ].join("\n"),
+    );
 
     const result = await startup.measureStartup(process.execPath, {
       args: [fake],
@@ -133,5 +142,21 @@ describe("startup measurement", () => {
     for (const ms of result.samples) expect(ms).toBeGreaterThanOrEqual(20);
     expect(result.ok).toBe(true);
     expect(startup.summarizeStartup(result.samples, 1).ok).toBe(false);
+  });
+
+  test("reports bootstrap failures instead of waiting for the startup timeout", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "flecten-startup-failure-"));
+    dirs.push(dir);
+    const fake = join(dir, "fake-sidecar.mjs");
+    writeFileSync(
+      fake,
+      [
+        'console.log(JSON.stringify({ type: "storage.migration", migration: { phase: "failed", error: "fixture storage denied" } }));',
+        "setInterval(() => {}, 1000);",
+      ].join("\n"),
+    );
+    await expect(
+      startup.measureStartup(process.execPath, { args: [fake], iterations: 1 }),
+    ).rejects.toThrow("fixture storage denied");
   });
 });

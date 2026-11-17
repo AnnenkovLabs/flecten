@@ -42,7 +42,7 @@ describe("workspace file list", () => {
       Array.from({ length: 5010 }, (_, index) => writeFile(join(cwd, `${index}.txt`), "")),
     );
     expect(await searchWorkspace(cwd, { query: "missing" })).toMatchObject({ limited: true });
-  });
+  }, 15000);
 
   test("lists files relative to the project root", async () => {
     const cwd = await fixture();

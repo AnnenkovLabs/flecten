@@ -1,7 +1,6 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { launchApp, repoRoot } from "./fixtures";
+import { launchApp } from "./fixtures";
+import { hiddenScreenshot } from "./hidden-screenshot";
 
 test("context details show real usage, fit both viewports and survive reopening", async () => {
   const harness = await launchApp({
@@ -18,12 +17,11 @@ test("context details show real usage, fit both viewports and survive reopening"
     },
   });
   const { page, app } = harness;
-  const artifactDir = join(repoRoot, ".flecten/context-usage-review");
-  mkdirSync(artifactDir, { recursive: true });
   try {
     await page.evaluate(() => localStorage.setItem("flecten.locale", "ru"));
     await page.reload();
     await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 1480, height: 940 });
     await expect(page.locator(".model-button")).toContainText("E2E Mock");
     const button = page.locator(".lh-context-button");
     await expect(button).toBeVisible();
@@ -32,7 +30,7 @@ test("context details show real usage, fit both viewports and survive reopening"
     await expect(popup).toContainText("Автосжатие при 100%");
     await expect(popup).not.toContainText("запросов в этой задаче ещё не было");
     await expect(popup.locator(".lh-context-compact")).toBeDisabled();
-    await popup.screenshot({ path: join(artifactDir, "context-empty.png") });
+    await hiddenScreenshot(harness, test.info().outputPath("context-empty.png"));
     const buttonBox = await button.boundingBox();
     expect(buttonBox?.width).toBeLessThan(62);
     await page.keyboard.press("Escape");
@@ -70,24 +68,7 @@ test("context details show real usage, fit both viewports and survive reopening"
       expect(box?.y).toBeGreaterThanOrEqual(7);
       expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(height - 7);
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width - 7);
-      const screenshot = await app.evaluate(
-        async ({ BrowserWindow }, size) => {
-          const window = BrowserWindow.getAllWindows()[0];
-          if (!window) throw new Error("app window missing");
-          // A minimized window needs a paint after resize before its screenshot is current.
-          await window.webContents.capturePage(
-            { x: 0, y: 0, ...size },
-            { stayHidden: true, stayAwake: true },
-          );
-          const image = await window.webContents.capturePage(
-            { x: 0, y: 0, ...size },
-            { stayHidden: true, stayAwake: true },
-          );
-          return image.toPNG().toString("base64");
-        },
-        { width, height },
-      );
-      writeFileSync(join(artifactDir, `context-${width}.png`), Buffer.from(screenshot, "base64"));
+      await hiddenScreenshot(harness, test.info().outputPath(`context-${width}.png`));
       await page.keyboard.press("Escape");
     }
     await page.reload();

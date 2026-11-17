@@ -13,6 +13,7 @@ import {
 } from "./fs";
 import { buildMerged } from "./merge";
 import { retireSources, validPublished } from "./publication";
+import { interruptedRelocation, prepareRelocation, verifyRelocation } from "./relocation";
 import { replanCorrectedSources } from "./retry";
 import {
   accepted,
@@ -36,7 +37,11 @@ export type MigrationProgress = (
 /** A durable transaction is proof that the user already started this migration. */
 export async function interruptedStorageMigration(roots: readonly string[]): Promise<boolean> {
   for (const root of await normalizeRoots(roots)) {
-    if (!(await accepted(root)) && (await readTransaction(root))) return true;
+    if (
+      !(await accepted(root)) &&
+      ((await readTransaction(root)) || (await interruptedRelocation(root)))
+    )
+      return true;
   }
   return false;
 }
@@ -133,6 +138,10 @@ async function migrateRoot(
     );
   }
   await assertNoActiveCore(root);
+  if (await prepareRelocation(root)) {
+    progress("verify", root, [...backups]);
+    return;
+  }
   let state = await readTransaction(root);
   if (!state) {
     state = await plan(root);
@@ -256,10 +265,12 @@ export async function acceptStorageMigration(roots: readonly string[]): Promise<
         throw new Error(`Accepted storage changed at ${root}. Review ${paths(root).transaction}.`);
       }
       await assertNoActiveCore(root);
-      const state = await readTransaction(root);
-      if (state?.phase !== "ready")
-        throw new Error(`Migration must finish before acceptance: ${root}`);
-      await validPublished(state);
+      if (!(await verifyRelocation(root))) {
+        const state = await readTransaction(root);
+        if (state?.phase !== "ready")
+          throw new Error(`Migration must finish before acceptance: ${root}`);
+        await validPublished(state);
+      }
       verified.push(root);
       await acceptNext(index + 1);
     });

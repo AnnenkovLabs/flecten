@@ -72,7 +72,12 @@ function syncPath(path, directory) {
   try {
     const handle = openSync(path, "r");
     try {
-      fsyncSync(handle);
+      try {
+        fsyncSync(handle);
+      } catch (error) {
+        if (directory && process.platform === "win32" && error.code === "EPERM") return;
+        throw error;
+      }
     } finally {
       closeSync(handle);
     }

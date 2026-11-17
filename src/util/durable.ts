@@ -6,7 +6,14 @@ export async function syncDirectory(path: string): Promise<void> {
   try {
     const handle = await open(path, "r");
     try {
-      await handle.sync();
+      try {
+        await handle.sync();
+      } catch (error) {
+        // Windows opens directories but rejects FlushFileBuffers for their read handles.
+        if (process.platform === "win32" && (error as NodeJS.ErrnoException).code === "EPERM")
+          return;
+        throw error;
+      }
     } finally {
       await handle.close();
     }

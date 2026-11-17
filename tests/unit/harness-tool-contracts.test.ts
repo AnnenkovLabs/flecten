@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { sessionModelHistory } from "../../src/app/session-replay";
 import { withExternalAccess } from "../../src/core/loop/external-access";
 import { ApprovalWaiters } from "../../src/core/session/approvals";
@@ -55,6 +55,7 @@ test("read advances through a 116386-character line and preserves Unicode across
   expect((first.data as { nextCursor: typeof cursor }).nextCursor.characterOffset).toBeGreaterThan(
     0,
   );
+  context.limits.maxOutputBytes = 4096;
   const parts: string[] = [];
   while (cursor.offset === 1) {
     const result = await runRead({ path: "line.txt", ...cursor }, context);
@@ -86,14 +87,18 @@ test("read advances through a 116386-character line and preserves Unicode across
 
 test("SSH remote payload is opaque while identities, local commands and redirections remain local", () => {
   const command = `ssh -vv -p 2222 -i /keys/id -o UserKnownHostsFile=/keys/hosts user@host 'cd /workspace && python -c '\\''open("/data/frame", "w").write("x")'\\''' > /local/output`;
-  expect(shellPaths(command, "/work")).toEqual(["/keys/id", "/keys/hosts", "/local/output"]);
+  expect(shellPaths(command, "/work")).toEqual(
+    ["/keys/id", "/keys/hosts", "/local/output"].map((path) => resolve(path)),
+  );
   expect(
     shellPaths(`ssh -o 'ProxyCommand=cat /local/proxy' host 'cat /remote/file'`, "/work"),
-  ).toEqual(["/local/proxy"]);
+  ).toEqual([resolve("/local/proxy")]);
   expect(shellPaths(`ssh host "cat $(cat /local/substitution) /remote/file"`, "/work")).toEqual([
-    "/local/substitution",
+    resolve("/local/substitution"),
   ]);
-  expect(shellPaths(`ssh -i/keys/id -- host '/remote/thing'`, "/work")).toEqual(["/keys/id"]);
+  expect(shellPaths(`ssh -i/keys/id -- host '/remote/thing'`, "/work")).toEqual([
+    resolve("/keys/id"),
+  ]);
 });
 
 test("project overview and recursive file pages expose a real cursor and exclude generated scratch", async () => {

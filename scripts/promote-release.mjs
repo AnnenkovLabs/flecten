@@ -121,23 +121,29 @@ export async function promoteRelease(directory) {
   assertTag();
   let existing = lookupRelease(tag);
   if (!existing) {
-    gh([
-      "release",
-      "create",
-      tag,
-      "--repo",
-      REPOSITORY,
-      "--verify-tag",
-      "--draft",
-      "--prerelease",
-      "--title",
-      `Flecten ${version} Alpha`,
-      "--notes-file",
-      notesFile,
-    ]);
-    existing = lookupRelease(tag);
+    // Use the creation response; GitHub's release list may still omit a new draft.
+    existing = JSON.parse(
+      gh([
+        "api",
+        `repos/${REPOSITORY}/releases`,
+        "--method",
+        "POST",
+        "-f",
+        `tag_name=${tag}`,
+        "-f",
+        `name=Flecten ${version} Alpha`,
+        "-f",
+        `body=${notes}`,
+        "-F",
+        "draft=true",
+        "-F",
+        "prerelease=true",
+      ]),
+    );
   }
   if (!existing) throw new Error("Created release could not be found.");
+  const releaseId = z.number().int().positive().parse(existing.id);
+  const reloadRelease = () => api(`releases/${releaseId}`);
   let release = validateExistingAssets(existing, files, notes);
   if (release.draft) {
     const missing = files.filter(
@@ -152,7 +158,7 @@ export async function promoteRelease(directory) {
         REPOSITORY,
         ...missing.map((file) => resolve(directory, file.name)),
       ]);
-    release = validateExistingAssets(lookupRelease(tag), files, notes);
+    release = validateExistingAssets(reloadRelease(), files, notes);
     if (release.assets.length !== files.length) throw new Error("Release upload is incomplete.");
     assertTag();
     gh([
@@ -168,7 +174,7 @@ export async function promoteRelease(directory) {
       "--notes-file",
       notesFile,
     ]);
-    release = validateExistingAssets(lookupRelease(tag), files, notes);
+    release = validateExistingAssets(reloadRelease(), files, notes);
     if (release.draft) throw new Error("GitHub Release is still a draft.");
   }
   console.log(release.html_url);

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:fs";
-import { access, mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -73,9 +73,17 @@ export function parseStartupReport(text) {
 function measureOnce(binary, args, cwd) {
   return new Promise((resolve, reject) => {
     const started = performance.now();
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([key]) =>
+          !key.startsWith("FLECTEN_") &&
+          !key.startsWith("LIQUID_") &&
+          key !== "ELECTRON_RUN_AS_NODE",
+      ),
+    );
     const child = spawn(binary, args, {
       cwd,
-      env: { ...process.env, FLECTEN_CWD: cwd },
+      env: { ...env, FLECTEN_CWD: cwd, FLECTEN_CONFIG: join(cwd, "flecten.config.json") },
       stdio: ["pipe", "pipe", "pipe"],
     });
     let out = "";
@@ -112,6 +120,13 @@ function measureOnce(binary, args, cwd) {
           finish(undefined, Math.round(performance.now() - started));
           return;
         }
+        if (
+          message?.type === "error" ||
+          (message?.type === "storage.migration" && message.migration.phase === "failed")
+        ) {
+          finish(new Error(message.message ?? message.migration.error));
+          return;
+        }
       }
     });
     child.stderr.setEncoding("utf8");
@@ -140,6 +155,7 @@ export async function measureStartup(
   }
   const cwd = await mkdtemp(join(tmpdir(), "flecten-startup-"));
   try {
+    await writeFile(join(cwd, "flecten.config.json"), "{}\n");
     const samples = [];
     for (let run = 0; run < iterations; run += 1) {
       samples.push(await measureOnce(binary, args, cwd));

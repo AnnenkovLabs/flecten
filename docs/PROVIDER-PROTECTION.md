@@ -2,7 +2,7 @@
 
 Protection is an explicit setting on each provider. Adding an API first runs a bounded, credential-free inspection of public gateway signals. When New API or One API fingerprints are found, the user must choose **Continue without protection** or **Enable protection**. Escape, backdrop clicks and closing the settings draft cannot dismiss that choice. The provider's Advanced tab can change protection later, including enabling it when the gateway is unknown.
 
-The detector identifies observable software fingerprints. It cannot establish nationality, operator identity, malicious intent or a deployment's authenticity. Headers, pages and assets can be removed or forged. The source-pinned evidence and exact probe limits are in [PROVIDER-GATEWAY-RESEARCH.md](PROVIDER-GATEWAY-RESEARCH.md).
+The detector identifies observable software fingerprints. It cannot establish nationality, operator identity, malicious intent or a deployment's authenticity. Headers, pages and assets can be removed or forged. The source-pinned evidence and exact probe limits are recorded in the internal PROVIDER-GATEWAY-RESEARCH.md research notes.
 
 ## Request and tool boundaries
 

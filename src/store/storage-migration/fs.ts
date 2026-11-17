@@ -61,7 +61,13 @@ export async function syncDirectory(path: string): Promise<void> {
   try {
     const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     try {
-      await handle.sync();
+      try {
+        await handle.sync();
+      } catch (error) {
+        if (process.platform === "win32" && (error as NodeJS.ErrnoException).code === "EPERM")
+          return;
+        throw error;
+      }
     } finally {
       await handle.close();
     }

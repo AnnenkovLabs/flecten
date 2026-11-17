@@ -1,5 +1,5 @@
 import { readlink, realpath, symlink } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve, toNamespacedPath } from "node:path";
 import { z } from "zod";
 import { ContentScopeSchema } from "./content";
 import { durableWrite, EntrySchema, ensureDirectory, info, readJson, syncDirectory } from "./fs";
@@ -31,9 +31,9 @@ export const TransactionSchema = z.object({
 });
 export type Transaction = z.infer<typeof TransactionSchema>;
 export type Source = z.infer<typeof SourceSchema>;
-const AcceptedSchema = z.object({
+export const AcceptedSchema = z.object({
   version: z.literal(1),
-  root: z.string(),
+  root: z.string().refine(isAbsolute, "Storage root must be absolute"),
   acceptedAt: z.iso.datetime(),
 });
 
@@ -72,7 +72,7 @@ export async function layout(root: string) {
     );
   let alias = false;
   if (legacy?.isSymbolicLink()) {
-    alias = resolve(root, await readlink(p.legacy)) === p.current;
+    alias = sameStoragePath(resolve(root, await readlink(p.legacy)), p.current);
     if (!alias)
       throw new Error(`Unsafe legacy alias at ${p.legacy}. It must point to ${p.current}.`);
     if (!current)
@@ -83,6 +83,8 @@ export async function layout(root: string) {
 }
 
 export async function readTransaction(root: string): Promise<Transaction | undefined> {
+  // An accepted store at a new location needs its own verification, not its historical plan.
+  if (await relocationSource(root)) return undefined;
   const raw = await readJson(paths(root).state);
   if (raw === undefined) return undefined;
   const parsed = TransactionSchema.parse(raw);
@@ -92,12 +94,21 @@ export async function readTransaction(root: string): Promise<Transaction | undef
 }
 
 export async function accepted(root: string): Promise<boolean> {
+  return (await readAcceptance(root))?.root === root;
+}
+
+export async function readAcceptance(root: string) {
   const raw = await readJson(paths(root).accepted);
-  if (raw === undefined) return false;
-  const parsed = AcceptedSchema.parse(raw);
-  if (parsed.root !== root)
-    throw new Error("Migration acceptance belongs to a different storage root");
-  return true;
+  return raw === undefined ? undefined : AcceptedSchema.parse(raw);
+}
+
+export async function relocationSource(root: string): Promise<string | undefined> {
+  const previous = await readAcceptance(root);
+  return previous && previous.root !== root ? previous.root : undefined;
+}
+
+export function sameStoragePath(left: string, right: string): boolean {
+  return toNamespacedPath(resolve(left)) === toNamespacedPath(resolve(right));
 }
 
 export async function saveTransaction(state: Transaction): Promise<void> {

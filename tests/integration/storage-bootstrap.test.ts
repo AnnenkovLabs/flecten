@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { StorageMigrationState } from "../../shared/storage-migration";
@@ -43,10 +43,16 @@ async function project() {
   return cwd;
 }
 
-function core(cwd: string) {
-  const child = Bun.spawn([process.execPath, resolve("src/app/server.ts")], {
+function core(cwd: string, options: { profile?: string; script?: string } = {}) {
+  const args = options.script ? ["--eval", options.script] : [resolve("src/app/server.ts")];
+  const child = Bun.spawn([process.execPath, ...args], {
     cwd,
-    env: { ...process.env, FLECTEN_CWD: cwd, FLECTEN_CONFIG: join(cwd, "flecten.config.json") },
+    env: {
+      ...process.env,
+      FLECTEN_CWD: cwd,
+      FLECTEN_CONFIG: options.profile ? "" : join(cwd, "flecten.config.json"),
+      FLECTEN_PROFILE: options.profile ?? "",
+    },
     stdin: "pipe",
     stdout: "pipe",
     stderr: "pipe",
@@ -154,4 +160,102 @@ test("fresh installs open the core without a migration prompt", async () => {
   const fresh = core(cwd);
   await fresh.next((message) => message.type === "status");
   expect(fresh.messages.some((message) => message.type === "storage.migration")).toBe(false);
+});
+
+test("a moved initialized project opens its core after verifying and accepting the new location", async () => {
+  const cwd = await project();
+  const original = core(cwd);
+  await original.next((message) => message.type === "status");
+  original.child.stdin.end();
+  expect(await original.child.exited).toBe(0);
+  await writeFile(join(cwd, ".flecten", "retained.txt"), "latest saved bytes");
+  const moved = `${cwd}-moved`;
+  directories.push(moved);
+  await rename(cwd, moved);
+  const relocated = core(moved);
+  await relocated.next((message) => message.migration?.phase === "required");
+  expect(relocated.messages.some((message) => message.type === "status")).toBe(false);
+  relocated.send({ type: "storage.migrate", requestId: "verify-location" });
+  await relocated.next((message) => message.migration?.phase === "complete");
+  relocated.send({ type: "storage.accept", requestId: "accept-location" });
+  await relocated.next((message) => message.type === "status");
+  expect(await readFile(join(moved, ".flecten", "retained.txt"), "utf8")).toBe(
+    "latest saved bytes",
+  );
+  relocated.child.stdin.end();
+  expect(await relocated.child.exited).toBe(0);
+});
+
+async function rememberedProject(profile: string, path: string): Promise<void> {
+  await writeFile(
+    join(profile, "projects.json"),
+    JSON.stringify({
+      version: 1,
+      selected: null,
+      projects: [{ path, name: "Remembered project", trust: "unknown" }],
+    }),
+  );
+}
+
+function unavailableProject(cwd: string, profile: string, path: string, code: string) {
+  return core(cwd, {
+    profile,
+    script: `
+      import { mock } from "bun:test";
+      const actual = { ...await import("node:fs/promises") };
+      const check = (path) => {
+        if (String(path) === ${JSON.stringify(path)})
+          throw Object.assign(new Error(${JSON.stringify(`Project unavailable: ${code}`)}), { code: ${JSON.stringify(code)} });
+      };
+      mock.module("node:fs/promises", () => ({ ...actual,
+        stat: async (path, ...args) => { check(path); return actual.stat(path, ...args); },
+        realpath: async (path, ...args) => { check(path); return actual.realpath(path, ...args); },
+      }));
+      await import(${JSON.stringify(resolve("src/app/server.ts"))});
+    `,
+  });
+}
+
+test.each(["EACCES", "ENOTDIR"])(
+  "remembered %s projects do not prevent the selected core from opening",
+  async (code) => {
+    const cwd = await project();
+    const profile = await project();
+    const unavailable = join(await project(), "remembered");
+    await rememberedProject(profile, unavailable);
+    const index = await readFile(join(profile, "projects.json"), "utf8");
+    const selected = unavailableProject(cwd, profile, unavailable, code);
+    await selected.next((message) => message.type === "status");
+    expect(selected.messages.some((message) => message.type === "storage.migration")).toBe(false);
+    expect(await Bun.file(join(cwd, ".flecten-migration/v1/accepted.json")).exists()).toBe(true);
+    expect(await Bun.file(join(unavailable, ".flecten-migration/v1/accepted.json")).exists()).toBe(
+      false,
+    );
+    expect(await readFile(join(profile, "projects.json"), "utf8")).toBe(index);
+    selected.child.stdin.end();
+    expect(await selected.child.exited).toBe(0);
+  },
+);
+
+test("a selected EACCES project remains blocked before core startup", async () => {
+  const cwd = await project();
+  const profile = await project();
+  await rememberedProject(profile, cwd);
+  const selected = unavailableProject(cwd, profile, cwd, "EACCES");
+  const failed = await selected.next((message) => message.migration?.phase === "failed");
+  expect(failed.migration?.error).toContain("EACCES");
+  expect(selected.messages.some((message) => message.type === "status")).toBe(false);
+  expect(await Bun.file(join(cwd, ".flecten/sidecar.lock")).exists()).toBe(false);
+});
+
+test("unexpected remembered-project IO errors remain visible and block startup", async () => {
+  const cwd = await project();
+  const profile = await project();
+  const unavailable = join(profile, "remembered");
+  await rememberedProject(profile, unavailable);
+  const selected = unavailableProject(cwd, profile, unavailable, "EIO");
+  const failed = await selected.next((message) => message.migration?.phase === "failed");
+  expect(failed.migration?.error).toContain("EIO");
+  expect(selected.messages.some((message) => message.type === "status")).toBe(false);
+  expect(await Bun.file(join(cwd, ".flecten/sidecar.lock")).exists()).toBe(false);
 });
