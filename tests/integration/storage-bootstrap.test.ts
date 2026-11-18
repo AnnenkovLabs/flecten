@@ -1,9 +1,12 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { StorageMigrationState } from "../../shared/storage-migration";
 import { withEnvelope } from "../../src/store/events/envelope";
+
+// Keep the test alive for the fixture's message deadline on slow Windows runners.
+setDefaultTimeout(30_000);
 
 type Message = Record<string, unknown> & {
   migration?: StorageMigrationState;
@@ -154,7 +157,7 @@ test("existing users are gated before core startup, recover both chats and accep
   expect(
     JSON.parse(await readFile(join(cwd, ".flecten-migration/v1/accepted.json"), "utf8")).version,
   ).toBe(1);
-}, 30000);
+});
 
 test("fresh installs open the core without a migration prompt", async () => {
   const cwd = await project();

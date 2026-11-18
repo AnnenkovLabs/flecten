@@ -117,7 +117,8 @@ test("sidebar profile renames persistently and keeps settings separate", async (
     await expect(menu).toBeVisible();
     await page.getByRole("button", { name: "Collapse projects panel", exact: true }).click();
     await expect(menu).toHaveCount(0);
-    await expect(profile).toHaveCount(0);
+    await expect(profile).toBeHidden();
+    await expect(page.getByRole("complementary", { name: "Projects and tasks" })).toHaveCount(0);
     await page.locator(".titlebar").getByRole("button", { name: "Settings", exact: true }).click();
     await expect(page.locator("dialog.settings-dialog")).toBeVisible();
     await page.keyboard.press("Escape");

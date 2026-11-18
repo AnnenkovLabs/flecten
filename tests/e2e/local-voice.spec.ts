@@ -12,7 +12,7 @@ test("local speech settings expose models, check missing installs and persist en
     const { page, app } = h;
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
     const dialog = page.locator("dialog.settings-dialog");
-    const engine = dialog.getByLabel("Движок распознавания", { exact: true });
+    const engine = dialog.getByRole("combobox", { name: "Движок распознавания", exact: true });
     await chooseSelect(engine, "faster-whisper");
     const whisper = dialog.getByLabel("Локальная модель faster-whisper", { exact: true });
     await expect(await selectOptions(whisper)).toHaveCount(6);
@@ -45,7 +45,7 @@ test("local speech settings expose models, check missing installs and persist en
         await chooseSelect(engine, current);
         await engine.evaluate((el) => el.closest(".st-group")?.scrollIntoView({ block: "start" }));
         if (current === "vosk") {
-          const vosk = dialog.getByLabel("Локальная модель Vosk", { exact: true });
+          const vosk = dialog.getByRole("combobox", { name: "Локальная модель Vosk", exact: true });
           await expect(await selectOptions(vosk)).toHaveCount(3);
           await page.keyboard.press("Escape");
           await chooseSelect(vosk, "vosk-model-small-uk-v3-nano");
@@ -78,10 +78,9 @@ test("local speech settings expose models, check missing installs and persist en
     await page.reload();
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
     await expect(engine).toHaveAttribute("value", "vosk");
-    await expect(dialog.getByLabel("Локальная модель Vosk", { exact: true })).toHaveAttribute(
-      "value",
-      "vosk-model-small-uk-v3-nano",
-    );
+    await expect(
+      dialog.getByRole("combobox", { name: "Локальная модель Vosk", exact: true }),
+    ).toHaveAttribute("value", "vosk-model-small-uk-v3-nano");
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();
@@ -102,9 +101,12 @@ test("installed Vosk converts the recorded microphone audio and inserts real rec
     const { page } = h;
     await page.getByRole("button", { name: "Настройки", exact: true }).click();
     const dialog = page.locator("dialog.settings-dialog");
-    await chooseSelect(dialog.getByLabel("Движок распознавания", { exact: true }), "vosk");
     await chooseSelect(
-      dialog.getByLabel("Локальная модель Vosk", { exact: true }),
+      dialog.getByRole("combobox", { name: "Движок распознавания", exact: true }),
+      "vosk",
+    );
+    await chooseSelect(
+      dialog.getByRole("combobox", { name: "Локальная модель Vosk", exact: true }),
       "vosk-model-small-en-us-0.15",
     );
     await dialog.getByRole("button", { name: "Проверить установку", exact: true }).click();

@@ -216,7 +216,7 @@ describe("registry", () => {
       limits: { ...limits, maxOutputBytes: 200 },
     });
     const result = await registry.run(
-      { id: "call-3", name: "bash", args: { command: "printf 'x%.0s' {1..2000}" } },
+      { id: "call-3", name: "bash", args: { command: `echo ${"x".repeat(2000)}` } },
       context(cwd),
     );
     expect(result.ok).toBe(true);

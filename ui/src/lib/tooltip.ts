@@ -93,8 +93,8 @@ export function tooltipLayer(layer: HTMLElement): { destroy: () => void } {
     }
     if (anchor === element) return;
     if (anchor) hide();
-    if (delay) opening = setTimeout(() => show(element), delay);
-    else show(element);
+    // Focus can be restored synchronously while Chromium is opening another popover.
+    opening = setTimeout(() => show(element), delay);
   }
 
   function deferHide(): void {

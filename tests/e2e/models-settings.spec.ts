@@ -100,20 +100,21 @@ test("model defaults save independently, survive toggles and reopen, and discard
       "minimal",
     );
     await expect(
-      dialog.getByLabel("Worker model: Model reasoning level", { exact: true }),
+      dialog.getByRole("combobox", { name: "Worker model: Model reasoning level", exact: true }),
     ).toHaveAttribute("value", "minimal");
     await chooseSelect(
-      dialog.getByLabel("Worker model: Model reasoning level", { exact: true }),
+      dialog.getByRole("combobox", { name: "Worker model: Model reasoning level", exact: true }),
       "high",
     );
     await expect(dialog.getByRole("button", { name: "Worker model", exact: true })).toHaveText(
       "Primary universal",
     );
     await expect(
-      dialog.getByLabel("Talker model: Model reasoning level", { exact: true }),
+      dialog.getByRole("combobox", { name: "Talker model: Model reasoning level", exact: true }),
     ).toHaveAttribute("value", "");
     await choose(page, "Talker model", "Switchable reasoning");
-    const talkerReasoning = dialog.getByLabel("Talker model: Model reasoning level", {
+    const talkerReasoning = dialog.getByRole("combobox", {
+      name: "Talker model: Model reasoning level",
       exact: true,
     });
     await expect(await selectOptions(talkerReasoning)).toHaveText([
@@ -126,21 +127,24 @@ test("model defaults save independently, survive toggles and reopen, and discard
     await expect(talkerReasoning).toHaveAttribute("value", "medium");
     await choose(page, "Talker model", "Conversation model");
     await chooseSelect(
-      dialog.getByLabel("Talker model: Model reasoning level", { exact: true }),
+      dialog.getByRole("combobox", { name: "Talker model: Model reasoning level", exact: true }),
       "low",
     );
-    await chooseSelect(dialog.getByLabel("Talker model: Model variant", { exact: true }), "deep");
+    await chooseSelect(
+      dialog.getByRole("combobox", { name: "Talker model: Model variant", exact: true }),
+      "deep",
+    );
     await expect(talkerReasoning).toBeDisabled();
     await expect(talkerReasoning).toHaveAttribute("value", "high");
     await chooseSelect(
-      dialog.getByLabel("Talker model: Model variant", { exact: true }),
+      dialog.getByRole("combobox", { name: "Talker model: Model variant", exact: true }),
       "careful",
     );
     await expect(talkerReasoning).toBeEnabled();
     await expect(talkerReasoning).toHaveAttribute("value", "low");
     await choose(page, "Worker model", "Task execution");
     await chooseSelect(
-      dialog.getByLabel("Worker model: Model reasoning level", { exact: true }),
+      dialog.getByRole("combobox", { name: "Worker model: Model reasoning level", exact: true }),
       "high",
     );
     await choose(page, "Explore", "Research model");

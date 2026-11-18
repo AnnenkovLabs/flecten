@@ -29,7 +29,7 @@ test("fresh English default, seven live languages, drafts and saved preference",
     let current: Locale = "en";
     for (const locale of locales) {
       await chooseSelect(
-        dialog.getByLabel(label(current, "Interface language"), { exact: true }),
+        dialog.getByRole("combobox", { name: label(current, "Interface language"), exact: true }),
         locale.id,
       );
       current = locale.id;
@@ -37,7 +37,7 @@ test("fresh English default, seven live languages, drafts and saved preference",
       await expect(dialog.locator("#settings-title")).toHaveText(label(current, "Settings"));
       await expect(dialog.locator("#settings-general")).toHaveText(label(current, "General"));
       await expect(
-        dialog.getByLabel(label(current, "Interface language"), { exact: true }),
+        dialog.getByRole("combobox", { name: label(current, "Interface language"), exact: true }),
       ).toHaveAttribute("value", current);
       await dialog
         .locator(".rail")

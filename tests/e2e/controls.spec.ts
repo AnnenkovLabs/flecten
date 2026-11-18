@@ -11,13 +11,14 @@ test("segmented composer actions and copy buttons preserve keyboard and failure 
     await page.locator("#prompt").fill("Следующая инструкция");
     const actions = page.getByRole("group", { name: "Действия агента" });
     await expect(actions.getByRole("button")).toHaveCount(3);
-    await actions.getByRole("button", { name: "Остановка", exact: true }).focus();
+    const queue = actions.getByRole("button", { name: "Добавить в очередь", exact: true });
+    const guide = actions.getByRole("button", { name: "Направить", exact: true });
+    const stop = actions.getByRole("button", { name: "Остановка", exact: true });
+    await queue.focus();
     await page.keyboard.press("Tab");
-    await expect(
-      actions.getByRole("button", { name: "Добавить в очередь", exact: true }),
-    ).toBeFocused();
+    await expect(guide).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(actions.getByRole("button", { name: "Направить", exact: true })).toBeFocused();
+    await expect(stop).toBeFocused();
     await page.locator("#prompt").fill("");
     await expect(page.locator(".answer-actions")).toHaveCount(0);
     await expect(page.locator(".answer-foot")).toHaveCount(0);
