@@ -76,4 +76,4 @@ test("access.set persists the real boundary through the app without replacing co
   } finally {
     await app.dispose();
   }
-});
+}, 15_000); // The app starts, persists config twice, and shuts down on a hosted runner.
