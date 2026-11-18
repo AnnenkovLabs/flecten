@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { SummaryInteractionPacketSchema, type SummaryInteraction } from "../../../shared/summary-interaction";
   import { t } from "../lib/i18n.svelte";
   import manropeCyrillic from "../assets/fonts/manrope-cyrillic.woff2?url";
   import manropeLatin from "../assets/fonts/manrope-latin.woff2?url";
@@ -14,9 +15,10 @@
     complete?: boolean;
     title?: string;
     onAction?: (message: SummaryActionMessage) => void;
+    onInteraction?: ((message: SummaryInteraction) => void) | undefined;
   }
 
-  let { html, complete = false, title = t("Summary"), onAction }: Props = $props();
+  let { html, complete = false, title = t("Summary"), onAction, onInteraction }: Props = $props();
 
   const TYPE = "flecten-summary";
   const VERSION = 1;
@@ -100,6 +102,7 @@
   let configuring = false;
   let finished = false;
   let sentFinish = false;
+  let generation = 0;
   let raf = 0;
   let shrinkTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -121,6 +124,7 @@
   }
 
   function resetStream(): void {
+    generation += 1;
     scanner = new SummaryHtmlStream();
     sourceText = "";
     pending = [];
@@ -141,7 +145,7 @@
       pending = [];
     }
     if (finished && !sentFinish) {
-      target.postMessage({ type: TYPE, version: VERSION, kind: "finish" }, "*");
+      target.postMessage({ type: TYPE, version: VERSION, kind: "finish", generation }, "*");
       sentFinish = true;
     }
   }
@@ -173,6 +177,8 @@
   $effect(() => {
     const element = frame;
     if (!element) return;
+    let disposed = false;
+    let interactionPort: MessagePort | undefined;
     const receive = (event: MessageEvent) => {
       if (event.source !== element.contentWindow) return;
       const message = parseSummaryMessage(event.data);
@@ -184,7 +190,23 @@
         configuring = true;
         void configCss()
           .then((css) => {
-            target.postMessage({ type: TYPE, version: VERSION, kind: "config", css }, "*");
+            if (disposed) return;
+            const channel = onInteraction ? new MessageChannel() : undefined;
+            if (channel) {
+              interactionPort = channel.port1;
+              channel.port1.onmessage = ({ data }: MessageEvent<unknown>) => {
+                if (disposed || !sentFinish) return;
+                const packet = SummaryInteractionPacketSchema.safeParse(data);
+                if (packet.success && packet.data.generation === generation) {
+                  onInteraction?.(packet.data.interaction);
+                }
+              };
+            }
+            target.postMessage(
+              { type: TYPE, version: VERSION, kind: "config", css },
+              "*",
+              channel ? [channel.port2] : [],
+            );
             frameReady = true;
             schedule();
           })
@@ -204,7 +226,11 @@
       onAction?.(message);
     };
     window.addEventListener("message", receive);
-    return () => window.removeEventListener("message", receive);
+    return () => {
+      disposed = true;
+      interactionPort?.close();
+      window.removeEventListener("message", receive);
+    };
   });
 
   $effect(() => {

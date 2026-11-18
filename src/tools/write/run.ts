@@ -82,7 +82,7 @@ export async function runWrite(
       });
       checkpointId = checkpoint.id;
     } catch (error) {
-      checkpointNote = `\nCheckpoint не создан: ${error instanceof Error ? error.message : String(error)}`;
+      checkpointNote = `\nCheckpoint skipped: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
 
@@ -101,7 +101,7 @@ export async function runWrite(
     try {
       await context.checkpoints.recordAfter(checkpointId);
     } catch (error) {
-      checkpointNote += `\nCheckpoint не завершён: ${error instanceof Error ? error.message : String(error)}`;
+      checkpointNote += `\nCheckpoint incomplete: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
 

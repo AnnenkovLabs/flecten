@@ -4,7 +4,7 @@ export default {
   "Responses API with reasoning and tools.": "Responses API с рассуждениями и инструментами.",
   "Claude and compatible Messages APIs.": "Claude и совместимые с ним Messages API.",
   "Google Gemini via generateContent.": "Google Gemini через generateContent.",
-  "The provider's API protocol.": "Протокол API провайдера.",
+  "The provider's API protocol.": "Пользовательский протокол API.",
   minimal: "минимальный",
   low: "низкий",
   medium: "средний",
@@ -42,7 +42,6 @@ export default {
   "Reasoning levels": "Уровни рассуждений",
   "Selected levels will appear in the selector next to the model.":
     "Выбранные уровни появятся в списке рядом с моделью.",
-  "The model supports reasoning.": "Модель поддерживает рассуждения.",
   "Reasoning toggle": "Переключатель рассуждений",
   "Show a reasoning toggle in the model selector.":
     "Показывать переключатель рассуждений при выборе модели.",
@@ -84,18 +83,14 @@ export default {
   "defaults to the model key": "по умолчанию ключ модели",
   "Catalog ID": "ID в каталоге",
   "Knowledge cutoff": "Знания до",
-  "The date up to which the model has knowledge.": "Дата, которой ограничены знания модели.",
   "Release date": "Дата выпуска",
   Limits: "Лимиты",
   "Max input (tokens)": "Лимит ввода, токенов",
   "not set": "не задан",
   "Response limit field": "Поле лимита ответа",
-  "The API parameter that limits response length.":
-    "Параметр API, который ограничивает длину ответа.",
   "Modalities and files": "Типы данных и файлы",
   Input: "Вход",
   Output: "Выход",
   "Open weights": "Открытые веса",
-  "The model's weights are open.": "Веса модели открыты.",
   "Files and attachments": "Файлы и вложения",
 } as const;

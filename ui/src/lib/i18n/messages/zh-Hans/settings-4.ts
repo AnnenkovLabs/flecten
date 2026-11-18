@@ -15,7 +15,7 @@ export default {
   "Enter the hook command.": "请输入自动操作命令。",
   "Exact match condition": "精确匹配条件",
   "All filled-in conditions must match. Regular expressions are not used.":
-    "所有已填写的条件都必须匹配。不使用正则表达式。",
+    "所有非空条件均按字面匹配（精确值或前缀）。",
   "Example tool": "示例中的工具",
   Testing: "正在测试",
   "Run saved hook": "运行已保存的自动操作",

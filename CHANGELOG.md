@@ -1,256 +1,244 @@
-# Изменения
+# Changelog
+
+## 0.1.5
+
+November 18, 2026 · Alpha
+
+**Keep talking to Flecten while it works.** Ask Talker for an update or add context while Worker continues executing. Interactive HTML answers can carry your selections into the conversation.
+
+### New
+
+- **Live replies during Worker runs.** Send a message directly to Talker while Worker keeps running, or use **Queue** to save it for later. Worker can ask Talker to clarify instructions already discussed in the chat.
+- **Interactive HTML answers.** A report can pass a choice you make in it to the next message, or offer a button to send the choice immediately.
+
+### Improvements
+
+- **Easier project navigation.** Reorder project folders from the sidebar and open older chats from a separate list without expanding the whole project history.
+- **Smoother desktop controls.** Settings, dialogs, and composer controls keep focus and layout steadier as they open, close, or change state.
+- **Updated build requirements.** Building from source now requires Bun 1.4.4 or newer and Node.js 22.12 or newer. Desktop users do not need to install either runtime.
+
+### Fixes
+
+- **Provider and tool reliability.** Tightened validation of provider streams and tool arguments so incomplete calls are rejected and ambiguous edits report what needs to be corrected.
+- **Chat isolation.** Follow-ups, queued messages, and interactive report choices stay associated with the chat that received them.
+
+### Before Updating
+
+- **Linux AppImage:** Use the **Beta** channel on `0.1.2` or newer. Older versions require a one-time manual install.
+- **Windows and macOS:** Download the installer for your platform from this release if your installation cannot update in-app. Native code signing is reported by the release assets.
+
+[Full diff from 0.1.4](https://github.com/AnnenkovLabs/flecten/compare/v0.1.4...v0.1.5)
 
 ## 0.1.4
 
-17 ноября 2026
+November 17, 2026 · Alpha
 
-**Понятная работа исполнителя, общий учёт расходов и больше контроля над данными.** В этой альфа-версии Worker показывает ход задачи и критерии готовности, модели разных ролей настраиваются отдельно, а история переходит в хранилище `.flecten` с проверкой и сохранением оригиналов.
+**Inspect Worker progress, blockers, and verification evidence in real time while a task is running.** Talker and Worker can now run on separate models, with all role costs aggregated into a single per-chat total.
 
-### Перед первым запуском: обновление хранилища
+### ✨ New
 
-- **История, вложения, память и контрольные точки переходят из `.liquid` в `.flecten`.** Для существующих данных приложение сначала показывает отдельный экран обновления. Рабочий интерфейс открывается после завершения проверки и вашего подтверждения; пустому новому профилю перенос не нужен.
-- **Исходные данные остаются на диске.** Перенос проверяет копии долговечных данных по SHA-256, сохраняет оригинальные каталоги и умеет продолжаться после прерывания. Конфликтующие версии останавливают перенос с указанием пути к сохранённым данным; кнопка повтора не выбирает одну из них за вас.
-- **Переносятся выбранный проект, профиль и доступные добавленные папки.** Отсутствующие папки не создаются заново. Кэши, диагностика и теневой Git остаются среди оригиналов и пересоздаются для нового хранилища; они не увеличивают объём проверяемых копий.
-- **Подтверждение сохранения следует за синхронизацией с диском.** Журнал событий, настройки и очередь используют усиленную запись через fsync. Ошибка записи возвращается как ошибка, а не как успешное сохранение. Защита зависит от поддержки этих операций файловой системой и накопителем.
+- **Dedicated Worker activity feed.** Open the `Worker` tab to inspect executed commands, errors, and permission prompts. Every task checklist item shows whether it is resolved and why, separating runtime-verified command outputs from model self-assessment. Refining the task prompts Worker to re-verify which completed items still hold.
+- **Per-role model configuration.** Configure separate models for the primary agent, Talker, Worker, subagents, and vision helper in **Models**. The composer model picker sets the active chat's executor, letting Talker stay on a fast lightweight model while Worker handles heavy execution.
+- **Unified per-chat spend counter.** Total chat cost aggregates Talker turns, Worker execution, subagents, Twin, and auxiliary calls across restarts. When a provider omits usage receipts, the UI explicitly marks the total as incomplete.
+- **Provider secret protection.** Known API key and password formats are replaced with reversible placeholder tags before context leaves the machine, while file writes and shell commands require confirmation. The provider's own connection API key is still sent to authenticate requests. See [Provider Protection](https://github.com/AnnenkovLabs/flecten/blob/v0.1.4/docs/PROVIDER-PROTECTION.md).
+- **Artifact-backed build verification.** Agents can declare expected output archives or reports for a command; Flecten verifies file existence, size bounds, and optional checksums before marking the check green.
 
-### Worker показывает, что сделано и что ещё требует проверки
+### ⚡ Improvements
 
-- **У исполнителя появилась полная лента работы.** Во вкладке Worker видны сообщения, размышления, вызовы инструментов, ошибки, ожидание повтора и запросы разрешений. Доступны поиск и кнопка остановки, положение чтения сохраняется отдельно.
-- **Поручение содержит цель, ограничения и критерии готовности.** Каждый пункт показывает состояние и доказательство. Результат реально выполненного инструмента отличается от утверждения модели; открытые и заблокированные пункты не позволяют выдать работу за принятую.
-- **Дополнение пользователя требует новой проверки.** Steering и возврат на доработку открывают критерии заново. Прежние доказательства сохраняются в истории, но не закрывают изменённое задание автоматически.
-- **После сбоя продолжается прежнее поручение.** Сохраняются блокеры, частичный результат, последний подтверждённый шаг и идентификаторы фоновых операций. Перед повтором Worker получает указание проверить действия с неопределённым результатом.
-- **Завершённый этап сохраняет полный результат перед сжатием контекста.** Структурированные выводы, риски, доказательства и итог архивируются вместе с transcript без дополнительного запроса к модели. Ошибка сохранения не подменяет исходную историю выжимкой.
+- **Seamless chat and draft restoration.** Relaunching reopens the last active chat. Unsent text, `@` mentions, and attachment lists persist independently per chat and workspace.
+- **Crash-resilient Worker state.** Worker persists partial progress, its last confirmed action, and stop reasons across crashes. When a remote Linux job disconnects, Flecten inspects remote process state before re-running it.
+- **Compact completed stages.** Finished Worker pages compress into structured summaries with outcomes and evidence links for subsequent model turns while archiving full transcripts on disk. Nested directory instructions load on demand as files inside them are touched.
+- **Chunked reads for large files and directories.** The `read` tool can resume mid-line on very long lines, the file explorer warns when directory listings are truncated, and terminal/background-job scratch files stay scoped to their chat.
+- **Sharper keyboard navigation for menus and tooltips.** Closing a menu restores focus cleanly; tooltip copy is selectable and dismisses on `Esc`.
+- **Interruptible Twin training.** Disabling Twin mid-import halts ingestion immediately while preserving traits already learned and keeping Twin disabled across restarts.
 
-Проверка ссылки на инструмент подтверждает происхождение доказательства. Содержательное соответствие задаче оценивают Worker и Twin: это не независимая гарантия правильности результата.
+### 🛠 Fixes
 
-### Модели и расходы собраны в понятную систему
+- **Windows:** Fixed a first-launch directory-creation hang and a false storage-migration conflict when Windows resolved the same path via 8.3 short names and full names.
+- **macOS:** Fixed SSH agent socket connections (including symlinked sockets) and restricted remote jobs strictly to required connection credentials.
+- **Providers:** Quota exhaustion on one model no longer blocks switching to sibling models with remaining quota. Truncated OpenAI Chat tool-call streams no longer execute incomplete commands.
+- **Persistence and permissions:** Event-log, config, and queue write failures now surface immediately. Session grants no longer leak into forked chats or survive security policy edits.
 
-- **В настройках появился отдельный раздел «Модели».** Основная модель, Talker, Worker, каждый тип субагента и помощник для изображений выбираются рядом. Для каждой роли доступен поддерживаемый уровень reasoning; сброс возвращает наследование или автоматический выбор.
-- **Выбор в поле сообщения задаёт исполнителя текущего чата.** Talker может использовать свою модель и по умолчанию не наследует дорогой уровень reasoning Worker. Vision также получает собственные параметры.
-- **Расходы относятся ко всему чату, включая продолжения и перезапуски.** Общая сумма включает Talker, Worker, субагентов, Twin, vision, перевод, сжатие контекста и оформление отчётов. Резервный маршрут учитывается по фактически вызванным провайдеру и модели.
-- **Отсутствие данных о расходе больше не выглядит как нулевая стоимость.** Интерфейс отмечает неполный учёт; известная часть остаётся нижней границей и учитывается при достижении лимита. Если API не сообщает usage, точный денежный потолок гарантировать нельзя.
-- **Квота одной модели не блокирует другие модели провайдера.** Ожидание разделяется по модели или явно заданной группе общей квоты. Обновление авторизации сбрасывает прежнее состояние ограничений.
+### 📦 Before Updating
 
-### Защита ключей и паролей для выбранного API
+- **Windows and Linux AppImage:** Versions `0.1.2`+ update automatically via the built-in **Beta** channel. Versions `0.1.0` and `0.1.1` require a one-time manual install.
+- **macOS:** Download the Intel or Apple Silicon installer manually until Apple Developer ID signing is configured.
+- **First launch with existing `.liquid` data:** Flecten verifies and migrates chats, attachments, memory, and checkpoints from `.liquid` to `.flecten` behind a dedicated confirmation screen while leaving original files untouched on disk. Interrupted migrations resume cleanly, and any conflicts display the exact backup paths.
 
-- **Защита включается отдельно у каждого провайдера.** При добавлении API приложение проверяет публичные признаки New API и One API без отправки ключа. Найденный признак предлагает явный выбор защиты; он не доказывает недобросовестность владельца сервиса.
-- **Распознанные секреты заменяются метками до отправки контекста.** Проверяются запросы, ответы и результаты инструментов, включая поддерживаемые кодированные представления. При допустимой локальной правке приложение восстанавливает исходное значение; неизвестная или устаревшая метка вызывает отказ.
-- **Действия защищённого провайдера требуют вашего подтверждения.** Запись файлов, команды, сеть, MCP, навыки, модули и запуск субагентов не обходят этот шаг через сохранённое широкое разрешение. Явные запреты продолжают действовать.
-- **Неполный ответ не превращается в готовую команду.** Проверяются завершение потока, имена и идентификаторы инструментов, аргументы и ограничения размера. Ответ, не прошедший защиту, не уходит незаметно в незащищённую резервную модель.
-
-Защита распознаёт известные форматы, а не любые возможные секреты. Ключ авторизации самого API по-прежнему нужен его владельцу. При включённой защите текст ответа появляется после полной проверки, а метки действуют только до пересоздания провайдера или перезапуска приложения. Это не антивирус и не проверка содержимого изображений. Подробности и ограничения: [Provider protection](https://github.com/AnnenkovLabs/flecten/blob/v0.1.4/docs/PROVIDER-PROTECTION.md).
-
-### Меньше потерянных черновиков и лишнего контекста
-
-- **Неотправленный текст переживает перезапуск окна.** Черновики разделены по проектам и чатам, сохраняют упоминания и список вложений. Последний открытый чат восстанавливается; при ошибке сохранения появляется предупреждение. Временное редактирование прежнего сообщения остаётся отдельным черновиком в памяти окна.
-- **Внешние MCP-инструменты загружаются по необходимости.** Сначала модель видит имена и описания, затем активирует нужные схемы через `tool_catalog`. Выбор сохраняется в своём чате после сжатия и восстановления, не расширяя права исполнения.
-- **Широкая папка не запускает неограниченный обход соседних проектов.** Индекс файлов и подготовка shell-снимков ограничены временем и размером. Проводник сообщает о неполном списке и предлагает выбрать конкретную папку; слишком большое хранилище снимков сохраняется на месте.
-- **Вложенные инструкции не попадают в стартовый контекст всей папкой.** Корневые и пользовательские правила загружаются при запуске, а инструкции вложенных каталогов предлагается читать по мере работы в них.
-- **Списки выбора и подсказки получили общее поведение.** Меню используют навигацию с клавиатуры и возвращают фокус. Подсказки доступны при наведении и фокусе, закрываются по Escape и позволяют выделять текст.
-- **Twin можно выключить прямо во время обучения.** Импорт отменяется, уже выученный характер сохраняется. Прощание и возвращение персонажа отражают переключатель во всех портретах; выключенное состояние восстанавливается без повторной сцены.
-
-### Инструменты точнее различают запуск и результат
-
-- **Удалённые Linux-задачи получают сохранённый идентификатор до отправки через SSH.** После потери соединения можно проверить и продолжить наблюдение той же операции вместо слепого повторного запуска. Авторизация использует живой SSH agent и проверенный ключ хоста, не открывая sandbox всё содержимое `.ssh`.
-- **Успех команды можно связать с ожидаемыми файлами.** `bash` с `expectedOutputs` дополнительно проверяет наличие, минимальный размер и при необходимости SHA-256. Нулевой код выхода сам по себе не выдаётся за подтверждение артефакта.
-- **Временные файлы принадлежат чату.** Shell, фоновые команды и PTY используют общий `.flecten-scratch/<sessionId>`, который переживает отдельные вызовы и перезапуск. При удалении чата он уходит в его корзину.
-- **Длинные строки и большие деревья можно читать частями.** `read` возвращает продвигающийся курсор внутри строки без разрыва Unicode, `glob` поддерживает обзор непосредственных записей и пагинацию.
-- **Подтверждённые разрешения чата восстанавливаются без расширения области.** Они привязаны к владельцу и версии политики. Новый чат, копия чата и новые запреты не получают прежний доступ автоматически.
-- **Поток OpenAI Chat различает завершение, обрыв и повреждённые данные.** Явный `[DONE]` допускается без `finish_reason`, если ответ и вызовы инструментов полны. Незавершённые аргументы не исполняются; техническая диагностика сохраняет причину завершения без текста запроса и ответа.
-
-### Установка и ограничения альфы
-
-Для встроенного обновления с версии 0.1.2 нужен канал Beta на Linux AppImage или Windows. С версий 0.1.0 и 0.1.1 требуется ручная установка. На macOS установка остаётся ручной до настройки Apple Developer ID. При первом открытии существующих данных выделите время и место на диске для обновления хранилища; сохранённые оригиналы автоматически не удаляются.
-
-[Все изменения относительно 0.1.3](https://github.com/AnnenkovLabs/flecten/compare/v0.1.3...v0.1.4)
+[Full diff from 0.1.3](https://github.com/AnnenkovLabs/flecten/compare/v0.1.3...v0.1.4)
 
 ## 0.1.3
 
-15 ноября 2026
+November 15, 2026
 
-**Редактирование сообщений, своя модель для каждого чата и более надёжный Twin.** Этот выпуск альфа-версии помогает менять ход разговора без потери прежних ответов, удобнее настраивать модели и подстроить интерфейс под себя.
+**Message branching, per-chat model selection, and stricter Twin learning.** Edit prior prompts without losing earlier branches, tailor models per conversation, and scale the desktop UI to fit your display.
 
-### Разговор можно поправить и продолжить
+### Edit and Branch Conversations
 
-- **Сообщение редактируется в привычном поле ввода.** Можно изменить текст и вложения, затем продолжить разговор с этого места. Отдельный черновик редактирования сохраняет обычное неотправленное сообщение.
-- **Прежний вариант разговора остаётся доступен.** Переключатель версий у сообщения возвращает соответствующую ветку вместе с её ответами. Выбор сохраняется после перезапуска; модель получает контекст выбранной ветки.
-- **Сохранённые вложения можно использовать повторно.** При редактировании можно оставить прежние файлы, убрать их или добавить новые. Вложения восстанавливаются из хранилища задачи, даже если исходный файл уже удалён.
-- **История защищена во время работы.** Редактирование и переключение веток доступны после завершения активной работы, чтобы не менять контекст выполняющегося запроса.
+- **Edit prior messages directly in the composer.** Modify prompt text and attachments to branch the conversation from any point while keeping your unsent bottom draft separate and intact.
+- **Switch freely between conversation branches.** Version switchers on edited messages restore the full downstream branch across restarts and feed the selected branch to the model.
+- **Reuse persisted attachments across edits.** Keep, remove, or add files when editing a message; existing attachments hydrate from session storage even if the original source file was deleted from disk.
+- **Locked history during active execution.** Editing and branch switching remain disabled while a run is in flight so active model context never mutates mid-turn.
 
-### Каждый чат помнит свою модель
+### Per-Chat Model Selection
 
-- **Модель, reasoning и вариант выбираются отдельно для чата.** Переключение между задачами восстанавливает их выбор и не меняет общую модель для новых разговоров. Уже начатый запрос завершается на прежней модели.
-- **Характеристики модели можно получить без пробной генерации.** Настройки используют данные API провайдера и каталога: возможности, лимиты и доступные параметры можно обновить при добавлении или редактировании модели.
-- **Список моделей умеет обновляться каждый час.** Автообновление включается отдельно для провайдера. Ручные правки сохраняются по умолчанию; их замену можно разрешить явно. Изменения, сохранённые во время загрузки списка, имеют приоритет.
-- **Провайдера можно добавить без проверки соединения.** Это позволяет сначала сохранить адрес и ключ, а затем настроить модели вручную. Для совместимых API сохранён явный выбор протокола.
-- **Сопоставление моделей стало точнее.** Каталог учитывает канонические имена и производные варианты, сохраняя различия версий и checkpoint. Данные самого API имеют приоритет.
+- **Independent model, reasoning, and variant per chat.** Switching tasks restores each chat's chosen model without altering global defaults for new chats; in-flight requests finish on the model that started them.
+- **Generation-free model metadata lookup.** Adding or editing a model populates capabilities, context limits, and supported parameters from provider APIs and the built-in catalog without spending tokens on test completions.
+- **Optional hourly model auto-refresh.** Enable automatic catalog refresh per provider while preserving manual capability overrides by default (with opt-in overwrite); edits saved while a refresh is in flight take precedence.
+- **Offline provider setup.** Save provider URLs and API keys without a live connectivity check, then configure models manually with explicit wire-protocol selection.
+- **Stricter model identity matching.** Catalog resolution accounts for canonical IDs and fine-tuned derivatives while preserving version/checkpoint distinctions and prioritizing live provider API metadata.
 
-### Twin надёжнее учится на вашей истории
+### More Reliable Twin Learning
 
-- **Ответы модели проверяются до применения.** Twin принимает JSON и JSON внутри одного блока кода, затем проверяет поля и точные ссылки на исходные сообщения. Обрезанные ответы и выдуманные цитаты не превращаются в черты профиля.
-- **Сбой сохранения оставляет прежний профиль.** Черты, ревизии и отметки обработанных сообщений меняются только после успешной записи. Повторный импорт обрабатывает сообщения, которые не удалось сохранить.
-- **Отмена и смена проекта останавливают устаревшие результаты.** Поздний ответ или опрос больше не возвращает старое состояние после выключения Twin. Пустой импорт прямо сообщает, что новых сообщений нет.
+- **Schema- and quote-verified trait updates.** Twin accepts raw or fenced JSON, validates every field, and verifies exact source quotes against real user messages so truncated completions or hallucinated quotes never corrupt the persona profile.
+- **Atomic profile updates.** Traits, revisions, and processed-message cursors commit only after durable disk writes succeed, allowing re-imports to retry failed batches cleanly.
+- **Stale-update protection on cancel or workspace switch.** Late model responses or polling ticks after disabling Twin or switching projects are discarded, and empty imports report explicitly when no new messages exist.
 
-### Интерфейс под вашу работу
+### Workspace Ergonomics
 
-- **Масштаб меняется от 75% до 125%.** Текст, элементы управления и колонка чата изменяются сразу; настройка сохраняется в профиле окна. Есть возврат к 100%.
-- **Имя профиля можно изменить из боковой панели.** Настройки находятся рядом с профилем; при скрытой панели и в IDE кнопка остаётся в заголовке.
-- **Словарь охватывает больше рабочих терминов.** Добавлены категории моделей, агентов, бенчмарков, MCP, веба, CSS, инфраструктуры, мобильных платформ и продукта. Публичные обновления дополняют встроенный словарь, сохраняя локальные определения.
-- **Встроенный маркетплейс начинается с пустого каталога.** Демонстрационные модули больше не поставляются и не появляются автоматически из репозитория. Установка из подключённых HTTPS-каталогов и управление установленными пакетами сохраняются.
+- **Interface zoom from 75% to 125%.** Scales typography, controls, and thread layout immediately via window profile settings, with one-click reset to `100%`.
+- **Quick profile rename and settings in the sidebar.** Edit your profile name directly from the sidebar footer, with header settings fallback when the sidebar is collapsed or in IDE mode.
+- **Expanded technical dictionary.** Added categories covering models, agents, benchmarks, MCP, web, CSS, infrastructure, mobile platforms, and product terms; remote updates extend built-in entries without overwriting project-local definitions.
+- **Clean-slate module marketplace.** Removed bundled demo modules and implicit repository seeding while retaining custom HTTPS catalog feeds and installed-package management.
 
-### Установка и обновление
+### Installation and Updates
 
-**С версии 0.1.2 этот выпуск доступен через встроенное обновление в канале Beta на Linux AppImage и Windows.** Метаданные подписаны прежним ключом Ed25519. С версий 0.1.0 и 0.1.1 по-прежнему нужна однократная ручная установка. На macOS установка остаётся ручной до настройки Apple Developer ID.
+**Linux AppImage and Windows builds on `0.1.2` can update in-app via the Beta channel** using the pinned Ed25519 key. Versions `0.1.0` and `0.1.1` still require a one-time manual upgrade, and macOS installs remain manual pending Apple Developer ID signing.
 
-[Все изменения относительно 0.1.2](https://github.com/AnnenkovLabs/flecten/compare/v0.1.2...v0.1.3)
+[Full diff from 0.1.2](https://github.com/AnnenkovLabs/flecten/compare/v0.1.2...v0.1.3)
 
 ## 0.1.2
 
-15 ноября 2026
+November 15, 2026
 
-**Обновления из GitHub, проекты в боковой панели и понятное управление доступом.** Flecten остаётся альфа-версией: этот выпуск делает повседневную работу удобнее и подготавливает безопасную автоматическую установку следующих версий.
+**Signed GitHub updates, multi-project sidebar navigation, and unified access controls.** Streamlines everyday workspace switching and establishes Ed25519-verified auto-updates for subsequent alpha builds.
 
-### Обновления приходят из GitHub
+### Signed Updates from GitHub
 
-- **Приложение само находит новые альфа-релизы.** Канал по умолчанию теперь `beta`, как и у опубликованных выпусков Flecten. Проверка начинается через 10 секунд после запуска и повторяется каждые 4 часа. При сетевых ошибках приложение увеличивает паузу перед повтором.
-- **Обновление скачивается в фоне с видимым прогрессом.** После загрузки можно перезапустить приложение кнопкой или установить обновление при обычном выходе. Само обнаружение новой версии не прерывает текущую задачу.
-- **Подлинность проверяется до загрузки установщика.** В сборку закреплён публичный ключ Ed25519. Метаданные канала подписываются в CI; версия, размер и контрольная сумма связывают подпись с конкретными файлами. Неподписанные или изменённые метаданные отклоняются.
-- **Источник и поведение можно настроить.** В About доступны канал, репозиторий GitHub или свой feed, автоматическая проверка, загрузка и установка при выходе. Настройки применяются без перезапуска.
-- **Переключение канала не откатывает приложение.** Даже корректно подписанный выпуск с меньшим номером версии не устанавливается поверх более нового.
-- **Установка при выходе включается и после загрузки.** Если обновление уже готово, новая настройка сразу применяется к проверенному файлу в кэше. Повторно скачивать установщик не нужно.
+- **Automatic alpha discovery on `beta`.** Default update channel is now `beta`, checking 10 seconds after launch and every 4 hours thereafter with exponential backoff on network errors.
+- **Non-disruptive background downloads.** Updates download with live progress without interrupting active runs; apply via one-click restart or automatically on quit.
+- **Pre-download Ed25519 verification.** Channel manifests are signed in CI and verified against a build-pinned Ed25519 public key, binding version, byte size, and SHA512 checksum before any installer runs. Unsigned or tampered metadata is rejected.
+- **Configurable update source and behavior.** Choose channel, GitHub repository or custom HTTPS feed, auto-check, auto-download, and install-on-quit in **About**, applied immediately without restarting.
+- **Downgrade protection.** Channel switches never install an older version over a newer build, even when validly signed.
+- **Retroactive install-on-quit.** Toggling install-on-quit after an update has already been downloaded and verified applies immediately to the cached installer without re-downloading.
 
-### Проекты и задачи всегда под рукой
+### Projects and Tasks in the Sidebar
 
-- **Можно начать без выбора папки.** Flecten открывает отдельное рабочее пространство внутри профиля. История, вложения и память такой задачи сохраняются отдельно от проектов.
-- **Добавленные папки и их задачи видны в боковой панели.** Можно переключаться между проектами и чатами, а выбранная папка восстанавливается после перезапуска. Удаление папки из панели сохраняет её файлы и историю на диске.
-- **Повторный запуск сохраняет выбранный проект.** Второй экземпляр фокусирует открытое окно и завершается до изменения списка папок.
-- **Доверие запрашивается при входе в папку.** Решение запоминается; его можно изменить через меню проекта. Отказ оставляет встроенные инструменты доступными и отключает исполняемые расширения проекта.
-- **Настройки приложения стали общими.** Провайдеры, модели, доступ, sandbox и расширения используют единый профиль. Первая загрузка переносит прежние настройки, сохраняя исходные файлы. Явный `FLECTEN_CONFIG` продолжает работать как отдельная конфигурация.
+- **Start immediately without picking a folder.** Launching without a workspace opens an isolated `projectless` directory inside the profile, keeping chats, attachments, and memory separate from code repositories.
+- **Multi-project sidebar.** Switch across saved folders and their threads from one tree, restoring the last workspace on restart; removing a folder from the sidebar leaves its files and session logs untouched on disk.
+- **Single-instance focus handoff.** Launching a second app instance focuses the existing window and exits before mutating the project index.
+- **Explicit workspace trust.** Entering a new folder prompts for trust (`trusted` vs `untrusted`), disabling project-local executable extensions when untrusted while keeping built-in tools working.
+- **Unified global desktop profile.** Providers, models, permissions, sandbox rules, and extensions now live in one profile config, migrating legacy per-project settings non-destructively while honoring explicit `FLECTEN_CONFIG` overrides.
 
-### Доступ и подтверждения в одном месте
+### Unified Access and Approvals
 
-- **Режим доступа можно выбрать прямо у поля сообщения.** «Агент», «С подтверждением» и «Полный доступ» согласованно меняют разрешения и фактическую изоляцию. Собственные правила, защищённые пути и обязательные подтверждения сохраняются отдельно.
-- **Разрешение внешней папки действует в текущем чате.** Подтверждённая область передаётся проверке инструментов и системному sandbox. Доступ не требует повторного вопроса для каждого файла внутри выбранной области; отозванное разрешение проверяется перед исполнением.
-- **Ожидающие подтверждения вынесены над композером.** В чате и IDE видны действие, причина запроса и кнопки ответа. Результат решения остаётся в истории, а ожидающее действие продолжается через тот же протокол подтверждения.
-- **Разрешения и изоляция собраны в разделе Access.** Режимы, сохранённые правила, обязательные подтверждения и параметры sandbox находятся рядом. Прежние ссылки на настройки sandbox открывают новый раздел.
+- **Access mode selector.** Switch among `Agent`, `Confirm`, and `Full access` to coordinate permission rules and OS sandboxing while keeping custom path rules, protected paths, and mandatory human checkpoints intact.
+- **Chat-scoped external folder grants.** Approving an external directory updates both tool authorization and OS sandbox writable roots for the active chat without prompting per file, re-checking revocations prior to execution.
+- **Docked approval cards above the composer.** Pending approvals in both Agent and IDE modes display target actions, reasons, and decision buttons above the input, recording receipts in history and resuming execution cleanly.
+- **Consolidated Access settings.** Permissions, saved rules, mandatory checkpoints, and sandbox configuration now share the **Access** tab (with legacy sandbox deep links routed automatically).
 
-### Продолжить работу без лишних действий
+### Smoother Run Control
 
-- **Остановленную задачу можно продолжить кнопкой у поля сообщения.** При пустом поле отправка также продолжает задачу; текст и вложения по-прежнему отправляются обычным сообщением.
-- **Быстрые повторные нажатия не меняют действие случайно.** Короткая общая пауза защищает переходы между остановкой, принудительной остановкой и продолжением. Запоздавший ответ остаётся привязан к исходной задаче и поколению прогона.
+- **One-click Continue from the composer.** Resume stopped runs via the `Continue` button or by pressing Send on an empty input while keeping normal message send behavior when text or attachments are present.
+- **Debounced run-state transitions.** Guarded transitions across `Stop`, `Force stop`, and `Continue` prevent accidental double-click races, and late responses remain bound to their originating chat and run epoch.
 
-### Выпуск готовится заранее
+### Build-Once Release Pipeline
 
-- **Проверки и установщики собираются параллельно после отправки main.** Публикация использует готовый проверенный комплект без повторной сборки и E2E.
-- **Каждый комплект связан с точным коммитом.** Перед публикацией проверяются источник CI, версия, подписи, размеры и контрольные суммы файлов. Повтор после сетевого сбоя догружает черновик; опубликованные установщики другим содержимым не заменяются.
+- **Parallel CI verification and packaging on `main`.** Releases promote pre-built, smoke-tested artifacts without rebuilding or re-running E2E suites at publish time.
+- **Commit-bound release integrity.** Publishing verifies CI provenance, version tags, Ed25519 signatures, file sizes, and checksums; network retries resume draft uploads without overwriting published assets.
 
-### Перед установкой
+### Before Installing
 
-**Версии 0.1.0 и 0.1.1 нужно один раз обновить вручную до 0.1.2.** В прежних установщиках нет закреплённого ключа, поэтому они не могут безопасно принять даже новый подписанный релиз. После установки 0.1.2 следующие выпуски смогут приходить через встроенное обновление. Для альфа-релизов нужен канал Beta; явно выбранный Stable не переключается автоматически.
+**Upgrade manually once from `0.1.0` or `0.1.1` to `0.1.2`.** Earlier builds lack the pinned Ed25519 verification key and cannot accept signed auto-updates. From `0.1.2` onward, Linux AppImage and Windows builds update in-app on the **Beta** channel (explicitly selected **Stable** channels do not auto-switch). macOS installers remain unsigned and require manual installation until Apple Developer ID certificates are configured.
 
-Автоматическая установка поддерживается для Linux AppImage и Windows. Для macOS дополнительно нужен сертификат Apple Developer ID, который пока не настроен: macOS-установщики в этом выпуске остаются unsigned и устанавливаются вручную. Подпись Ed25519 метаданных не заменяет платформенную подпись Apple.
-
-[Все изменения относительно 0.1.1](https://github.com/AnnenkovLabs/flecten/compare/v0.1.1...v0.1.2)
+[Full diff from 0.1.1](https://github.com/AnnenkovLabs/flecten/compare/v0.1.1...v0.1.2)
 
 ## 0.1.1
 
-14 ноября 2026
+November 14, 2026
 
-**Общие настройки между проектами, новое обучение Twin и исправления, которые помогают продолжать работу без потери контекста.** Это обновление альфа-версии Flecten.
+**Shared cross-project settings, interactive Twin training, and Windows/runtime reliability fixes.**
 
-### Один раз настроить, работать в разных проектах
+### Configure Once Across Projects
 
-- **Провайдеры, ключи и выбранные модели сохраняются при смене папки.** Личные настройки теперь живут в общем профиле приложения. Права доступа, sandbox, MCP, hooks и доверие к расширениям остаются у своего проекта.
-- **Переход на общий профиль сохраняет существующий конфиг.** При первом запуске Flecten переносит личные настройки и привязанные к провайдерам ключи, оставляя исходный файл на месте. Явно заданный `FLECTEN_CONFIG` продолжает работать отдельно.
+- **Global provider and model profile.** Providers, API keys, and model selections persist across workspaces in the shared app profile while permissions, sandbox settings, MCP servers, hooks, and extension trust stay project-scoped.
+- **Non-destructive config migration.** First launch imports existing provider settings and destination-bound keys without deleting legacy files; explicit `FLECTEN_CONFIG` paths continue to run isolated.
 
-### Twin учится у вас на глазах
+### Live Twin Training
 
-- **Во время импорта Twin получает карточки с реальными фразами из выбранной истории.** Персонаж следит за ними взглядом, подхватывает лапами и реагирует на каждую карточку. Движение продолжается между сообщениями без перезапуска сцены.
-- **Завершение показывает реальное состояние обучения.** Счётчики приходят из ядра; 100% появляется только после готовности. Можно поставить движение на паузу или отменить импорт. Системная настройка уменьшения анимации также учитывается.
-- **Превью фраз существуют только во время импорта.** До показа из них удаляются известные секреты; в профиль Twin эти превью не записываются.
+- **Interactive phrase cards during history import.** Twin tracks, catches, and reacts to real redacted snippets from imported chats continuously across batches without resetting the WebGL scene.
+- **Core-driven training progress.** Progress counters reflect verified backend ingestion (`100%` appears only on completion), supporting pause, cancel, and `prefers-reduced-motion`.
+- **Ephemeral redacted previews.** Training card snippets strip known secrets before rendering and are never persisted into the Twin persona file.
 
-### Чат сохраняет ваше место и время работы
+### Stable Scroll, Timers, and Thread State
 
-- **Длинный чат следует за ответом, пока вы читаете его конец.** Подгрузка видимых сообщений больше не отключает автоследование. Прокрутка вверх освобождает чат от него: новые фрагменты ответа и изменение высоты HTML-результата не возвращают вас вниз, пока вы читаете историю.
-- **Возврат в длинную переписку сохраняет видимое сообщение и его положение.** Поиск и отложенный замер высоты больше не сдвигают место чтения при переключении задач.
-- **Таймер работы продолжает идти во время ожидания ответа.** Длительность работы и размышлений восстанавливается по исходным событиям после перехода между чатами и переоткрытия задачи. Завершённые значения остаются фиксированными.
-- **HTML-ответ корректно заменяется новой версией.** Исправлен случай, когда итоговый документ менялся целиком, но имел ту же длину или становился длиннее: в кадре мог оставаться прежний результат.
-- **Диаграммы Mermaid в разных сообщениях независимы.** Их SVG получают уникальные идентификаторы, поэтому новая схема не перехватывает стрелки и другие элементы уже показанной диаграммы.
-- **Поздние ответы команд остаются в своей задаче.** Если переключить чат во время запроса, его результат больше не меняет представление уже открытого чата.
-- **Закрытие настроек не перехватывает следующее действие клавиатуры.** Фокус возвращается один раз: запоздавший обработчик больше не уводит его с уже выбранной вкладки.
-- **Удаление ожидающего сообщения из очереди работает без промежуточного сбоя состояния.** Сообщение, которое уже отправляется, удалить нельзя.
+- **Smart streaming auto-follow.** Virtualized message loading no longer breaks bottom auto-follow, while scrolling up detaches cleanly so incoming tokens and dynamic HTML summary resizes never yank your reading position down.
+- **Preserved reading anchors across long threads.** Search highlights and deferred height measurements no longer shift scroll position when switching chats.
+- **Accurate elapsed and reasoning timers.** Active timers tick continuously while awaiting completions, reconstruct exact durations from event timestamps on chat reopen, and freeze once finished.
+- **Reliable HTML summary updates.** Fixed stale iframe rendering when a replacement HTML document had greater or equal byte length.
+- **Isolated Mermaid SVG IDs.** Multiple Mermaid diagrams in the same thread now namespace their internal SVG defs so markers and arrows never collide across messages.
+- **Chat-isolated late IPC replies, single-shot modal focus restore, and atomic queue item removal** (in-flight messages can no longer be deleted mid-send).
 
-### Надёжнее запуск, восстановление и инструменты
+### Startup, Recovery, and Tooling Hardening
 
-- **Исправлено зависание запуска на Windows при отсутствии файла секретов.** Чтение теперь получает обычную ошибку отсутствующего файла и позволяет продолжить загрузку приложения.
-- **Краткая блокировка файла на Windows не срывает сохранение настроек.** Атомарная замена повторяется в пределах одной секунды, сохраняя прежний файл и возможность отмены операции.
-- **Команды Windows сохраняют кавычки в путях и аргументах.** Запуск через CMD больше не ломает пути с пробелами и специальные символы; фоновые команды и hooks используют тот же исправленный путь запуска.
-- **Терминал Windows распознаёт завершение команды через ConPTY.** CMD и PowerShell возвращают явную границу вместе с кодом выхода. Замена переводов строк управляющими последовательностями больше не оставляет выполненную команду в ожидании таймаута.
-- **Windows узнаёт собственные файлы по полному и короткому имени пути.** Канонизация устраняет ложные отказы sandbox внутри проекта, сохраняя ограничения на секреты и выход за его границы. Вложения сохраняются через доступный для синхронизации файловый дескриптор.
-- **Поиск на Windows соблюдает вложенные `.gitignore`.** Разделители путей приводятся к единому формату до фильтрации, поэтому исключённые и сгенерированные каталоги не попадают в результаты glob и grep.
-- **Разрешения в интерфейсе Studio завершают ожидающее действие.** Подтверждение использует ID самого запроса, поэтому сохранение и чтение brief продолжаются после нажатия Allow once.
-- **История продолжает записываться после оборванной последней строки.** Новые события больше не склеиваются с повреждённым хвостом журнала. Восстановление индекса сохраняет состояние последнего прогона и отметку о прерывании.
-- **Перезапущенное ядро не получает запоздавшие сообщения от старого процесса.** Вывод и ошибки привязаны к конкретному запуску sidecar.
-- **Проект, уже открытый в другом окне, не уходит в цикл перезапусков.** Последняя ошибка запуска доходит до интерфейса, а фоновые запросы не поднимают ядро снова. Повторить запуск можно явным действием или выбором другой папки.
-- **Остановка на macOS находит отделившиеся дочерние процессы.** Команды сохраняют идентификатор своего запуска в окружении, поэтому дерево можно завершить и после выхода родительского процесса.
-- **Закрытие приложения дожидается фоновой подготовки отката.** Индексация рабочей папки через Git и очистка контрольных точек завершаются до освобождения ресурсов проекта, без оставленных фоновых Git-процессов.
-- **Терминал возвращает вывод текущей команды.** Исправлена потеря начала результата после очистки ANSI-кодов или обрезки старых строк в длинной сессии.
-- **Отмена записи проверяется после создания контрольной точки.** Если отменить инструмент во время подготовки снимка, `write`, `edit`, `apply_patch`, `delete` и `move` не продолжают менять файлы.
-- **Провайдеры сохраняют сведения о длительных лимитах.** HTTP-статус, время сброса и данные лимита доходят до адаптера, чтобы агент мог дождаться допустимого продолжения или сообщить причину остановки.
-- **Потоковые ответы поддерживают разные окончания строк.** SSE обрабатывает LF, CR и CRLF, в том числе когда они разделены сетевыми фрагментами.
-- **MCP не пересылает запрос на адрес из HTTP-редиректа.** Для перенесённого сервера нужно указать конечный URL. SSE-соединение закрывается и при ошибке обработки ответа.
+- **Windows:** Fixed startup hang when the secrets file is absent; added bounded 1-second atomic-rename retries under transient file locks; preserved quoted paths/special characters in `cmd.exe` commands, background jobs, and hooks; framed ConPTY command completion with explicit exit codes across `cmd.exe` and PowerShell; canonicalized 8.3 short vs long paths inside sandbox checks while flushing attachments via syncable file descriptors; normalized path separators for nested `.gitignore` rules in `glob` and `grep`.
+- **Studio approvals:** Bound `Allow once` confirmations to exact request IDs so brief reads and writes resume reliably.
+- **Tolerant JSONL recovery:** New events append cleanly on a fresh line after a truncated tail record, preserving last-run state and interruption markers during index rebuilds.
+- **Epoch-scoped sidecar stdio and lock handling:** Restarted sidecars ignore late output from superseded processes, and workspaces locked by another window surface the error once instead of crash-looping.
+- **Process-tree and Git shadow cleanup:** macOS run cancellation tracks detached child processes via environment markers, and app shutdown awaits background shadow-Git indexing and checkpoint pruning before releasing workspace locks.
+- **Terminal output retention and post-checkpoint cancellation:** Fixed lost leading command output after ANSI stripping or scrollback trimming, and re-checked `AbortSignal` immediately after checkpoint creation so cancelled `write`, `edit`, `apply_patch`, `delete`, and `move` calls abort before mutating files.
+- **Provider rate-limit metadata, SSE line endings, and MCP redirect safety:** Surfaced HTTP status, reset timestamps, and quota headers to adapters; supported split `LF`/`CR`/`CRLF` boundaries in SSE streams; blocked cross-redirect MCP request forwarding while closing SSE streams on handler errors.
 
-### Меньше лишнего в контексте модели
+### Leaner Model Context
 
-- **Промпты сосредоточены на правилах Flecten.** Убраны повторные перечисления полей и лимитов, которые модель уже получает через схемы инструментов, а также неиспользуемые промпты. Роли, границы доверия и протоколы завершения сохранены.
-- **Из встроенного набора удалены `git` и `lsp`.** Git-команды доступны через терминал; отдельные агентские операции LSP больше не предоставляются. Устаревшая секция `lsp` удаляется при миграции конфига и не мешает открыть проект. Встроенных инструментов теперь 18.
+- **Focused system prompts.** Removed duplicated tool-schema field prose and unused prompt templates while preserving role boundaries, trust rules, and completion contracts.
+- **Removed built-in `git` and `lsp` tools (18 built-in tools total).** Git runs directly via terminal tools, and legacy `lsp` config sections strip cleanly during migration.
 
-### Выпуск и установка
+### Releases and Packaging
 
-- **У каждой версии есть полноценная страница GitHub Release.** Workflow создаёт черновик с описанием из этого чейнджлога, проверяет и собирает приложение, затем прикрепляет установщики, SBOM и контрольные суммы и публикует Pre-release. Если проверка не прошла, выпуск остаётся черновиком.
-- **Установщики выходят для Linux, Windows и обеих архитектур macOS.** Сборки Intel и Apple Silicon сохраняются вместе; beta-канал получает метаданные обеих сборок и файлы для загрузки только изменившихся частей обновления.
+- **Automated GitHub Pre-releases.** CI drafts release notes from `CHANGELOG.md`, runs verification and builds, and attaches Linux, Windows, and dual-architecture macOS (`x64` + `arm64`) installers, blockmaps, SBOMs, and checksums (leaving failed builds as unpublished drafts).
 
-### Перед обновлением
+### Before Updating
 
-Flecten остаётся альфой: возможны ошибки и недоделки. Автоматическая установка обновлений требует подписанных метаданных канала; для macOS также нужна подпись Developer ID. Наличие установщика само по себе не означает, что эти подписи настроены.
+Flecten remains in alpha. In-app auto-updates require Ed25519-signed channel metadata plus Apple Developer ID signing on macOS; shipping an installer alone does not imply auto-update signing is active.
 
-[Все изменения относительно 0.1.0](https://github.com/AnnenkovLabs/flecten/compare/v0.1.0...v0.1.1)
+[Full diff from 0.1.0](https://github.com/AnnenkovLabs/flecten/compare/v0.1.0...v0.1.1)
 
 ## 0.1.0
 
-13 ноября 2026
+November 13, 2026
 
-**Первая публичная альфа Flecten.** Десктопный харнесс с отдельным ядром на Bun, интерфейсом Svelte 5 и Electron-оболочкой. Изменения, ранее оставшиеся под заголовком «Не выпущено», включены в эту версию.
+**First public alpha of Flecten:** a desktop coding harness pairing a Bun sidecar core, Svelte 5 UI, and Electron shell (incorporating all prior pre-release work).
 
-### Рабочая среда
+### Workspace
 
-- Переключение Agent и IDE в одной задаче, редактор файлов, просмотр изменений, история и терминал. Защита несохранённого черновика при правках агента.
-- Talker и Worker разделяют разговор и исполнение, сохраняя общий журнал. Twin представляет предпочтения пользователя, проектная память хранит решения и уроки, словарь уточняет термины.
-- Четыре протокола провайдеров: OpenAI Chat Completions, OpenAI Responses, Anthropic Messages и Gemini. Импорт моделей, проверка подключения, повторная авторизация и резервные модели.
-- Интерфейс на семи языках, живые HTML-ответы, блоки кода с копированием, диаграммы Mermaid и просмотр файлов с номерами строк.
-- Голосовой ввод через API, локальные Vosk и faster-whisper; изображения, PDF и поддерживаемые аудиовложения.
+- Unified Agent and IDE modes per task with CodeMirror editor, diff viewer, run history, interactive terminal, and dirty-buffer protection during agent edits.
+- Split Talker and Worker roles over a shared event log, alongside Twin user-preference modeling, project memory, and technical term dictionary.
+- Four provider protocols (OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and Gemini) with catalog import, connectivity probes, auth refresh, and model failover.
+- Seven UI locales, sandboxed live HTML summaries, copyable code blocks, Mermaid diagrams, and line-numbered file previews.
+- Voice dictation via cloud API or offline `Vosk` / `faster-whisper`, plus image, PDF, and audio attachments.
 
-### Долгая работа и восстановление
+### Long-Running Execution and Recovery
 
-- Несколько параллельных задач, очередь сообщений, steering, фоновые команды и отдельное управление субагентами.
-- Журнал событий, сохранение очереди, восстановление после падения ядра и перезагрузки окна. Вложения переживают сжатие контекста, очередь и копирование чата.
-- Страницы контекста и архивы, бюджеты токенов, стоимости и времени, ограниченные результаты инструментов со ссылками на полные логи.
-- Контрольные точки файлов и shell-команд с `/undo`, переносимый экспорт истории, политика хранения и корзина.
-- Виртуализация длинных тредов, поиск по истории, сохранение позиции чтения и следование за ответом.
+- Concurrent session pool, persistent message queue, mid-run steering, background shell jobs, and independent subagent tabs.
+- Durable `events.jsonl` log, crash recovery across sidecar/window restarts, and content-addressed attachments surviving compaction, queuing, and chat forks.
+- Structured Worker context pages and archives, token/cost/wall-clock budgets, and bounded tool outputs linked to full disk logs.
+- Git-independent file and shell checkpoints with `/undo`, portable session exports, retention policies, and trash.
+- Virtualized long threads with history search, preserved reading anchors, and streaming auto-follow.
 
-### Расширения и защита данных
+### Extensions and Security
 
-- Agent Skills, MCP через stdio и Streamable HTTP, OAuth, формы elicitation и каталог ресурсов. Модули объединяют инструкции, инструменты, hooks и интерфейс.
-- Доверие к содержимому расширений по SHA-256. Изменение пакета снимает доверие; ограничения активированных skills восстанавливаются из журнала.
-- Права доступа, sandbox, подтверждения действий и hooks с блокировкой при сбое. Субагент не может расширить права родителя.
-- Маскирование секретов до записи в логи и отправки в окно, включая секреты на границе фрагментов потока. Ключи связаны с проектом и назначением провайдера.
-- Атомарное сохранение конфигов, очереди и кэшей; отдельная диагностическая выгрузка и техническая телеметрия по согласию.
+- Agent Skills, MCP over `stdio` and Streamable HTTP with OAuth PKCE, elicitation forms, and resource catalogs, plus hot-loadable SDK modules.
+- SHA-256 content trust for extensions (invalidated automatically on package mutation) and durable replay of skill `allowed-tools` restrictions.
+- Layered PermissionEngine, OS sandboxing, interactive approvals, and `failClosed` hooks; subagents can never escalate beyond parent permissions.
+- Pre-log and pre-IPC secret redaction (including cross-chunk stream boundaries) plus project- and destination-bound credentials.
+- Atomic writes for configs, queues, and caches, paired with redacted diagnostic bundles and opt-in counter telemetry.
 
-### Установка и выпуск
+### Packaging and CI
 
-- Название Flecten, конфиг `flecten.config.json`, переменные `FLECTEN_*` и бинарник `flecten-agent` с совместимостью прежних имён.
-- Установщики AppImage для Linux, DMG и ZIP для macOS, NSIS для Windows. Проверка запуска упакованного приложения, SBOM и контрольные суммы.
-- Подписанные метаданные обновлений Ed25519 с проверкой версии, SHA512 и размера установщика. Неподписанный канал отклоняется.
-- CI на Linux, macOS и Windows, порог покрытия 85%, проверки документации и визуальная регрессия на 1480x940 и 1180x640.
+- Renamed to Flecten (`flecten.config.json`, `FLECTEN_*` env vars, `flecten-agent` binary) with legacy-name migration compatibility.
+- Linux AppImage, macOS DMG/ZIP, and Windows NSIS installers with packaged smoke tests, SBOMs, and SHA checksums.
+- Ed25519-signed update manifests verifying version, SHA512, and installer byte size, rejecting unsigned feeds.
+- Cross-platform CI across Linux, macOS, and Windows enforcing an 85% line-coverage gate, docs-as-code checks, and visual regression at 1480x940 and 1180x640.
 
-[Исходники 0.1.0](https://github.com/AnnenkovLabs/flecten/tree/v0.1.0)
+[0.1.0 source tree](https://github.com/AnnenkovLabs/flecten/tree/v0.1.0)

@@ -2,17 +2,17 @@ export default {
   "Main model": "Modelo principal",
   "Default main model": "Modelo principal predeterminado",
   "Used when Talker and Worker is off, and as the fallback for role defaults.":
-    "Se usa cuando Talker y Worker están desactivados y como alternativa para los roles.",
+    "Se usa en chats de un solo agente y como respaldo para roles sin modelo propio.",
   "Defaults apply to new chats. You can still choose a model in the message box.":
-    "Los valores se aplican a los chats nuevos. También puedes elegir un modelo en el cuadro de mensaje.",
+    "Se aplica a los nuevos chats. Puedes cambiar el modelo en cada chat desde el cuadro de mensaje.",
   "Talker handles your conversation. Worker carries out tasks with tools, for any kind of work.":
-    "Talker lleva la conversación. Worker realiza tareas con herramientas para cualquier tipo de trabajo.",
+    "Talker mantiene la conversación ágil mientras Worker ejecuta herramientas y edita archivos en otra sesión.",
   "Talker model": "Modelo de Talker",
   "Worker model": "Modelo de Worker",
   "Understands requests, asks questions, and explains progress and results.":
     "Comprende solicitudes, hace preguntas y explica el progreso y los resultados.",
   "Executes tasks. A model selected in the message box overrides this default for that chat.":
-    "Ejecuta tareas. El modelo del cuadro de mensaje sustituye este valor en ese chat.",
+    "Ejecuta herramientas y edita archivos. Se reemplaza si eliges otro modelo en el chat.",
   "Use chat model": "Usar modelo del chat",
   "Use main model": "Usar modelo principal",
   "Subagent models": "Modelos de subagentes",
@@ -22,9 +22,9 @@ export default {
   Explore: "Explorar",
   Implement: "Ejecutar",
   Review: "Revisar",
-  "Find information and understand the task.": "Busca información y comprende la tarea.",
-  "Carry out a focused assignment.": "Realiza un encargo concreto.",
-  "Check results and identify risks.": "Comprueba resultados e identifica riesgos.",
+  "Find information and understand the task.": "Búsqueda y análisis del código en modo lectura.",
+  "Carry out a focused assignment.": "Cambios acotados en código y verificación.",
+  "Check results and identify risks.": "Revisión de diffs, casos límite y regresiones.",
   "Choose an enabled model that supports tools.":
     "Elige un modelo habilitado que admita herramientas.",
   "Choose a variant available for this model.": "Elige una variante disponible para este modelo.",

@@ -1,6 +1,5 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "The model accepts attachments.": "The model accepts attachments.",
   "Price per 1M tokens": "Price per 1M tokens",
   "Cache read": "Cache read",
   "Cache write": "Cache write",
@@ -29,7 +28,7 @@ export default {
   "Advanced protocol settings": "Advanced protocol settings",
   "Reasoning, requests, and raw JSON.": "Reasoning, requests, and raw JSON.",
   "How to send and store reasoning between turns.":
-    "How to send and store reasoning between turns.",
+    "Wire overrides for OpenAI-compatible servers (DeepSeek, Qwen, GLM, vLLM). Leave on Auto unless required.",
   "Resend reasoning": "Resend reasoning",
   "Do not send": "Do not send",
   "Reasoning details": "Reasoning details",
@@ -46,8 +45,6 @@ export default {
   Keep: "Keep",
   Clear: "Clear",
   "Request mode": "Request mode",
-  "What to send with the response and how to call tools.":
-    "What to send with the response and how to call tools.",
   "Parallel tool calls": "Parallel tool calls",
   "Cache prompt": "Cache prompt",
   "The provider reuses the shared request prefix.":
@@ -61,30 +58,21 @@ export default {
   "The app runs a command and reads the API key from its output. Useful for short-lived tokens.":
     "The app runs a command and reads the API key from its output. Useful for short-lived tokens.",
   "Get API key from command": "Get API key from command",
-  "Instead of the key in the Access field.": "Instead of the key in the Access field.",
+  "Instead of the key in the Access field.":
+    "Overrides the static API key and environment variable.",
   "Arguments (JSON array)": "Arguments (JSON array)",
-  "Timeout, ms": "Timeout, ms",
-  "Key refresh interval, ms": "Key refresh interval, ms",
+  "Timeout, ms": "Timeout (ms)",
+  "Key refresh interval, ms": "Token refresh interval (ms)",
   "Raw overrides": "Raw overrides",
   "Added to every request. For custom servers.": "Added to every request. For custom servers.",
   "Headers (JSON)": "Headers (JSON)",
   "Request body (JSON)": "Request body (JSON)",
-  "The model calls read, write, bash, and other tools.":
-    "The model calls read, write, bash, and other tools.",
-  "Understands images in the input.": "Understands images in the input.",
   Temperature: "Temperature",
-  "Accepts the temperature parameter.": "Accepts the temperature parameter.",
-  "Responds using the specified JSON schema.": "Responds using the specified JSON schema.",
   "WAV and MP3 via Chat Completions, audio files via Gemini.":
-    "WAV and MP3 via Chat Completions, audio files via Gemini.",
+    "WAV/MP3 on Chat Completions; audio containers on Gemini.",
   "Prompt cache": "Prompt cache",
-  "The provider caches the shared request prefix.":
-    "The provider caches the shared request prefix.",
   "Parallel calls": "Parallel calls",
-  "Multiple tools in one turn.": "Multiple tools in one turn.",
   "Reasoning between calls": "Reasoning between calls",
-  "The model reasons after receiving a tool result.":
-    "The model reasons after receiving a tool result.",
   "Hide from selection": "Hide from selection",
   Capabilities: "Capabilities",
   Test: "Test",
@@ -120,4 +108,6 @@ export default {
     "The app will get the model list from the API and fill in context limits and capabilities from the catalog.",
   "Provider added without checking. Add models manually in the Models tab.":
     "Provider added without checking. Add models manually in the Models tab.",
+  "Auto-filled from the model catalog. Override when a proxy or custom endpoint differs.":
+    "Auto-filled from the model catalog. Override when a proxy or custom endpoint differs.",
 } as const;

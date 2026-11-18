@@ -33,12 +33,11 @@ export async function replaceWorkspace(cwd: string, input: unknown): Promise<unk
   if (command.action === "preview") {
     const result = await searchWorkspace(cwd, command);
     if (result.limited)
-      throw new Error("Уточните поиск перед заменой: показаны не все совпадения.");
+      throw new Error("Refine your search before replacing: results are truncated.");
     const files = [];
     for (const path of new Set(result.matches.map((match) => match.path))) {
       const file = await previewFile(cwd, path);
-      if (!file.hash)
-        throw new Error(`${path}: ${file.readOnlyReason ?? "Файл доступен только для чтения"}`);
+      if (!file.hash) throw new Error(`${path}: ${file.readOnlyReason ?? "Read-only file."}`);
       const updated = replace(file.text, command);
       if (updated.count) files.push({ path, expectedHash: file.hash, count: updated.count });
     }
@@ -50,10 +49,10 @@ export async function replaceWorkspace(cwd: string, input: unknown): Promise<unk
     try {
       const current = await previewFile(cwd, planned.path);
       if (current.hash !== planned.expectedHash)
-        throw new Error("Файл изменился после предпросмотра. Повторите поиск.");
+        throw new Error("File changed after preview. Run the search again.");
       const updated = replace(current.text, command);
       if (updated.count !== planned.count)
-        throw new Error("Число совпадений изменилось. Повторите поиск.");
+        throw new Error("Match count changed. Run the search again.");
       await saveProjectFile(cwd, {
         path: planned.path,
         text: updated.text,

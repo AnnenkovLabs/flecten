@@ -1,42 +1,42 @@
 # Shell
 
-Electron 45. Окно, preload, протокол и запуск sidecar.
+Electron 45 desktop shell: window lifecycle, preload bridge, custom protocol, and sidecar process management.
 
-## Запуск
+## Commands
 
 ```bash
-bun run app:dev   # Vite и Electron
-bun run app       # сборка интерфейса и Electron
-bun run app:shot  # снимок окна во временный файл
+bun run app:dev   # Vite + Electron
+bun run app       # build UI and launch Electron
+bun run app:shot  # capture window screenshot to a temp file
 ```
 
-## Дерево
+## Layout
 
 ```text
-main.mjs      окно, протокол flecten://, IPC, запуск ядра, снимок
-preload.cjs   единственный мост window.desktop: окно и команды агенту
+main.mjs      window lifecycle, flecten:// protocol, IPC, sidecar spawn, screenshots
+preload.cjs   sole window.desktop bridge for window controls and agent commands
 ```
 
-## Загрузка интерфейса
+## UI Loading
 
-- В dev окно грузит `FLECTEN_DEV_URL` от Vite.
-- В продакшене окно грузит `flecten://app/index.html`.
-- Протокол отдаёт только файлы внутри `ui/dist`. Обход пути возвращает 404.
-- Ответы читаются через `readFile`, поэтому работают и внутри `asar`.
+- In dev, the window loads `FLECTEN_DEV_URL` from Vite.
+- In production, the window loads `flecten://app/index.html`.
+- The custom protocol serves files strictly inside `ui/dist`; path traversal returns 404.
+- Responses read via `readFile`, working transparently inside packaged `asar` archives.
 
-## Безопасность
+## Security
 
 - `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
-- `preload.cjs` отдаёт `control(action)`, `agent.send(command)` и `agent.onEvent(listener)`.
-- Главный процесс проверяет действие и тип команды по списку.
-- Ядро запускается отдельным процессом на Bun и не получает Electron API.
-- Внешние окна запрещены, навигация за пределы приложения заблокирована.
-- CSP задаётся в `ui/index.html`.
+- `preload.cjs` exposes only `control(action)`, `agent.send(command)`, and `agent.onEvent(listener)`.
+- The main process validates every window action and command type against an explicit allowlist.
+- Core runs as a separate Bun sidecar process with no access to Electron APIs.
+- Popups and external navigation outside the app are blocked.
+- Content Security Policy is enforced in `ui/index.html`.
 
-## Границы
+## Boundaries
 
-Оболочка знает про окно, файлы интерфейса и процесс ядра. Она не знает про Twin, тулы, контекст и страницы. Если в `main.mjs` появилась логика харнесса, граница протекла.
+The shell manages the OS window, static UI assets, and the sidecar process. It knows nothing about Twin, tools, context budgets, or pages. Any harness logic inside `main.mjs` is a boundary violation.
 
-В dev ядро запускается через `bun run src/app/server.ts`. В собранном приложении используется `resources/flecten-agent`, а промпты лежат в `resources/prompts`.
+In dev, the sidecar starts via `bun run src/app/server.ts`. Packaged builds execute `resources/flecten-agent` with prompts loaded from `resources/prompts`.
 
-Electrobun остаётся целью для продакшн-оболочки по ADR-003. Electron используется как рабочая оболочка и упаковывается через `electron-builder.yml`.
+Electrobun remains the long-term production shell target per ADR-003; Electron serves as the shipping shell packaged via `electron-builder.yml`.

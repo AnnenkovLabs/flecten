@@ -76,7 +76,7 @@ test("every Worker call appears in the conversation and Worker tab, progress is 
     await expect(progress).toHaveCount(1);
     await page.locator("#prompt").fill("Ты можешь отвечать, пока идёт проверка?");
     await expect(actions.getByRole("button")).toHaveCount(3);
-    await actions.getByRole("button", { name: "Уточнить сейчас", exact: true }).click();
+    await actions.getByRole("button", { name: "Отправить", exact: true }).click();
     await expect(talker.locator(".answer").last()).toContainText("Можем общаться во время работы.");
     await expect(actions.getByRole("button")).toHaveCount(1);
     await expect(talker.locator(".summary-frame")).toHaveCount(0);

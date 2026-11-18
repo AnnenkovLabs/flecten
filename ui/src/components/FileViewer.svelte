@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from "../lib/i18n.svelte";
   import { modal } from "../lib/modal";
+  import { overlayPresence } from "../lib/overlay-presence";
   import { formatBytes } from "../lib/composer/queue";
   import { lineNumbers, splitPath } from "../lib/file-text";
   import { fileViewer } from "../lib/file-viewer.svelte";
@@ -31,6 +32,7 @@
   <dialog
     class="viewer st-dialog"
     use:modal
+    transition:overlayPresence|global
     aria-labelledby="viewer-title"
     oncancel={(event) => {
       event.preventDefault();

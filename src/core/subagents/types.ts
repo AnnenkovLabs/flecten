@@ -37,6 +37,7 @@ export interface SubagentChildRequest {
   parentPermissions?: PermissionEngine;
   parentApprovals?: import("../../security/types").ApprovalGate;
   approvalSessionId?: string;
+  parentReads?: import("../../tools/util/read-tracker").ReadTracker;
   permissionIntent?: import("../../tools/types").ToolContext["permissionIntent"];
   parentAuthorize?: (toolName: string) => string | undefined;
   spec: SubagentSpec;

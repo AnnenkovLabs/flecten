@@ -69,7 +69,7 @@ async function run(cmd: string[], signal: AbortSignal, audio?: Uint8Array): Prom
       env: { ...process.env, PYTHONUNBUFFERED: "1", HF_HUB_DISABLE_TELEMETRY: "1" },
     });
   } catch {
-    throw new Error("Python не найден. Укажите установленный Python 3.9+ в настройках голоса.");
+    throw new Error("Python not found. Set a Python 3.9+ binary in Voice settings.");
   }
   const abort = () => killProcessTree(processHandle.pid, "SIGKILL", false);
   signal.addEventListener("abort", abort, { once: true });
@@ -91,7 +91,7 @@ async function run(cmd: string[], signal: AbortSignal, audio?: Uint8Array): Prom
       } catch {
         /* pip and venv write plain stderr. */
       }
-      throw new Error(message || "Локальный движок завершился с ошибкой.");
+      throw new Error(message || "Local speech engine exited with an error.");
     }
     return stdout;
   } catch (error) {
@@ -144,7 +144,7 @@ export async function checkLocalVoice(
   signal: AbortSignal,
 ) {
   if (!existsSync(pythonFor(engine)))
-    return { ready: false, message: "Движок не установлен. Нажмите «Установить движок и модель»." };
+    return { ready: false, message: 'Engine not installed. Click "Install engine and model".' };
   return SetupResult.parse(await invoke("check", engine, options, signal));
 }
 

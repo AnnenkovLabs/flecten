@@ -12,14 +12,8 @@ import {
   windowsProcessUsage,
 } from "./windows-processes";
 
-const MEMORY_HEADROOM_BYTES = 512 * 1024 * 1024;
-
 export function processLimitAllowance(maxProcesses: number): number {
   return Math.max(maxProcesses * 2, 128) + 64;
-}
-
-export function memoryLimitBytes(maxMemoryBytes: number): number {
-  return maxMemoryBytes + MEMORY_HEADROOM_BYTES;
 }
 
 /** The same kernel backstop is used by foreground commands, jobs and interactive shells. */
@@ -29,11 +23,11 @@ export function withResourceLimits(command: string[], limits: TerminalResourceLi
   if (prlimit === null) return command;
   const args = [prlimit];
   if (limits.maxProcesses > 0) {
-    // ponytail: RLIMIT_NPROC is per user, the monitor enforces the exact tree budget.
-    // Use cgroups or Windows job objects when limits must be isolated by the kernel.
+    // ponytail: RLIMIT_NPROC is per user, while RLIMIT_AS breaks V8/WebAssembly multi-GB virtual
+    // address reservations; ResourceMonitor enforces exact tree process count and physical RSS.
+    // Use cgroups v2 memory.max / pids.max or Windows job objects for kernel-level isolation.
     args.push(`--nproc=${countUserProcesses() + processLimitAllowance(limits.maxProcesses)}`);
   }
-  if (limits.maxMemoryBytes > 0) args.push(`--as=${memoryLimitBytes(limits.maxMemoryBytes)}`);
   return args.length === 1 ? command : [...args, "--", ...command];
 }
 

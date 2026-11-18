@@ -56,14 +56,14 @@ export default {
   "Copying…": "Copiando…",
   "Save or close modified files in the IDE before switching projects":
     "Salve ou feche os arquivos alterados na IDE antes de trocar de projeto",
-  "Folder selection is available in the app": "A seleção de pastas está disponível no aplicativo",
+  "Folder selection is available in the app": "A seleção de pastas requer o aplicativo desktop",
   "## User": "## Usuário",
   "## Response": "## Resposta",
   "## Work": "## Trabalho",
   "> Error: {0}": ["> Erro: ", 0],
   "Conversation saved as Markdown": "Conversa salva em Markdown",
   "Enter text after /search": "Digite um texto após /search",
-  "Search is available in the app": "A busca está disponível no aplicativo",
+  "Search is available in the app": "A busca requer o aplicativo desktop",
   "“{0}” not found in the conversation": ["“", 0, "” não foi encontrado na conversa"],
   "Matches found: {0}. Press Esc to clear highlighting": [
     "Ocorrências encontradas: ",
@@ -75,7 +75,7 @@ export default {
   "Opening task…": "Abrindo tarefa…",
   "Interface language": "Idioma da interface",
   "The language of buttons, menus, and app messages. The language of agent replies is set separately.":
-    "Idioma dos botões, menus e mensagens do aplicativo. O idioma das respostas do agente é configurado separadamente.",
+    "Define o idioma da interface; o idioma das respostas do agente é separado.",
   "Diagram source": "Código-fonte do diagrama",
   "Couldn't save the language setting. Your choice applies until you close the app.":
     "Não foi possível salvar o idioma. A escolha vale até o aplicativo ser fechado.",

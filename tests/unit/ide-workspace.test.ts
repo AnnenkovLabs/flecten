@@ -69,7 +69,8 @@ test("IDE keeps drafts through refresh, conflicts and dirty-close cancellation",
   bridge(async (command) => {
     if (command.type === "files.list") return { ok: true, files: ["src/a.ts"] };
     if (command.type === "files.write") {
-      if (command.expectedHash !== disk) return { ok: false, error: "Файл изменился на диске" };
+      if (command.expectedHash !== disk)
+        return { ok: false, error: "File changed on disk. Reload before saving." };
       disk = command.text;
     }
     return { ok: true, file: file(disk) };
@@ -83,7 +84,7 @@ test("IDE keeps drafts through refresh, conflicts and dirty-close cancellation",
   expect(ide.active?.changedOnDisk).toBe(true);
   expect(await ide.save()).toBe(false);
   expect(ide.active?.text).toBe("my draft");
-  expect(ide.active?.error).toContain("Файл изменился на диске");
+  expect(ide.active?.error).toContain("File changed on disk");
   ide.close("src/a.ts");
   expect(ide.pending).toEqual({ path: "src/a.ts", action: "close" });
   await ide.resolvePending("cancel");

@@ -21,9 +21,9 @@ export default {
   "Nothing to undo": "Nada para desfazer",
   "Nothing to retry": "Nada para tentar novamente",
   "Model: {0}": ["Modelo: ", 0],
-  "Resuming the task after the core restarted": "Retomando a tarefa após reiniciar o núcleo",
+  "Resuming the task after the core restarted": "Retomando após reiniciar o agente",
   "History, plan, and files are intact; the model checks the current state before acting":
-    "O histórico, o plano e os arquivos estão preservados; o modelo confere o estado antes de agir",
+    "Histórico e arquivos preservados; verificando o estado da pasta antes de continuar",
   "Run interrupted": "Execução interrompida",
   "Stopped at the run budget limit": "Execução interrompida por atingir o orçamento",
   "failed to start": "não iniciou",
@@ -41,9 +41,8 @@ export default {
   Thinking: "Pensando",
   Error: "Erro",
   "Awaiting approval": "Aguardando permissão",
-  "Core restarting": "Reiniciando o núcleo",
-  "The model received the background command result":
-    "O modelo recebeu o resultado do comando em segundo plano",
+  "Core restarting": "Reiniciando agente",
+  "The model received the background command result": "Saída do comando em segundo plano entregue",
   "Preparing a call": "Preparando chamada",
   Writing: "Escrevendo",
   "Untranslated response": "Resposta sem tradução",
@@ -89,11 +88,10 @@ export default {
   "[timed out]": "[tempo esgotado]",
   "[exit code {0}]": ["[código ", 0, "]"],
   "Context is almost full (95%). Compress it now, or the core will compress it automatically.":
-    "O contexto está quase cheio (95%). Comprima agora, ou o núcleo fará isso automaticamente.",
+    "Contexto em 95%. A compactação automática ocorre em 100%.",
   "Context is 85% full. You can compress it now, focusing on the topic you need.":
-    "O contexto está 85% cheio. Você pode comprimi-lo agora com foco no tema desejado.",
-  "Context is 70% full. No need to compress it yet, but keep it in mind.":
-    "O contexto está 70% cheio. Ainda não é preciso comprimi-lo, mas vale ficar de olho.",
+    "Contexto em 85%. Compacte agora pelo medidor de contexto se quiser definir um foco.",
+  "Context is 70% full. No need to compress it yet, but keep it in mind.": "Contexto em 70%.",
   "page {0}": ["página ", 0],
   "{0} → {1} tokens": [0, " → ", 1, " tokens"],
   "no model": "sem modelo",
@@ -107,5 +105,5 @@ export default {
     "O contexto está cheio. Comprima o histórico ou inicie uma nova tarefa.",
   "Run canceled.": "Execução cancelada.",
   "The core could not start. Check your installation and settings.":
-    "O núcleo não iniciou. Verifique a instalação e as configurações.",
+    "O processo do agente falhou ao iniciar. Verifique as Configurações ou reinstale.",
 } as const;

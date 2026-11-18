@@ -6,6 +6,7 @@
   import type { SubagentView } from "../lib/run/subagents.svelte";
   import { subagentStatus } from "../lib/subagent-presentation";
   import Icon from "./Icon.svelte";
+  import MorphIcon from "./MorphIcon.svelte";
   import PanelTabs, { type PanelTab } from "./PanelTabs.svelte";
   import SessionState from "./SessionState.svelte";
   import type { ModuleSurface } from "../../../shared/modules";
@@ -56,7 +57,7 @@
         aria-pressed={split} aria-label={t("Conversation and panel side by side")}
         data-tooltip={split ? t("Show only the selected panel") : t("Show the conversation and selected panel side by side")}
         onclick={onToggleSplit}>
-        <Icon name="panel-right" size={16} /><span>{t("Side by side")}</span>
+        <MorphIcon name={split ? "panel-right-close" : "panel-right-open"} size={16} /><span>{t("Side by side")}</span>
       </button>
     {/if}
   </div>

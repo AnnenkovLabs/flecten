@@ -1,8 +1,11 @@
+import interactionNotice from "../../prompts/summary-interaction-notice.md" with { type: "text" };
 import type { SessionState } from "../../shared/session-state";
+import type { SummaryInteraction } from "../../shared/summary-interaction";
 import { createEventBus } from "../core/session/event-bus";
 import type { SessionHandle, SessionOptions } from "../core/session/session";
 import type { Command, Event, Message, RoutedCommand, SessionId } from "../core/types";
 import { EventJournal, type JournalReplay, type StampedEvent } from "./event-journal";
+import { SummaryInteractions } from "./summary-interactions";
 
 export type StampedListener = (event: StampedEvent) => void;
 
@@ -54,6 +57,8 @@ export class SessionPool implements SessionHandle {
   readonly #journal: EventJournal;
   readonly #used = new Map<SessionHandle, number>();
   readonly #editing = new Set<SessionId>();
+  readonly #summaryInteractions: SummaryInteractions;
+  #summaryWake: ReturnType<typeof setImmediate> | undefined;
   #fresh: Promise<SessionHandle> | undefined;
   #focused: SessionHandle | undefined;
   #creating: Promise<unknown> = Promise.resolve();
@@ -61,6 +66,10 @@ export class SessionPool implements SessionHandle {
   constructor(options: SessionPoolOptions) {
     this.#options = options;
     this.#journal = new EventJournal(options.secrets);
+    this.#summaryInteractions = new SummaryInteractions(
+      () => this.#scheduleSummaryWake(),
+      options.secrets ?? (() => []),
+    );
   }
 
   /** Listeners get every event of every session, numbered for replay. */
@@ -88,6 +97,8 @@ export class SessionPool implements SessionHandle {
     const target = command.sessionId ?? this.#focused?.getSessionId();
     if (target && this.#editing.has(target)) throw new Error("Conversation history is changing");
     if (command.type === "run") return this.#run(command);
+    if (command.type === "stop" && target && !command.target)
+      this.#summaryInteractions.cancelPending(target);
     if (command.sessionId === undefined && isApproval(command)) return this.#approve(command);
     const handle = await this.#route(command.sessionId);
     if (handle.getSessionId() && this.#editing.has(handle.getSessionId() as string))
@@ -97,6 +108,51 @@ export class SessionPool implements SessionHandle {
     const sessionId = handle.getSessionId();
     if (sessionId) this.#handles.set(sessionId, handle);
     return result;
+  }
+
+  receiveSummaryInteraction(sessionId: string, summaryId: string, event: SummaryInteraction): void {
+    if (this.#handles.has(sessionId) && !this.#editing.has(sessionId))
+      this.#summaryInteractions.receive(sessionId, summaryId, event);
+  }
+
+  takeSummaryContext(sessionId: string) {
+    return this.#summaryInteractions.take(sessionId, true);
+  }
+
+  #scheduleSummaryWake(): void {
+    if (this.#summaryWake || this.#summaryInteractions.pending().length === 0) return;
+    this.#summaryWake = setImmediate(() => {
+      this.#summaryWake = undefined;
+      let available =
+        this.#options.maxActive() -
+        [...this.#handles.values()].filter((handle) => handle.isBusy()).length;
+      for (const id of this.#summaryInteractions.pending()) {
+        if (available <= 0) break;
+        const handle = this.#handles.get(id);
+        if (!handle || this.#editing.has(id) || handle.isBusy()) continue;
+        const context = this.#summaryInteractions.take(id, false);
+        if (!context) continue;
+        available--;
+        void handle
+          .send({
+            type: "run",
+            sessionId: id,
+            prompt: interactionNotice.trim(),
+            internal: true,
+            summaryWake: true,
+            contexts: [context],
+          })
+          .catch((error: unknown) =>
+            this.publish({
+              type: "error",
+              sessionId: id,
+              code: "summary_interaction_failed",
+              message: String(error),
+            }),
+          );
+      }
+    });
+    this.#summaryWake.unref?.();
   }
 
   /** Excludes sends while a history change closes both roles and starts its replacement run. */
@@ -177,6 +233,7 @@ export class SessionPool implements SessionHandle {
 
   /** Closes the handle of a deleted session; the caller makes sure it is not running. */
   async close(sessionId: SessionId): Promise<void> {
+    this.#summaryInteractions.clear(sessionId);
     const handle = this.#handles.get(sessionId);
     if (!handle) return;
     this.#handles.delete(sessionId);
@@ -186,6 +243,8 @@ export class SessionPool implements SessionHandle {
   }
 
   async dispose(): Promise<void> {
+    clearImmediate(this.#summaryWake);
+    this.#summaryInteractions.dispose();
     const handles = this.#all();
     await Promise.all(
       handles.map((handle) => handle.send({ type: "stop" }).catch(() => undefined)),
@@ -204,7 +263,7 @@ export class SessionPool implements SessionHandle {
       const running = [...this.#handles.values()].filter((handle) => handle.isBusy()).length;
       if (running >= this.#options.maxActive()) {
         throw new Error(
-          `Одновременно идёт задач: ${running}, это лимит sessions.maxConcurrent. Дождитесь одной или остановите её.`,
+          `${running} tasks are already running (sessions.maxConcurrent limit). Wait for one to finish or stop it.`,
         );
       }
     }
@@ -281,6 +340,12 @@ export class SessionPool implements SessionHandle {
         this.#handles.set(event.sessionId, handle);
       }
       this.publish(event);
+      if (
+        event.type === "session.finished" ||
+        event.type === "message.finished" ||
+        (event.type === "worker.event" && event.event.type === "session.finished")
+      )
+        this.#scheduleSummaryWake();
     });
     return handle;
   }
@@ -307,6 +372,7 @@ export class SessionPool implements SessionHandle {
     idle.sort(([, left], [, right]) => (this.#used.get(left) ?? 0) - (this.#used.get(right) ?? 0));
     for (const [sessionId, handle] of idle.slice(0, idle.length - MAX_IDLE_HANDLES)) {
       this.#handles.delete(sessionId);
+      this.#summaryInteractions.clear(sessionId);
       this.#journal.forget(sessionId);
       void handle.dispose().catch(() => undefined);
     }

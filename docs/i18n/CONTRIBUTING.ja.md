@@ -4,11 +4,10 @@
 
 ## 準備
 
-Bun 1.4 と Node 20 以降が必要です。Node は Electron にのみ必要です。
+Bun 1.4.4 と Node 22.12 以降が必要です。Node は Electron にのみ必要です。
 
 ```bash
 bun install
-bun run dev help
 bun run app:dev
 ```
 
@@ -21,6 +20,7 @@ bun test
 bun run check
 bun run lint
 bun run build:ui
+bun run build:agent
 ```
 
 ウィンドウを変更した場合は、スクリーンショットを添付するか、1480x940 と 1180x640 でのブラウザ確認を記述してください。状態を確認: 空、読み込み中、停止、reduced motion。
@@ -41,9 +41,8 @@ bun run build:ui
 
 - 視覚的な動作を変える前に `design.md` を読んでください。
 - コンポーネントは `ui/src/components`、状態と純粋関数は `ui/src/lib` に置きます。
-- デモデータは `ui/src/lib/demo.ts` でのみ変更します。コンポーネントはそのデータのコピーを保持しません。
 - トークン、フォント、基本スタイルは `ui/src/app.css` に置きます。2 つ目のトークンセットを追加しないでください。
-- 新しいコンポーネントは props でデータを受け取ります。`demo.ts` の直接インポートは画面コンテナでのみ許可されます。
+- 画面データは `ui/src/lib/run.svelte.ts` と props から受け取り、コンポーネントは `core`、`store`、`tools` をインポートしません。
 - インタラクティブ要素はキーボードで操作でき、`aria-label` または可視ラベルを持ちます。
 - 状態の理解にアニメーションは不要です。`prefers-reduced-motion` は静止フレームを残す必要があります。
 

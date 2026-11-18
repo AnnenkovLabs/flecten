@@ -1,6 +1,5 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "The model accepts attachments.": "模型支持接收附件。",
   "Price per 1M tokens": "每百万 token 价格",
   "Cache read": "缓存读取",
   "Cache write": "缓存写入",
@@ -22,7 +21,8 @@ export default {
   "Expected an array of strings": "需要字符串数组",
   "Advanced protocol settings": "协议高级设置",
   "Reasoning, requests, and raw JSON.": "推理、请求和原始 JSON。",
-  "How to send and store reasoning between turns.": "设置如何在对话轮次之间发送和保存推理内容。",
+  "How to send and store reasoning between turns.":
+    "适用于 OpenAI 兼容服务端（DeepSeek、Qwen、GLM、vLLM）的推理字段覆盖。无特殊要求请保持“自动”。",
   "Resend reasoning": "重新发送推理内容",
   "Do not send": "不发送",
   "Reasoning details": "推理详情",
@@ -39,7 +39,6 @@ export default {
   Keep: "保留",
   Clear: "清除",
   "Request mode": "请求模式",
-  "What to send with the response and how to call tools.": "设置随回复发送的内容及工具调用方式。",
   "Parallel tool calls": "并行调用工具",
   "Cache prompt": "缓存提示词",
   "The provider reuses the shared request prefix.": "服务商会复用请求中的公共前缀。",
@@ -51,27 +50,20 @@ export default {
   "The app runs a command and reads the API key from its output. Useful for short-lived tokens.":
     "程序将执行命令，并从输出中读取密钥。适用于短期有效的令牌。",
   "Get API key from command": "从命令获取密钥",
-  "Instead of the key in the Access field.": "替代“访问”字段中的密钥。",
+  "Instead of the key in the Access field.": "覆盖静态 API 密钥与环境变量。",
   "Arguments (JSON array)": "参数（JSON 数组）",
-  "Timeout, ms": "超时时间（毫秒）",
-  "Key refresh interval, ms": "密钥刷新间隔（毫秒）",
+  "Timeout, ms": "超时 (ms)",
+  "Key refresh interval, ms": "令牌刷新间隔 (ms)",
   "Raw overrides": "原始覆盖设置",
   "Added to every request. For custom servers.": "添加到每个请求中，用于非标准服务器。",
   "Headers (JSON)": "请求头（JSON）",
   "Request body (JSON)": "请求体（JSON）",
-  "The model calls read, write, bash, and other tools.": "模型可调用 read、write、bash 等工具。",
-  "Understands images in the input.": "可理解输入中的图片。",
   Temperature: "温度",
-  "Accepts the temperature parameter.": "支持 temperature 参数。",
-  "Responds using the specified JSON schema.": "按指定的 JSON 结构回复。",
   "WAV and MP3 via Chat Completions, audio files via Gemini.":
-    "通过 Chat Completions 接收 WAV 和 MP3，通过 Gemini 接收音频文件。",
+    "Chat Completions 支持 WAV/MP3，Gemini 支持音频文件。",
   "Prompt cache": "提示词缓存",
-  "The provider caches the shared request prefix.": "服务商会缓存请求中的公共前缀。",
   "Parallel calls": "并行调用",
-  "Multiple tools in one turn.": "一轮内调用多个工具。",
   "Reasoning between calls": "调用间推理",
-  "The model reasons after receiving a tool result.": "模型在收到工具结果后进行推理。",
   "Hide from selection": "在选择列表中隐藏",
   Capabilities: "能力",
   Test: "验证",
@@ -107,4 +99,6 @@ export default {
     "系统会从 API 获取模型列表，并从目录补充上下文和能力信息。",
   "Provider added without checking. Add models manually in the Models tab.":
     "已添加提供商，未进行检查。请在“模型”选项卡中手动添加模型。",
+  "Auto-filled from the model catalog. Override when a proxy or custom endpoint differs.":
+    "根据模型目录自动填写。若代理或自定义端点行为不同，可手动覆盖。",
 } as const;

@@ -37,7 +37,49 @@ function normalizeEndings(text: string): string {
 function lineEndingAt(body: string, offset: number): "\n" | "\r\n" {
   const newline = body.indexOf("\n", offset);
   if (newline > 0 && body[newline - 1] === "\r") return "\r\n";
+  if (newline < 0 && body.includes("\r\n")) return "\r\n";
   return "\n";
+}
+
+function lineNumberAt(body: string, offset: number): number {
+  let line = 1;
+  for (let index = 0; index < offset && index < body.length; index += 1) {
+    if (body[index] === "\n") line += 1;
+  }
+  return line;
+}
+
+function stripReadLinePrefix(line: string): string | undefined {
+  let index = 0;
+  while (index < line.length && line[index] === " ") index += 1;
+  const digitStart = index;
+  while (index < line.length) {
+    const ch = line[index] ?? "";
+    if (ch >= "0" && ch <= "9") index += 1;
+    else break;
+  }
+  if (index === digitStart || line[index] !== ":") return undefined;
+  return line[index + 1] === " " ? line.slice(index + 2) : line.slice(index + 1);
+}
+
+function mismatchHint(body: string, oldString: string): string {
+  const oldLines = oldString.split("\n");
+  const stripped = oldLines.map(stripReadLinePrefix);
+  if (stripped.every((entry): entry is string => entry !== undefined)) {
+    const candidate = stripped.join("\n");
+    if (candidate.length > 0 && findMatches(body, candidate).length > 0) {
+      return ' Hint: remove the "N: " line-number prefixes copied from read output.';
+    }
+  }
+  const firstTrimmed = oldLines.map((line) => line.trim()).find((line) => line.length >= 4);
+  if (!firstTrimmed) return "";
+  const bodyLines = normalizeEndings(body).split("\n");
+  for (let index = 0; index < bodyLines.length; index += 1) {
+    if ((bodyLines[index] ?? "").trim() === firstTrimmed) {
+      return ` Hint: nearest matching line is around line ${index + 1}; check exact indentation and surrounding lines.`;
+    }
+  }
+  return "";
 }
 
 function matchEnding(body: string, start: number, end: number): "\n" | "\r\n" {
@@ -236,14 +278,19 @@ export async function runEdit(
       return {
         ok: false,
         output: "",
-        error: `${label}Could not find oldString in the file. It must match exactly, including whitespace and surrounding context.`,
+        error: `${label}Could not find oldString in the file. It must match exactly, including whitespace and surrounding context.${mismatchHint(body, oldString)}`,
       };
     }
     if (matches.length > 1 && !hunk.replaceAll) {
+      const sampleLines = matches
+        .slice(0, 5)
+        .map((match) => lineNumberAt(body, match.start))
+        .join(", ");
+      const suffix = matches.length > 5 ? ", ..." : "";
       return {
         ok: false,
         output: "",
-        error: `${label}oldString matches ${matches.length} places. Add surrounding context or set replaceAll to true.`,
+        error: `${label}oldString matches ${matches.length} places (lines ${sampleLines}${suffix}). Add surrounding context or set replaceAll to true.`,
       };
     }
 
@@ -299,7 +346,7 @@ export async function runEdit(
       });
       checkpointId = checkpoint.id;
     } catch (error) {
-      checkpointNote = `\nCheckpoint не создан: ${error instanceof Error ? error.message : String(error)}`;
+      checkpointNote = `\nCheckpoint skipped: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
 
@@ -318,7 +365,7 @@ export async function runEdit(
     try {
       await context.checkpoints.recordAfter(checkpointId);
     } catch (error) {
-      checkpointNote += `\nCheckpoint не завершён: ${error instanceof Error ? error.message : String(error)}`;
+      checkpointNote += `\nCheckpoint incomplete: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
 

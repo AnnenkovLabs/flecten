@@ -55,7 +55,7 @@ function failed(host: ApprovalHost, error: unknown): void {
   host.error = error instanceof Error ? error.message : String(error);
 }
 
-/** The waiting call itself goes on or stops; «Всегда» also saves a precise rule in the core. */
+/** Resolves the waiting call; "allow_always" also persists a scoped rule in config. */
 export async function respondApproval(
   host: ApprovalHost,
   id: string,

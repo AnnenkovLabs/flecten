@@ -45,7 +45,9 @@ export function voiceService(config: () => HarnessConfig) {
     const id = providerId ?? (current.voice?.provider || current.provider);
     const provider = current.providers[id];
     if (!provider || !["openai-chat", "openai-responses"].includes(provider.protocol)) {
-      throw new Error("Выберите провайдера распознавания в Настройки → Общее → Голосовой ввод.");
+      throw new Error(
+        "Select a speech recognition provider in Settings -> General -> Voice input.",
+      );
     }
     return { current, id, provider };
   }
@@ -65,7 +67,7 @@ export function voiceService(config: () => HarnessConfig) {
         return {
           engine,
           providerId: engine,
-          provider: engine === "vosk" ? "Vosk · локально" : "faster-whisper · локально",
+          provider: engine === "vosk" ? "Vosk · local" : "faster-whisper · local",
           model: localModel(engine, options),
           language: currentConfig.voice?.language ?? "auto",
         };
@@ -81,7 +83,7 @@ export function voiceService(config: () => HarnessConfig) {
     },
     async transcribe(input: unknown): Promise<string> {
       const { id: recordingId, audio, mimeType, destination } = AudioInput.parse(input);
-      if (pending.size > 0) throw new Error("Дождитесь завершения распознавания.");
+      if (pending.size > 0) throw new Error("Transcription already in progress.");
       const currentConfig = config();
       const engine = destination?.engine ?? currentConfig.voice?.engine ?? "api";
       const controller = new AbortController();
@@ -92,11 +94,11 @@ export function voiceService(config: () => HarnessConfig) {
           bytes.length > (engine === "api" ? 2 * 1024 * 1024 : 2_900_044) ||
           bytes.toString("base64") !== audio
         ) {
-          throw new Error("Запись слишком большая или повреждена. Запишите до 90 секунд.");
+          throw new Error("Recording exceeds 90 seconds or is corrupted.");
         }
         if (engine !== "api") {
           if (mimeType !== "audio/wav")
-            throw new Error("Для локального ввода нужен WAV PCM16, 16000 Гц.");
+            throw new Error("Local speech recognition requires 16 kHz mono PCM16 WAV.");
           const options = LocalVoiceOptionsSchema.parse(currentConfig.voice?.local ?? {});
           return await transcribeLocalVoice(
             engine,
@@ -136,7 +138,7 @@ export function voiceService(config: () => HarnessConfig) {
         });
         const url = new URL(provider.baseUrl);
         if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
-          throw new Error("Укажите HTTP или HTTPS адрес провайдера без пароля в URL.");
+          throw new Error("Use an HTTP or HTTPS URL without embedded credentials.");
         }
         if (!url.pathname.endsWith("/")) url.pathname += "/";
         url.pathname += "audio/transcriptions";
@@ -155,8 +157,7 @@ export function voiceService(config: () => HarnessConfig) {
       const { id, ...options } = LocalVoiceRequestSchema.extend({ id: z.string().uuid() }).parse(
         input,
       );
-      if (pending.size > 0)
-        throw new Error("Уже выполняется установка или распознавание. Дождитесь завершения.");
+      if (pending.size > 0) throw new Error("Voice setup or transcription is already running.");
       const controller = new AbortController();
       pending.set(id, controller);
       try {

@@ -114,7 +114,9 @@ export function subagentChildRunner(runtime: ChildRuntime) {
           }
         : {}),
       ...(runtime.modules ? { modules: runtime.modules } : {}),
-      ...(runtime.memory ? { memory: readOnlyMemory(runtime.memory) } : {}),
+      ...(runtime.memory && allowed.has("memory")
+        ? { memory: readOnlyMemory(runtime.memory) }
+        : {}),
       ...(runtime.dictionary ? { dictionary: runtime.dictionary } : {}),
       cwd: runtime.cwd,
       secrets: () => configSecrets(runtime.config()),
@@ -138,7 +140,7 @@ export function subagentChildRunner(runtime: ChildRuntime) {
       systemParts: built.systemParts,
       responseFormat: "structured",
       budgets: {
-        maxTokens: request.budget.maxTokens,
+        maxTokens: request.budget.maxTokens * 3,
         ...(request.budget.maxCost === undefined ? {} : { maxCostUsd: request.budget.maxCost }),
       },
       price: usagePrice(childConfig),
@@ -164,6 +166,9 @@ export function subagentChildRunner(runtime: ChildRuntime) {
       approvalTimeoutMs: 0,
       ...(request.parentApprovals ? { inheritedApprovals: request.parentApprovals } : {}),
       ...(request.approvalSessionId ? { approvalSessionId: request.approvalSessionId } : {}),
+      ...(request.parentReads && childTools.list().some((tool) => tool.mutating)
+        ? { reads: request.parentReads }
+        : {}),
       permissionActor: request.spec.id,
       ...(request.permissionIntent ? { permissionIntent: request.permissionIntent } : {}),
       terminal: terminalSettings(config),

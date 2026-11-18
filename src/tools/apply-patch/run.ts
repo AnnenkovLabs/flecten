@@ -76,20 +76,27 @@ function validateFiles(files: PatchFile[]): void {
     if (file.path.length === 0) throw new Error(`Line ${file.line}: empty file path`);
     claim(file.path, file.line);
     if (file.kind !== "update") continue;
+    if (file.hunks.length > 1) {
+      file.hunks = file.hunks.filter((hunk) => hunk.lines.length > 0);
+    }
     if (file.hunks.length === 0 && file.moveTo === undefined) {
       throw new Error(
         `Line ${file.line}: Update File needs at least one @@ hunk or a *** Move to line`,
       );
     }
+    let sawChange = false;
     for (const [index, hunk] of file.hunks.entries()) {
       if (hunk.lines.length === 0) {
         throw new Error(`Line ${file.line}: hunk ${index + 1} is empty`);
       }
-      if (!hunk.lines.some((line) => line.kind === "add" || line.kind === "delete")) {
-        throw new Error(
-          `Line ${file.line}: hunk ${index + 1} has no changed lines; a hunk needs + or - lines`,
-        );
+      if (hunk.lines.some((line) => line.kind === "add" || line.kind === "delete")) {
+        sawChange = true;
       }
+    }
+    if (!sawChange && file.moveTo === undefined) {
+      throw new Error(
+        `Line ${file.line}: Update File has no changed lines; at least one hunk needs + or - lines`,
+      );
     }
     if (file.moveTo !== undefined) {
       if (file.moveTo === file.path) {
@@ -233,8 +240,19 @@ function applyHunks(label: string, previous: string, hunks: Hunk[]): string {
       }
     }
     if (at < 0) {
+      const firstTrimmed = expected.map((line) => line.trim()).find((line) => line.length >= 4);
+      const near =
+        firstTrimmed === undefined
+          ? -1
+          : lines.findIndex((line, lineIndex) => lineIndex >= 0 && line.trim() === firstTrimmed);
+      const hint =
+        near >= 0 && near < cursor
+          ? ` (matched earlier at line ${near + 1}; hunks must be in ascending file order)`
+          : near >= 0
+            ? ` (nearest trimmed match around line ${near + 1})`
+            : "";
       throw new Error(
-        `Hunk ${index + 1} for ${label} does not match the current file; read the file again and rebuild the patch`,
+        `Hunk ${index + 1} for ${label} does not match the current file${hint}; read the file again and rebuild the patch`,
       );
     }
     lines.splice(at, expected.length, ...replacement);
@@ -360,12 +378,18 @@ export async function runApplyPatch(
 
       if (file.kind === "delete") {
         if (previous === null) throw new Error(`Delete File: ${file.path} not found`);
+        if (context.reads.verify(path, previous) === "changed") {
+          throw new Error(`${file.path} changed after it was read. Read it again before patching.`);
+        }
         changes.push({ path, display, previous, content: null });
         summaries.push({ path: display, state: "D", ...summarize(previous, "") });
         continue;
       }
 
       if (previous === null) throw new Error(`Update File: ${file.path} not found`);
+      if (context.reads.verify(path, previous) === "changed") {
+        throw new Error(`${file.path} changed after it was read. Read it again before patching.`);
+      }
       const content =
         file.hunks.length === 0 ? previous : applyHunks(file.path, previous, file.hunks);
 
@@ -420,7 +444,7 @@ export async function runApplyPatch(
       });
       checkpointId = checkpoint.id;
     } catch (error) {
-      checkpointNote = `\nCheckpoint не создан: ${message(error)}`;
+      checkpointNote = `\nCheckpoint skipped: ${message(error)}`;
     }
   }
 
@@ -439,7 +463,7 @@ export async function runApplyPatch(
     try {
       await context.checkpoints.recordAfter(checkpointId);
     } catch (error) {
-      checkpointNote += `\nCheckpoint не завершён: ${message(error)}`;
+      checkpointNote += `\nCheckpoint incomplete: ${message(error)}`;
     }
   }
 

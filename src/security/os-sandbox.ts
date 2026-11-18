@@ -79,9 +79,9 @@ export function detectSandbox(options: DetectSandboxOptions = {}): SandboxDetect
   if (platform === "linux") {
     const command = which("bwrap");
     if (command !== null) {
-      return { kind: "bubblewrap", command, reason: `bwrap найден: ${command}.` };
+      return { kind: "bubblewrap", command, reason: `bwrap found: ${command}.` };
     }
-    return { kind: "none", reason: "bwrap не найден: OS-level sandbox недоступен." };
+    return { kind: "none", reason: "bwrap not found; OS sandbox unavailable." };
   }
 
   if (platform === "darwin") {
@@ -89,18 +89,18 @@ export function detectSandbox(options: DetectSandboxOptions = {}): SandboxDetect
       return {
         kind: "seatbelt",
         command: SANDBOX_EXEC,
-        reason: `sandbox-exec найден: ${SANDBOX_EXEC}.`,
+        reason: `sandbox-exec found: ${SANDBOX_EXEC}.`,
       };
     }
     return {
       kind: "none",
-      reason: `${SANDBOX_EXEC} не найден: OS-level sandbox недоступен.`,
+      reason: `${SANDBOX_EXEC} not found; OS sandbox unavailable.`,
     };
   }
 
   return {
     kind: "none",
-    reason: `Платформа ${platform} не поддерживает OS-level sandbox.`,
+    reason: `OS sandbox is not supported on ${platform}.`,
   };
 }
 
@@ -253,7 +253,7 @@ export async function runSandboxed(options: RunSandboxOptions): Promise<RunSandb
       supported: false,
       exitCode: null,
       output: "",
-      reason: `Не удалось запустить ${detection.kind}: ${errorMessage(cause)}.`,
+      reason: `Failed to start ${detection.kind}: ${errorMessage(cause)}.`,
     };
   }
 

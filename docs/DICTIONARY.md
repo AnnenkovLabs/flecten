@@ -1,21 +1,21 @@
-# Словарь
+# Dictionary
 
-Словарь уточняет значение терминов перед обращением к модели. Пользователь пишет обычный запрос, а харнесс добавляет только найденные определения отдельным блоком контекста. Исходное сообщение сохраняется буквально. Для поиска определений отдельный запрос модели не нужен.
+The dictionary resolves domain terms before sending a request to the model. Users write natural prompts, and the harness injects matched definitions as a separate context block while preserving the raw user message verbatim. Looking up definitions requires no extra model call.
 
-## Публичный словарь
+## Public Dictionary
 
-Общий источник: [AnnenkovLabs/flecten, src/dictionary/data](https://github.com/AnnenkovLabs/flecten/tree/main/src/dictionary/data).
+Shared upstream source: [AnnenkovLabs/flecten, src/dictionary/data](https://github.com/AnnenkovLabs/flecten/tree/main/src/dictionary/data).
 
-- `src/dictionary/data/index.json` перечисляет категории.
-- `src/dictionary/data/design.json` содержит термины дизайна.
-- `src/dictionary/data/ai-development.json` содержит термины работы с ИИ и разработки.
-- Остальные категории охватывают агентов, модели, бенчмарки, MCP, CSS и web-платформу, инструменты разработки, инфраструктуру, мобильные платформы и продуктовые понятия.
+- `src/dictionary/data/index.json` lists category files.
+- `src/dictionary/data/design.json` contains design terminology.
+- `src/dictionary/data/ai-development.json` contains AI and software engineering terminology.
+- Remaining categories cover agents, models, benchmarks, MCP, CSS and the web platform, developer tooling, infrastructure, mobile platforms, and product concepts.
 
-Из пользовательского архива `mera-os-public-0.3.9.zip` перенесено 111 записей файла `mera-os-public/os/memory/terms.jsonl`. Два совпадения, Liquid Glass и Vibe coding, сохраняют существующие определения. Источник архива: версия 0.3.9, снимок от 11 сентября 2026 года; SHA-256 `f512595698f3190edc05ddfa805fb03ef8e74a3de564f294fa15f6d68e8db489`. У записей сохранены исходные HTTPS-источники и пояснения частых ошибок. Статусы и версии в этих определениях относятся к снимку архива.
+111 entries were imported from `mera-os-public/os/memory/terms.jsonl` in `mera-os-public-0.3.9.zip` (version `0.3.9`, snapshot dated September 11, 2026; SHA-256 `f512595698f3190edc05ddfa805fb03ef8e74a3de564f294fa15f6d68e8db489`). Two overlapping entries, `Liquid Glass` and `Vibe coding`, kept their existing definitions. Imported entries retain their original HTTPS sources and common-pitfall clarifications; version and status notes in those definitions reflect the archive snapshot.
 
-Oh My Pi добавлен отдельно по [репозиторию проекта](https://github.com/can1357/oh-my-pi). Запись включает OMP/ОМП, падежные и украинские формы, сайт и имя пакета, а также все 80 сочетаний частей `о | оу | ох | oh | o`, `my | май | маи | ма` и `пай | паи | пи | pi`. Пробелы, дефисы, слитное написание и регистр обрабатываются общим сопоставлением. Всего в поставке 114 определений.
+`Oh My Pi` was added from [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi). The entry covers `OMP` (in both Latin and Cyrillic scripts), Russian and Ukrainian inflected forms, the website and package name, and all 80 phonetic and transliterated combinations of its three parts (`oh`/`o`, `my`, `pi`). Spaces, hyphens, concatenated spelling, and case are handled by the shared matcher. The bundled dataset totals 114 definitions.
 
-Индекс:
+Index format:
 
 ```json
 {
@@ -24,7 +24,7 @@ Oh My Pi добавлен отдельно по [репозиторию прое
 }
 ```
 
-Файл категории:
+Category file format:
 
 ```json
 {
@@ -34,50 +34,50 @@ Oh My Pi добавлен отдельно по [репозиторию прое
     {
       "id": "liquid-glass",
       "term": "Liquid Glass",
-      "aliases": ["ликвид гласс", "жидкое стекло"],
+      "aliases": ["liquid glass ui", "apple liquid glass"],
       "category": "design",
-      "definition": "Определение технологии и её назначение.",
-      "clarification": "Что помогает отличить термин от похожих понятий.",
+      "definition": "Concise description of the technology and its purpose.",
+      "clarification": "Distinguishes the term from similarly named concepts.",
       "sources": ["https://developer.apple.com/documentation/technologyoverviews/liquid-glass"]
     }
   ]
 }
 ```
 
-`id` стабилен при изменении определения. `category` совпадает с категорией файла. `aliases` содержат до 128 явных синонимов, переводов, транслитераций и нужных падежных форм. `clarification` необязателен. `sources` содержат HTTPS-ссылки для проверки смысла.
+`id` remains stable when a definition is edited. `category` must match the enclosing file's category. `aliases` holds up to 128 explicit synonyms, translations, transliterations, and inflected forms. `clarification` is optional. `sources` lists HTTPS URLs for verification.
 
-Начальные определения встроены в бинарник через JSON imports, поэтому Liquid Glass и vibe coding доступны без сети. Обновление читает raw GitHub из ветки `main`. Оно проверяет индекс, каждый файл, уникальность идентификаторов и общий лимит. Только полностью проверенный набор атомарно заменяет `.flecten/dictionary/public.json`. При сетевой ошибке или ошибке схемы остаётся последняя исправная версия, а интерфейс показывает причину и действие для повтора. Автоматическое обновление ограничено одной попыткой в 24 часа, ручное обновление можно запустить сразу.
+Seed definitions are compiled into the binary via JSON imports, so entries like `Liquid Glass` and `vibe coding` work offline. Sync fetches raw files from the `main` branch on GitHub, validates the index, every category file, ID uniqueness, and global caps, and atomically replaces `.flecten/dictionary/public.json` only when the entire set passes validation. On network or schema failure, the last known-good snapshot remains active and the UI displays the failure reason with a retry action. Automatic sync runs at most once every 24 hours; manual sync runs immediately.
 
-Сохранённый или загруженный публичный набор дополняет встроенные определения по `id` и заменяет совпавшие публичные записи. Поэтому старый кэш или ещё не обновлённый удалённый индекс не скрывают новые встроенные термины. Локальное определение по-прежнему имеет высший приоритет.
+Saved or downloaded public snapshots merge over bundled entries by `id`, replacing matching public definitions without hiding newer bundled entries missing from an older cache or remote index. Local definitions always take highest precedence.
 
-Лимиты: до 40 файлов категорий, 512 КиБ на ответ, 4 МиБ на сохранённый набор и 5000 публичных записей. Перенаправления запросов запрещены. Имена файлов допускают только строчные латинские буквы, цифры, дефис и расширение `.json`.
+Limits: up to 40 category files, 512 KiB per HTTP response, 4 MiB for the stored dataset, and 5,000 public entries. HTTP redirects are rejected. Category filenames allow only lowercase ASCII letters, digits, hyphens, and the `.json` extension.
 
-## Локальный словарь
+## Local Dictionary
 
-Локальная запись использует ту же схему определения `DictionaryEntry`, что публичная. Она хранится в проектной памяти `.flecten/memory.json` как запись `kind: "vocabulary"`, с ключом `dictionary/<id>` и структурированным полем `dictionary`. Источник и ревизия приходят из памяти, поэтому для локального словаря действуют существующие доказательства, атомарная запись, проверка ревизий, удаление и восстановление памяти.
+Local entries share the `DictionaryEntry` schema and live in project memory (`.flecten/memory.json`) as `kind: "vocabulary"` records keyed by `dictionary/<id>` with a structured `dictionary` payload. Provenance and revisions come from the memory store, giving local dictionary entries the same evidence checks, atomic writes, compare-and-swap revisions, deletion, and recovery guarantees.
 
-Раздел словаря позволяет создавать и редактировать определения без JSON. Агент может сохранить неизвестный термин через инструмент памяти, опираясь на буквальное пояснение пользователя или проверенный источник. Простое упоминание неизвестного слова само по себе не создаёт определение. Локальные значения остаются в проекте и не отправляются в публичный репозиторий. Локальное определение с тем же `id` имеет приоритет над публичным.
+The dictionary UI supports creating and editing entries without editing JSON. The agent can also persist an unfamiliar term via the `memory` tool when backed by a verbatim user explanation or a verified source; merely mentioning an unknown word never creates an entry. Local definitions remain scoped to the project, are never sent to the public repository, and override public entries with the same `id`.
 
-## Как находится термин
+## Term Matching
 
-1. Unicode NFKC приводит совместимые формы символов к общей форме; сравнение не зависит от регистра.
-2. `Intl.Segmenter` задаёт границы слов. Пробелы и распространённые виды дефиса объединяют части названия. `vibe coding`, `vibe-coding` и `vibecoding` находят одно определение.
-3. Английская, русская и украинская раскладки исправляются по таблицам физических клавиш для названий длиной от пяти символов. Например, `мшиусщвштп` соответствует `vibecoding`.
-4. Для терминов длиной 8-64 символа допускается одна вставка, пропуск, замена или перестановка соседних букв. Если одинаково подходят разные определения, исправление не применяется. Пунктуация не исправляется как опечатка.
-5. Явные совпадения имеют преимущество перед исправленными. Среди одинаково точных совпадений сначала берётся самая длинная фраза, пересечения исключаются, повторные упоминания дают одно определение.
+1. Unicode NFKC normalizes compatibility characters; matching is case-insensitive.
+2. `Intl.Segmenter` establishes word boundaries. Spaces and common hyphen variants join multi-word terms, so `vibe coding`, `vibe-coding`, and `vibecoding` resolve to the same entry.
+3. Physical key-map tables recover terms of 5+ characters typed in the wrong keyboard layout across English, Russian, and Ukrainian layouts (for example, typing `vibecoding` while a Russian layout is active still matches `vibecoding`).
+4. Terms of 8-64 characters tolerate a single edit (insertion, deletion, substitution, or adjacent transposition). Ambiguous corrections that match multiple entries equally are rejected. Punctuation is never treated as a typo.
+5. Exact matches take priority over corrected matches. Among equally exact matches, the longest phrase wins, overlapping spans are discarded, and repeated mentions emit the definition once.
 
-Система не угадывает перевод, намерение пользователя или неизвестное значение. Переводы и транслитерации задаются в `aliases`. Для коротких слов нет нечёткого поиска. Исправление двух и более опечаток сознательно ограничено: при необходимости можно расширить алгоритм на основании измерений ложных совпадений.
+The matcher never guesses translations, user intent, or unknown meanings; translations and transliterations belong in `aliases`. Short words skip fuzzy matching, and edit distance of two or more is intentionally disabled unless justified by false-positive measurements.
 
-Контекст определения справочный. Он объясняет термин и не предоставляет инструментам права, не меняет инструкции пользователя и не должен выполнять команды из текста определения.
+Dictionary context is strictly informational: it explains terminology without granting tool permissions, altering user instructions, or authorizing commands mentioned inside a definition.
 
-Совпадение написания предлагает возможный смысл. Модель разрешает неоднозначность по полному запросу, разговору, рабочей папке, файлам проекта и доступному окружению. Запись Oh My Pi прямо отличает ИИ-харнесс от Oh My Posh, инструмента тем командной строки, и напоминает о других значениях OMP, включая OpenMP. Знакомое название не служит основанием автоматически исправлять незнакомое; вопрос нужен только при существенной неоднозначности, которую контекст не разрешает.
+A lexical match proposes a candidate meaning; the model disambiguates using the full prompt, conversation history, working directory, project files, and environment. For example, the `Oh My Pi` entry distinguishes the AI harness from the `Oh My Posh` shell theme engine and notes other meanings of `OMP` such as `OpenMP`. Recognizing a familiar name is not grounds to silently rewrite an unfamiliar one; the model should ask only when genuine ambiguity cannot be resolved from context.
 
-Общий блок ограничен 1200 оценочными токенами и свободным местом в контексте. Сначала убираются ссылки и необязательное пояснение, сохраняя само определение. Если даже оно не помещается, передаётся начало с явной отметкой `Definition truncated`; полная запись остаётся в словаре.
+The injected dictionary block is capped at 1,200 estimated tokens and available context headroom. `sources` and optional `clarification` fields are dropped first to preserve core definitions. If a single definition still exceeds the budget, its prefix is sent with an explicit `Definition truncated` marker while the full entry remains in the dictionary.
 
-## Реализация и проверки
+## Implementation and Tests
 
-- `shared/dictionary.ts`: общие схемы и типы записей, категорий и IPC.
-- `src/dictionary/normalize.ts`: Unicode, разделители, раскладки и одна опечатка.
-- `src/dictionary/match.ts`: разрешение определений и конфликтов.
-- `src/dictionary/public.ts`: встроенная база, загрузка, обновление и последняя исправная версия.
-- `tests/unit/dictionary.test.ts`, `dictionary-public.test.ts`: варианты написания, границы слов, коллизии и сохранность публичной базы.
+- `shared/dictionary.ts`: shared schemas and types for entries, categories, and IPC.
+- `src/dictionary/normalize.ts`: Unicode normalization, separators, keyboard layouts, and single-typo recovery.
+- `src/dictionary/match.ts`: candidate resolution and conflict handling.
+- `src/dictionary/public.ts`: bundled dataset, remote sync, validation, and last known-good fallback.
+- `tests/unit/dictionary.test.ts`, `dictionary-public.test.ts`: spelling variants, word boundaries, collisions, and public dataset integrity.

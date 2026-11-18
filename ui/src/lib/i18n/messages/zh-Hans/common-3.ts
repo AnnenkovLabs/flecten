@@ -55,14 +55,14 @@ export default {
   "Copying…": "正在复制…",
   "Save or close modified files in the IDE before switching projects":
     "切换项目前，请先在 IDE 中保存或关闭已修改的文件",
-  "Folder selection is available in the app": "可在桌面应用中选择文件夹",
+  "Folder selection is available in the app": "仅桌面版支持选择文件夹",
   "## User": "## 用户",
   "## Response": "## 回复",
   "## Work": "## 执行过程",
   "> Error: {0}": ["> 错误：", 0],
   "Conversation saved as Markdown": "对话已保存为 Markdown",
   "Enter text after /search": "请在 /search 后输入搜索内容",
-  "Search is available in the app": "可在桌面应用中搜索",
+  "Search is available in the app": "仅桌面版支持搜索",
   "“{0}” not found in the conversation": ["在对话中未找到“", 0, "”"],
   "Matches found: {0}. Press Esc to clear highlighting": ["找到 ", 0, " 处匹配。按 Esc 取消高亮"],
   "Command /{0} not found": ["未找到命令 /", 0],
@@ -70,7 +70,7 @@ export default {
   "Opening task…": "正在打开任务…",
   "Interface language": "界面语言",
   "The language of buttons, menus, and app messages. The language of agent replies is set separately.":
-    "应用中按钮、菜单和消息使用的语言。AI 助手的回复语言需单独设置。",
+    "控制菜单与界面文字；智能体回复语言单独设置。",
   "Diagram source": "图表源码",
   "Couldn't save the language setting. Your choice applies until you close the app.":
     "无法保存语言设置。所选语言在关闭应用前仍然有效。",

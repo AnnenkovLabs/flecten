@@ -94,11 +94,15 @@ function repairPath(
     return;
   }
 
-  if (type === "number" && typeof value === "string" && value.trim() !== "") {
+  if (
+    (type === "number" || type === "integer") &&
+    typeof value === "string" &&
+    value.trim() !== ""
+  ) {
     const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
+    if (Number.isFinite(parsed) && (type !== "integer" || Number.isInteger(parsed))) {
       setValue(root, path, parsed);
-      note(notes, `Coerced string \`${field}\` to a number.`);
+      note(notes, `Coerced string \`${field}\` to a ${type}.`);
     }
     return;
   }
@@ -142,9 +146,49 @@ function formatCorrection(
   return lines.join("\n");
 }
 
+function sortIssuesForRepair(issues: ToolIssue[]): ToolIssue[] {
+  return [...issues].sort((left, right) => {
+    const leftLast = left.path.at(-1);
+    const rightLast = right.path.at(-1);
+    if (typeof leftLast === "number" && typeof rightLast === "number") {
+      const leftParent = left.path.slice(0, -1).map(String).join(".");
+      const rightParent = right.path.slice(0, -1).map(String).join(".");
+      if (leftParent === rightParent) return rightLast - leftLast;
+    }
+    return 0;
+  });
+}
+
+function stripOptionalNulls(
+  value: unknown,
+  schema: JsonSchemaNode | undefined,
+  notes: string[],
+): void {
+  if (!schema) return;
+  if (Array.isArray(value)) {
+    for (const entry of value) stripOptionalNulls(entry, schema.items, notes);
+    return;
+  }
+  if (!isObject(value) || !schema.properties) return;
+  const required = new Set(schema.required ?? []);
+  for (const [key, child] of Object.entries(schema.properties)) {
+    if (!(key in value)) continue;
+    const field = value[key];
+    if ((field === null || field === undefined) && !required.has(key)) {
+      delete value[key];
+      note(
+        notes,
+        `Dropped ${field === null ? "null" : "undefined"} \`${key}\`; omit optional fields instead.`,
+      );
+      continue;
+    }
+    stripOptionalNulls(field, child, notes);
+  }
+}
+
 export function repairToolInput(tool: Tool, raw: unknown): RepairedInput {
   const notes: string[] = [];
-  const parsed = parseToolArgs(raw);
+  const parsed = parseToolArgs(raw, { allowTruncated: !tool.mutating });
   const primary = PRIMARY_FIELD[tool.name];
 
   let inputValue = parsed;
@@ -162,9 +206,10 @@ export function repairToolInput(tool: Tool, raw: unknown): RepairedInput {
   }
 
   const original = { ...inputValue };
-  const input: Record<string, unknown> = { ...inputValue };
+  const input = structuredClone(inputValue) as Record<string, unknown>;
   const schema = tool.parameters as JsonSchemaNode;
 
+  stripOptionalNulls(input, schema, notes);
   applyAliases(input, schema, tool.name, notes);
   dropUnknown(input, schema, tool.name, notes);
   applyPathLinks(input, schema, notes);
@@ -174,7 +219,7 @@ export function repairToolInput(tool: Tool, raw: unknown): RepairedInput {
     const result = tool.schema.safeParse(input);
     if (result.success) return { input, notes };
     issues = result.error.issues as ToolIssue[];
-    for (const issue of issues.slice(0, 20)) {
+    for (const issue of sortIssuesForRepair(issues.slice(0, 20))) {
       repairPath(input, issue.path as PathSegment[], schema, notes);
     }
     applyAliases(input, schema, tool.name, notes);

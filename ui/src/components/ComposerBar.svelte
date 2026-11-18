@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { t } from "../lib/i18n.svelte";
   import type { SendMode } from "../lib/composer/types";
   import type { ContextView } from "../lib/context-meter.svelte";
@@ -6,12 +7,14 @@
   import type { ProviderInfo, ReasoningChoice, ReasoningEffort } from "../lib/types";
   import Icon from "./Icon.svelte";
   import ModelPicker from "./ModelPicker.svelte";
+  import MorphIcon from "./MorphIcon.svelte";
   import ContextMeter from "./composer/ContextMeter.svelte";
   import ComposerSelect from "./composer/ComposerSelect.svelte";
   import "./composer/composer-bar.css";
 
   interface Props {
     running: boolean;
+    isTalker: boolean;
     stopping: boolean;
     canContinue: boolean;
     controlCooldown: boolean;
@@ -46,6 +49,7 @@
 
   let {
     running,
+    isTalker,
     stopping,
     canContinue,
     controlCooldown,
@@ -105,7 +109,39 @@
     ...variants.map(([id, entry]) => ({ value: id, label: entry.name ?? id })),
   ]);
 
-  const stopLabel = $derived(stopping ? t("Force stop") : t("Stop"));
+  const action = $derived(
+    editing ? "save" : running ? "stop" : canContinue && !hasDraft ? "continue" : "send",
+  );
+  const split = $derived(action === "stop" && hasDraft);
+  const actionLabel = $derived({
+    save: t("Save & send"),
+    stop: stopping ? t("Force stop") : t("Stop"),
+    continue: t("Continue"),
+    send: t("Send"),
+  }[action]);
+  const actionTooltip = $derived(
+    action === "stop"
+      ? stopping
+        ? t("Waiting for the current step to finish. Click again to stop immediately")
+        : t("Stop after the current response or command")
+      : action === "continue"
+        ? t("Continue the task where it stopped without starting over")
+        : editPending ? t("Saving…") : actionLabel,
+  );
+  let primary = $state<HTMLButtonElement>();
+  let followups = $state<HTMLDivElement>();
+
+  $effect.pre(() => {
+    if (split) return;
+    const focused = document.activeElement;
+    if (!followups?.contains(focused)) return;
+    void tick().then(() => {
+      if (document.activeElement === focused || document.activeElement === document.body) {
+        primary?.focus({ preventScroll: true });
+      }
+    });
+  });
+
   const voiceTitle = $derived(
     !voiceSupported
       ? t("Audio recording is unavailable. Check microphone access.")
@@ -148,12 +184,12 @@
   </div>
   <div class="composer-right">
     <ContextMeter view={context} {running} {onCompact} />
-    {#if voiceActive}
-      <button class="stop" type="button" aria-label={t("Cancel")}
+    <div class="composer-voice-cancel" class:is-revealed={voiceActive} inert={!voiceActive} aria-hidden={!voiceActive ? true : undefined}>
+      <button class="voice-cancel" type="button" aria-label={t("Cancel")}
         data-tooltip={t("Cancel voice input (Escape)")} onclick={onVoiceCancel}>
         <Icon name="x" size={15} />
       </button>
-    {/if}
+    </div>
     <button
       class="voice"
       class:is-listening={voiceListening}
@@ -164,37 +200,37 @@
       disabled={!voiceSupported || running || voicePending || editPending}
       onclick={voiceListening ? onVoiceStop : onVoiceStart}
     >
-      <Icon name="mic" size={14} />
+      <MorphIcon name={voiceListening ? "stop" : "mic"} size={14} />
     </button>
-    {#if editing}
-      <button class="send" type="submit" aria-label={t("Save & send")} data-tooltip={editPending ? t("Saving…") : t("Save & send")} disabled={!canSend || editPending}>
-        <span class="send-face"><Icon name="arrow-up" size={16} stroke={2} /></span>
-      </button>
-    {:else if running}
-      <div class="composer-actions" class:is-split={hasDraft} role="group" aria-label={t("Agent actions")}>
-        <button class="stop" class:is-stopping={stopping} type="button" aria-label={stopLabel}
-          data-tooltip={stopping ? t("Waiting for the current step to finish. Click again to stop immediately") : t("Stop after the current response or command")}
-          disabled={controlCooldown} onclick={onStop}>
-          <Icon name="stop" size={16} stroke={2} />
+    <div class="composer-action-set" class:composer-actions={action === "stop"} class:is-split={split}
+      role={action === "stop" ? "group" : undefined} aria-label={action === "stop" ? t("Agent actions") : undefined}>
+      <div class="composer-followups" bind:this={followups} inert={!split} aria-hidden={!split ? true : undefined}>
+        <button class="queue-send" type="button" aria-label={t("Add to queue")} data-tooltip={t("Queue: send when the current run finishes")}
+          disabled={!canSend} onclick={() => onSend("queue")}><Icon name="tasks" size={16} /></button>
+        <button class="steer-send" type={isTalker ? "submit" : "button"} aria-label={t(isTalker ? "Send" : "Guide now")}
+          data-tooltip={t(isTalker ? "Send" : "Guide now: send at the next safe point")}
+          disabled={!canSend} onclick={isTalker ? undefined : () => onSend("steer")}>
+          <Icon name={isTalker ? "arrow-up" : "spark"} size={16} />
         </button>
-        {#if hasDraft}
-          <button class="queue-send" type="button" aria-label={t("Add to queue")} data-tooltip={t("Queue: send when the current run finishes")}
-            disabled={!canSend} onclick={() => onSend("queue")}><Icon name="tasks" size={16} /></button>
-          <button class="steer-send" type="button" aria-label={t("Guide now")} data-tooltip={t("Guide now: send at the next safe point")}
-            disabled={!canSend} onclick={() => onSend("steer")}><Icon name="spark" size={16} /></button>
-        {/if}
       </div>
+      <button
+        bind:this={primary}
+        class="composer-primary"
+        class:stop={action === "stop"}
+        class:send={action !== "stop"}
+        class:continue={action === "continue"}
+        class:is-stopping={action === "stop" && stopping}
+        type={action === "stop" || action === "continue" ? "button" : "submit"}
+        aria-label={actionLabel}
+        data-tooltip={actionTooltip}
+        disabled={action === "stop" ? controlCooldown : action === "continue" ? controlCooldown || voiceActive : !canSend || editPending}
+        onclick={action === "stop" ? onStop : action === "continue" ? onContinue : undefined}
+      >
+        <MorphIcon name={action === "stop" ? "stop" : action === "continue" ? "continue" : "arrow-up"} size={16} stroke={2} />
+      </button>
+    </div>
+    {#if action === "stop"}
       <span class="sr-only" role="status">{stopping ? t("Stopping after the current step. Click again to stop it immediately.") : ""}</span>
-    {:else if canContinue && !hasDraft}
-      <button class="send continue" type="button" aria-label={t("Continue")}
-        data-tooltip={t("Continue the task where it stopped without starting over")}
-        disabled={controlCooldown || voiceActive} onclick={onContinue}>
-        <span class="send-face"><Icon name="continue" size={17} stroke={2} /></span>
-      </button>
-    {:else}
-      <button class="send" type="submit" aria-label={t("Send")} data-tooltip={t("Send")} disabled={!canSend}>
-        <span class="send-face"><Icon name="arrow-up" size={16} stroke={2} /></span>
-      </button>
     {/if}
   </div>
 </div>

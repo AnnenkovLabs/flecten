@@ -303,9 +303,9 @@ describe("translated session", () => {
       expect(events.find((event) => event.type === "error")).toMatchObject({
         code: "provider_failed",
       });
-      expect(result.summary).toContain("системные инструкции");
+      expect(result.summary).toContain("system instructions");
       expect(result.summary).toContain("test-translator / slow-model");
-      expect(result.summary).toContain("0.01 с");
+      expect(result.summary).toContain("0.01 s");
     } finally {
       await session.dispose();
     }

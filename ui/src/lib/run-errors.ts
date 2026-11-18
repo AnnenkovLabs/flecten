@@ -70,7 +70,7 @@ const LIMIT_REASONS: Record<LimitKind, string> = {
   },
 };
 
-/** Errors after which the task goes on from history; the card offers «Продолжить». */
+/** Errors after which the task can resume from history via Continue. */
 const RESUMABLE = new Set(["provider_failed", "provider_limit", "context_overflow", "agent_exit"]);
 
 export function formatReset(at: number, now: number = Date.now()): string {

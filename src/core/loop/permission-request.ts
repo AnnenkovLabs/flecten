@@ -19,7 +19,7 @@ const FILE_ACTIONS: Record<string, PermissionAction> = {
   delete: "write",
   move: "write",
 };
-const INTERNAL = new Set(["ask", "done", "task"]);
+const INTERNAL = new Set(["ask", "ask_talker", "done", "task"]);
 const TERMINAL_READ = new Set(["read", "list"]);
 const JOBS_READ = new Set(["list", "output", "wait"]);
 

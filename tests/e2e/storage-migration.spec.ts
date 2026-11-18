@@ -33,7 +33,7 @@ test("mandatory upgrade keeps focus, retries and resumes after restart before ac
     const { page } = h;
     const dialog = page.locator("dialog.storage-migration");
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("heading")).toHaveText("Update your saved chats");
+    await expect(dialog.getByRole("heading")).toHaveText("Upgrade session storage");
     await page.keyboard.press("Escape");
     await page.mouse.click(10, 100);
     await expect(dialog).toBeVisible();
@@ -64,11 +64,11 @@ test("mandatory upgrade keeps focus, retries and resumes after restart before ac
       JSON.stringify({ pid: process.pid, token: "test-holder" }),
     );
     await dialog.getByRole("button", { name: "Start migration", exact: true }).click();
-    await expect(dialog.getByRole("heading")).toHaveText("Migration needs another try");
+    await expect(dialog.getByRole("heading")).toHaveText("Storage upgrade paused");
     await expect(dialog.getByRole("alert")).toContainText("already running");
     await rm(join(cwd, ".flecten-migration/v1/engine.lock"));
     await dialog.getByRole("button", { name: "Retry migration", exact: true }).click();
-    await expect(dialog.getByRole("heading")).toHaveText("Your chats are ready");
+    await expect(dialog.getByRole("heading")).toHaveText("Session storage upgraded");
     await page.keyboard.press("Escape");
     await expect(dialog).toBeVisible();
     expect(await readFile(join(cwd, ".flecten/saved.bin"), "utf8")).toBe("original data");
@@ -89,7 +89,7 @@ test("mandatory upgrade keeps focus, retries and resumes after restart before ac
         break;
       }
       expect(killed).toBeGreaterThan(0);
-      await expect(dialog.getByRole("heading")).toHaveText("Your chats are ready");
+      await expect(dialog.getByRole("heading")).toHaveText("Session storage upgraded");
       await expect
         .poll(async () =>
           page.evaluate(
@@ -113,7 +113,7 @@ test("mandatory upgrade keeps focus, retries and resumes after restart before ac
     h = undefined;
     h = await launchApp({ cwd, userData, locale: "en", migration: "manual" });
     const resumed = h.page.locator("dialog.storage-migration");
-    await expect(resumed.getByRole("heading")).toHaveText("Your chats are ready");
+    await expect(resumed.getByRole("heading")).toHaveText("Session storage upgraded");
     await resumed.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(resumed).toHaveCount(0);
     await expect(h.page.locator("#prompt")).toBeVisible();

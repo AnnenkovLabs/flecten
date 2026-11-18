@@ -157,6 +157,29 @@ export class ToolRegistry {
     return [...this.#activeMcp];
   }
 
+  without(excluded: ReadonlySet<string>): ToolRegistry {
+    let matches = false;
+    for (const name of excluded) {
+      if (this.#tools.has(name)) {
+        matches = true;
+        break;
+      }
+    }
+    if (!matches) return this;
+    const filtered = new ToolRegistry(
+      this.list().filter((tool) => !excluded.has(tool.name)),
+      {
+        limits: this.#limits,
+        deferredMcp: this.deferredMcp,
+        ...(this.#authorize ? { authorize: this.#authorize } : {}),
+      },
+    );
+    for (const name of this.#activeMcp) {
+      if (!excluded.has(name)) filtered.#activeMcp.add(name);
+    }
+    return filtered;
+  }
+
   setLimits(limits: ToolLimits): void {
     this.#limits = limits;
   }
@@ -281,7 +304,8 @@ export class ToolRegistry {
       ...(result.fullOutputPath ? { existingPath: result.fullOutputPath } : {}),
       ...(context.secrets ? { secrets: context.secrets } : {}),
     });
-    const trailer = [result.trailer, `[full output: ${log.path}]`]
+    const wasTruncated = log.truncated || (isObject(result.data) && result.data.truncated === true);
+    const trailer = [result.trailer, ...(wasTruncated ? [`[full output: ${log.path}]`] : [])]
       .filter((line) => line !== undefined && line.length > 0)
       .join("\n");
     const notice = [notes.join("\n"), result.notice]

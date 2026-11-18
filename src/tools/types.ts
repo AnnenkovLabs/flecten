@@ -124,6 +124,8 @@ export interface ToolDefinition<T> {
   name: string;
   description: string;
   schema: z.ZodType<T>;
+  /** Flat object JSON schema for provider tool definitions when `schema` is a union or refinement. */
+  parametersSchema?: z.ZodType<unknown>;
   source?: ToolSource;
   mutating?: boolean;
   timeoutMs?: (args: T) => number;
@@ -132,7 +134,10 @@ export interface ToolDefinition<T> {
 }
 
 export function defineTool<T>(definition: ToolDefinition<T>): Tool {
-  const generated = z.toJSONSchema(definition.schema) as Record<string, unknown>;
+  const generated = z.toJSONSchema(definition.parametersSchema ?? definition.schema) as Record<
+    string,
+    unknown
+  >;
   const { $schema: _schema, ...parameters } = generated;
   const provenance = definition.provenance;
   return {

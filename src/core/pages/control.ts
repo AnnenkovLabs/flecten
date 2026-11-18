@@ -34,6 +34,17 @@ export const PageCommandSchema = z.discriminatedUnion("op", [
   PageSearchSchema.extend({ op: z.literal("search") }),
 ]);
 
+export function parsePageCommand(value: unknown) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (entry !== null && entry !== undefined) cleaned[key] = entry;
+    }
+    return PageCommandSchema.safeParse(cleaned);
+  }
+  return PageCommandSchema.safeParse(value);
+}
+
 // Provider schemas require an object root; the runtime validates each operation separately.
 export const PageToolSchema = z
   .object({

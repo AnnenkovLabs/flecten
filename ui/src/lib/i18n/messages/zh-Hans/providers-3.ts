@@ -64,7 +64,7 @@ export default {
   "Authentication refreshed and verified.": "授权已更新并验证。",
   "Base URL API address": "Base URL API 地址",
   Proxy: "代理",
-  "Request timeout, ms": "请求超时（毫秒）",
+  "Request timeout, ms": "请求超时 (ms)",
   "Request timeout": "请求超时",
   "API key for provider {0}": ["服务商 ", 0, " 的 API 密钥"],
   "API key Key": "API 密钥",

@@ -65,11 +65,21 @@ function oneLine(text: string, limit = MAX_LINE_CHARS): string {
   return clip(text.split("\n").join(" "), limit);
 }
 
+export function stripJsonFence(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("```")) return trimmed;
+  const firstNewline = trimmed.indexOf("\n");
+  if (firstNewline < 0) return trimmed;
+  const body = trimmed.slice(firstNewline + 1);
+  const closing = body.lastIndexOf("```");
+  return closing >= 0 ? body.slice(0, closing).trim() : body.trim();
+}
+
 /** Standard JSON response, schema checked before it can replace model history. */
 export function parsePageSummary(text: string): PageSummary | undefined {
   try {
     const { progress, locations, instructions, nextSteps, risks } = PageSummaryResponseSchema.parse(
-      JSON.parse(text),
+      JSON.parse(stripJsonFence(text)),
     );
     return { changed: progress, where: locations, rules: instructions, next: nextSteps, risks };
   } catch {
@@ -111,7 +121,7 @@ function previousSummary(messages: readonly ContextMessage[]): ContextSummary | 
 function latestRequest(messages: readonly ContextMessage[]): string | undefined {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
-    if (message?.role !== "user") continue;
+    if (message?.role !== "user" || message.synthetic) continue;
     if (message.contextSummary) return message.contextSummary.latestRequest;
     return message.content;
   }
@@ -158,7 +168,9 @@ export function deterministicPage(messages: readonly ContextMessage[]): PageSumm
 
   for (const message of messages) {
     if (message.role === "user") {
-      if (!message.contextSummary) rules.push(`User: ${oneLine(message.content)}`);
+      if (!message.contextSummary && !message.synthetic) {
+        rules.push(`User: ${oneLine(message.content)}`);
+      }
       continue;
     }
     if (message.role === "assistant") {
@@ -233,7 +245,7 @@ export function deterministicPage(messages: readonly ContextMessage[]): PageSumm
 /** First user message of the summarized span: the task statement survives verbatim. */
 export function originalRequest(messages: readonly ContextMessage[]): string | undefined {
   for (const message of messages) {
-    if (message.role !== "user") continue;
+    if (message.role !== "user" || message.synthetic) continue;
     if (message.contextSummary) {
       if (message.contextSummary.originalRequest) return message.contextSummary.originalRequest;
       continue;
@@ -294,10 +306,14 @@ export function renderContinuation(
   value: ContextSummary,
   pointers?: Pick<PageRender, "path" | "logsDir">,
 ): string {
+  const boundedRequest =
+    value.originalRequest && value.originalRequest.length > 8_000
+      ? `${value.originalRequest.slice(0, 8_000)}\n...[original request truncated at 8,000 chars]`
+      : value.originalRequest;
   const page = pageContextMessage({
     page: value.page,
     summary: value.fields,
-    request: value.originalRequest,
+    request: boundedRequest,
     ...pointers,
   });
   return value.activePage

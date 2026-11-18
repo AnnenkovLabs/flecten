@@ -1,83 +1,63 @@
-# Talker и Worker
+# Talker and Worker
 
-Новые чаты по умолчанию используют Talker и Worker. Переключатель «Отделить общение от выполнения» находится в разделе настроек «Модели». После изменения начните новый чат. Talker ведёт разговор на языке пользователя, применяет навыки и создаёт HTML только для итогового саммари задачи. Промежуточные ответы, вопросы и разговор во время работы используют Markdown без блока завершения. Worker получает отдельное задание, выполняет работу и возвращает обычный Markdown внутри `<summary>`. Отдельный переводчик в этом режиме не вызывается.
+New chats run the dual-role **Talker + Worker** architecture by default, controlled by **Separate conversation from execution** under **Settings > Models** (toggling applies to newly created chats). Talker converses directly in the user's language, loads skills, answers questions or streams interim Markdown updates during execution, and renders an HTML `<summary>` exclusively for the final accepted task deliverable, eliminating separate translation calls. Worker receives structured assignments, executes tools, and reports results in plain Markdown.
 
-В разделе «Модели» выбираются основная модель, отдельные модели Talker и Worker, модель каждого типа субагентов и зрячая модель для описания изображений. Основная модель используется в обычном режиме. В двухролевом режиме выбор в поле ввода задаёт исполнителя для текущего чата, а Talker использует свою настройку. Незаполненная модель Worker наследует основную модель, а Talker наследует модель исполнителя. Для субагента настройка типа имеет приоритет над моделью в определении роли; затем используется модель вызывающей сессии. Зрячая модель вызывается только для основной модели без поддержки изображений; её автоматический выбор сохраняется.
+**Settings > Models** configures the primary model (used in single-agent chats), dedicated **Talker** and **Worker** overrides, per-subagent-role models, and the **Vision** fallback model. In dual-role chats, the composer model picker sets Worker for that chat while Talker uses its configured model; an unset Worker inherits the primary model, and an unset Talker inherits Worker. Subagents resolve role-specific overrides first, then their agent definition, then the caller's model; Vision runs only when the active model lacks native image input.
 
-Это разделение контекстов, а не гарантированное снижение цены. Talker добавляет свои запросы; экономия зависит от длины истории и работы Worker. Расход обоих учитывается в деталях контекста с отдельными строками Talker и Worker. Число занятых токенов основного контекста относится к Talker.
+Splitting roles isolates verbose tool context from user conversation rather than guaranteeing lower spend on short tasks: both loops consume tokens, tracked on separate **Talker** and **Worker** lines in context details (the top-level context indicator reflects Talker).
 
-В каждой строке раздела «Модели» отдельно задаётся уровень reasoning выбранной модели. Уровни берутся из её характеристик; для thinking-переключателя доступны включение и выключение, для модели без reasoning поле отключено. Изменение уровня унаследованной модели Talker или Worker сохраняет текущую модель как явную настройку роли. Для субагента и автоматического vision сначала выбирается конкретная модель. Сброс строки возвращает наследование или автоматический выбор вместе с уровнем и вариантом.
+Each row in **Settings > Models** exposes its own `reasoning` selector populated from model metadata (boolean thinking toggle where applicable, disabled when unsupported). Changing reasoning on an inherited Talker or Worker row promotes the resolved model into an explicit role setting; resetting restores inheritance alongside reasoning and variant defaults. When left unset, Talker and Vision send requests without reasoning rather than inheriting an expensive Worker thinking budget, whereas primary, Worker, and subagent runs use the model/provider default. Vision maintains its own pricing and cache key independent of Worker settings.
 
-У Talker и vision без явного уровня сохраняется прежний запрос без reasoning; это не наследование дорогого уровня Worker. У основной модели, Worker и субагента пустой уровень использует стандартное поведение выбранной модели и провайдера. Явный выбор модели в поле ввода сохраняет её reasoning для текущего чата. Vision получает собственные reasoning и вариант, включая отдельную цену и ключ кэша описаний; настройка Worker в его запрос не попадает. Провайдер адаптирует уровень к возможностям модели, а выбранный вариант может задавать собственный фиксированный уровень.
+## Conversing During Execution
 
-## Разговор во время выполнения
+Talker coordinates Worker through the five-operation `worker` tool:
 
-Инструмент `worker` имеет пять операций:
-
-| Операция | Аргумент | Поведение |
+| Operation | Argument | Behavior |
 |---|---|---|
-| `start` | `assignment` | Немедленно возвращает управление Talker и запускает отдельный цикл. Структурированное задание содержит цель, ограничения пользователя, ожидаемые результаты и критерии готовности. |
-| `steer` | `message` | Передаёт дополнение на следующей безопасной границе цикла Worker. Выполняющуюся команду не переписывает. |
-| `resume` | нет | Продолжает незавершённое задание с теми же критериями и сохранёнными блокерами. Сначала проверяет фактическое состояние. |
-| `status` | нет | Возвращает состояние и последний результат без копирования логов. |
-| `stop` | нет | Прерывает Worker через настоящий сигнал отмены. |
+| `start` | `assignment` | Launches an asynchronous Worker run and returns control to Talker immediately. Carries `objective`, verbatim `userConstraints`, `expectedOutputs`, and `acceptanceCriteria`. |
+| `steer` | `message` | Delivers updated guidance at Worker's next safe turn boundary without interrupting an in-flight command. |
+| `resume` | none | Resumes an unfinished assignment with preserved criteria and blockers after re-checking workspace state. |
+| `status` | none | Returns current Worker phase and latest result summary without dumping raw logs. |
+| `stop` | none | Cancels Worker immediately via its `AbortSignal`. |
 
-Одновременно у чата работает один Worker. Повторный `start` во время выполнения отклоняется; для дополнения используется `steer`. Talker может читать и искать файлы и загружать навыки, но редактирование и команды делегирует Worker. Worker сохраняет проектные инструкции, permissions, sandbox и проверки. Каталог навыков и HTML kit остаются у Talker; нужные инструкции навыка включаются в задание явно.
+At most one Worker runs per chat at a time (calling `start` while active is rejected in favor of `steer`). Talker has read/search tools and `skill` access, delegating all file mutations and shell execution to Worker (which enforces project instructions, permissions, sandboxing, and gates; Talker explicitly embeds any needed skill instructions into `assignment`).
 
-## Задание и подтверждение результата
+## Structured Assignments and Acceptance
 
-Контракт не требует кода, файлов, diff или команд. Он одинаково подходит для исследования, текста, расчётов, визуальных материалов, работы в приложении и программирования. В `assignment` передаются `objective`, дословные `userConstraints`, `expectedOutputs` и `acceptanceCriteria`. Каждый критерий имеет устойчивый `id`, описание и `evidenceRequirement`: `tool_result` или `model_assertion`.
+`assignment` works uniformly across coding, research, writing, math, media, and desktop tasks via `objective`, verbatim `userConstraints`, `expectedOutputs`, and `acceptanceCriteria` (each carrying a stable `id`, description, and `evidenceRequirement`: `"tool_result"` or `"model_assertion"`). Legacy string `task` payloads remain supported for older integrations by wrapping into a single `model_assertion` criterion.
 
-Worker использует инструмент `criterion`, чтобы получить список или сообщить состояние пункта: `open`, `met`, `blocked`. Для `met` нужно доказательство; для `blocked` нужна причина и следующее необходимое действие. Ссылка `tool_result` проверяется по реальному успешному вызову инструмента этого задания. Утверждение модели маркируется отдельно и не закрывает пункт, который требует результата инструмента. Проверка идентификатора подтверждает происхождение доказательства; соответствие его содержания задаче оценивают Worker и Twin. Это не независимый предметный верификатор.
+Worker calls `criterion` to inspect criteria or mark each item `open`, `met` (with verified evidence), or `blocked` (with cause and required next action). Runtime validation checks that `"tool_result"` citations reference an actual successful tool call from the current assignment; `"model_assertion"` cannot close a `"tool_result"` criterion. User steering or Twin `revise` feedback bumps `revision` and reopens criteria so stale evidence from a superseded direction no longer counts. Acceptance state persists via `worker.acceptance` events and blocks Talker from emitting a final completion summary while Worker or Twin review is still running or while criteria remain `open`/`blocked` (Talker may still report status in plain Markdown).
 
-Пункты фиксируются при старте. Дополнение пользователя и возврат на доработку открывают их для повторной проверки и повышают `revision`: доказательства предыдущего направления больше не закрывают пункты. Состояние и доказательства записываются как `worker.acceptance`, восстанавливаются из журнала и доступны в действиях Worker. После прерывания результат остаётся неподтверждённым. Пока Worker или приёмка работают, runtime отклоняет итоговое завершение Talker до публикации финального сообщения. При открытых или заблокированных пунктах Talker может дать обычный Markdown-отчёт, но не выдать задачу за принятую.
+For modules, tool schemas restrict Talker to `list`, `status`, `tools`, and `read`, reserving `activate`, `call`, and `deactivate` for Worker while binding both roles and the **Computer** workspace tab to the same shared module instance (human Computer previews use a separate observation ID at one in-flight refresh at a time so they never overwrite Worker's action observation ID).
 
-Старый строковый `task` поддерживается для сохранённых интеграций: он превращается в один пункт, а итоговый текст исполнителя явно записывается как утверждение модели. Новый промпт Talker использует структурированный `assignment`.
+Users can message Talker mid-stream: **Send** steers Talker at the next step boundary while Worker keeps running uninterrupted, **Queue** holds the prompt for a subsequent run, **Stop Worker** aborts only Worker, global **Stop** halts both loops, and per-card cancel targets that individual tool call.
 
-Для модулей граница закреплена схемой инструмента: Talker может выполнить `list`, `status`, `tools`, `read`, а `activate`, `call`, `deactivate` доступны Worker. Беседа явно связывает обе роли с одним владельцем модулей, поэтому раздел «Компьютер» показывает тот же экземпляр, в котором работает Worker. Наблюдение, передача управления и остановка общие; истории моделей и полномочия каждого вызова остаются отдельными. Модули других чатов не объединяются.
+Worker can call `ask_talker` (a single tool-free call to Talker's model with recent dialogue context, billed to the shared chat ledger) to clarify already stated user intent, or `ask` when genuine new user input is required. Each Talker turn occupies its own chronological slot between Worker tool cards without overwriting earlier commentary (`message.started` anchors position even if Worker starts another call mid-stream, and adjacent tool cards stack tightly while preserving 40 px hit targets).
 
-Просмотр компьютера получает свежий human preview с отдельным идентификатором. Он не заменяет наблюдение, на котором Worker основывает следующее действие. Одновременно выполняется один запрос обновления; ошибка приостанавливает автообновление до явного действия пользователя. Это последовательность снимков экрана, а не видеопоток.
+## Live Tool Cards (`[[w_<uuid>]]`)
 
-Пользователь продолжает писать Talker, пока Worker занят. Если Talker сам формирует ответ, обычная очередь и steering остаются доступны. Отдельная кнопка «Остановить Worker» прерывает только исполнителя. Общая остановка сессии останавливает оба цикла. Отмена отдельной карточки направляется исходному вызову, а не Talker.
-
-Каждое сообщение Talker занимает отдельное место в хронологии между вызовами Worker. Новый комментарий не заменяет предыдущий. Повтор запроса модели сбрасывает только незавершённое сообщение; завершённые комментарии сохраняются. При открытии чата журнал восстанавливает тот же порядок. Соседние вызовы показаны плотным списком без дополнительных вертикальных отступов, с сохранением области нажатия 40 px.
-
-## Живые карточки
-
-Каждому вызову назначается случайный идентификатор вида `w_<uuid>`, отдельный от идентификатора провайдера. Talker получает проверенную ссылку и может написать:
+Every Worker tool call receives a random chat-scoped ID (`w_<uuid>`). Talker can embed live interactive cards directly in Markdown prose (outside code spans, URLs, and `<summary>` HTML):
 
 ```text
-Прогоняем проверки:
+Running verification checks:
 
-[[w_идентификатор]]
+[[w_example_id]]
 ```
 
-Ссылка размещается в обычном тексте ответа, вне HTML summary и кода. Рендерер разрешает только вызовы текущего чата. Неизвестная ссылка остаётся текстом. Ссылки внутри кода, URL и HTML не становятся карточками.
+Every Worker call renders automatically in the thread as soon as `worker.event` arrives, so fast calls between Talker turns are never hidden; if Talker explicitly references `[[w_<uuid>]]`, that reference claims the card's slot without duplicating it, while unknown IDs remain plain text.
 
-Каждый вызов автоматически появляется в диалоге по настоящему событию Worker. Даже быстрые вызовы между уведомлениями Talker остаются видны. Если Talker вставил явную ссылку в Markdown, она занимает место автоматической карточки этого вызова, без второго экземпляра в диалоге. Ссылка внутри кода не скрывает автоматическую карточку.
+The **Worker Actions** workspace tab (alongside Changes, History, and Terminal, supporting split-pane layout, scroll preservation, and dedicated **Stop Worker**) projects the exact same underlying `worker.event` stream, streaming live redacted `bash`/PTY output without polling any model.
 
-Полный список вынесен во вкладку «Действия Worker» рядом с изменениями, историей и терминалом. Вкладка поддерживает общий режим двух панелей, сохраняет прокрутку при переключении и содержит отдельную остановку Worker. Зеркало в диалоге и вкладка используют одну проекцию настоящих событий. Начало, результат, ошибка, отмена, полный лог и поток вывода не зависят от того, что написал Talker. `bash` и выполняющиеся команды PTY передают очищенный вывод во время исполнения. Прикладное окно не опрашивает модель ради статуса.
+Worker progress notifications to Talker coalesce to at most one automatic wake-up every 15 seconds (completion delivers immediately), passing status, call ID, and up to 8,000 characters of untrusted output while keeping raw logs out of Talker's context window and preserving the user's raw prompt history untouched.
 
-Прогресс для Talker объединяется в одно последнее уведомление, максимум один автоматический ответ на 15 секунд. Это ограничение не задерживает карточки и вывод. Завершение доставляется сразу. В уведомление входит статус, ссылка на вызов и до 8000 символов результата; логи остаются вне разговорного контекста. Строка Worker считается недоверенными данными. Сырые сообщения пользователя сохраняются дословно; внутреннее уведомление не становится пользовательским сообщением в интерфейсе и не меняет последний запрос в истории.
+## Persistence and Crash Recovery
 
-## Хранение и восстановление
+Talker and Worker serialize writes through one shared conversation event queue in exact real-time arrival order, wrapping Worker events inside parent `worker.event` envelopes so reopening restores identical card IDs and rebuilds Worker's context independently of Talker's chat transcript. `session.started.role` pins chat architecture at creation time (`conversation.enabled: false` preserves single-agent mode for new chats while existing chats keep their original loop). After an unexpected crash, an unfinished Worker run is marked interrupted and never replays shell commands blindly on `resume`.
 
-Talker и Worker записывают события через общую очередь диалога в том же порядке, в котором интерфейс получает их в реальном времени. Медленная запись одной роли не переставляет события другой роли.
+## Verification
 
-События Worker хранятся в журнале родительского чата внутри `worker.event`. Вложенное событие сохраняет реальный идентификатор сессии Worker; номер последовательности принадлежит родительскому потоку. Так reload и повторное открытие восстанавливают ту же карточку с тем же идентификатором. Событие `message.started` сохраняет позицию первого фрагмента текста Talker, даже если Worker начал следующий вызов до завершения сообщения. История Worker восстанавливается из этих событий, без разговорной истории Talker.
+Covered by `tests/integration/conversation.test.ts` (concurrent chat during live shell execution, steering, card cancellation, stop, replay), `tests/integration/conversation-modules.test.ts` (shared Computer runtime, takeover, stop, Talker schema restriction), `tests/unit/worker-mirrors.test.ts` (reference parsing and event projection), and `tests/e2e/conversation.spec.ts` (settings, sidecar, live output streaming, mirrored cards, and session reopen in headless Electron at `1480x940` and `1180x640`).
 
-Роль Talker записывается в `session.started.role`. Она сохраняется при открытии чата после изменения глобальной настройки. Ранее созданные обычные чаты сохраняют прямой агентный цикл. Чтобы применить новую архитектуру, начните новый чат. Отсутствующий `conversation` и пустой объект включают режим по умолчанию; явно сохранённое `conversation.enabled: false` сохраняет отключение.
+## Worker Context Pages
 
-После падения процесса незавершённый Worker помечается прерванным. Он не повторяет команды автоматически: следующее продолжение требует сначала проверить фактическое состояние. Фоновые jobs сохраняют существующий жизненный цикл терминала; завершённый tool call не выдаётся за продолжающуюся foreground-команду.
-
-## Проверка
-
-`tests/integration/conversation.test.ts` выполняет настоящие shell-команды через две сессии: разговор во время команды, steering, отмена по ссылке, остановка и durable replay. `tests/integration/conversation-modules.test.ts` связывает Worker с настоящим Computer runtime и пользовательской поверхностью, проверяет общий снимок, takeover, stop, lifecycle и inspection schema Talker. `tests/unit/worker-mirrors.test.ts` проверяет разбор ссылок и проекцию событий. `tests/e2e/conversation.spec.ts` проходит через настройки, sidecar, реальную команду, поток вывода, зеркальную карточку и повторное открытие чата в Electron при 1480x940 и 1180x640. Провайдер в проверке детерминированный; это проверка механизма, а не оценка качества или экономии выбранной пользователем модели.
-
-## Границы контекста
-
-Worker получает `context begin/complete` и ограничивает страницу одной небольшой связной подзадачей. Завершение принудительно архивирует весь блок и заменяет его выжимкой до следующего запроса, даже при почти пустом окне. Работа без begin, смешанный lifecycle batch и финальный ответ без собственного успешного checkpoint в текущем запуске отклоняются. Это относится и к текстовым подзадачам. Полноту подзадачи оценивает модель, runtime проверяет явное состояние. Talker продолжает сжиматься по заполнению контекста.
-
-Если внешнее препятствие не позволяет продолжить, Worker вызывает `context block` с причиной, доказательствами и следующим необходимым действием. Этот checkpoint сохраняет незавершённую цель, возвращает Talker отчёт о блокере и завершает текущий запуск без статуса done. Следующий запуск продолжает ту же страницу.
-
-Архивные `context list/read/search` доступны Worker в любой момент, в том числе между страницами. Сегменты хранятся рядом с его журналом в `.flecten/sessions/<chat>_worker/pages/`. Чтение по номеру страницы и строкам и буквальный поиск находят детали из полных transcripts; длинные выводы сохраняют ссылки на tool logs. Ошибка записи не удаляет активную историю. Аварийное сжатие переносит незавершённую цель в `ContextSummary.activePage`.
+Worker uses `context` (`begin`, `complete`, `block`, plus archive `list`, `read`, `search`) to scope each page to one self-contained subtask: `complete` archives the full segment to `.flecten/sessions/<chat>_worker/pages/` and replaces active history with its structured summary immediately, even when context utilization is low. Acting before `begin`, mixing lifecycle calls in one batch, or emitting a final answer without closing the active page in the current run is rejected. When blocked by an external dependency, `context block` records cause, evidence, and next action, returning a blocker report to Talker so the next run resumes that page cleanly (emergency window-limit compaction preserves unfinished goals in `ContextSummary.activePage`).

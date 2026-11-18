@@ -26,7 +26,7 @@ test("Twin trains selected sources through the Electron bridge without a clone e
     await panel.getByRole("button", { name: "Train Twin", exact: true }).click();
 
     const ready = panel.getByText(
-      "No new supported user messages were found. No model request was made.",
+      "No new user messages found in selected sources. Skipped model call.",
       { exact: false },
     );
     await expect

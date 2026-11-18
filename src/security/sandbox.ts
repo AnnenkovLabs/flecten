@@ -129,26 +129,26 @@ export class SandboxPolicy {
 
   // ponytail: shell paths are checked lexically; enforce subprocesses and relative escapes in the OS sandbox at spawn.
   checkShell(command: string, cwd = this.workspaceRoot): SandboxDecision {
-    if (command.trim().length === 0) return deny("Shell: команда не указана.");
+    if (command.trim().length === 0) return deny("Shell: empty command.");
     for (const simple of parseShell(command).commands) {
       const name = programName(simple.argv[0]?.value ?? "");
       if (PRIVILEGED_COMMANDS.has(name)) {
-        return deny(`Shell: команда "${name}" требует прав, которых нет у песочницы.`);
+        return deny(`Shell: "${name}" requires privileges unavailable in the sandbox.`);
       }
       if (!this.allowNetwork && NETWORK_COMMANDS.has(name)) {
-        return deny(`Shell: команда "${name}" использует сеть, а сеть запрещена.`);
+        return deny(`Shell: "${name}" uses the network; network access is disabled.`);
       }
     }
     for (const path of shellPaths(command, cwd))
       if (!this.insideWorkspace(normalizePath(path)))
-        return deny(`Shell: путь "${path}" вне разрешённых рабочих папок.`);
-    return allow("Shell: команда не нарушает политику песочницы.");
+        return deny(`Shell: path "${path}" is outside allowed workspace roots.`);
+    return allow("Shell: command satisfies sandbox policy.");
   }
 
   checkNetwork(host: string): SandboxDecision {
-    if (host.trim().length === 0) return deny("Сеть: адрес не указан.");
-    if (!this.allowNetwork) return deny("Сеть запрещена политикой песочницы.");
-    return allow(`Сеть разрешена для "${host}".`);
+    if (host.trim().length === 0) return deny("Network: host is empty.");
+    if (!this.allowNetwork) return deny("Network: network access is disabled by sandbox policy.");
+    return allow(`Network access allowed for "${host}".`);
   }
 
   private async check(
@@ -156,14 +156,14 @@ export class SandboxPolicy {
     mode: "read" | "write",
     allowedPrefixes?: readonly string[],
   ): Promise<SandboxDecision> {
-    const label = mode === "read" ? "Чтение" : "Запись";
+    const label = mode === "read" ? "Read" : "Write";
     if (path.length === 0 || path.trim().length === 0) {
-      return deny(`${label}: путь не указан.`);
+      return deny(`${label}: path is empty.`);
     }
-    if (path.includes("\0")) return deny(`${label}: путь содержит запрещённый символ.`);
+    if (path.includes("\0")) return deny(`${label}: path contains a null byte.`);
     const canonical = await canonicalize(path, this.workspaceRoot);
     if ("error" in canonical) {
-      return deny(`${label} "${path}" невозможно проверить: ${canonical.error}.`);
+      return deny(`${label} "${path}" could not be verified: ${canonical.error}.`);
     }
     const prefixes =
       allowedPrefixes ?? (mode === "read" ? this.readDenyPrefixes : this.writeDenyPrefixes);
@@ -193,16 +193,16 @@ export class SandboxPolicy {
       }
     }
     if (blocked !== undefined) {
-      return deny(`${label} "${canonical.path}" запрещено: защищённый путь "${blocked}".`);
+      return deny(`${label} "${canonical.path}" denied: protected path "${blocked}".`);
     }
     if (!this.insideWorkspace(canonical.path)) {
       return deny(
         canonical.symlink
-          ? `${label} "${canonical.path}" запрещено: символическая ссылка ведёт за пределы рабочей папки.`
-          : `${label} "${canonical.path}" запрещено: путь вне рабочей папки "${this.workspaceRoot}".`,
+          ? `${label} "${canonical.path}" denied: symlink resolves outside the workspace.`
+          : `${label} "${canonical.path}" denied: path is outside the workspace ("${this.workspaceRoot}").`,
       );
     }
-    return allow(`${label} "${canonical.path}" разрешено: путь внутри рабочей папки.`);
+    return allow(`${label} "${canonical.path}" allowed: path is inside the workspace.`);
   }
 
   private insideWorkspace(path: string): boolean {
@@ -226,7 +226,7 @@ async function canonicalize(
       try {
         real = await realpath(current);
       } catch {
-        return { error: "не удалось разрешить символическую ссылку" };
+        return { error: "could not resolve symlink" };
       }
       const path = missing.length === 0 ? real : join(real, ...missing.reverse());
       return { path: normalizePath(path), symlink: stats.isSymbolicLink() };

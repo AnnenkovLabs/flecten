@@ -22,6 +22,8 @@ export interface ModelRequest {
   variant?: string;
   apiModel?: string;
   toolChoice?: "auto" | "required" | "none";
+  parallelToolCalls?: boolean;
+  promptCacheKey?: string;
 }
 
 export type ModelEvent =

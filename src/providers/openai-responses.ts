@@ -4,6 +4,7 @@ import {
   apiModel,
   effectiveParallelTools,
   modelConfig,
+  normalizeEffort,
   promptCacheEnabled,
   requestExtra,
   requestHeaders,
@@ -13,6 +14,7 @@ import { responsesMedia } from "./input-media";
 import {
   defaultWarn,
   jsonSchemaFormat,
+  openaiSchema,
   strictSchema,
   structuredOutputFormat,
   type Warn,
@@ -34,6 +36,7 @@ interface StreamCall {
   index: number;
   name: string;
   arguments: string;
+  done: boolean;
   emitted: boolean;
 }
 
@@ -79,23 +82,36 @@ function convertInput(message: Message): Record<string, unknown>[] {
   return [{ type: "function_call_output", call_id: message.toolCallId, output: message.content }];
 }
 
+function reasoningPayload(
+  request: ModelRequest,
+  runtime: ProviderRuntime,
+  model: ReturnType<typeof modelConfig>,
+): Record<string, unknown> {
+  if (model?.reasoning === false || runtime.config.thinking === "disabled") return {};
+  if (request.reasoning === "none") {
+    return model?.reasoningLevels?.includes("none") ? { reasoning: { effort: "none" } } : {};
+  }
+  if (request.reasoning !== undefined) {
+    return {
+      reasoning: {
+        effort: normalizeEffort(request.reasoning, model),
+        summary: "auto",
+      },
+    };
+  }
+  return model?.reasoning ? { reasoning: { summary: "auto" } } : {};
+}
+
 function buildBody(
   request: ModelRequest,
   runtime: ProviderRuntime,
   warn: Warn,
 ): Record<string, unknown> {
   const model = modelConfig(runtime, request.model);
-  const reasoning =
-    request.reasoning !== undefined || model?.reasoning
-      ? {
-          reasoning: {
-            ...(request.reasoning === undefined ? {} : { effort: request.reasoning }),
-            summary: "auto",
-          },
-        }
-      : {};
-  const parallel = effectiveParallelTools(runtime, model);
+  const reasoning = reasoningPayload(request, runtime, model);
+  const parallel = effectiveParallelTools(runtime, model, request);
   const cacheEnabled = promptCacheEnabled(runtime, model);
+  const cacheKey = request.promptCacheKey || runtime.config.promptCacheKey;
   const strictTools = model?.compat?.strictTools ?? runtime.config.strictTools;
   const format = structuredOutputFormat(model);
   const text = format
@@ -112,7 +128,7 @@ function buildBody(
     tools:
       request.tools.length > 0
         ? request.tools.map((tool) => {
-            let parameters = tool.parameters;
+            let parameters = openaiSchema(tool.parameters);
             let strict = false;
             if (strictTools) {
               const transformed = strictSchema(parameters);
@@ -133,15 +149,15 @@ function buildBody(
         : undefined,
     stream: true,
     store: false,
-    include: ["reasoning.encrypted_content"],
+    ...(model?.reasoning === false ? {} : { include: ["reasoning.encrypted_content"] }),
     max_output_tokens: request.maxTokens,
     ...text,
-    ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
+    ...(request.temperature === undefined || model?.temperature === false
+      ? {}
+      : { temperature: request.temperature }),
     ...reasoning,
     ...(parallel === undefined ? {} : { parallel_tool_calls: parallel }),
-    ...(cacheEnabled && runtime.config.promptCacheKey
-      ? { prompt_cache_key: runtime.config.promptCacheKey }
-      : {}),
+    ...(cacheEnabled && cacheKey ? { prompt_cache_key: cacheKey } : {}),
     ...(request.toolChoice === "required" ||
     request.toolChoice === "none" ||
     request.toolChoice === "auto"
@@ -210,6 +226,11 @@ export function createOpenAiResponses(
       const headers = requestHeaders(runtime, model, request);
       if (runtime.apiKey && !headers.authorization) {
         headers.authorization = `Bearer ${runtime.apiKey}`;
+      }
+      const cacheKey = request.promptCacheKey || runtime.config.promptCacheKey;
+      if (promptCacheEnabled(runtime, model) && cacheKey) {
+        headers.session_id ??= cacheKey;
+        headers.conversation_id ??= cacheKey;
       }
 
       const response = await postStream({
@@ -298,6 +319,7 @@ export function createOpenAiResponses(
                 index,
                 name,
                 arguments: initial,
+                done: false,
                 emitted: false,
               });
               if (name) yield events.emit({ type: "tool_call_progress", index, name });
@@ -325,6 +347,7 @@ export function createOpenAiResponses(
             const call = calls.get(itemId);
             if (call) {
               if (typeof event.arguments === "string") call.arguments = event.arguments;
+              call.done = true;
               const toolEvent = emitCall(call);
               if (toolEvent) yield events.emit(toolEvent);
             }
@@ -336,12 +359,27 @@ export function createOpenAiResponses(
             outputItems.push(item);
             if (item.type === "function_call") {
               const itemId = typeof item.id === "string" ? item.id : "";
-              const call = calls.get(itemId);
-              if (call) {
+              const callId = typeof item.call_id === "string" ? item.call_id : itemId;
+              const key = itemId || callId;
+              let call = calls.get(key);
+              if (!call) {
+                call = {
+                  itemId,
+                  callId,
+                  index: typeof event.output_index === "number" ? event.output_index : calls.size,
+                  name: typeof item.name === "string" ? item.name : "",
+                  arguments: typeof item.arguments === "string" ? item.arguments : "",
+                  done: true,
+                  emitted: false,
+                };
+                calls.set(key, call);
+              } else {
                 if (typeof item.arguments === "string") call.arguments = item.arguments;
-                const toolEvent = emitCall(call);
-                if (toolEvent) yield events.emit(toolEvent);
+                if (typeof item.name === "string" && !call.name) call.name = item.name;
+                call.done = true;
               }
+              const toolEvent = emitCall(call);
+              if (toolEvent) yield events.emit(toolEvent);
             } else if (item.type === "message" && !sawText) {
               const text = itemText(item);
               if (text.length > 0) {
@@ -380,9 +418,31 @@ export function createOpenAiResponses(
 
       if (!sawTerminal) events.requireDone("response.completed or response.incomplete");
 
+      const provisionalReason = readReason(terminal, calls.size > 0);
       for (const call of calls.values()) {
+        if (provisionalReason === "max_tokens" && !call.done) continue;
         const toolEvent = emitCall(call);
         if (toolEvent) yield events.emit(toolEvent);
+      }
+      const emittedCalls = [...calls.values()].filter((call) => call.emitted);
+      if (outputItems.length > 0) {
+        const recordedIds = new Set(
+          outputItems.flatMap((item) =>
+            isObject(item) && item.type === "function_call" && typeof item.call_id === "string"
+              ? [item.call_id]
+              : [],
+          ),
+        );
+        for (const call of emittedCalls) {
+          if (recordedIds.has(call.callId)) continue;
+          outputItems.push({
+            type: "function_call",
+            ...(call.itemId ? { id: call.itemId } : {}),
+            call_id: call.callId,
+            name: call.name,
+            arguments: call.arguments.trim().length > 0 ? call.arguments : "{}",
+          });
+        }
       }
       const nextUsage = readUsage(terminal?.usage);
       if (nextUsage) usage = nextUsage;
@@ -393,7 +453,7 @@ export function createOpenAiResponses(
         });
       }
       if (usage) yield events.emit(usage);
-      yield events.done(readReason(terminal, calls.size > 0));
+      yield events.done(readReason(terminal, emittedCalls.length > 0));
     },
   };
 }

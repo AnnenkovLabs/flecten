@@ -1,77 +1,74 @@
-# Безопасность
+# Security
 
-## Границы доверия
+## Trust Boundaries
 
-Пользователь управляет правами. Модель, файлы, web, MCP и содержимое расширений считаются недоверенными. Аргументы инструментов, конфигурация, события и ответы внешних сервисов проверяются схемами до использования.
+The user controls all permissions. Model outputs, workspace files, web content, MCP servers, and extension payloads are treated as untrusted inputs: tool arguments, configuration files, wire events, and upstream responses are validated with Zod schemas at every boundary before use.
 
-Renderer не читает файлы и не вызывает модель. Electron передаёт только разрешённые IPC-команды, проверяет отправителя и запускает sidecar. Sidecar общается с оболочкой через stdin/stdout; локального HTTP API с токеном нет. OAuth callback слушает только loopback на время явной авторизации.
+The renderer never reads local files or calls LLM APIs directly. Electron's main process allowlists IPC channels, verifies sender frames, and spawns the Bun sidecar over `stdin`/`stdout` (there is no local bearer-token HTTP server; OAuth loopback listeners bind `127.0.0.1` exclusively during an active user-initiated login).
 
-Выбор папки сразу открывает полноэкранный запрос доверия. Решение сохраняется в `projects.json` профиля и доступно для изменения через меню папки. Закрытие крестиком оставляет решение неизвестным; отказ требует отдельного подтверждения. В недоверенном проекте hooks, MCP и исполняемые модули отключены, встроенные инструменты подчиняются обычным permissions и sandbox. Отказ в доверии не запрещает все файловые операции.
+Opening a folder presents a full-screen workspace trust prompt stored per canonical path in profile `projects.json` (changeable anytime from the workspace menu; dismissing the dialog leaves trust `unknown`, while rejecting requires explicit confirmation). Untrusted workspaces disable project hooks, project MCP servers, and executable project modules while keeping built-in tools subject to standard permissions and sandboxing.
 
-Без выбранного проекта runtime использует свою папку профиля, исключает автоматический сбор проектных AGENTS, навыков и команд и не запускает shadow Git. Внешние пути проходят существующие проверки доступа. Список проектов ограничен явно добавленными директориями, удаление записи не удаляет пользовательские данные.
+When running without an open workspace (`projectRoot: null`), the sidecar runs inside its profile directory, skips project `AGENTS.md`, skills, and custom commands, disables shadow Git, and enforces external-path checks on every filesystem access.
 
-## Секреты
+## Secrets Management
 
-- Источники ключа: env, системный keychain, закрытый fallback-файл, явная команда авторизации. Env имеет приоритет. Renderer видит `isSet` и источник.
-- Keychain account привязан к каноническому пути scope: общего desktop profile или явно выбранного проектного конфига. Сохранённый ключ провайдера дополнительно связан с protocol, baseUrl и proxy; другой адрес не получает прежний ключ. Смена рабочей директории сохраняет desktop profile, и все глобальные настройки доступа, hooks и MCP. Доверие хранится отдельно для каждого канонического пути.
-- Старые ключи без привязки сохранены, но автоматически не подставляются. Повторный ввод ключа создаёт проверяемую привязку. Удаление действует на ключ текущего scope. Первый запуск desktop переносит проверенные личные настройки и ключи в профиль, сохраняя исходные файлы.
-- `.flecten/secrets.json` и атомарные временные файлы имеют режим 0600. `.env`, `.flecten/`, logs и приватные выгрузки исключены из git.
-- Redaction работает до live UI, listeners, событий, replay и полных tool logs. Он учитывает заданные секреты и стандартные форматы AWS, Google, GitHub, JWT и PEM, включая разрыв между chunks.
+- **Credential sources** (in precedence order): environment variables, OS keychain, mode-`0600` fallback file (`.flecten/secrets.json`), and explicit auth commands. The renderer receives only `{ isSet, source }`.
+- **Scope binding**: keychain entries bind to the canonical scope path (desktop profile or explicit project config), and stored provider API keys additionally bind to `{ protocol, baseUrl, proxy }` so changing an endpoint URL never leaks an existing key to a new host. Legacy unbound keys stay untouched on disk without auto-populating requests until re-entered.
+- **Filesystem hygiene**: `.flecten/secrets.json` and atomic staging files use mode `0600`; `.env*`, `.flecten/`, `.liquid/`, logs, and private exports are git-ignored.
+- **Streaming redaction**: runs prior to live UI events, listeners, replay buffers, and full tool logs, scrubbing configured secret values as well as AWS, Google, GitHub, Bearer, JWT, and PEM credentials even when split across stream chunks.
 
-Защита отдельных API-провайдеров, обратимые теги секретов и обязательные подтверждения описаны в [PROVIDER-PROTECTION.md](PROVIDER-PROTECTION.md). Исходники и признаки New API / One API разобраны во внутренних материалах PROVIDER-GATEWAY-RESEARCH.md.
+Per-provider secret protection, reversible secret placeholders, and mandatory human checkpoints are detailed in [PROVIDER-PROTECTION.md](PROVIDER-PROTECTION.md).
 
-## Права и запись файлов
+## Access Modes, Permissions, and Protected Paths
 
-Новая конфигурация использует режим `agent`: обычные чтение, запись, shell, сеть, MCP и навыки разрешены; новая внешняя папка и destructive shell operations требуют ответа. Sandbox включён, сеть внутри него разрешена. Явно сохранённые настройки прежнего проекта не переводятся в новый режим автоматически.
+Fresh configurations default to `agent` mode: workspace reads, writes, shell commands, network access, MCP calls, and skills run inside the OS sandbox (with network enabled), while accessing external directories or running destructive shell commands prompts for confirmation. Existing saved project configs are never silently rewritten.
 
-`shared/access-mode.ts` задаёт три согласованных режима для permissions и sandbox. `agent` разрешает обычную работу внутри проекта и одобренных папок; `confirm` дополнительно спрашивает перед записью, shell и MCP; `full` разрешает категории действий и отключает sandbox. Последний режим снимает процессную изоляцию и защиту путей SandboxPolicy. Явные permission deny и обязательные human checkpoints остаются сильнее режима и сохранённых grants. Несовпадение базовых полей с режимами отображается как `custom`.
+`shared/access-mode.ts` defines three presets synchronized across permissions and sandbox settings (`access.set` accepts `agent | confirm | full`, reporting `custom` whenever baseline fields diverge):
 
-При включённом sandbox canonical path и symlink проверяются до чтения и записи; защищены настройки, `.flecten/`, `.env` и файлы секретов. Запрос внешнего файла показывает каноническую существующую папку, которая его содержит; для нового пути выбирается ближайшая существующая родительская папка. Разрешение папки охватывает её содержимое и подпапки и выдаёт доступ к чтению и записи при соблюдении остальных политик действий. `allow_once` действует только для подготовленного вызова, `allow_session` хранит область в памяти текущего чата, `allow_always` сохраняет правило `external_path` с `pathPrefix` в глобальный конфиг. Одноразовое разрешение не создаёт постоянного правила. Разрешение чата разделяют Talker, Worker и субагенты этого чата, а другой чат его не получает.
+- `agent`: standard development inside the workspace and approved directories with OS sandboxing active.
+- `confirm`: prompts before file writes, shell commands, and MCP tool calls.
+- `full`: allows baseline action categories and disables OS process sandboxing and `SandboxPolicy` path guards. Explicit `deny` rules and mandatory human checkpoints still override `full` mode and saved session grants.
 
-Один набор одобренных папок расширяет logical sandbox и `writablePaths` OS sandbox. Отдельный вопрос на каждый файл или инструмент той же папки не требуется; параллельные запросы папки сериализованы. Перед исполнением повторно проверяются ресурсы, symlink и актуальные запреты. Изменение правил отзывает grants чата; удаление сохранённого правила действует на следующую операцию. Поле `why` объясняет намерение модели, но само не выдаёт доступ. Точное разрешение shell-команды остаётся привязанным к аргументам, cwd и ресурсам; оно не превращается в command-prefix allowlist.
+When `SandboxPolicy` is active, canonical paths and symlinks are resolved before every read or write, protecting `.git`, `.flecten`, `.liquid`, `flecten.config.json`, `AGENTS.md`, `secrets.json`, `.env*`, `~/.ssh`, and `~/.aws`. Accessing an external path prompts on its canonical containing directory (or nearest existing parent directory for new files), serializing concurrent prompts for the same directory:
 
-Ожидающий approval подписан на изменения своего PermissionEngine и родительской политики. После смены правил или публикации покрывающего grant он проверяет актуальную политику: `allow` или допустимый `auto` снимает ожидание как `allow_once` с `by: policy`, `deny` завершает его отказом с `by: policy`. Если действие всё ещё требует ask или human checkpoint, вопрос остаётся. Это не создаёт нового grant и не выдаёт изменение политики за ответ пользователя. Подписка снимается при ответе, таймауте и отмене; сохранённый grant публикуется после успешной записи конфига.
+- `allow_once`: authorizes only the prepared invocation without persisting a rule.
+- `allow_session`: caches directory read/write scope in memory for the current chat (shared across Talker, Worker, and subagents of that chat, never across other chats or forks) and extends both the logical sandbox and OS sandbox `writablePaths`.
+- `allow_always`: persists an `external_path` rule with `pathPrefix` in global config.
 
-Режим выбирается только в настройках Access вместе с обычным сохранением. Программная команда `access.set` сохраняет тот же контракт. Команда проверяет `agent | confirm | full` схемой и записывает только базовые security-поля через общую очередь сохранения конфига. Провайдеры, секреты, явные rules, checkpoints и ограничения окружения сохраняются. Технические настройки изоляции и правила находятся в раскрываемом разделе Access без обязательного JSON.
+Targets, symlinks, and explicit `deny` rules are re-checked immediately before execution; editing permission rules invalidates active session grants. Model-supplied `why` strings explain intent in UI prompts without granting access, and shell approvals bind to exact command arguments, `cwd`, and touched resources rather than turning into command-prefix allowlists.
 
-Ожидающие решения закреплены над композером в основном чате и IDE. Путь и кнопки ответа остаются доступны в низком окне; длинные детали прокручиваются внутри карточки. После ответа receipt появляется в истории разговора. Чтение старых сообщений не прячет текущий запрос и не требует принудительной прокрутки истории.
+Pending approval prompts subscribe to live `PermissionEngine` and parent-policy updates: if a rule change or newly saved grant now permits the call, it resolves with `by: "policy"` (`allow_once`); if newly blocked, it resolves `deny` (`by: "policy"`); `ask` and human checkpoints stay pinned above the composer until answered, timed out, or cancelled, recording durable receipts in chat history.
 
-Permissions задаются типизированными действиями, правилами и approvals. Destructive shell operations определяет shell lexer, риск подтверждается отдельно. Отказ возвращается инструменту и позволяет модели продолжить работу. Сырые сообщения пользователя хранятся слово в слово; чувствительные данные редактируются перед журналированием.
+Destructive shell commands are detected by a dedicated shell lexer rather than regex heuristics. File checkpoints store pre/post-images and shell commands snapshot into an isolated shadow Git repository without touching `.git`; `/undo` skips config and secret files unless explicitly requested (`includeProtected`) and aborts cleanly if checkpoint lock/write budgets expire rather than writing partial manifests.
 
-Checkpoints содержат pre/post-image. Shell использует отдельный shadow git, не меняющий Git пользователя. Undo пропускает настройки и секреты без явного выбора, проверяет конфликты. Бюджет checkpoint включает ожидание mutex и сохранение; при deadline интерфейс получает gap, неполный manifest не публикуется позже.
+## Untrusted Context and Sandboxed UI
 
-## Недоверенный контекст
+Outputs from file reads, web tools, MCP servers, and shell commands are wrapped in fenced `Untrusted data` Markdown blocks annotated with provenance, keeping prompt-injection payloads subordinate to system and user instructions.
 
-Вывод файлов, web, MCP и shell помещается в Markdown-раздел `Untrusted data` с источником и цельным fenced block. Обрезка сохраняет границы блока. Текст не переписывается по шаблонам, прочитанные инструкции не меняют системный промпт.
+HTML summaries render inside an opaque-origin `sandbox="allow-scripts"` iframe (`flecten-summary://shell`) with network and nested frames blocked; user interactions pass only schema-validated named values back to the sidecar as untrusted context without granting tool permissions. Markdown output is sanitized and Mermaid diagrams retain plain-text fallbacks.
 
-HTML-summary работает в sandbox iframe с CSS и JavaScript, без доступа к Electron, файлам и модели. Обычный Markdown проходит sanitization; Mermaid имеет текстовую альтернативу.
+## MCP, Hooks, and Modules
 
-## MCP, hooks и модули
+Project-scoped MCP servers, command hooks, and modules run only in trusted workspaces with allowlisted environment variables. Upstream MCP `readOnlyHint` annotations grant no privileges. MCP servers default to a `60s` (`60000` ms) request timeout and `64` tools per server (`maxTools`, configurable up to `128` max); see [EXTENSIONS.md](EXTENSIONS.md).
 
-MCP и command hooks запускаются только из явной конфигурации доверенного проекта или доверенного модуля. Их окружение ограничено allowlist. MCP annotations не выдают права; tools остаются mutating для общей проверки. Настройки MCP задают allowlist, read-only, timeout и health; transport и payload проверяет SDK. Подробности: [EXTENSIONS.md](EXTENSIONS.md).
+Command and HTTP hooks default to a `10s` (`10000` ms) timeout up to a `60s` (`60000` ms) maximum, capping `stdin`/`stdout`/`stderr` at 64 KiB. Hooks with `failClosed: true` (mandatory in strict mode) block interceptable events on errors, timeouts, or malformed JSON, while async observer hooks cannot undo completed operations ([HOOKS.md](HOOKS.md)).
 
-Hook с `failClosed` блокирует действие при ошибке, timeout и неверном ответе. Строгий режим требует fail-closed. Async hook не может задним числом отменить исполненное действие. HTTP hook получает тот же проверенный payload, что command hook.
+Modifying any byte of a trusted module invalidates its SHA-256 trust immediately on the next boundary ([MODULES.md](MODULES.md)). Child subagents execute under the strict intersection of their own permissions, parent permissions, and active parent skill `allowedTools`, rejecting any call that would require interactive approval.
 
-Изменение содержимого модуля отзывает hash доверия. Новый контекст и инструменты требуют доверия новой ревизии; текущие вызовы завершаются на прежней версии согласно lifecycle и leases из [MODULES.md](MODULES.md). Субагент получает пересечение своих разрешений с правами родителя и ограничениями активного skill; запрос родительского approval не превращается в разрешение для дочернего прогона.
+## Process Isolation and Resource Guards
 
-## Процессы и ресурсы
+`bash`, background `jobs`, and persistent PTYs share a process-tree monitor tracking RSS memory, process count, and open ports, killing the entire tree on stop or timeout:
 
-Bash, jobs и поддерживаемый PTY используют общий monitor памяти, количества процессов и портов, а stop завершает дерево. Linux использует procfs и доступный prlimit. Явная наследуемая process scope позволяет найти Linux-потомка после setsid и выхода его родителя. macOS получает process/RSS из ps и socket ownership из lsof. Windows читает PPID/RSS/TCP LISTEN/UDP через асинхронный CIM snapshot; JSON проверяется Zod, ошибочный ответ останавливает инструмент вместо нулевых метрик. Windows kill использует taskkill /T. Native macOS/Windows приёмка остаётся открытой; fixtures на Linux её не заменяют.
+- **Linux**: `bubblewrap` OS sandbox (when installed), `procfs` + `prlimit`, and inherited process-scope markers tracking descendants across `setsid`/reparenting (verified in headless Electron E2E across `SIGKILL`).
+- **macOS**: `Seatbelt` (`sandbox-exec`) when available, plus `ps` RSS and `lsof` socket ownership.
+- **Windows**: Bun `1.4.2` ConPTY, `no-orphans` kill-on-close Job Object, async CIM snapshots validated by Zod (halting on malformed telemetry rather than reporting zeroes), and `taskkill /T` (per-command AppContainer and resource Job Objects are not wired in yet; native Windows/macOS acceptance remains tracked separately from Linux CI).
 
-OS sandbox использует bubblewrap на Linux и Seatbelt на macOS при наличии системного инструмента. Windows AppContainer и отдельный Job Object для каждой команды не подключены. Отсутствие OS sandbox явно сообщается; лексическая проверка команды не заменяет изоляцию ОС. Sampling не гарантирует изоляцию коротких процессов/сокетов между polls; Windows PPID не восстанавливает orphan, если родитель исчез до sample.
+Missing OS sandbox binaries are surfaced explicitly in `status`. `grep`'s JS regex fallback runs inside a cancellable worker thread with a hard deadline to prevent ReDoS stalls, and `read` bounds long-line buffering while rejecting FIFOs and device files.
 
-Persistent PTY использует openpty/ConPTY из Bun 1.4.2. Штатный no-orphans следит за родителем sidecar и завершает потомков при выходе; Windows runtime использует общий kill-on-close Job Object. Это не отдельный ресурсный Job для каждой команды. На Linux настоящий Electron E2E подтверждает отсутствие фонового потомка после SIGKILL окна. Native Windows/macOS приёмка остаётся открытой.
+## Auditability, Session Grants, and SSH
 
-Grep fallback исполняет пользовательский RegExp в отдельном прерываемом worker с deadline, поэтому тяжёлый шаблон не блокирует sidecar. Чтение ограничивает накопление длинной строки, не читает FIFO и устройства, большие логи сохраняются потоком.
+Logs and diagnostics stay local under `.flecten/`, telemetry is opt-in counters-only ([PRIVACY.md](PRIVACY.md)), new dependencies require decision-log entries, `bun audit` runs in CI, and auto-updates verify pinned Ed25519 signatures plus SHA-512 installer hashes before user-triggered installation ([RELEASE.md](RELEASE.md)).
 
-## Логи и зависимости
+Durable `allow_session` resolutions record canonical scope/request hashes, owner session, and policy epoch in `approval.resolved`: replay restores grants only within that exact chat and policy epoch, never across new chats, forks, or legacy unhashed events.
 
-Логи и диагностика остаются в `.flecten/`. Retention, корзина, удаление и явный экспорт доступны через историю. Диагностический пакет ничего не отправляет сам; телеметрия требует opt-in и включает только счётчики. Подробности: [PRIVACY.md](PRIVACY.md).
-
-Новая зависимость требует записи в журнале решений; `bun audit` запускается отдельной CI job. Подписанный update channel проверяет Ed25519 manifest, встроенный публичный ключ, версию, размер и SHA512 installer до установки. Загрузка и установка требуют действия пользователя.
-
-## Восстановление разрешений чата
-
-Человеческий `allow_session` записывает canonical scope или hash точного запроса вместе с владельцем и идентичностью политики в `approval.resolved`. Replay восстанавливает grant в том же чате; новый чат и fork не наследуют его. Durable policy epoch меняется при изменении правил, поэтому прежние grants не оживают даже после возврата прежних настроек. Explicit deny и human checkpoint сохраняют приоритет. События старых версий без canonical grant не превращаются в разрешение по догадке. Разрешённые внешние директории снова доходят до logical и OS sandbox через существующий refresh.
-
-SSH resource analysis читает локальные file options и local ProxyCommand, но останавливается на destination: remote argv остаётся непрозрачным payload. Локальные redirections и command substitutions продолжают проверяться. Scoped SSH preflight пробрасывает только живой agent socket и выбранные публичные known_hosts в контекст конкретного guarded вызова, повторно применяя их после live security refresh. Модель не получает приватные ключи.
+SSH resource analysis inspects local key/config flags, redirections, command substitutions, and local `ProxyCommand` arguments while treating remote `argv` as an opaque payload; scoped SSH preflight forwards only the live `SSH_AUTH_SOCK` and verified target `known_hosts` entries into guarded calls without exposing private keys or `~/.ssh`.

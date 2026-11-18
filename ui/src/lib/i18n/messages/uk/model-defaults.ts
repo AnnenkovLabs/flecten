@@ -2,17 +2,17 @@ export default {
   "Main model": "Основна модель",
   "Default main model": "Основна модель за замовчуванням",
   "Used when Talker and Worker is off, and as the fallback for role defaults.":
-    "Використовується, коли Talker і Worker вимкнені, та як резервна модель для ролей.",
+    "Використовується в одноагентних чатах і для ролей зі значенням за замовчуванням.",
   "Defaults apply to new chats. You can still choose a model in the message box.":
-    "Налаштування застосовуються до нових чатів. Модель також можна вибрати в полі повідомлення.",
+    "Застосовується до нових чатів. Для окремого чату модель обирається в полі вводу.",
   "Talker handles your conversation. Worker carries out tasks with tools, for any kind of work.":
-    "Talker веде діалог. Worker виконує завдання з інструментами для будь-якої роботи.",
+    "Talker відповідає в діалозі без затримок, поки Worker запускає інструменти й редагує файли в окремій сесії.",
   "Talker model": "Модель Talker",
   "Worker model": "Модель Worker",
   "Understands requests, asks questions, and explains progress and results.":
     "Розуміє запити, ставить запитання, пояснює перебіг роботи та результати.",
   "Executes tasks. A model selected in the message box overrides this default for that chat.":
-    "Виконує завдання. Модель із поля повідомлення замінює цей вибір у поточному чаті.",
+    "Запускає інструменти й редагує файли. Перевизначається вибором моделі в полі вводу.",
   "Use chat model": "Як у чаті",
   "Use main model": "Основна модель",
   "Subagent models": "Моделі субагентів",
@@ -22,9 +22,9 @@ export default {
   Explore: "Дослідження",
   Implement: "Виконання",
   Review: "Перевірка",
-  "Find information and understand the task.": "Знаходить інформацію та розбирається в завданні.",
-  "Carry out a focused assignment.": "Виконує конкретне доручення.",
-  "Check results and identify risks.": "Перевіряє результати та виявляє ризики.",
+  "Find information and understand the task.": "Читання та пошук по коду без внесення змін.",
+  "Carry out a focused assignment.": "Локальні правки коду та перевірка.",
+  "Check results and identify risks.": "Перевірка diff, граничних випадків і регресій.",
   "Choose an enabled model that supports tools.":
     "Виберіть увімкнену модель із підтримкою інструментів.",
   "Choose a variant available for this model.": "Виберіть варіант, доступний для цієї моделі.",

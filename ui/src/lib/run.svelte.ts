@@ -73,7 +73,7 @@ export class RunStore implements TaskHost, ModelHost {
     return contextMentions(this.ide.context, this.sessions, extensions.mcp);
   }
   get sendMode(): SendMode {
-    return preferences.followUpBehavior;
+    return this.view.isTalker ? "steer" : preferences.followUpBehavior;
   }
   files = $state<string[]>([]);
   readonly activity = new TaskActivity();

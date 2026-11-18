@@ -1,17 +1,13 @@
 import { HarnessError } from "../../errors";
 import { TerminalManager } from "../../terminal/manager";
-import { ReadTracker } from "../../tools/util/read-tracker";
+import { ToolRegistry } from "../../tools/registry";
 import { newId } from "../../util/ids";
-import type { AttachmentSnapshot } from "../attachment-reference";
-import { withAttachmentBlocks } from "../attachments";
-import { type ContextReference, contextReferenceBlocks } from "../context-reference";
 import { sessionDictionary } from "../dictionary/session";
 import { GoalState } from "../goal/state";
 import { ToolCalls } from "../loop/calls";
-import type { SteeringMessage } from "../loop/types";
 import { RunQueue } from "../queue/queue";
 import { SteeringController } from "../queue/steering";
-import type { QueueItem } from "../queue/types";
+import type { QueueItemMode } from "../queue/types";
 import { runAgent } from "../services/agent";
 import { SubagentTasks } from "../subagents/tasks";
 import type { Command, Event, Message, ReasoningEffort, RunResult, SessionId } from "../types";
@@ -19,23 +15,24 @@ import { ApprovalWaiters } from "./approvals";
 import { BUDGET_ABORT, RunBudget } from "./budget";
 import { dispatch } from "./commands";
 import { SessionCompaction } from "./compaction";
+import { drainQueue, followUpMode } from "./drain-queue";
 import { createEventBus } from "./event-bus";
 import { failureEvent, messageOf, sessionRetryPolicy } from "./failure";
 import type { SessionHandle, SessionPeek } from "./handle";
 import { notifyJobHook, sessionHookRunner } from "./hooks";
 import { JobNotices } from "./jobs";
 import { runLanguage, translatedRunInput } from "./language";
-import { assertHistoryMedia, sessionAttachments, toolMediaOptions } from "./media";
+import { toolMediaOptions } from "./media";
 import { sessionMemory } from "./memory";
 import type { SessionOptions } from "./options";
 import { SessionPermissionIntent } from "./permission-intent";
 import { isPersistentEvent, SessionPersistence } from "./persistence";
 import { accountingChanged, runAccounting, taskBudgetEvent } from "./run-accounting";
-import { promptWithHookContext } from "./run-input";
+import { prepareSessionInput, promptWithHookContext } from "./run-input";
 import type { ActiveRun, RunExtras, SessionRuntime } from "./runtime";
 import { SessionStatePublisher } from "./state";
-import { prepareSteering } from "./steering";
-import { sessionToolOptions } from "./tool-options";
+import { takeSessionSteering } from "./steering";
+import { sessionReadsTracker, sessionToolOptions } from "./tool-options";
 import { runVision } from "./vision";
 
 export type { SessionHandle, SessionPeek } from "./handle";
@@ -43,11 +40,15 @@ export type { SessionOptions } from "./options";
 export type { SessionMemory } from "./run-input";
 export const DEFAULT_APPROVAL_TIMEOUT_MS = 300_000;
 const RECENT_RUNS = 64;
+const UNWIRED_MEMORY = new Set(["memory"]);
 export function createSession(options: SessionOptions): SessionHandle {
   const bus = createEventBus();
+  const readsFor = sessionReadsTracker(RECENT_RUNS);
   const statePublisher = new SessionStatePublisher(options.initialPhase, options.interrupted);
   let active: ActiveRun | undefined;
   let starting = false;
+  let holdQueue = false;
+  let queuedRun: Promise<RunResult | undefined> | undefined;
   let preparing: AbortController | undefined;
   let goalState: GoalState | undefined;
   let currentSessionId: SessionId | undefined = options.sessionId;
@@ -78,7 +79,7 @@ export function createSession(options: SessionOptions): SessionHandle {
       type: "error",
       ...(currentSessionId ? { sessionId: currentSessionId } : {}),
       code: "log_failed",
-      message: `Не удалось сохранить задачу: ${messageOf(error)}`,
+      message: `Could not save session: ${messageOf(error)}`,
     });
   });
   function persist(event: Event): void {
@@ -125,9 +126,9 @@ export function createSession(options: SessionOptions): SessionHandle {
     prompt: string,
     requestedSessionId: string | undefined,
     attachmentPaths: readonly string[],
-    contexts: readonly ContextReference[],
-    snapshot?: AttachmentSnapshot,
+    extras: RunExtras,
   ) {
+    if (extras.queueId) await persistence.flush();
     await compaction.settled();
     let sessionId: SessionId;
     const selected = requestedSessionId ?? (historyOf === undefined ? currentSessionId : undefined);
@@ -144,26 +145,7 @@ export function createSession(options: SessionOptions): SessionHandle {
       historyOf = sessionId;
       history = [];
     }
-    const expanded = options.expandPrompt ? await options.expandPrompt(prompt) : prompt;
-    assertHistoryMedia(history, options);
-    const attached = await sessionAttachments(attachmentPaths, sessionId, options, snapshot);
-    const input = withAttachmentBlocks(expanded, [
-      ...attached.blocks,
-      ...contextReferenceBlocks(contexts),
-    ]);
-    return { sessionId, expanded, input, attached };
-  }
-  async function steeringMessages(): Promise<SteeringMessage[]> {
-    const notices = jobs.take(active?.sessionId ?? currentSessionId);
-    const items: QueueItem[] = steering.takeAtBoundary();
-    for (const item of items) queue.markSending(item.id);
-    if (items.length > 0) await saveQueue();
-    const typed = await prepareSteering(
-      items,
-      active?.sessionId ?? currentSessionId ?? "",
-      options,
-    );
-    return [...((await options.takeNotices?.()) ?? []), ...notices, ...typed];
+    return prepareSessionInput(prompt, sessionId, history, attachmentPaths, extras, options);
   }
   async function run(
     prompt: string,
@@ -186,13 +168,7 @@ export function createSession(options: SessionOptions): SessionHandle {
     const controller = preparing;
     starting = true;
     statePublisher.starting();
-    const prepared = await prepareRun(
-      prompt,
-      requestedSessionId,
-      attachmentPaths ?? [],
-      extras.contexts ?? [],
-      extras.attachmentSnapshot,
-    )
+    const prepared = await prepareRun(prompt, requestedSessionId, attachmentPaths ?? [], extras)
       .catch((error: unknown) => {
         starting = false;
         statePublisher.failed();
@@ -220,6 +196,7 @@ export function createSession(options: SessionOptions): SessionHandle {
     );
     const state: ActiveRun = {
       sessionId,
+      ...(extras.summaryWake ? { summaryWake: true } : {}),
       controller,
       stop: new AbortController(),
       turns: 0,
@@ -228,13 +205,13 @@ export function createSession(options: SessionOptions): SessionHandle {
     };
     active = state;
     const disarm = budget.arm(() => controller.abort(BUDGET_ABORT));
-    const reads = new ReadTracker();
+    const reads = readsFor(sessionId, options.reads);
     const sessionHooks = sessionHookRunner(
-      options.hooks,
+      extras.summaryWake ? undefined : options.hooks,
       sessionId,
       options.cwd,
       emit,
-      options.modules,
+      extras.summaryWake ? undefined : options.modules,
     );
     const hooks = sessionHooks.runner;
     const runHooks = sessionHooks.run;
@@ -304,10 +281,18 @@ export function createSession(options: SessionOptions): SessionHandle {
         ...authority.input,
         provider: options.provider,
         loadMedia: toolMediaOptions(options, sessionId).loadMedia,
-        ...(options.modules ? { modules: options.modules } : {}),
-        tools: options.tools,
+        ...(options.modules && !extras.summaryWake ? { modules: options.modules } : {}),
+        tools: extras.summaryWake
+          ? new ToolRegistry([], { limits: options.limits })
+          : memory
+            ? options.tools
+            : options.tools.without(UNWIRED_MEMORY),
         system,
-        ...(options.responseFormat ? { responseFormat: options.responseFormat } : {}),
+        ...(extras.summaryWake
+          ? { responseFormat: "conversation" as const }
+          : options.responseFormat
+            ? { responseFormat: options.responseFormat }
+            : {}),
         ...(options.completionGuard ? { completionGuard: options.completionGuard } : {}),
         messages: history,
         ...(attached.parts.length > 0 ? { attachments: attached.parts } : {}),
@@ -316,13 +301,15 @@ export function createSession(options: SessionOptions): SessionHandle {
         takeCompactionRequest: compaction.take,
         retryPolicy,
         goal,
-        takeSteering: steeringMessages,
+        ...(extras.summaryWake
+          ? {}
+          : { takeSteering: () => takeSessionSteering(runtime, jobs.take(sessionId)) }),
         budgetExhausted: () => options.externalBudgetExhausted?.() ?? budget.stopReason(),
         calls,
         signal: controller.signal,
         stopSignal: state.stop.signal,
         emit: loopEvent,
-        maxTurns: options.loop.maxTurns,
+        maxTurns: extras.summaryWake ? 1 : options.loop.maxTurns,
         maxTokens: options.maxOutputTokens,
         contextWindow: options.context.window,
         reserveTokens: options.context.reserve,
@@ -347,7 +334,7 @@ export function createSession(options: SessionOptions): SessionHandle {
             ? { approvals: options.inheritedApprovals }
             : options.approvalTimeoutMs === 0
               ? {}
-              : { approvals: approvals.gate(sessionId) }),
+              : { approvals: approvals.gate(options.approvalSessionId ?? sessionId) }),
           terminals,
         },
       });
@@ -384,6 +371,10 @@ export function createSession(options: SessionOptions): SessionHandle {
       };
     } finally {
       disarm();
+    }
+    try {
+      await runHooks("sessionEnd", { stopReason: result.stopReason }, new AbortController().signal);
+    } finally {
       active = undefined;
       if (deferred) {
         const next = deferred;
@@ -391,27 +382,18 @@ export function createSession(options: SessionOptions): SessionHandle {
         applyOptions(next);
       }
     }
-    await runHooks("sessionEnd", { stopReason: result.stopReason }, new AbortController().signal);
     emit({ type: "session.finished", sessionId, result });
-    if (
-      (result.stopReason === "end" || result.stopReason === "done") &&
-      !controller.signal.aborted
-    ) {
-      const next = queue.takeNext();
-      if (next) {
-        await saveQueue();
-        void run(next.text, undefined, sessionId, next.attachments, {
-          ...(next.attachmentSnapshot ? { attachmentSnapshot: next.attachmentSnapshot } : {}),
-          queueId: next.id,
-          ...(next.contexts ? { contexts: next.contexts } : {}),
-        }).catch((error: unknown) => {
-          queue.markCancelled(next.id);
-          void saveQueue();
-          emit(failureEvent(sessionId, error, messageOf(error)));
-        });
-      }
-    }
+    const mode = followUpMode(result.stopReason, options.role, Boolean(extras.summaryWake));
+    if (mode && !controller.signal.aborted && !state.stop.signal.aborted)
+      startQueuedRun(sessionId, mode);
     return result;
+  }
+  function startQueuedRun(sessionId: SessionId, mode: QueueItemMode | "any"): void {
+    if (holdQueue) return;
+    queuedRun =
+      drainQueue(runtime, sessionId, mode, (item, extras) =>
+        run(item.text, undefined, sessionId, item.attachments, extras),
+      ) ?? queuedRun;
   }
   const runtime: SessionRuntime = {
     options,
@@ -459,7 +441,10 @@ export function createSession(options: SessionOptions): SessionHandle {
     },
     flush: () => compaction.settled().then(() => persistence.flush()),
     async dispose(): Promise<void> {
+      holdQueue = true;
+      (preparing ?? active?.controller)?.abort("stopped");
       calls.abortAll(new Error("Session closed"));
+      await queuedRun;
       if (currentSessionId) await options.modules?.close(currentSessionId);
       await subagents.dispose();
       jobs.dispose();
@@ -478,9 +463,19 @@ export function createSession(options: SessionOptions): SessionHandle {
     },
     async send(command: Command): Promise<unknown> {
       permissionIntent.beforeCommand(command, options.role, queue.list());
-      if (command.type === "stop" && !command.target) preparing?.abort("stopped");
+      if (command.type === "stop" && !command.target) {
+        holdQueue = true;
+        preparing?.abort("stopped");
+      }
       if (command.type !== "run") {
         const result = await dispatch(runtime, command);
+        if (
+          command.type === "queue.add" &&
+          command.mode === "steer" &&
+          options.role === "talker" &&
+          currentSessionId
+        )
+          startQueuedRun(currentSessionId, "steer");
         statePublisher.publish(runtime);
         return result;
       }
@@ -489,11 +484,13 @@ export function createSession(options: SessionOptions): SessionHandle {
         recentRuns.push(command.clientId);
         if (recentRuns.length > RECENT_RUNS) recentRuns.shift();
       }
+      if (!command.internal) holdQueue = false;
       return run(command.prompt, command.reasoning, command.sessionId, command.attachments, {
         ...(command.attachmentSnapshot ? { attachmentSnapshot: command.attachmentSnapshot } : {}),
         ...(command.contexts ? { contexts: command.contexts } : {}),
         ...(command.resumed ? { resumed: true } : {}),
         ...(command.internal ? { internal: true } : {}),
+        ...(command.summaryWake ? { summaryWake: true } : {}),
       });
     },
   };

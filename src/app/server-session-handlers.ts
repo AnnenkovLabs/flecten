@@ -1,3 +1,4 @@
+import { SummaryInteractionSchema } from "../../shared/summary-interaction";
 import { ContextReferencesSchema } from "../core/context-reference";
 import type { RoutedCommand } from "../core/types";
 import { isReasoningEffort } from "../core/types";
@@ -25,6 +26,7 @@ export const SESSION_COMMANDS = [
   "run",
   "steer",
   "stop",
+  "summary.interaction",
   "tool.cancel",
   "subagent.stop",
 ] as const;
@@ -75,6 +77,14 @@ export function sessionHandlers(
   };
 
   return {
+    "summary.interaction": (input) => {
+      const sessionId = optionalId(input, "sessionId");
+      const summaryId = optionalId(input, "summaryId");
+      if (!sessionId || !summaryId) throw new Error("sessionId and summaryId are required");
+      const interaction = SummaryInteractionSchema.parse(input.interaction);
+      app.session.receiveSummaryInteraction(sessionId, summaryId, interaction);
+      return undefined;
+    },
     stop: (input) => {
       const mode = input.mode;
       if (mode !== undefined && mode !== "graceful" && mode !== "force")

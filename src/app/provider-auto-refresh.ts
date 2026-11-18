@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import type { HarnessConfig, ProviderConfig } from "../config/schema";
+import type { HarnessConfig, ModelConfig, ProviderConfig } from "../config/schema";
 import { DiagnosticsRuntime } from "../observability/runtime";
 import { actualizeModels } from "../providers/actualize";
 import { catalogStatus, syncCatalog } from "../providers/catalog";
@@ -98,7 +98,7 @@ export function providerAutoRefresh(context: RefreshContext) {
         target.models[next.model] = activeModel;
       target.modelMetadataBaseline = { ...provider.modelMetadataBaseline, ...result.models };
       for (const [modelId, incoming] of Object.entries(result.models)) {
-        const currentModel = provider.models[modelId];
+        const currentModel: ModelConfig | undefined = provider.models[modelId];
         if (!currentModel) continue;
         const startedModel = started.models[modelId];
         const previous = started.modelMetadataBaseline?.[modelId];

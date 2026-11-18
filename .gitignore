@@ -6,6 +6,7 @@ node_modules/
 dist/
 release/
 *.tsbuildinfo
+/ui/.svelte-check/
 
 # Test and coverage artifacts
 coverage/

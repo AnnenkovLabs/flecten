@@ -356,13 +356,17 @@ describe("skills", () => {
     expect(preview.text).toContain("must not execute");
     expect(preview.truncated).toBe(false);
     await expect(readSkillResource(skill, "../../flecten.config.json")).rejects.toThrow(
-      "списка ресурсов",
+      "not listed in this skill",
     );
-    await expect(readSkillResource(skill, "references/binary")).rejects.toThrow("Бинарный");
+    await expect(readSkillResource(skill, "references/binary")).rejects.toThrow(
+      "Binary skill resource",
+    );
     const { symlink } = await import("node:fs/promises");
     await Bun.write(join(cwd, "outside"), "secret");
     await symlink(join(cwd, "outside"), join(directory, "references/linked"));
-    await expect(readSkillResource(skill, "references/linked")).rejects.toThrow("списка ресурсов");
+    await expect(readSkillResource(skill, "references/linked")).rejects.toThrow(
+      "not listed in this skill",
+    );
   });
 
   test("omits the skill tool when no skills are installed", () => {

@@ -21,9 +21,9 @@ export default {
   "Nothing to undo": "没有可撤销的更改",
   "Nothing to retry": "没有可重试的内容",
   "Model: {0}": ["模型：", 0],
-  "Resuming the task after the core restarted": "核心重启后继续任务",
+  "Resuming the task after the core restarted": "智能体进程重启后正在恢复任务",
   "History, plan, and files are intact; the model checks the current state before acting":
-    "历史记录、计划和文件均已保留；模型会在操作前核对状态",
+    "会话历史与文件完好，正在检查工作区状态后继续",
   "Run interrupted": "本次运行已中断",
   "Stopped at the run budget limit": "已达到本次运行的预算上限，已停止",
   "failed to start": "未能启动",
@@ -40,8 +40,8 @@ export default {
   Thinking: "思考中",
   Error: "错误",
   "Awaiting approval": "等待授权",
-  "Core restarting": "核心正在重启",
-  "The model received the background command result": "模型已收到后台命令的结果",
+  "Core restarting": "正在重启智能体",
+  "The model received the background command result": "后台命令输出已送达模型",
   "Preparing a call": "正在准备调用",
   Writing: "正在撰写",
   "Untranslated response": "原文回复",
@@ -79,11 +79,10 @@ export default {
   "[timed out]": "[已超时]",
   "[exit code {0}]": ["[退出码 ", 0, "]"],
   "Context is almost full (95%). Compress it now, or the core will compress it automatically.":
-    "上下文即将用满（95%）。请立即压缩，否则内核将自动压缩。",
+    "上下文已达 95%，满 100% 时将自动压缩。",
   "Context is 85% full. You can compress it now, focusing on the topic you need.":
-    "上下文已用 85%。现在可以压缩，并重点保留所需主题。",
-  "Context is 70% full. No need to compress it yet, but keep it in mind.":
-    "上下文已用 70%。暂时无需压缩，但请留意使用情况。",
+    "上下文已达 85%，可在上下文指示器中指定重点并提前压缩。",
+  "Context is 70% full. No need to compress it yet, but keep it in mind.": "上下文已使用 70%。",
   "page {0}": ["第 ", 0, " 页"],
   "{0} → {1} tokens": [0, " → ", 1, " 个 token"],
   "no model": "无模型",
@@ -96,5 +95,5 @@ export default {
     "上下文已超出容量。请压缩历史记录或新建任务。",
   "Run canceled.": "已取消运行。",
   "The core could not start. Check your installation and settings.":
-    "内核未能启动。请检查安装情况和设置。",
+    "智能体进程启动失败，请检查设置或重新安装。",
 } as const;

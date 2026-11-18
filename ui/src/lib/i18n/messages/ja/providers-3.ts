@@ -71,7 +71,7 @@ export default {
   "Authentication refreshed and verified.": "認証情報を更新し、確認しました。",
   "Base URL API address": "Base URL APIアドレス",
   Proxy: "プロキシ",
-  "Request timeout, ms": "リクエストのタイムアウト（ミリ秒）",
+  "Request timeout, ms": "リクエストタイムアウト (ms)",
   "Request timeout": "リクエストのタイムアウト",
   "API key for provider {0}": ["プロバイダー ", 0, " のAPIキー"],
   "API key Key": "APIキー キー",

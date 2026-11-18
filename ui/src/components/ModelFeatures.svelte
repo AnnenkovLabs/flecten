@@ -22,40 +22,20 @@
     | "disabled";
 
   const FLAGS: Array<{ key: FlagKey; label: string; hint: string }> = $derived([
-    {
-      key: "tools",
-      label: t("Tools"),
-      hint: t("The model calls read, write, bash, and other tools."),
-    },
-    { key: "vision", label: t("Images"), hint: t("Understands images in the input.") },
-    { key: "temperature", label: t("Temperature"), hint: t("Accepts the temperature parameter.") },
-    {
-      key: "structuredOutput",
-      label: t("Structured output"),
-      hint: t("Responds using the specified JSON schema."),
-    },
+    { key: "tools", label: t("Tools"), hint: "" },
+    { key: "vision", label: t("Images"), hint: "" },
+    { key: "temperature", label: t("Temperature"), hint: "" },
+    { key: "structuredOutput", label: t("Structured output"), hint: "" },
     { key: "audio", label: t("Audio"), hint: t("WAV and MP3 via Chat Completions, audio files via Gemini.") },
     { key: "pdf", label: "PDF", hint: "" },
     { key: "computerUse", label: t("Computer use"), hint: "" },
-    {
-      key: "promptCache",
-      label: t("Prompt cache"),
-      hint: t("The provider caches the shared request prefix."),
-    },
-    {
-      key: "parallelToolCalls",
-      label: t("Parallel calls"),
-      hint: t("Multiple tools in one turn."),
-    },
-    {
-      key: "interleavedReasoning",
-      label: t("Reasoning between calls"),
-      hint: t("The model reasons after receiving a tool result."),
-    },
+    { key: "promptCache", label: t("Prompt cache"), hint: "" },
+    { key: "parallelToolCalls", label: t("Parallel calls"), hint: "" },
+    { key: "interleavedReasoning", label: t("Reasoning between calls"), hint: "" },
     {
       key: "disabled",
       label: t("Hide from selection"),
-      hint: "",
+      hint: t("Not shown in the model picker"),
     },
   ]);
 
@@ -80,6 +60,7 @@
 {#if model}
   <section class="sheet-section">
     <h3 class="st-title">{t("Capabilities")}</h3>
+    <p class="st-hint">{t("Auto-filled from the model catalog. Override when a proxy or custom endpoint differs.")}</p>
     <div class="flag-list">
       {#each FLAGS as flag (flag.key)}
         <label class="st-switch">

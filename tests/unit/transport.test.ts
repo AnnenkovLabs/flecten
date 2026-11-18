@@ -165,7 +165,7 @@ describe("provider transport headers", () => {
 });
 
 describe("provider transport proxy validation", () => {
-  test("rejects socks and other non-http proxies with a Russian typed error", () => {
+  test("rejects socks and other non-http proxies with a typed error", () => {
     for (const proxy of [
       "socks5://127.0.0.1:1080",
       "socks5h://127.0.0.1:1080",
@@ -174,7 +174,7 @@ describe("provider transport proxy validation", () => {
       const error = captureSyncError(() => createProviderFetch({ proxy }));
       expect(error.reason).toBe("proxy");
       expect(error.code).toBe("invalid_input");
-      expect(error.message).toContain("не поддерживается");
+      expect(error.message).toContain("Unsupported proxy scheme");
       expect(error.message).toContain(proxy.slice(0, proxy.indexOf(":")));
     }
 
@@ -187,7 +187,7 @@ describe("provider transport proxy validation", () => {
   test("rejects malformed proxy urls", () => {
     const error = captureSyncError(() => createProviderFetch({ proxy: "not a url" }));
     expect(error.reason).toBe("proxy");
-    expect(error.message).toContain("Некорректный URL прокси");
+    expect(error.message).toContain("Invalid proxy URL");
   });
 });
 

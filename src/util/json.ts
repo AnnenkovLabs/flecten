@@ -65,15 +65,20 @@ function parseOnce(text: string): unknown {
   }
 }
 
-export function parseToolArgs(input: unknown): unknown {
+export interface ParseToolArgsOptions {
+  allowTruncated?: boolean;
+}
+
+export function parseToolArgs(input: unknown, options?: ParseToolArgsOptions): unknown {
   if (typeof input !== "string") return input;
   const text = input.trim();
   if (text.length === 0) return input;
+  const allowTruncated = options?.allowTruncated ?? true;
 
   let parsed = parseOnce(text);
   if (parsed === undefined) parsed = parseOnce(escapeControlChars(text));
-  if (parsed === undefined) parsed = repairTruncated(text);
-  if (parsed === undefined) parsed = repairTruncated(escapeControlChars(text));
+  if (allowTruncated && parsed === undefined) parsed = repairTruncated(text);
+  if (allowTruncated && parsed === undefined) parsed = repairTruncated(escapeControlChars(text));
 
   if (typeof parsed === "string") {
     const nested = parseOnce(parsed);

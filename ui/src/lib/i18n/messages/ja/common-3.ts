@@ -55,14 +55,14 @@ export default {
   "Copying…": "コピー中…",
   "Save or close modified files in the IDE before switching projects":
     "プロジェクトを切り替える前に、IDEで変更したファイルを保存するか閉じてください",
-  "Folder selection is available in the app": "フォルダーの選択はアプリで利用できます",
+  "Folder selection is available in the app": "フォルダ選択はデスクトップアプリでのみ利用できます",
   "## User": "## ユーザー",
   "## Response": "## 回答",
   "## Work": "## 作業",
   "> Error: {0}": ["> エラー: ", 0],
   "Conversation saved as Markdown": "会話をMarkdownで保存しました",
   "Enter text after /search": "/search の後に検索する文字列を入力してください",
-  "Search is available in the app": "検索はアプリで利用できます",
+  "Search is available in the app": "検索はデスクトップアプリでのみ利用できます",
   "“{0}” not found in the conversation": ["会話内に「", 0, "」が見つかりません"],
   "Matches found: {0}. Press Esc to clear highlighting": ["一致件数: ", 0, "。Escで強調表示を解除"],
   "Command /{0} not found": ["コマンド /", 0, " が見つかりません"],
@@ -70,7 +70,7 @@ export default {
   "Opening task…": "タスクを開いています…",
   "Interface language": "表示言語",
   "The language of buttons, menus, and app messages. The language of agent replies is set separately.":
-    "アプリのボタン、メニュー、メッセージの言語です。エージェントの回答言語は別途設定します。",
+    "メニューや UI 表示の言語です。エージェントの応答言語とは別に設定されます。",
   "Diagram source": "図のソース",
   "Couldn't save the language setting. Your choice applies until you close the app.":
     "言語設定を保存できませんでした。選択した言語はアプリを閉じるまで有効です。",

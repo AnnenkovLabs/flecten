@@ -4,11 +4,10 @@
 
 ## 准备
 
-需要 Bun 1.4 和 Node 20 或更新版本。Node 仅用于 Electron。
+需要 Bun 1.4.4 和 Node 22.12 或更新版本。Node 仅用于 Electron。
 
 ```bash
 bun install
-bun run dev help
 bun run app:dev
 ```
 
@@ -21,6 +20,7 @@ bun test
 bun run check
 bun run lint
 bun run build:ui
+bun run build:agent
 ```
 
 如果改动了窗口，请附上截图，或描述在 1480x940 和 1180x640 下的浏览器检查。检查这些状态：空、加载、停止、reduced motion。
@@ -41,9 +41,8 @@ bun run build:ui
 
 - 改动视觉行为前先读 `design.md`。
 - 组件放在 `ui/src/components`，状态和纯函数放在 `ui/src/lib`。
-- 演示数据只在 `ui/src/lib/demo.ts` 中修改。组件不保存这些数据的副本。
 - 令牌、字体和基础样式放在 `ui/src/app.css`。不要添加第二套令牌。
-- 新组件通过 props 接收数据。仅屏幕容器允许直接导入 `demo.ts`。
+- 屏幕状态来自 `ui/src/lib/run.svelte.ts` 和 props；组件不导入 `core`、`store` 或 `tools`。
 - 交互元素支持键盘操作，并有 `aria-label` 或可见标签。
 - 理解状态不需要动画。`prefers-reduced-motion` 必须保留静态画面。
 

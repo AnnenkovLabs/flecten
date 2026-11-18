@@ -21,9 +21,9 @@ export default {
   "Nothing to undo": "Немає чого скасовувати",
   "Nothing to retry": "Немає чого повторювати",
   "Model: {0}": ["Модель: ", 0],
-  "Resuming the task after the core restarted": "Продовжую завдання після перезапуску ядра",
+  "Resuming the task after the core restarted": "Відновлюю задачу після перезапуску агента",
   "History, plan, and files are intact; the model checks the current state before acting":
-    "Історія, план і файли на місці; перед дією модель звіряє стан",
+    "Історію та файли збережено; перевіряю стан робочої папки перед продовженням",
   "Run interrupted": "Виконання перервано",
   "Stopped at the run budget limit": "Зупинено через вичерпання бюджету виконання",
   "failed to start": "не запустилася",
@@ -40,8 +40,8 @@ export default {
   Thinking: "Міркую",
   Error: "Помилка",
   "Awaiting approval": "Очікує дозволу",
-  "Core restarting": "Ядро перезапускається",
-  "The model received the background command result": "Модель отримала результат фонової команди",
+  "Core restarting": "Перезапуск агента",
+  "The model received the background command result": "Вивід фонової команди передано моделі",
   "Preparing a call": "Готує виклик",
   Writing: "Пишу",
   "Untranslated response": "Відповідь без перекладу",
@@ -87,11 +87,11 @@ export default {
   "[timed out]": "[час вичерпано]",
   "[exit code {0}]": ["[код ", 0, "]"],
   "Context is almost full (95%). Compress it now, or the core will compress it automatically.":
-    "Контекст майже заповнений (95%). Стисніть його зараз, інакше ядро стисне його автоматично.",
+    "Контекст заповнено на 95%. При 100% спрацює автостиснення.",
   "Context is 85% full. You can compress it now, focusing on the topic you need.":
-    "Контекст заповнений на 85%. Можна стиснути його зараз, зосередившись на потрібній темі.",
+    "Контекст заповнено на 85%. Стисніть історію через індикатор контексту, якщо потрібен власний фокус.",
   "Context is 70% full. No need to compress it yet, but keep it in mind.":
-    "Контекст заповнений на 70%. Стиснення поки не потрібне, але варто про нього пам’ятати.",
+    "Контекст заповнено на 70%.",
   "page {0}": ["сторінка ", 0],
   "{0} → {1} tokens": [0, " → ", 1, " токенів"],
   "no model": "без моделі",
@@ -105,5 +105,5 @@ export default {
     "Контекст переповнений. Стисніть історію або почніть нове завдання.",
   "Run canceled.": "Запуск скасовано.",
   "The core could not start. Check your installation and settings.":
-    "Ядро не запустилося. Перевірте встановлення та налаштування.",
+    "Процес агента не запустився. Перевірте налаштування або перевстановіть застосунок.",
 } as const;

@@ -12,6 +12,7 @@ export default {
   "Search file contents": "Buscar en archivos",
   "Find files": "Buscar archivos",
   "Ask a question": "Hacer una pregunta",
+  "Ask Talker": "Preguntar a Talker",
   "Read web page": "Leer página web",
   "Search the web": "Buscar en internet",
   Git: "Git",

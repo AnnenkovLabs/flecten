@@ -11,7 +11,7 @@ for (const key of [
 ]) {
   if (env[key] === "") delete env[key];
 }
-const child = Bun.spawn(["bunx", "electron-builder", ...process.argv.slice(2)], {
+const child = Bun.spawn(["bunx", "--no-install", "electron-builder", ...process.argv.slice(2)], {
   env,
   stdin: "inherit",
   stdout: "inherit",

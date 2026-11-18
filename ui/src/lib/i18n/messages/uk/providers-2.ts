@@ -1,6 +1,5 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "The model accepts attachments.": "Модель підтримує вкладення.",
   "Price per 1M tokens": "Ціна за 1 млн токенів",
   "Cache read": "Кеш, читання",
   "Cache write": "Кеш, запис",
@@ -29,7 +28,7 @@ export default {
   "Advanced protocol settings": "Детальні налаштування протоколу",
   "Reasoning, requests, and raw JSON.": "Міркування, запити та необроблений JSON.",
   "How to send and store reasoning between turns.":
-    "Як надсилати та зберігати міркування між ходами.",
+    "Параметри передавання міркувань для OpenAI-сумісних серверів (DeepSeek, Qwen, GLM, vLLM). Залиште «Авто», якщо не потрібно інше.",
   "Resend reasoning": "Повторне надсилання міркувань",
   "Do not send": "Не надсилати",
   "Reasoning details": "Деталі міркувань",
@@ -46,8 +45,6 @@ export default {
   Keep: "Зберігати",
   Clear: "Очищати",
   "Request mode": "Режим запитів",
-  "What to send with the response and how to call tools.":
-    "Що надсилати разом із відповіддю та як викликати інструменти.",
   "Parallel tool calls": "Паралельні виклики інструментів",
   "Cache prompt": "Кешувати промпт",
   "The provider reuses the shared request prefix.":
@@ -61,30 +58,22 @@ export default {
   "The app runs a command and reads the API key from its output. Useful for short-lived tokens.":
     "Система запустить команду та прочитає ключ із її виводу. Зручно для токенів із коротким строком дії.",
   "Get API key from command": "Отримувати ключ із команди",
-  "Instead of the key in the Access field.": "Замість ключа з поля «Доступ».",
+  "Instead of the key in the Access field.":
+    "Використовується замість постійного ключа API та змінної середовища.",
   "Arguments (JSON array)": "Аргументи (масив JSON)",
-  "Timeout, ms": "Час очікування, мс",
-  "Key refresh interval, ms": "Інтервал оновлення ключа, мс",
+  "Timeout, ms": "Таймаут, мс",
+  "Key refresh interval, ms": "Інтервал оновлення токена, мс",
   "Raw overrides": "Необроблені перевизначення",
   "Added to every request. For custom servers.":
     "Додаються до кожного запиту. Потрібні для нестандартних серверів.",
   "Headers (JSON)": "Заголовки (JSON)",
   "Request body (JSON)": "Тіло запиту (JSON)",
-  "The model calls read, write, bash, and other tools.":
-    "Модель викликає read, write, bash та інші інструменти.",
-  "Understands images in the input.": "Розуміє зображення у вхідних даних.",
   Temperature: "Температура",
-  "Accepts the temperature parameter.": "Підтримує параметр temperature.",
-  "Responds using the specified JSON schema.": "Відповідає за заданою схемою JSON.",
   "WAV and MP3 via Chat Completions, audio files via Gemini.":
-    "WAV і MP3 через Chat Completions, аудіофайли через Gemini.",
+    "WAV/MP3 у Chat Completions; аудіофайли в Gemini.",
   "Prompt cache": "Кеш промпту",
-  "The provider caches the shared request prefix.": "Провайдер кешує спільний префікс запиту.",
   "Parallel calls": "Паралельні виклики",
-  "Multiple tools in one turn.": "Кілька інструментів за один хід.",
   "Reasoning between calls": "Міркування між викликами",
-  "The model reasons after receiving a tool result.":
-    "Модель міркує після отримання результату інструмента.",
   "Hide from selection": "Приховати зі списку вибору",
   Capabilities: "Можливості",
   Test: "Перевірка",
@@ -128,4 +117,6 @@ export default {
     "Програма отримає список моделей з API та доповнить дані про контекст і можливості з каталогу.",
   "Provider added without checking. Add models manually in the Models tab.":
     "Провайдера додано без перевірки. Вкажіть моделі вручну на вкладці «Моделі».",
+  "Auto-filled from the model catalog. Override when a proxy or custom endpoint differs.":
+    "Заповнюється з каталогу моделей. Змініть, якщо проксі або власний сервер працює інакше.",
 } as const;

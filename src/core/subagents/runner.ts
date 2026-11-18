@@ -23,7 +23,8 @@ function failure(
 
 function budgetError(spec: SubagentSpec, child: SubagentChildResult): string | undefined {
   const usage = child.usage;
-  const tokens = usage.input + usage.output;
+  const effectiveInput = Math.max(0, usage.input - Math.floor((usage.cached ?? 0) * 0.9));
+  const tokens = effectiveInput + usage.output;
   if (tokens > spec.budget.maxTokens) {
     return `Subagent "${spec.id}" exceeded its token budget: ${tokens} > ${spec.budget.maxTokens}.`;
   }

@@ -201,7 +201,6 @@ export async function buildPrompt(
             workingLanguage: "en" as const,
           },
         ]),
-    { id: "environment", text: environment(cwd), required: true, workingLanguage: "en" },
     ...(options.projectRoot === null
       ? [
           {
@@ -224,6 +223,11 @@ export async function buildPrompt(
       workingLanguage: "en",
     });
   }
+  (options.sections ?? []).forEach((section, index) => {
+    const part = sectionPart(section, index);
+    if (part.text.trim().length > 0) parts.push(part);
+  });
+  parts.push({ id: "environment", text: environment(cwd), required: true, workingLanguage: "en" });
   if (instructions.text.length > 0) {
     parts.push({
       id: "instructions",
@@ -231,10 +235,6 @@ export async function buildPrompt(
       required: true,
     });
   }
-  (options.sections ?? []).forEach((section, index) => {
-    const part = sectionPart(section, index);
-    if (part.text.trim().length > 0) parts.push(part);
-  });
   if (options.tools !== undefined && options.tools.length > 0) {
     parts.push({
       id: "tool-schemas",

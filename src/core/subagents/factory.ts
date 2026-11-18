@@ -70,6 +70,7 @@ export function createSubagentRuntime(options: CreateSubagentRuntimeOptions): Su
               approvalSessionId: context.approvalSessionId ?? context.sessionId,
             }
           : {}),
+        parentReads: context.reads,
         parentAuthorize: (name) => options.toolRegistry?.authorize?.(name, context),
       }),
     signal: context.signal,

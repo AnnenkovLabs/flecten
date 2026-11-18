@@ -9,9 +9,10 @@
     recent: NewSessionProject[];
     onSelect: (id: string) => void;
     onChooseFolder: () => void;
+    onChooseProjectless: () => void;
   }
 
-  let { current, recent, onSelect, onChooseFolder }: Props = $props();
+  let { current, recent, onSelect, onChooseFolder, onChooseProjectless }: Props = $props();
 
   let open = $state(false);
   let root: HTMLDetailsElement;
@@ -90,5 +91,11 @@
       <Icon name="folder-plus" size={15} />
       <span>{t("Select folder")}</span>
     </button>
+    {#if current}
+      <button class="ns-picker-row" type="button" onclick={() => { open = false; onChooseProjectless(); }}>
+        <Icon name="x" size={15} />
+        <span>{t("Without a project")}</span>
+      </button>
+    {/if}
   </div>
 </details>

@@ -53,7 +53,7 @@ describe("IDE file saves", () => {
           text: "stale\n",
           expectedHash: before.hash,
         }),
-      ).rejects.toThrow("изменился на диске");
+      ).rejects.toThrow("changed on disk");
       expect(await readFile(path, "utf8")).toBe("agent change\n");
       const current = await previewFile(cwd, "a.ts");
       const saves = await Promise.allSettled(
@@ -106,7 +106,7 @@ describe("IDE file saves", () => {
             text: "no",
             expectedHash: "0".repeat(64),
           }),
-        ).rejects.toThrow("вне проекта");
+        ).rejects.toThrow("outside the project");
         expect(await readFile(path, "utf8")).toBe("safe");
       });
       await expect(
@@ -129,7 +129,7 @@ describe("IDE file saves", () => {
           text: "я".repeat(PREVIEW_BYTES),
           expectedHash: "0".repeat(64),
         }),
-      ).rejects.toThrow("512 КБ");
+      ).rejects.toThrow("512 KB");
     });
   });
 });

@@ -42,7 +42,7 @@ test("explorer creates empty folders and files, renames without overwrite, and t
     expect(await readFile(join(cwd, "empty/b.ts"), "utf8")).toContain("42");
     await expect(
       change({ operation: "rename", path: "src", destination: "empty" }),
-    ).rejects.toThrow("существует");
+    ).rejects.toThrow("already exists");
     await expect(change({ operation: "trash", path: "empty" })).rejects.toThrow();
     await change({ operation: "trash", path: "empty", confirm: true });
     const trash = await readdir(join(cwd, ".flecten/ide-trash"));
@@ -167,7 +167,7 @@ test("Git UI stages only explicit paths, shows real diffs, unstages and commits 
     await git({ action: "stage", path: "a1.txt" });
     await expect(
       workspaceGit(join(cwd, "nested"), { action: "commit", message: "nested" }),
-    ).rejects.toThrow("вне открытого проекта");
+    ).rejects.toThrow("outside the open project");
   });
 }, 20_000); // Native Windows Git starts a new process for each operation in this lifecycle.
 

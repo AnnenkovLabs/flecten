@@ -4,6 +4,7 @@
   let { hookRuns = [], dictionary }: { hookRuns?: HookRun[]; dictionary: DictionaryStore } = $props();
   import { t } from "../lib/i18n.svelte";
   import { modal } from "../lib/modal";
+  import { overlayPresence } from "../lib/overlay-presence";
   import "./settings-surface.css";
   import "./settings-layout.css";
   import "./settings-sections.css";
@@ -130,6 +131,7 @@
     class="settings-dialog st-dialog"
     bind:this={dialogEl}
     use:modal={() => dialogEl}
+    transition:overlayPresence|global
     tabindex="-1"
     aria-labelledby="settings-title"
     oncancel={(event) => {

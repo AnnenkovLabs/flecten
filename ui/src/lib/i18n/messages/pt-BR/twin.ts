@@ -1,21 +1,21 @@
 export default {
   "Twin is on": "Twin ativado",
   "Twin is off": "Twin desativado",
-  "Twin is saying goodbye…": "Twin está se despedindo…",
-  "Twin is back with you": "Twin está com você de novo",
+  "Twin is saying goodbye…": "Desativando Twin…",
+  "Twin is back with you": "Twin está ativo",
   "Represents you while you work.": "Representa você enquanto trabalha.",
   "Your character stays saved. Turn Twin on whenever you want.":
     "Seu perfil continua salvo. Ative o Twin quando quiser.",
   "No new supported user messages were found. No model request was made.":
-    "Nenhuma nova mensagem de usuário compatível foi encontrada. Nenhuma solicitação foi enviada ao modelo.",
+    "Nenhuma nova mensagem encontrada nas fontes selecionadas. Nenhuma chamada ao modelo foi feita.",
   "Training finished. No supported traits were found.":
-    "O aprendizado terminou. Nenhum traço comprovado foi encontrado.",
+    "Análise concluída, mas nenhuma preferência recorrente foi encontrada para salvar.",
   "On sessions from any harness.": "Com sessões de qualquer harness.",
   "Your Twin": "Seu Twin",
   "Learning from your decisions": "Aprendendo com suas decisões",
   "Ready to work with you": "Pronto para trabalhar com você",
   "Ready to learn": "Pronto para aprender",
-  "Same ideas. Same thoughts.": "As mesmas ideias. Os mesmos pensamentos.",
+  "Same ideas. Same thoughts.": "Seus padrões, aplicados automaticamente",
   "Your taste, your standards, your voice. Twin answers the Worker and sends weak work back.":
     "Seu gosto, seus padrões, sua voz. O Twin responde ao Worker e devolve o trabalho que não atende às suas exigências.",
   Anger: "Irritação",
@@ -56,7 +56,7 @@ export default {
   ],
   "Would Twin choose what you would?": "O Twin escolheria o mesmo que você?",
   "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "Experimente uma decisão real. O Twin escolhe a opção com mais fundamento usando sua voz, como faz ao responder ao Worker.",
+    "Faça uma pergunta real de design ou código para ver como o Twin responde ao Worker com base nos seus traços.",
   "Question for Twin": "Pergunta para o Twin",
   "How should we design checkout for this project?":
     "Como devemos projetar o checkout deste projeto?",
@@ -66,7 +66,7 @@ export default {
     "Usa o modelo configurado. Cada resposta mostra suas fontes.",
   "Twin needs your answer": "O Twin precisa da sua resposta",
   "No supported answer. Ask the user directly.":
-    "Não há base para uma resposta. Pergunte diretamente ao usuário.",
+    "Não há evidência suficiente nos traços salvos; o Twin perguntará diretamente a você.",
   "Based on your character": "Com base na sua personalidade",
   "Input: {0} tokens · Output: {1} tokens": ["Entrada: ", 0, " tokens · Saída: ", 1, " tokens"],
   "Learning…": "Aprendendo…",
@@ -97,7 +97,7 @@ export default {
   "What this means for the Worker": "O que isso significa para o Worker",
   "Use this when": "Quando aplicar",
   "Save character": "Salvar personalidade",
-  "You, without repeating yourself.": "Você, sem precisar se repetir.",
+  "You, without repeating yourself.": "Traços e preferências aprendidos",
   "Twin learns what makes you angry, what you like and what delights you. It keeps your original voice, including strong language.":
     "O Twin aprende o que irrita você, o que você gosta e o que encanta você. Preserva seu jeito de falar, incluindo expressões fortes.",
   "Learned traits apply immediately. Edit anything that does not sound like you.":
@@ -110,7 +110,7 @@ export default {
   "No matching traits. Clear the search or change the reaction.":
     "Nenhuma característica encontrada. Limpe a busca ou mude a reação.",
   "Your Twin is still getting to know you. Train it on your conversations to begin.":
-    "O Twin ainda está conhecendo você. Para começar, treine com suas conversas.",
+    "Nenhum traço salvo ainda. Escaneie sessões anteriores e treine o Twin para começar.",
   "Earlier suggestions": "Sugestões anteriores",
   "Apply trait": "Aplicar característica",
   Reject: "Rejeitar",

@@ -1,7 +1,16 @@
 import { asciiAlphaNumeric } from "./formats";
 import type { SecretVault } from "./vault";
 
-const REFERENCE_TOOLS = new Set(["task", "worker", "memory", "context", "todo", "ask", "done"]);
+const REFERENCE_TOOLS = new Set([
+  "task",
+  "worker",
+  "memory",
+  "context",
+  "todo",
+  "ask",
+  "ask_talker",
+  "done",
+]);
 const DATA_TOOLS = new Set(["edit", "write", "apply_patch", "read", "glob", "grep"]);
 const EXECUTION_CHARACTERS = "_-./:@%+=,";
 

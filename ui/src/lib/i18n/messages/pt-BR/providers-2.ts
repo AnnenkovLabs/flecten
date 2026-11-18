@@ -1,6 +1,5 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "The model accepts attachments.": "O modelo aceita anexos.",
   "Price per 1M tokens": "Preço por 1 milhão de tokens",
   "Cache read": "Leitura do cache",
   "Cache write": "Gravação no cache",
@@ -30,7 +29,7 @@ export default {
   "Advanced protocol settings": "Ajustes avançados do protocolo",
   "Reasoning, requests, and raw JSON.": "Raciocínio, requisições e JSON bruto.",
   "How to send and store reasoning between turns.":
-    "Como enviar e armazenar o raciocínio entre as interações.",
+    "Ajustes de protocolo para servidores compatíveis com OpenAI (DeepSeek, Qwen, GLM, vLLM). Mantenha em Auto salvo necessidade.",
   "Resend reasoning": "Reenvio do raciocínio",
   "Do not send": "Não enviar",
   "Reasoning details": "Detalhes do raciocínio",
@@ -47,8 +46,6 @@ export default {
   Keep: "Manter",
   Clear: "Limpar",
   "Request mode": "Modo de requisição",
-  "What to send with the response and how to call tools.":
-    "O que enviar junto com a resposta e como chamar ferramentas.",
   "Parallel tool calls": "Chamadas paralelas de ferramentas",
   "Cache prompt": "Armazenar prompt em cache",
   "The provider reuses the shared request prefix.":
@@ -62,31 +59,22 @@ export default {
   "The app runs a command and reads the API key from its output. Useful for short-lived tokens.":
     "O executor executará o comando e lerá a chave na saída. Útil para tokens de curta duração.",
   "Get API key from command": "Obter chave via comando",
-  "Instead of the key in the Access field.": "Em vez da chave do campo “Acesso”.",
+  "Instead of the key in the Access field.":
+    "Substitui a chave de API fixa e a variável de ambiente.",
   "Arguments (JSON array)": "Argumentos (array JSON)",
-  "Timeout, ms": "Tempo limite, ms",
-  "Key refresh interval, ms": "Intervalo de atualização da chave, ms",
+  "Timeout, ms": "Tempo limite (ms)",
+  "Key refresh interval, ms": "Intervalo de renovação (ms)",
   "Raw overrides": "Substituições de dados brutos",
   "Added to every request. For custom servers.":
     "Adicionadas a cada requisição. Necessárias para servidores personalizados.",
   "Headers (JSON)": "Cabeçalhos (JSON)",
   "Request body (JSON)": "Corpo da requisição (JSON)",
-  "The model calls read, write, bash, and other tools.":
-    "O modelo chama read, write, bash e outras ferramentas.",
-  "Understands images in the input.": "Entende imagens na entrada.",
   Temperature: "Temperatura",
-  "Accepts the temperature parameter.": "Aceita o parâmetro temperature.",
-  "Responds using the specified JSON schema.": "Responde conforme o esquema JSON definido.",
   "WAV and MP3 via Chat Completions, audio files via Gemini.":
-    "WAV e MP3 via Chat Completions, arquivos de áudio via Gemini.",
+    "WAV/MP3 no Chat Completions; arquivos de áudio no Gemini.",
   "Prompt cache": "Cache de prompt",
-  "The provider caches the shared request prefix.":
-    "O provedor armazena em cache o prefixo comum da requisição.",
   "Parallel calls": "Chamadas paralelas",
-  "Multiple tools in one turn.": "Várias ferramentas em uma única interação.",
   "Reasoning between calls": "Raciocínio entre chamadas",
-  "The model reasons after receiving a tool result.":
-    "O modelo raciocina após receber o resultado da ferramenta.",
   "Hide from selection": "Ocultar da seleção",
   Capabilities: "Recursos",
   Test: "Verificação",
@@ -130,4 +118,6 @@ export default {
     "O sistema lerá a lista de modelos da API e completará as informações de contexto e recursos com os dados do catálogo.",
   "Provider added without checking. Add models manually in the Models tab.":
     "Provedor adicionado sem verificação. Adicione os modelos manualmente na aba Modelos.",
+  "Auto-filled from the model catalog. Override when a proxy or custom endpoint differs.":
+    "Preenchido pelo catálogo de modelos. Altere se o seu proxy ou servidor funcionar de forma diferente.",
 } as const;

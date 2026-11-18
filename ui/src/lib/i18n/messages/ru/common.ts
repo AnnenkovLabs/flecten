@@ -43,13 +43,13 @@ export default {
   "Allows all actions without asking. Use only in a trusted project.":
     "Все действия разрешены без подтверждения. Используйте только в доверенном проекте.",
   "These settings don't match any preset. Check each row before saving.":
-    "Настройки не совпадают с готовыми наборами. Проверьте каждую строку перед сохранением.",
+    "Собственная комбинация правил.",
   "just now": "только что",
   "{0} sec": [0, " с"],
   "{0} min": [0, " мин"],
   "{0} hr": [0, " ч"],
   "{0} d": [0, " д"],
-  "Policies must be an object.": "Правила доступа должны быть объектом.",
+  "Policies must be an object.": "Некорректный формат правил доступа.",
   "Unknown action: {0}.": ["Неизвестное действие: ", 0, "."],
   "Unknown policy for action {0}: {1}.": [
     "Неизвестное правило доступа для действия ",
@@ -58,8 +58,9 @@ export default {
     1,
     ".",
   ],
-  "Opening a browser is available in the desktop app": "Открыть браузер можно в приложении",
-  "the core returned no file": "ядро не вернуло файл",
+  "Opening a browser is available in the desktop app":
+    "Ссылки открываются только в настольном приложении",
+  "the core returned no file": "содержимое файла недоступно",
   model: "модель",
   models: "модели",
   "Catalog updated": "Каталог обновлён",
@@ -82,7 +83,8 @@ export default {
   "Українська · 73 MB": "Украинский · 73 МБ",
   Copied: "Скопировано",
   "Could not copy. Try again.": "Не удалось скопировать. Попробуйте ещё раз.",
-  "Could not prepare the text. Try again.": "Не удалось подготовить текст. Попробуйте ещё раз.",
+  "Could not prepare the text. Try again.":
+    "Не удалось подготовить текст для копирования. Попробуйте ещё раз.",
   Reasoning: "Рассуждения",
   Images: "Изображения",
   Audio: "Аудио",
@@ -110,5 +112,5 @@ export default {
   "No pending approvals.": "Нет запросов, ожидающих подтверждения.",
   "Waiting {0}": ["Ожидает ", 0],
   "This request has been waiting for over 2 minutes. Check whether the action is still needed.":
-    "Запрос ожидает подтверждения больше 2 минут. Проверьте, актуально ли действие.",
+    "Ожидает больше 2 минут.",
 } as const;

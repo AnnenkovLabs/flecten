@@ -25,8 +25,8 @@ test("settings save practical preferences and apply them to the composer", async
     await chooseSelect(page.getByLabel("Сообщения во время работы", { exact: true }), "steer");
     await page.getByLabel("Одновременные задачи", { exact: true }).fill("8");
     await page.getByRole("button", { name: "Терминал и инструменты", exact: true }).click();
-    await page.getByLabel("Ожидание команды, с", { exact: true }).fill("60");
-    await expect(page.getByLabel("Вывод, байт", { exact: true })).toBeHidden();
+    await page.getByLabel("Переводить в фон через, с", { exact: true }).fill("60");
+    await expect(page.getByLabel("Макс. вывод, байт", { exact: true })).toBeHidden();
     await page.getByRole("button", { name: "История и откат", exact: true }).click();
     await page.getByLabel("Хранить снимки, дней", { exact: true }).fill("21");
     await expect(page.getByRole("button", { name: "Сохранить", exact: true })).toBeEnabled();

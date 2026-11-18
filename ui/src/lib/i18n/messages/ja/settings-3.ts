@@ -1,7 +1,8 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
   "Speech recognition provider": "音声認識プロバイダー",
-  "Audio is sent to the selected provider.": "音声は選択したプロバイダーに送信されます。",
+  "Audio is sent to the selected provider.":
+    "OpenAI 互換の /audio/transcriptions エンドポイントが必要です。",
   "Current provider": "現在のプロバイダー",
   "Speech recognition model": "音声認識モデル",
   "Speech language": "音声の言語",
@@ -23,7 +24,7 @@ export default {
   "Vosk language and model": "Voskの言語とモデル",
   "Local Vosk model": "Voskのローカルモデル",
   "After installation, audio is processed on this computer.":
-    "インストール後、音声はこのコンピューターで処理されます。",
+    "セットアップ後はオフラインで動作し、音声は外部に送信されません。",
   "Check installation": "インストール状況を確認",
   "Install engine and model": "エンジンとモデルをインストール",
   "Installation options": "インストール設定",
@@ -33,9 +34,9 @@ export default {
   "python3 or full path": "python3またはフルパス",
   "NVIDIA requires CUDA 12 and cuDNN 9.": "NVIDIA GPUにはCUDA 12とcuDNN 9が必要です。",
   "Choose folders to load skills from. Your selection is saved in the current configuration.":
-    "スキルを読み込むフォルダーを選択してください。選択内容は現在の設定ファイルに保存されます。",
+    "SKILL.md パッケージを検索するフォルダを選択します。",
   "Takes effect after saving, with no restart needed. Active tasks use the new set on their next run.":
-    "保存すると、再起動せずに適用されます。進行中のタスクでは、次の実行から新しいスキル構成が使われます。",
+    "保存後、次の実行から反映されます。",
   "All sources are disabled. No skills will be loaded after saving.":
     "すべての読み込み元が無効です。保存すると、スキルは読み込まれなくなります。",
   "The saved set of skills is shown below. Save your changes to update the list.":

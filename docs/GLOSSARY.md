@@ -1,33 +1,33 @@
-# Словарь
+# Glossary
 
-**Twin**: клиент сессии. Считает себя юзером, пишет спеку, отвечает на развилках, выносит вердикт.
+**Twin**: Session client persona representing the user. Drafts specs, answers trade-off questions at decision points, and issues acceptance verdicts.
 
-**Critic**: тот же Twin в чистом окне. Видит сырое сообщение, спеку и diff. Работы не видел.
+**Critic**: Twin running in a clean context window. Sees only the raw user prompt, the spec, and the resulting diff, without intermediate Worker history.
 
-**Worker**: исполнитель. Работает по одной странице, видит только спеку, brief, выжимку и текущую страницу.
+**Worker**: Execution agent. Operates one page at a time, seeing only the spec, assignment brief, prior page handoffs, and the active page.
 
-**Scout**: read-only разведчик. Приносит файлы, символы, паттерны и риски до того, как Worker попросил контекст.
+**Scout**: Read-only reconnaissance agent. Gathers relevant files, symbols, codebase patterns, and risks before Worker requests context.
 
-**Orchestrator**: дешёвая модель плюс правила. Выбирает шаг и границу страницы, перепланирует после падения.
+**Orchestrator**: Lightweight model paired with deterministic rules. Picks the next step and page boundary, and replans after failures.
 
-**Janitor**: работает в конце сессии. Предлагает записи профиля и обновляет базу терминов.
+**Janitor**: Post-session maintenance pass. Proposes profile entries and updates the curated term base.
 
-**Spec**: контракт сессии: цель, non-goals, критерии, голос юзера, gates, источники.
+**Spec**: Session contract defining objective, non-goals, acceptance criteria, user voice, verification gates, and allowed sources.
 
-**Criterion**: проверяемое утверждение из спеки. Одна страница равна одному критерию.
+**Criterion**: Testable requirement in a spec. One page maps to one criterion.
 
-**Page**: единица работы. Закрывается, когда критерий доказан.
+**Page**: Atomic unit of execution, closed once its criterion is backed by verified evidence.
 
-**Handoff**: выжимка страницы: что изменил, где, правила, следующий шаг, риски.
+**Handoff**: Structured summary produced when closing a page: what changed, where, active invariants, next step, and risks.
 
-**Gate**: команда проверки из спеки. Падение возвращается воркеру результатом тула.
+**Gate**: Verification command declared in the spec. Gate failures return to Worker as tool results.
 
-**Profile**: пять коллекций памяти: preferences, vocabulary, taste, anti_patterns, decisions.
+**Profile**: Five user-memory collections: `preferences`, `vocabulary`, `taste`, `anti_patterns`, and `decisions`.
 
-**Taste-diff**: правки, которые юзер сделал руками после агента. Главный сигнал вкуса.
+**Taste-diff**: Manual edits the user makes directly after an agent run; primary signal for `taste`.
 
-**Term base**: файл терминов с источником и датой. Курируется руками.
+**Term base**: Curated glossary file (`terms.jsonl`) recording definitions with provenance and dates.
 
-**Session**: один запуск от сырого сообщения до вердикта.
+**Session**: Single end-to-end task lifecycle from raw user prompt to final verdict.
 
-**Frame**: не используем. Слишком общее слово.
+**Frame**: Unused term; avoided as overly generic.

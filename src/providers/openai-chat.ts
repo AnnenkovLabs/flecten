@@ -22,6 +22,7 @@ import { usesCompletionTokens } from "./model-family";
 import {
   defaultWarn,
   jsonSchemaFormat,
+  openaiSchema,
   strictSchema,
   structuredOutputFormat,
   type Warn,
@@ -119,7 +120,7 @@ function buildBody(
   const tools =
     request.tools.length > 0
       ? request.tools.map((tool) => {
-          let parameters = tool.parameters;
+          let parameters = openaiSchema(tool.parameters);
           let strict = false;
           if (strictTools) {
             const transformed = strictSchema(parameters);
@@ -144,8 +145,9 @@ function buildBody(
   const responseFormat = format
     ? { type: "json_schema", json_schema: { name: format.name, ...jsonSchemaFormat(format, warn) } }
     : undefined;
-  const parallel = effectiveParallelTools(runtime, model);
+  const parallel = effectiveParallelTools(runtime, model, request);
   const cacheEnabled = promptCacheEnabled(runtime, model);
+  const cacheKey = request.promptCacheKey || runtime.config.promptCacheKey;
   const streamUsage = model?.compat?.streamUsage ?? runtime.config.streamUsage;
   const body: Record<string, unknown> = {
     model: apiModel(request),
@@ -156,14 +158,16 @@ function buildBody(
     tools,
     ...(streamUsage ? { stream_options: { include_usage: true } } : {}),
     ...maxTokensField(model, apiModel(request), request.maxTokens),
-    ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
+    ...(request.temperature === undefined || model?.temperature === false
+      ? {}
+      : { temperature: request.temperature }),
     ...thinking,
     ...(isOpenRouter(runtime) ? openRouterEffort : effortPayload),
     ...(parallel === undefined ? {} : { parallel_tool_calls: parallel }),
-    ...(cacheEnabled && runtime.config.promptCacheKey
+    ...(cacheEnabled && cacheKey
       ? isOpenRouter(runtime)
-        ? { session_id: runtime.config.promptCacheKey }
-        : { prompt_cache_key: runtime.config.promptCacheKey }
+        ? { session_id: cacheKey }
+        : { prompt_cache_key: cacheKey }
       : {}),
     ...(request.toolChoice === "required" ||
     request.toolChoice === "none" ||

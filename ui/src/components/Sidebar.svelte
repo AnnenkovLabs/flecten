@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { i18n, t } from "../lib/i18n.svelte";
-  import { onMount, tick } from "svelte";
+  import { t } from "../lib/i18n.svelte";
   import type { Project } from "../lib/types";
   import Icon from "./Icon.svelte";
-  import ProjectGroup from "./ProjectGroup.svelte";
+  import SidebarProjects from "./SidebarProjects.svelte";
   import SidebarUser from "./SidebarUser.svelte";
   import TwinCharacter from "./twin/TwinCharacter.svelte";
 
@@ -47,32 +46,7 @@
     onOpenModules,
   }: Props = $props();
 
-  let projectsPane: HTMLDivElement;
-  let gooReady = $state(false);
-  let gooTop = $state(0);
-  let gooLeft = $state(10);
-  let gooWidth = $state(0);
-  let gooHeight = $state(34);
   let query = $state("");
-
-  const visibleProjects = $derived.by(() => {
-    const needle = query.trim().toLocaleLowerCase(i18n.locale);
-    if (!needle) return projects;
-    const result: Project[] = [];
-    for (const project of projects) {
-      const tasks = project.tasks ?? [];
-      const projectMatch = project.name.toLocaleLowerCase(i18n.locale).includes(needle);
-      const matched = projectMatch
-        ? tasks
-        : tasks.filter((task) => {
-            const title = task.title.toLocaleLowerCase(i18n.locale);
-            const prompt = task.lastPrompt?.toLocaleLowerCase(i18n.locale) ?? "";
-            return title.includes(needle) || prompt.includes(needle);
-          });
-      if (projectMatch || matched.length > 0) result.push({ ...project, tasks: matched });
-    }
-    return result;
-  });
 
   function clearSearch(): void {
     query = "";
@@ -94,41 +68,9 @@
     return () => clearTimeout(timer);
   });
 
-  function measure(): void {
-    if (!projectsPane || hidden) {
-      gooReady = false;
-      return;
-    }
-    const active = projectsPane.querySelector<HTMLElement>("[data-task-active='true']");
-    if (!active) {
-      gooReady = false;
-      return;
-    }
-    const pane = projectsPane.getBoundingClientRect();
-    const row = active.getBoundingClientRect();
-    gooTop = row.top - pane.top + projectsPane.scrollTop;
-    gooLeft = row.left - pane.left;
-    gooWidth = row.width;
-    gooHeight = row.height;
-    if (!gooReady) requestAnimationFrame(() => (gooReady = true));
-  }
-
-  $effect(() => {
-    activeTask;
-    projects;
-    query;
-    hidden;
-    void tick().then(measure);
-  });
-
-  onMount(() => {
-    const observer = new ResizeObserver(measure);
-    observer.observe(projectsPane);
-    return () => observer.disconnect();
-  });
 </script>
 
-<aside class="sidebar" class:is-hidden={hidden} inert={hidden} aria-label={t("Projects and tasks")}>
+<aside class="sidebar" inert={hidden} aria-label={t("Projects and tasks")}>
   <div class="side-top">
     <button class="side-action" type="button" data-tooltip={t("New task")} onclick={onNewTask}>
       <Icon name="plus" />
@@ -162,31 +104,11 @@
     {#if onOpenDictionary}<button class="side-action" type="button" onclick={onOpenDictionary}><Icon name="brain" size={18} /><span>{t("Memory and dictionary")}</span></button>{/if}
     {#if onOpenModules}<button class="side-action" type="button" onclick={onOpenModules}><Icon name="layers" size={18} /><span>{t("Modules")}</span></button>{/if}
   </nav>
-  <div class="side-projects" bind:this={projectsPane}>
-    <span
-      class="task-goo"
-      class:is-ready={gooReady}
-      aria-hidden="true"
-      style={`--goo-top: ${gooTop}px; --goo-left: ${gooLeft}px; --goo-width: ${gooWidth}px; --goo-height: ${gooHeight}px`}
-    >
-      <span class="task-goo-trail"></span>
-      <span class="task-goo-pill"></span>
-    </span>
-    {#each visibleProjects as project (project.id)}
-      <ProjectGroup
-        {project}
-        {activeTask}
-        {onSelectTask}
-        {onRenameTask}
-        {onDeleteTask}
-        {onSelectProject} {onRemoveProject} {onProjectTrust}
-      />
-    {:else}
-      <p class="side-empty" role="status">{t("No results")}</p>
-    {/each}
-  </div>
+  <SidebarProjects {projects} {activeTask} {query} {hidden}
+    {onSelectTask} {onRenameTask} {onDeleteTask}
+    {onSelectProject} {onRemoveProject} {onProjectTrust} />
 
-  {#if !hidden}<SidebarUser {user} onRename={onRenameUser} {onOpenSettings} />{/if}
+  <SidebarUser {hidden} {user} onRename={onRenameUser} {onOpenSettings} />
 </aside>
 
 <style>
@@ -201,21 +123,6 @@
     background: var(--sidebar);
     border-right: 1px solid var(--line);
     user-select: none;
-    transition:
-      opacity 420ms var(--ease),
-      transform 720ms var(--ease-goo),
-      visibility 0s;
-  }
-
-  .sidebar.is-hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-14px) scale(0.99);
-    visibility: hidden;
-    transition:
-      opacity 420ms var(--ease),
-      transform 720ms var(--ease-goo),
-      visibility 0s 720ms;
   }
 
   .side-top {
@@ -311,63 +218,5 @@
   .search-clear:hover {
     background: rgba(240, 239, 237, 0.06);
     color: var(--text-2);
-  }
-
-  .side-projects {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    padding: 4px 8px 8px;
-    overflow-y: auto;
-  }
-
-  .side-empty {
-    padding: 12px 10px;
-    color: var(--muted);
-    font-size: 12.5px;
-    line-height: 1.4;
-    text-wrap: pretty;
-  }
-
-  .task-goo {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    opacity: 0;
-    pointer-events: none;
-    filter: url(#goo);
-    transition: opacity 240ms var(--ease);
-  }
-
-  .task-goo.is-ready {
-    opacity: 1;
-  }
-
-  .task-goo:not(.is-ready) .task-goo-pill,
-  .task-goo:not(.is-ready) .task-goo-trail {
-    transition: none;
-  }
-
-  .task-goo-pill,
-  .task-goo-trail {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--goo-width);
-    height: var(--goo-height);
-    translate: var(--goo-left) var(--goo-top);
-    border-radius: 7px;
-    background: var(--raised);
-    transition:
-      translate 520ms var(--ease-jelly),
-      width 520ms var(--ease-jelly),
-      height 520ms var(--ease-jelly);
-  }
-
-  .task-goo-trail {
-    transition:
-      translate 760ms var(--ease-goo),
-      width 760ms var(--ease-goo),
-      height 760ms var(--ease-goo);
   }
 </style>

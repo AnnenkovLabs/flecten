@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { SummaryInteraction } from "../../../shared/summary-interaction";
   import { t } from "../lib/i18n.svelte";
   import { type Snippet, onDestroy, onMount, tick, untrack } from "svelte";
   import { restoredThreadTop, saveThreadPosition, threadPosition } from "../lib/thread-position";
@@ -37,6 +38,7 @@
     onEditMessage?: ((messageId: string, text: string) => void) | undefined;
     onSelectVersion?: ((messageId: string, variantId: string) => Promise<boolean>) | undefined;
     onNavigateSummary?: (destination: SummaryDestination) => void;
+    onSummaryInteraction?: ((taskId: string, summaryId: string, interaction: SummaryInteraction) => void) | undefined;
   }
   let {
     taskId,
@@ -50,9 +52,8 @@
     onRepeat,
     header,
     retryUntil,
-    onEditMessage,
-    onSelectVersion,
-    onNavigateSummary,
+    onEditMessage, onSelectVersion,
+    onNavigateSummary, onSummaryInteraction,
   }: Props = $props();
   const NEAR_BOTTOM = 72;
   let scroller: HTMLDivElement;
@@ -235,7 +236,6 @@
     }
     unread = Math.max(0, messageCount - seenMessages);
   });
-
   $effect(() => {
     const { start, end, before, after } = window;
     void [start, end, before, after];
@@ -354,12 +354,12 @@
                   <HtmlSummary
                     html={item.summaryHtml}
                     complete={item.complete ?? false}
+                    onInteraction={onSummaryInteraction ? (interaction) => onSummaryInteraction?.(taskId, item.id, interaction) : undefined}
                     onAction={(action) => {
                       if (action.action === "copy") {
                         void copyText(action.payload);
                       } else onNavigateSummary?.(action.destination);
-                    }}
-                  />
+                    }} />
                 {/if}
               {/snippet}
             </Answer>

@@ -8,9 +8,16 @@ import {
 } from "../config/schema";
 import { HarnessError } from "../errors";
 import { dashSlug, trimTrailingSlashes, withoutPrefix } from "../util/text";
-import { findCatalogModel, formatModelName, loadModelsDev, providerNameFromUrl } from "./catalog";
+import {
+  findModel,
+  formatModelName,
+  loadAgentOne,
+  loadModelsDev,
+  providerNameFromUrl,
+} from "./catalog";
 import { anthropicModel, geminiModel, object, openAiModel } from "./discovery-models";
 import { discoverNativeLocal, mergeNativeModels } from "./local-discovery";
+import { findFallbackModel } from "./model-identity";
 import { createProvider } from "./registry";
 import { createProviderFetch, type ProviderFetch } from "./transport";
 
@@ -220,7 +227,10 @@ export async function discoverProvider(cwd: string, input: DiscoverInput): Promi
       : input.protocol === "gemini"
         ? await discoverGemini(input)
         : await discoverOpenAi(input);
-  const catalog = await loadModelsDev(cwd);
+  const [catalog, fallback] = await Promise.all([
+    loadModelsDev(cwd),
+    loadAgentOne(cwd).catch(() => ({})),
+  ]);
   const models: Record<string, ModelConfig> = {};
   const warnings: string[] = [];
   const seen = new Set<string>();
@@ -249,7 +259,7 @@ export async function discoverProvider(cwd: string, input: DiscoverInput): Promi
       );
     }
     seen.add(key);
-    const known = await findCatalogModel(cwd, id, result.baseUrl);
+    const known = findModel(catalog, id, result.baseUrl) ?? findFallbackModel(fallback, id);
     const parsed = ModelConfigSchema.safeParse(mergeModel(model, known));
     if (!parsed.success) {
       const issue = parsed.error.issues[0];

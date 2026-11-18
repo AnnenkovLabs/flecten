@@ -110,5 +110,5 @@ export default {
   Trust: "信頼",
   Version: "バージョン",
   About: "このアプリについて",
-  Directory: "カタログ",
+  Directory: "モデルカタログ",
 } as const;

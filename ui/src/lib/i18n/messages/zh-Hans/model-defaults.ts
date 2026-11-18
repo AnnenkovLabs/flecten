@@ -2,17 +2,17 @@ export default {
   "Main model": "主模型",
   "Default main model": "默认主模型",
   "Used when Talker and Worker is off, and as the fallback for role defaults.":
-    "关闭 Talker 和 Worker 时使用，也用作各角色的后备模型。",
+    "用于单智能体对话，以及未单独指定模型的角色。",
   "Defaults apply to new chats. You can still choose a model in the message box.":
-    "默认设置适用于新对话。你仍可在消息框中选择模型。",
+    "应用于新对话；仍可在输入框中为单个对话切换模型。",
   "Talker handles your conversation. Worker carries out tasks with tools, for any kind of work.":
-    "Talker 负责对话。Worker 使用工具执行各种类型的任务。",
+    "Talker 在对话中保持即时响应，Worker 在独立会话中调用工具并修改文件。",
   "Talker model": "Talker 模型",
   "Worker model": "Worker 模型",
   "Understands requests, asks questions, and explains progress and results.":
     "理解请求、提出问题，并解释进度和结果。",
   "Executes tasks. A model selected in the message box overrides this default for that chat.":
-    "执行任务。在消息框中选择的模型会在该对话中覆盖此默认设置。",
+    "负责运行工具与编辑文件；在输入框中选择其他模型时会覆盖此默认值。",
   "Use chat model": "使用对话模型",
   "Use main model": "使用主模型",
   "Subagent models": "子代理模型",
@@ -22,9 +22,9 @@ export default {
   Explore: "探索",
   Implement: "执行",
   Review: "审查",
-  "Find information and understand the task.": "查找信息并理解任务。",
-  "Carry out a focused assignment.": "执行指定任务。",
-  "Check results and identify risks.": "检查结果并识别风险。",
+  "Find information and understand the task.": "只读代码搜索与分析。",
+  "Carry out a focused assignment.": "针对具体子任务的代码修改与验证。",
+  "Check results and identify risks.": "审查变更差异、边界情况与潜在回归。",
   "Choose an enabled model that supports tools.": "请选择已启用且支持工具的模型。",
   "Choose a variant available for this model.": "请选择此模型可用的变体。",
   "Reasoning level": "推理级别",

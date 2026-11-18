@@ -13,6 +13,26 @@ interface StrictNode {
   reason?: string;
 }
 
+function allowsNull(schema: unknown): boolean {
+  if (!isObject(schema)) return false;
+  if (schema.type === "null") return true;
+  if (Array.isArray(schema.type) && schema.type.includes("null")) return true;
+  if (Array.isArray(schema.anyOf) && schema.anyOf.some((branch) => allowsNull(branch))) return true;
+  if (Array.isArray(schema.oneOf) && schema.oneOf.some((branch) => allowsNull(branch))) return true;
+  return false;
+}
+
+function makeNullable(schema: unknown): unknown {
+  if (!isObject(schema) || allowsNull(schema)) return schema;
+  if (typeof schema.type === "string" && !("enum" in schema) && !("const" in schema)) {
+    return { ...schema, type: [schema.type, "null"] };
+  }
+  if (Array.isArray(schema.anyOf)) {
+    return { ...schema, anyOf: [...schema.anyOf, { type: "null" }] };
+  }
+  return { anyOf: [schema, { type: "null" }] };
+}
+
 function strictNode(value: unknown): StrictNode {
   if (Array.isArray(value)) {
     const output: unknown[] = [];
@@ -33,8 +53,16 @@ function strictNode(value: unknown): StrictNode {
   }
 
   const output: Record<string, unknown> = { ...value };
+  delete output.$schema;
+  delete output.$id;
+  delete output.$comment;
+  delete output.format;
+  if (Array.isArray(output.oneOf) && output.anyOf === undefined) {
+    output.anyOf = output.oneOf;
+    delete output.oneOf;
+  }
   for (const key of ["allOf", "anyOf", "oneOf"] as const) {
-    const branch = value[key];
+    const branch = output[key];
     if (Array.isArray(branch)) {
       const next = strictNode(branch);
       if (!next.ok) return next;
@@ -65,15 +93,18 @@ function strictNode(value: unknown): StrictNode {
   }
 
   if (isObject(value.properties)) {
+    const explicitRequired = Array.isArray(value.required)
+      ? value.required.filter((entry): entry is string => typeof entry === "string")
+      : undefined;
+    const requiredSet = explicitRequired ? new Set(explicitRequired) : undefined;
     const properties: Record<string, unknown> = {};
     for (const [name, schema] of Object.entries(value.properties)) {
       const transformed = strictNode(schema);
       if (!transformed.ok) return transformed;
-      properties[name] = transformed.value;
+      properties[name] =
+        requiredSet && !requiredSet.has(name) ? makeNullable(transformed.value) : transformed.value;
     }
-    const required = Array.isArray(value.required)
-      ? value.required.filter((entry): entry is string => typeof entry === "string")
-      : [];
+    const required = explicitRequired ?? [];
     output.type = "object";
     output.properties = properties;
     output.required = [...new Set([...required, ...Object.keys(properties)])];
@@ -93,20 +124,36 @@ export interface StrictSchemaResult {
   reason?: string;
 }
 
+const strictMemo = new WeakMap<Record<string, unknown>, StrictSchemaResult>();
+const openaiMemo = new WeakMap<Record<string, unknown>, Record<string, unknown>>();
+const anthropicMemo = new WeakMap<Record<string, unknown>, Record<string, unknown>>();
+
 export function strictSchema(parameters: Record<string, unknown>): StrictSchemaResult {
+  const hit = strictMemo.get(parameters);
+  if (hit) return hit;
   const result = strictNode(parameters);
   if (!result.ok) {
-    return {
+    const fallback: StrictSchemaResult = {
       schema: parameters,
       strict: false,
       ...(result.reason === undefined ? {} : { reason: result.reason }),
     };
+    strictMemo.set(parameters, fallback);
+    return fallback;
   }
   const schema = result.value as Record<string, unknown>;
   if (schema.type !== "object" && !isObject(schema.properties)) {
-    return { schema: parameters, strict: false, reason: "the root schema must be an object" };
+    const fallback: StrictSchemaResult = {
+      schema: parameters,
+      strict: false,
+      reason: "the root schema must be an object",
+    };
+    strictMemo.set(parameters, fallback);
+    return fallback;
   }
-  return { schema, strict: true };
+  const computed: StrictSchemaResult = { schema, strict: true };
+  strictMemo.set(parameters, computed);
+  return computed;
 }
 
 export function structuredOutputFormat(
@@ -158,9 +205,33 @@ function clone(value: unknown, root: unknown, seen: Set<string>): unknown {
 }
 
 export function anthropicSchema(schema: Record<string, unknown>): Record<string, unknown> {
+  const hit = anthropicMemo.get(schema);
+  if (hit) return hit;
   const cloned = clone(schema, schema, new Set());
   const output = isObject(cloned) ? cloned : {};
   if (output.type === undefined && isObject(output.properties)) output.type = "object";
+  anthropicMemo.set(schema, output);
+  return output;
+}
+
+function stripFormatNode(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((entry) => stripFormatNode(entry));
+  if (!isObject(value)) return value;
+  const output: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "format") continue;
+    output[key] = stripFormatNode(entry);
+  }
+  return output;
+}
+
+export function openaiSchema(schema: Record<string, unknown>): Record<string, unknown> {
+  const hit = openaiMemo.get(schema);
+  if (hit) return hit;
+  const cloned = stripFormatNode(clone(schema, schema, new Set()));
+  const output = isObject(cloned) ? cloned : {};
+  if (output.type === undefined && isObject(output.properties)) output.type = "object";
+  openaiMemo.set(schema, output);
   return output;
 }
 

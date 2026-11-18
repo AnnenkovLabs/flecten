@@ -1,7 +1,7 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
   "Speech recognition provider": "语音识别服务商",
-  "Audio is sent to the selected provider.": "音频会发送给所选服务商。",
+  "Audio is sent to the selected provider.": "需要兼容 OpenAI 的 /audio/transcriptions 端点。",
   "Current provider": "当前服务商",
   "Speech recognition model": "识别模型",
   "Speech language": "语音语言",
@@ -21,7 +21,7 @@ export default {
   "NVIDIA GPU": "NVIDIA 显卡",
   "Vosk language and model": "Vosk 语言和模型",
   "Local Vosk model": "本地 Vosk 模型",
-  "After installation, audio is processed on this computer.": "安装后，音频将在本机处理。",
+  "After installation, audio is processed on this computer.": "安装后离线运行，音频不会离开本机。",
   "Check installation": "检查安装",
   "Install engine and model": "安装引擎和模型",
   "Installation options": "安装选项",
@@ -31,9 +31,9 @@ export default {
   "python3 or full path": "python3 或完整路径",
   "NVIDIA requires CUDA 12 and cuDNN 9.": "使用 NVIDIA 显卡需要 CUDA 12 和 cuDNN 9。",
   "Choose folders to load skills from. Your selection is saved in the current configuration.":
-    "选择用于加载技能的文件夹。选择会保存在当前配置中。",
+    "在所选目录中扫描 SKILL.md 技能包。",
   "Takes effect after saving, with no restart needed. Active tasks use the new set on their next run.":
-    "保存后即可生效，无需重启。进行中的任务会在下次运行时使用新的技能集。",
+    "保存后将在下一次运行时生效。",
   "All sources are disabled. No skills will be loaded after saving.":
     "所有来源均已关闭。保存后将不再加载技能。",
   "The saved set of skills is shown below. Save your changes to update the list.":

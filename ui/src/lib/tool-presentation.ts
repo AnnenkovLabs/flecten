@@ -14,6 +14,7 @@ const TOOLS: Record<string, { label: MessageKey; icon: IconName; field?: string 
   grep: { label: "Search file contents", icon: "search", field: "pattern" },
   glob: { label: "Find files", icon: "search", field: "pattern" },
   ask: { label: "Ask a question", icon: "tasks", field: "question" },
+  ask_talker: { label: "Ask Talker", icon: "tasks", field: "question" },
   web_fetch: { label: "Read web page", icon: "file", field: "url" },
   web_search: { label: "Search the web", icon: "search", field: "query" },
   git: { label: "Git", icon: "branch", field: "path" },

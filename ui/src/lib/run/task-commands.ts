@@ -1,5 +1,6 @@
+import type { SummaryInteraction } from "../../../../shared/summary-interaction";
 import type { AgentEvent } from "../agent-protocol";
-import { requestAgent } from "../desktop";
+import { requestAgent, sendAgent } from "../desktop";
 import { t } from "../i18n.svelte";
 import { toast } from "../toast.svelte";
 import type { ApprovalChoice } from "./intents";
@@ -23,6 +24,15 @@ export class TaskCommands {
     this.#view = view;
     this.#sessionId = sessionId;
   }
+
+  summaryInteraction = (
+    taskId: string,
+    summaryId: string,
+    interaction: SummaryInteraction,
+  ): void => {
+    if (taskId !== this.#sessionId()) return;
+    sendAgent({ type: "summary.interaction", sessionId: taskId, summaryId, interaction });
+  };
 
   async stopWorker(): Promise<void> {
     try {

@@ -43,18 +43,17 @@ export default {
   "Allows all actions without asking. Use only in a trusted project.":
     "Allows all actions without asking. Use only in a trusted project.",
   "These settings don't match any preset. Check each row before saving.":
-    "These settings don't match any preset. Check each row before saving.",
+    "Custom rule combination.",
   "just now": "just now",
   "{0} sec": [0, " sec"],
   "{0} min": [0, " min"],
   "{0} hr": [0, " hr"],
   "{0} d": [0, " d"],
-  "Policies must be an object.": "Policies must be an object.",
+  "Policies must be an object.": "Invalid permission policy format.",
   "Unknown action: {0}.": ["Unknown action: ", 0, "."],
   "Unknown policy for action {0}: {1}.": ["Unknown policy for action ", 0, ": ", 1, "."],
-  "Opening a browser is available in the desktop app":
-    "Opening a browser is available in the desktop app",
-  "the core returned no file": "the core returned no file",
+  "Opening a browser is available in the desktop app": "Browser links require the desktop app",
+  "the core returned no file": "file content unavailable",
   model: "model",
   models: "models",
   "Catalog updated": "Catalog updated",
@@ -77,7 +76,7 @@ export default {
   "Українська · 73 MB": "Ukrainian · 73 MB",
   Copied: "Copied",
   "Could not copy. Try again.": "Could not copy. Try again.",
-  "Could not prepare the text. Try again.": "Could not prepare the text. Try again.",
+  "Could not prepare the text. Try again.": "Could not generate text to copy. Try again.",
   Reasoning: "Reasoning",
   Images: "Images",
   Audio: "Audio",
@@ -105,5 +104,5 @@ export default {
   "No pending approvals.": "No pending approvals.",
   "Waiting {0}": ["Waiting ", 0],
   "This request has been waiting for over 2 minutes. Check whether the action is still needed.":
-    "This request has been waiting for over 2 minutes. Check whether the action is still needed.",
+    "Waiting over 2 minutes.",
 } as const;

@@ -32,6 +32,7 @@ async function aligned(page: Page, actionSelector = ".composer-actions") {
       prompt: rect("#prompt"),
       bar: rect(".composer-bar"),
       actions: rect(selector),
+      primary: rect(".composer-primary"),
       voice: rect(".voice"),
     };
   }, actionSelector);
@@ -77,6 +78,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
       const draft = await aligned(page);
       expect(draft.prompt).toEqual(empty.prompt);
       expect(draft.bar).toEqual(empty.bar);
+      expect(draft.primary).toEqual(empty.primary);
       const buttons = await actions.getByRole("button").evaluateAll((elements) =>
         elements.map((element) => {
           const { x, width } = element.getBoundingClientRect();
@@ -93,7 +95,7 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
       "Следующая инструкция агенту",
     );
     await prompt.fill("Новая корректировка");
-    await actions.getByRole("button", { name: "Уточнить сейчас", exact: true }).click();
+    await actions.getByRole("button", { name: "Направить", exact: true }).click();
     await expect(page.getByRole("region", { name: "Очередь сообщений" })).toContainText(
       "Новая корректировка",
     );
@@ -220,7 +222,7 @@ test("three-part composer stays available with an idle Talker and a running Work
       );
       await page.setViewportSize({ width, height });
       await expect(actions.getByRole("button")).toHaveCount(3);
-      for (const name of ["Остановка", "Добавить в очередь", "Уточнить сейчас"]) {
+      for (const name of ["Остановка", "Добавить в очередь", "Отправить"]) {
         await expect(actions.getByRole("button", { name, exact: true })).toBeEnabled();
       }
       await aligned(page);

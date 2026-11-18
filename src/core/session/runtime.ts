@@ -17,12 +17,14 @@ export interface RunExtras {
   queueId?: string;
   resumed?: boolean;
   internal?: boolean;
+  summaryWake?: true;
   contexts?: ContextReference[];
   attachmentSnapshot?: AttachmentSnapshot;
 }
 
 export interface ActiveRun {
   sessionId: SessionId;
+  summaryWake?: true;
   controller: AbortController;
   stop: AbortController;
   turns: number;

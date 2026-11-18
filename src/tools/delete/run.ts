@@ -105,7 +105,7 @@ export async function runDelete(args: DeleteArgs, context: ToolContext): Promise
         checkpointId = checkpoint.id;
       }
     } catch (error) {
-      checkpointNote = `\nCheckpoint не создан: ${message(error)}`;
+      checkpointNote = `\nCheckpoint skipped: ${message(error)}`;
     }
   }
 
@@ -125,7 +125,7 @@ export async function runDelete(args: DeleteArgs, context: ToolContext): Promise
     try {
       await context.checkpoints.recordAfter(checkpointId);
     } catch (error) {
-      checkpointNote += `\nCheckpoint не завершён: ${message(error)}`;
+      checkpointNote += `\nCheckpoint incomplete: ${message(error)}`;
     }
   }
 

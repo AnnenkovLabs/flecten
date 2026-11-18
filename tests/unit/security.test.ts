@@ -62,11 +62,11 @@ describe("PermissionEngine", () => {
     expect(engine.decide(request("write", "write", "../src/main.ts")).policy).toBe("ask");
   });
 
-  test("returns the configured policy with a Russian reason", () => {
+  test("returns the configured policy with a clear reason", () => {
     const engine = new PermissionEngine({
       rules: [
         { action: "read", tool: "read", policy: "allow" },
-        { action: "network", tool: "fetch", policy: "deny", note: "Сеть выключена" },
+        { action: "network", tool: "fetch", policy: "deny", note: "Network disabled" },
         { action: "shell", tool: "bash", policy: "auto" },
       ],
     });
@@ -74,11 +74,11 @@ describe("PermissionEngine", () => {
     expect(engine.decide(request("read", "read", "AGENTS.md")).policy).toBe("allow");
     const denied = engine.decide(request("network", "fetch"));
     expect(denied.policy).toBe("deny");
-    expect(denied.reason).toContain("запрещено");
-    expect(denied.reason).toContain("Сеть выключена");
+    expect(denied.reason).toContain("denied by rule");
+    expect(denied.reason).toContain("Network disabled");
     const auto = engine.decide(request("shell", "bash"));
     expect(auto.policy).toBe("ask");
-    expect(auto.reason).toContain("независимой проверки");
+    expect(auto.reason).toContain("independent review");
     expect(auto.review).toBe(true);
   });
 
@@ -87,7 +87,7 @@ describe("PermissionEngine", () => {
     const decision = engine.decide(request("shell", "bash"));
 
     expect(decision.policy).toBe("ask");
-    expect(decision.reason).toContain("подтверждение");
+    expect(decision.reason).toContain("approval required");
     expect(engine.pending()).toHaveLength(1);
 
     const id = approvalId(decision);
@@ -111,8 +111,8 @@ describe("PermissionEngine", () => {
     engine.approve(approvalId(second), "allow_always");
     const third = engine.decide(request("write", "write", "src/main.ts"));
     expect(third.policy).toBe("allow");
-    expect(third.reason).toContain("разрешено правилом");
-    expect(third.reason).toContain("Разрешено пользователем");
+    expect(third.reason).toContain("allowed by rule");
+    expect(third.reason).toContain("approved by the user");
     expect(engine.decide(request("write", "write", "src/other.ts")).policy).toBe("ask");
   });
 
@@ -175,7 +175,7 @@ describe("SandboxPolicy", () => {
     const write = await sandbox.checkWrite("../outside/secret.txt");
 
     expect(decision.allowed).toBe(false);
-    expect(decision.reason).toContain("вне рабочей папки");
+    expect(decision.reason).toContain("outside the workspace");
     expect(write.allowed).toBe(false);
   });
 
@@ -186,11 +186,11 @@ describe("SandboxPolicy", () => {
 
     const directory = await sandbox.checkRead("escape/secret.txt");
     expect(directory.allowed).toBe(false);
-    expect(directory.reason).toContain("вне рабочей папки");
+    expect(directory.reason).toContain("outside the workspace");
 
     const file = await sandbox.checkRead("leak.txt");
     expect(file.allowed).toBe(false);
-    expect(file.reason).toContain("символическая ссылка");
+    expect(file.reason).toContain("symlink");
   });
 
   test("protects config, instructions and secrets", async () => {

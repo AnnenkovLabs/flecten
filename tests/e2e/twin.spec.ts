@@ -78,7 +78,7 @@ test("Twin live 3D, interactions and character workflow stay usable at both desk
       "enabled",
     );
     await expect(
-      panel.getByRole("heading", { name: "Same ideas. Same thoughts.", exact: true }),
+      panel.getByRole("heading", { name: "Your standards, applied automatically", exact: true }),
     ).toBeVisible();
     await expect(panel.locator(".twin-source")).toHaveCount(9);
     const character = panel.locator(".twin-portrait [data-testid='twin-character']");

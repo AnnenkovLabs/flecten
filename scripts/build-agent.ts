@@ -2,10 +2,12 @@ import { cp, rm, stat } from "node:fs/promises";
 
 export const AGENT_BINARY_PATH =
   process.platform === "win32" ? "dist/flecten-agent.exe" : "dist/flecten-agent";
-// 0.1.3 / Bun 1.4.2: linux-x64 80.5 MiB, windows-x64 85.1 MiB (89,201,152 bytes).
-// The larger Windows runtime gets 0.9 MiB headroom; other platforms keep their existing cap.
-export function agentSizeBudget(platform: NodeJS.Platform): number {
-  return (platform === "win32" ? 86 : 85) * 1024 * 1024;
+// Bun 1.4.4 compiled agents: Windows x64 113.0, Linux x64 107.2,
+// macOS x64 96.7, macOS arm64 88.2 MiB. Keep roughly 2 MiB headroom on each target.
+export function agentSizeBudget(platform: NodeJS.Platform, arch = process.arch): number {
+  if (platform === "win32") return 115 * 1024 * 1024;
+  if (platform === "darwin") return (arch === "arm64" ? 90 : 98) * 1024 * 1024;
+  return 109 * 1024 * 1024;
 }
 export const AGENT_SIZE_BUDGET_BYTES = agentSizeBudget(process.platform);
 

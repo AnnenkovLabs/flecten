@@ -1,5 +1,6 @@
 <script lang="ts">
   import { modal } from "../lib/modal";
+  import { overlayPresence } from "../lib/overlay-presence";
   import type { Snippet } from "svelte";
   import "./settings-surface.css";
 
@@ -20,6 +21,7 @@
 <dialog
   class="dialog st-dialog"
   use:modal
+  transition:overlayPresence|global
   aria-labelledby={`${id}-title`}
   aria-describedby={description ? `${id}-description` : undefined}
   oncancel={(event) => {

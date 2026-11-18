@@ -29,6 +29,11 @@ import type { LoopOptions, LoopResult } from "./types";
 
 const PAGE_COMPLETION_REQUIRED = pageCompletionRequired.trim();
 
+function pushSyntheticNotice(messages: Message[], text: string, options: LoopOptions): void {
+  messages.push({ role: "user", content: text, synthetic: true });
+  options.emit({ type: "notice.applied", text });
+}
+
 /** Publish the already checkpointed deliverable without asking the model to reconstruct it. */
 function pageResult(
   text: string | undefined,
@@ -41,7 +46,7 @@ function pageResult(
     options.completionGuard?.() ??
     (remaining.length ? `Cannot finish while work remains:\n${remaining.join("\n")}` : undefined);
   if (issue) {
-    messages.push({ role: "user", content: issue });
+    pushSyntheticNotice(messages, issue, options);
     return undefined;
   }
   const done = { summary: text, evidence: [] };
@@ -220,6 +225,7 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
       // ponytail: one mutation mutex for the whole batch; per-path locks if writes become a bottleneck.
       await executeCalls(message.toolCalls, execution, options.emit, results);
 
+      let sawTodoChange = false;
       for (let index = 0; index < message.toolCalls.length; index += 1) {
         const call = message.toolCalls[index];
         const result = results[index];
@@ -227,7 +233,10 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
         messages.push(toolMessage(call, result));
 
         const todos = goalTodosOf(result.data);
-        if (todos) goal?.applyTodos(todos);
+        if (todos) {
+          goal?.applyTodos(todos);
+          sawTodoChange = true;
+        }
 
         const toolDone = doneFromToolResult(result);
         if (toolDone) {
@@ -278,7 +287,7 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
         break;
       }
 
-      if (goal) {
+      if (goal && sawTodoChange) {
         const decision = shouldContinue(goal, { text: message.content });
         if (decision.action === "blocked") {
           blockGoal(goal, decision.reason);
@@ -287,7 +296,7 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
         }
         if (decision.action === "continue") {
           continuations.noteGoalContinuation();
-          messages.push({ role: "user", content: continueGoalMessage(goal) });
+          pushSyntheticNotice(messages, continueGoalMessage(goal), options);
           options.emit({ type: "turn.finished", turn: turns, reason: "continue_goal" });
           continue;
         }
@@ -326,19 +335,23 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
     }
 
     if (continuations.takeLength(streamed.stopReason, options.continuations)) {
-      messages.push({ role: "user", content: CONTINUE_LENGTH });
+      pushSyntheticNotice(messages, CONTINUE_LENGTH, options);
       options.emit({ type: "turn.finished", turn: turns, reason: "continue_length" });
       continue;
     }
 
     if (continuations.takeEmpty(visible, options.continuations)) {
-      messages.push({ role: "user", content: CONTINUE_EMPTY });
+      pushSyntheticNotice(messages, CONTINUE_EMPTY, options);
       options.emit({ type: "turn.finished", turn: turns, reason: "continue_empty" });
       continue;
     }
 
     if (pages && !pages.canFinish()) {
-      messages.push({ role: "user", content: PAGE_COMPLETION_REQUIRED });
+      if (!continuations.takePageIncomplete()) {
+        options.emit({ type: "turn.finished", turn: turns, reason: "end" });
+        return { stopReason: "end", summary: lastText, turns, usage, lastText, messages };
+      }
+      pushSyntheticNotice(messages, PAGE_COMPLETION_REQUIRED, options);
       options.emit({ type: "turn.finished", turn: turns, reason: "page_incomplete" });
       continue;
     }
@@ -359,13 +372,13 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
     if (goal && progressBefore) {
       const decision = shouldContinue(goal, { text: message.content });
       if (decision.action === "continue") {
-        const progressed = goalProgressed(goal, progressBefore, message.toolCalls.length > 0);
+        const progressed = goalProgressed(goal, progressBefore, false);
         if (continuations.noteGoalProgress(progressed)) {
           blockGoal(goal, "goal made no progress across repeated turns");
           options.emit({ type: "turn.finished", turn: turns, reason: "goal_no_progress" });
           return { stopReason: "end", summary: lastText, turns, usage, lastText, messages };
         }
-        messages.push({ role: "user", content: continueGoalMessage(goal) });
+        pushSyntheticNotice(messages, continueGoalMessage(goal), options);
         options.emit({ type: "turn.finished", turn: turns, reason: "continue_goal" });
         continue;
       }
@@ -394,12 +407,15 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
       options.responseFormat !== "conversation" &&
       continuations.takeProtocol()
     ) {
-      messages.push({ role: "user", content: CONTINUE_PROTOCOL });
+      pushSyntheticNotice(messages, CONTINUE_PROTOCOL, options);
       options.emit({ type: "turn.finished", turn: turns, reason: "continue_protocol" });
       continue;
     }
 
-    if (await takeSteering(messages, options)) {
+    if (
+      (options.maxTurns === 0 || turns < options.maxTurns) &&
+      (await takeSteering(messages, options))
+    ) {
       options.emit({ type: "turn.finished", turn: turns, reason: "steer" });
       continue;
     }

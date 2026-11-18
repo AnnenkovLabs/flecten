@@ -11,19 +11,7 @@ import {
 } from "./types";
 
 function copy(item: QueueItem): QueueItem {
-  return {
-    ...item,
-    ...(item.attachments ? { attachments: [...item.attachments] } : {}),
-    ...(item.attachmentSnapshot
-      ? {
-          attachmentSnapshot: {
-            media: item.attachmentSnapshot.media.map((ref) => ({ ...ref })),
-            blocks: [...item.attachmentSnapshot.blocks],
-          },
-        }
-      : {}),
-    ...(item.contexts ? { contexts: item.contexts.map((context) => ({ ...context })) } : {}),
-  };
+  return structuredClone(item);
 }
 
 function stateError(id: string, state: QueueItem["state"], action: string): HarnessError {
@@ -84,8 +72,10 @@ export class RunQueue {
     return this.items.map(copy);
   }
 
-  takeNext(): QueueItem | undefined {
-    const next = this.items.find((item) => item.mode === "queue" && item.state === "pending");
+  takeNext(mode: QueueItemMode | "any" = "queue"): QueueItem | undefined {
+    const next = this.items.find(
+      (item) => (mode === "any" || item.mode === mode) && item.state === "pending",
+    );
     if (!next) return undefined;
     return this.markSending(next.id);
   }

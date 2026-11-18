@@ -34,7 +34,9 @@ export function continueGoalMessage(goal: GoalState): string {
 }
 
 export function goalTodosOf(data: unknown): GoalTodo[] | undefined {
-  if (!isObject(data) || data.kind !== "todo" || !Array.isArray(data.todos)) return undefined;
+  if (!isObject(data) || data.kind !== "todo" || data.op === "list" || !Array.isArray(data.todos)) {
+    return undefined;
+  }
   const todos: GoalTodo[] = [];
   for (const entry of data.todos) {
     if (!isObject(entry)) return undefined;
@@ -213,6 +215,7 @@ export class TurnContinuations {
   #lengthAttempts = 0;
   #emptyAttempts = 0;
   #protocolAttempts = 0;
+  #pageIncompleteAttempts = 0;
   #sawToolCall = false;
   #noProgressTurns = 0;
 
@@ -220,6 +223,13 @@ export class TurnContinuations {
     this.#sawToolCall = true;
     this.#lengthAttempts = 0;
     this.#emptyAttempts = 0;
+    this.#pageIncompleteAttempts = 0;
+  }
+
+  takePageIncomplete(limit = 3): boolean {
+    if (this.#pageIncompleteAttempts >= limit) return false;
+    this.#pageIncompleteAttempts += 1;
+    return true;
   }
 
   takeLength(stopReason: string, limit: number): boolean {

@@ -52,7 +52,7 @@ async function sandbox(
       try {
         host = new URL(url).hostname;
       } catch {
-        return denied("Сеть: некорректный URL.", "sandbox");
+        return denied("Network: invalid URL.", "sandbox");
       }
     }
     const check = policy.checkNetwork(host);
@@ -251,10 +251,10 @@ async function authorizeRequest(
 
 function refusal(outcome: ApprovalOutcome, reason: string): string {
   if (outcome.by === "timeout")
-    return `Нет ответа пользователя на запрос разрешения, вызов отклонён. ${reason} Выберите безопасный путь или продолжите другую часть задачи.`;
-  if (outcome.by === "aborted") return "Прогон остановлен, пока вызов ждал разрешения.";
-  if (outcome.by === "policy") return `Права изменились, вызов запрещён. ${reason}`;
+    return `Approval timed out; tool call denied. ${reason} Choose a safer alternative or continue with another part of the task.`;
+  if (outcome.by === "aborted") return "Run stopped while waiting for permission approval.";
+  if (outcome.by === "policy") return `Permission policy changed; tool call denied. ${reason}`;
   if (outcome.by === "persistence")
-    return "Не удалось сохранить разрешение. Вызов не выполнен; устраните ошибку сохранения или запросите одноразовое разрешение.";
-  return `Пользователь отклонил вызов. Не достигайте того же результата обходным инструментом. Продолжайте только с существенно более безопасным действием. ${reason}${outcome.by === "user" && outcome.feedback !== undefined ? `\n\nUser feedback:\n${outcome.feedback}` : ""}`;
+    return "Could not save permission rule; tool call was not executed. Fix the config write error or request one-time approval.";
+  return `User denied this tool call. Do not work around this denial with another tool; only proceed with a substantially safer action. ${reason}${outcome.by === "user" && outcome.feedback !== undefined ? `\n\nUser feedback:\n${outcome.feedback}` : ""}`;
 }

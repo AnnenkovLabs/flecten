@@ -1,21 +1,21 @@
 export default {
   "Twin is on": "Twin увімкнений",
   "Twin is off": "Twin вимкнений",
-  "Twin is saying goodbye…": "Twin прощається…",
-  "Twin is back with you": "Twin знову з вами",
+  "Twin is saying goodbye…": "Вимикаю Twin…",
+  "Twin is back with you": "Twin активний",
   "Represents you while you work.": "Представляє вас, поки ви працюєте.",
   "Your character stays saved. Turn Twin on whenever you want.":
     "Ваш характер збережено. Twin можна увімкнути будь-коли.",
   "No new supported user messages were found. No model request was made.":
-    "Нових підтримуваних повідомлень користувача не знайдено. Запит до моделі не надсилався.",
+    "У вибраних джерелах немає нових повідомлень користувача. Запит до моделі не надсилався.",
   "Training finished. No supported traits were found.":
-    "Навчання завершено. Підтверджених рис не знайдено.",
+    "Аналіз завершено, стійких вподобань для збереження не знайдено.",
   "On sessions from any harness.": "На сесіях із будь-якого харнеса.",
   "Your Twin": "Ваш Twin",
   "Learning from your decisions": "Вчиться на ваших рішеннях",
   "Ready to work with you": "Готовий працювати з вами",
   "Ready to learn": "Готовий до навчання",
-  "Same ideas. Same thoughts.": "Ті самі ідеї. Ті самі думки.",
+  "Same ideas. Same thoughts.": "Ваші стандарти без зайвих повторень",
   "Your taste, your standards, your voice. Twin answers the Worker and sends weak work back.":
     "Ваш смак, ваші вимоги, ваш голос. Twin відповідає Worker і повертає слабку роботу на доопрацювання.",
   Anger: "Злість",
@@ -56,7 +56,7 @@ export default {
   ],
   "Would Twin choose what you would?": "Twin вибере те саме, що й ви?",
   "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "Запропонуйте реальну розвилку. Twin вибере обґрунтований варіант вашим голосом, як і в розмові з Worker.",
+    "Поставте реальне питання щодо коду чи архітектури, щоб перевірити, як Twin відповість Worker на основі ваших рис.",
   "Question for Twin": "Запитання до Twin",
   "How should we design checkout for this project?": "Як оформити чекаут у цьому проєкті?",
   "Asking Twin…": "Twin відповідає…",
@@ -65,7 +65,7 @@ export default {
     "Використовує вибрану модель. Кожна відповідь показує підстави.",
   "Twin needs your answer": "Twin потрібна ваша відповідь",
   "No supported answer. Ask the user directly.":
-    "Недостатньо підстав для відповіді. Потрібно запитати користувача.",
+    "У збережених рисах недостатньо підстав; Twin запитає вас напряму.",
   "Based on your character": "На основі вашого характеру",
   "Input: {0} tokens · Output: {1} tokens": ["Вхід: ", 0, " токенів · Вихід: ", 1, " токенів"],
   "Learning…": "Навчається…",
@@ -96,7 +96,7 @@ export default {
   "What this means for the Worker": "Що це означає для Worker",
   "Use this when": "Коли застосовувати",
   "Save character": "Зберегти характер",
-  "You, without repeating yourself.": "Ви, без повторних пояснень.",
+  "You, without repeating yourself.": "Вивчені риси та вподобання",
   "Twin learns what makes you angry, what you like and what delights you. It keeps your original voice, including strong language.":
     "Twin вчиться розуміти, що вас злить, що подобається і що захоплює. Зберігає ваш голос, зокрема міцні вислови.",
   "Learned traits apply immediately. Edit anything that does not sound like you.":
@@ -109,7 +109,7 @@ export default {
   "No matching traits. Clear the search or change the reaction.":
     "Рис не знайдено. Очистьте пошук або виберіть іншу реакцію.",
   "Your Twin is still getting to know you. Train it on your conversations to begin.":
-    "Twin ще знайомиться з вами. Почніть із навчання на ваших розмовах.",
+    "Збережених рис поки немає. Проскануйте минулі сесії та запустіть навчання.",
   "Earlier suggestions": "Попередні пропозиції",
   "Apply trait": "Застосувати рису",
   Reject: "Відхилити",

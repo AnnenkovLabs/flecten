@@ -1,16 +1,16 @@
-## Что меняется
+## Summary
 
-Коротко опиши изменение и причину.
+State what changed and why.
 
-## Проверка
+## Verification
 
 - [ ] `bun test`
 - [ ] `bun run check`
 - [ ] `bun run lint`
 - [ ] `bun run build:ui`
 
-Если менялся интерфейс, приложи снимок или опиши проверку на 1480x940 и 1180x640.
+For UI changes, attach screenshots or note verification at 1480x940 and 1180x640.
 
-## Контекст
+## Context
 
-Ссылки на issue, скриншоты, решения. Новые зависимости идут с записью в журнале решений.
+Related issues, screenshots, and decisions. Any new dependency requires an entry in the decision log.

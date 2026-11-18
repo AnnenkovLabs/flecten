@@ -39,7 +39,7 @@ export function describeProviderError(
 ): string {
   if (error instanceof MissingKeyError) {
     return redactProviderError(
-      `Провайдеру "${provider}" нужен ключ ${error.env}. Задайте переменную окружения или введите ключ в настройках.`,
+      `Provider "${provider}" requires ${error.env}. Set the environment variable or enter an API key in Settings.`,
       definition,
     );
   }

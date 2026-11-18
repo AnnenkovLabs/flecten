@@ -54,7 +54,7 @@ function anthropicBlocks(message: Message): unknown[] | undefined {
   return Array.isArray(message.providerData.blocks) ? message.providerData.blocks : undefined;
 }
 
-function convertMessages(messages: Message[]): Record<string, unknown>[] {
+function convertMessages(messages: Message[], caching = false): Record<string, unknown>[] {
   const output: Record<string, unknown>[] = [];
   let index = 0;
 
@@ -74,7 +74,10 @@ function convertMessages(messages: Message[]): Record<string, unknown>[] {
     if (message.role === "assistant") {
       const raw = anthropicBlocks(message);
       if (raw && raw.length > 0) {
-        output.push({ role: "assistant", content: raw });
+        output.push({
+          role: "assistant",
+          content: raw.map((entry) => (isObject(entry) ? { ...entry } : entry)),
+        });
         index += 1;
         continue;
       }
@@ -108,6 +111,26 @@ function convertMessages(messages: Message[]): Record<string, unknown>[] {
       index += 1;
     }
     if (results.length > 0) pushUserBlocks(output, results);
+  }
+
+  if (caching) {
+    let remainingBreakpoints = 2;
+    for (let msgIdx = output.length - 1; msgIdx >= 0 && remainingBreakpoints > 0; msgIdx -= 1) {
+      const item = output[msgIdx];
+      if (msgIdx < output.length - 1 && item?.role !== "user") continue;
+      const blocks = Array.isArray(item?.content) ? item.content : undefined;
+      for (let at = (blocks?.length ?? 0) - 1; blocks && at >= 0; at -= 1) {
+        const block = blocks[at];
+        if (!isObject(block)) continue;
+        if (block.type === "thinking" || block.type === "redacted_thinking") continue;
+        if (block.type === "text" && typeof block.text === "string" && block.text.length === 0) {
+          continue;
+        }
+        blocks[at] = { ...block, cache_control: { type: "ephemeral" } };
+        remainingBreakpoints -= 1;
+        break;
+      }
+    }
   }
 
   return output;
@@ -168,16 +191,19 @@ function buildBody(request: ModelRequest, runtime: ProviderRuntime): Record<stri
     ...(format && formatSchema ? { format: { type: "json_schema", schema: formatSchema } } : {}),
   };
 
+  const thinkingActive = isObject(thinking.thinking) && thinking.thinking.type !== "disabled";
   const body: Record<string, unknown> = {
     model: apiModel(request),
     max_tokens: request.maxTokens,
     system: caching
       ? [{ type: "text", text: request.system, cache_control: { type: "ephemeral" } }]
       : request.system,
-    messages: convertMessages(request.messages),
+    messages: convertMessages(request.messages, caching),
     tools,
     stream: true,
-    ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
+    ...(request.temperature === undefined || thinkingActive || model?.temperature === false
+      ? {}
+      : { temperature: request.temperature }),
     ...(thinking.thinking ? { thinking: thinking.thinking } : {}),
     ...(Object.keys(outputConfig).length > 0 ? { output_config: outputConfig } : {}),
     ...(request.toolChoice === "required"
@@ -244,6 +270,7 @@ function rawBlock(block: StreamBlock): Record<string, unknown> | undefined {
   if (block.type === "text") {
     return block.text.length > 0 ? { type: "text", text: block.text } : undefined;
   }
+  if (!block.stopped) return undefined;
   return {
     type: "tool_use",
     id: block.id,

@@ -166,7 +166,9 @@ test("local engines validate setup, keep audio off the provider and cancel the w
   expect(await handlers["voice.check"]({ type: "voice.check", ...options })).toMatchObject({
     voiceSetup: { ready: false },
   });
-  await expect(handlers["voice.status"]({ type: "voice.status" })).rejects.toThrow("не установлен");
+  await expect(handlers["voice.status"]({ type: "voice.status" })).rejects.toThrow(
+    "Engine not installed",
+  );
   await expect(
     handlers["voice.prepare"]({ type: "voice.prepare", ...options, engine: "other" }),
   ).rejects.toThrow();

@@ -1,82 +1,82 @@
-# Автоматические действия
+# Hooks
 
-Автоматическое действие выполняет локальную команду или HTTP-запрос на выбранном событии агента. Оно может добавить контекст, сообщить об ошибке или запретить ещё не выполненную операцию. Внешний код исполняет sidecar, а не интерфейс.
+Hooks run a local shell command or an HTTP `POST` request on specific agent lifecycle events. A hook can inject context, report diagnostics, or block a pending operation before execution. External hook code always runs in the sidecar, never in the renderer.
 
-## Настройка
+## Configuration
 
-В настройках откройте «Автоматические действия», создайте действие и задайте:
+Open **Settings > Hooks** (Automatic Actions), create an entry, and configure:
 
-1. Название, по которому его можно узнать в списке и результате проверки.
-2. Событие: отправка сообщения, вызов инструмента, завершение прогона или другой этап.
-3. Команду либо HTTP URL.
-4. Условия, если действие должно запускаться только для определённого инструмента, пути или команды.
-5. Поведение при ошибке, время ожидания и формат ответа в дополнительных параметрах.
+1. **Name**: human-readable label shown in lists and test results.
+2. **Event**: lifecycle stage (prompt submission, tool call, run completion, etc.).
+3. **Command or HTTP URL**: local shell command or `http`/`https` endpoint.
+4. **Match conditions**: optional literal filters by tool name, path, or shell command.
+5. **Advanced options**: failure policy (`failClosed`), timeout, and response format (`text` or `json`).
 
-Новые действия по умолчанию принимают обычный текстовый вывод. Например, можно сразу указать `bun test` или команду форматирования. Для решений `allow`/`deny` и дополнительного контекста выберите формат ответа JSON; формат задаётся явно, содержимое вывода не угадывается.
+New form-created hooks default to `responseFormat: "text"`, so commands like `bun test` or a formatter work out of the box. Choose `responseFormat: "json"` explicitly when returning `allow`/`deny` decisions or `additionalContext`; output format is never inferred from stdout contents.
 
-Действия одного события выполняются в порядке списка. Отключённые действия пропускаются. Первый запрет останавливает цепочку этого события; последующий allow не отменяет предыдущий deny.
+Hooks registered on the same event run sequentially in list order, skipping disabled entries. The first `deny` short-circuits the chain for that event; a later `allow` cannot override an earlier `deny`.
 
-Проверка черновика выполняет именно текущие настройки, без сохранения. Пример должен отражать нужный вызов: имя инструмента, путь и команда задаются отдельно. Несовпадение условий возвращается как отдельный результат; команда или HTTP-запрос в этом случае не запускаются.
+Testing a draft executes the current unsaved form state with a sample event payload (tool name, path, and command specified separately). When match conditions fail, the runner reports a non-match without spawning the command or sending an HTTP request.
 
-Ручная проверка действительно исполняет действие, включая отключённое. Она принудительно ждёт результат и не делает действие фоновым. Изменение файлов, внешний HTTP endpoint и другие side effects не откатываются проверкой. Project trust действует и для ручного запуска.
+Manual hook tests execute the real command or HTTP endpoint even if the hook is currently disabled, always run synchronously, do not roll back filesystem or network side effects, and enforce project trust.
 
-«Недавние запуски» показывают последние 50 реальных выполнений в текущей задаче, начиная с нового: имя, событие, результат, длительность и доступный вывод. В деталях указан источник: проект или имя модуля. История восстанавливается из `hook.finished` при переоткрытии задачи. Ручные проверки остаются в редакторе и не смешиваются с запусками агента.
+**Recent runs** displays the latest 50 real hook executions in the active task (newest first) with name, event, outcome, duration, output preview, and provenance (`project` or module name). History reconstructs from durable `hook.finished` events on session reopen and excludes manual editor tests.
 
-## События
+## Events
 
-Имена в первом столбце остаются стабильными для существующего конфига. Пользователь видит переведённые названия.
+Event keys in the first column are stable config identifiers:
 
-| Событие | Момент | Может запретить |
+| Event | Trigger point | Can block |
 |---|---|---|
-| `sessionStart` | Перед запуском прогона | Запуск прогона |
-| `userPromptSubmit` | Перед доставкой исходного сообщения модели | Доставку сообщения |
-| `preToolUse` | После проверки аргументов, до исполнения инструмента | Вызов инструмента |
-| `postToolUse` | После результата инструмента, включая ошибку исполнения | Нет |
-| `toolBatch` | Перед группой вызовов инструментов | Группу |
-| `permission` | После чтения текущей policy, до окончательного разрешения вызова | Вызов |
-| `compact` | После подготовки summary, до замены истории | Применение сжатия |
-| `subagent` | Перед запуском и после результата `task` | Запуск, когда `subagent.phase` равен `start` |
-| `notification` | При доставке уведомления, в том числе о фоновой задаче | Нет |
-| `stop` | После обычного завершения работы модели | Нет |
-| `sessionEnd` | В конце прогона, включая ошибку или остановку | Нет |
+| `sessionStart` | Before starting a run | Run startup |
+| `userPromptSubmit` | Before delivering the user prompt to the model | Prompt delivery |
+| `preToolUse` | After schema validation, before tool execution | Tool call |
+| `postToolUse` | After tool execution completes or errors | No |
+| `toolBatch` | Before executing a batch of tool calls | Entire batch |
+| `permission` | After policy evaluation, before final authorization | Tool call |
+| `compact` | After summary generation, before replacing history | History replacement |
+| `subagent` | Before launching and after finishing `task` | Launch when `subagent.phase === "start"` |
+| `notification` | When delivering a runtime notice (e.g., background job) | No |
+| `stop` | After natural model turn completion | No |
+| `sessionEnd` | At the end of a run, including error or cancellation | No |
 
-Текущая совместимая семантика: `sessionStart` и `sessionEnd` относятся к прогону. В существующем чате они срабатывают и при следующем сообщении. `stop` не является обработчиком нажатия кнопки остановки; при принудительной отмене и ошибке используется `sessionEnd`. Событие `compact` не отменяет уже потраченные токены подготовки summary.
+Run-level semantics: `sessionStart` and `sessionEnd` fire on every run, including follow-up prompts in an existing chat. `stop` fires only when the model finishes naturally; forced user cancellation and run failures trigger `sessionEnd` instead. Blocking `compact` preserves uncompacted history but cannot refund tokens already spent generating the candidate summary.
 
-## Условия
+## Match Conditions
 
-Поля условий имеют буквальную семантику:
+All condition fields use exact literal matching:
 
-- `tool`: точное каноническое имя инструмента. `*` или отсутствие означает любой инструмент.
-- `path`: точный путь. Относительный путь разрешается от корня рабочего проекта.
-- `pathPrefix`: каталог и его потомки. `src` соответствует `src/a.ts`, но не `src-other/a.ts`.
-- `command`: полное точное совпадение команды.
-- `commandPrefix`: команда либо её начало на границе пробела или табуляции. `git status` соответствует `git status --short`, но не `git statuses`.
+- `tool`: canonical tool name; `*` or omitted matches any tool.
+- `path`: exact path; relative paths resolve against the project root.
+- `pathPrefix`: directory prefix on path boundaries (`src` matches `src/a.ts` but not `src-other/a.ts`).
+- `command`: exact full shell command string.
+- `commandPrefix`: exact command or prefix bounded by space or tab (`git status` matches `git status --short` but not `git statuses`).
 
-Все заполненные поля соединяются условием «и». Регулярные выражения и shell globs не используются. В `toolBatch` поля должны совпасть у одного и того же вызова; имя инструмента от одного вызова не соединяется с путём другого.
+Populated fields combine with logical AND; regular expressions and shell globs are not used. On `toolBatch`, all populated fields must match a single call within the batch rather than mixing `tool` from one call with `path` from another.
 
-Условия инструмента, пути и команды применимы к событиям, payload которых содержит эти данные. У события без инструмента условие `tool: "write"` не может совпасть. Для нескольких разных правил создайте отдельные действия.
+Tool, path, and command filters apply only to events carrying those fields; `tool: "write"` never matches an event without tool metadata. Create separate hook entries to express OR combinations.
 
-Для пути используются явные поля аргументов: `path`, `file_path`, `filePath`, `paths`, `source`, `destination`, `target`, а также permission target для действий read/write/external_path. Для команд используются `command`, `cmd` и permission target действия shell. Это сопоставление структурированных полей; поиск строк внутри JSON не выполняется.
+Path matching inspects structured argument fields (`path`, `file_path`, `filePath`, `paths`, `source`, `destination`, `target`) plus `read`/`write`/`external_path` permission targets. Command matching inspects `command`, `cmd`, and `shell` permission targets without scanning arbitrary JSON substrings.
 
-## Политика выполнения
+## Execution Policy
 
-«Блокировать при ошибке» относится к timeout, отмене, ошибке transport, ненулевому коду процесса и некорректному ответу. Политика влияет только на события, которые могут запретить операцию. При выключенной политике сбой записывается, но операция продолжается.
+`failClosed` (**Block on failure**) covers timeouts, aborts, transport errors, non-zero exit codes, oversized responses, and invalid JSON. It affects only interceptable events; when `failClosed` is `false`, the failure is logged and execution proceeds.
 
-Явный `decision: "deny"` и exit code 2 блокируют допустимое событие независимо от политики ошибки. На observer-событиях они не отменяют уже выполненную операцию. Allow не выдаёт дополнительных прав и не обходит permissions или sandbox инструмента.
+Explicit `decision: "deny"` or exit code `2` always blocks an interceptable event regardless of `failClosed`, while observer events cannot undo an already completed action. Returning `allow` never escalates privileges or bypasses permissions or OS sandboxing.
 
-Фоновый режим доступен observer-событиям. Агент продолжает работу, не дожидаясь их ответа. Их дополнительный контекст не доставляется модели: результат уже находится вне ожидающей цепочки. Для контекста используйте синхронное выполнение.
+Background (`async`) execution is available only on observer events: the agent continues immediately, and any `additionalContext` from an async hook is discarded. Use synchronous hooks whenever the model must read injected context.
 
-Время ожидания одного действия задаётся от 100 до 60 000 мс, по умолчанию 10 000 мс. Вход и каждый поток ответа ограничены 64 КиБ. Превышение размера ответа считается ошибкой, а не успешным чтением обрезанного JSON. В журнал попадает ограниченный preview; секреты маскируются до публикации.
+Per-hook `timeoutMs` ranges from `100` to `60000` ms (default `10000` ms). Input payloads and each output stream (`stdout`, `stderr`, HTTP body) are capped at 64 KiB; exceeding 64 KiB fails the hook rather than parsing truncated JSON. Bounded previews are logged after secret redaction.
 
-Command hooks используют стандартную оболочку платформы через общие terminal helpers: `/bin/bash` на Unix и `cmd.exe` на Windows. Рабочая папка совпадает с проектом. Переменные окружения наследуются только из allowlist и явно заданного `env`; ключи провайдера не копируются в hook автоматически. HTTP hooks отправляют POST, принимают только http/https и не следуют redirect.
+Command hooks run in the project root through shared platform shell helpers (`/bin/bash` on Unix, `cmd.exe` on Windows). Environment variables come solely from the platform allowlist plus explicit hook `env` entries; provider API keys are never inherited automatically. HTTP hooks send `POST` over `http`/`https` and do not follow redirects.
 
-## Протокол для авторов
+## Authoring Protocol
 
-`responseFormat: "text"` принимает stdout как диагностический текст и не извлекает из него решения или контекст. Exit code 2 остаётся явным запретом, другие ошибки обрабатываются выбранной политикой. Для HTTP также можно явно выбрать текстовый ответ.
+`responseFormat: "text"` treats `stdout` (or the HTTP response body) as diagnostic output without parsing decisions or context; exit code `2` still blocks, and other failures follow `failClosed`.
 
-`responseFormat: "json"` включает описанный ниже протокол. Отсутствие поля сохраняет прежнее поведение JSON, поэтому старые защитные действия не меняют смысл после обновления. Новые действия формы записывают явный `text`.
+`responseFormat: "json"` enables the structured response contract below. Omitting `responseFormat` in `flecten.config.json` keeps `"json"` for backward compatibility, whereas new UI form entries write `"text"` explicitly.
 
-Команда получает один JSON-объект в stdin, HTTP получает его в теле запроса. Служебные поля:
+Command hooks receive a single JSON object on `stdin`; HTTP hooks receive the same object as the `POST` body:
 
 ```json
 {
@@ -88,58 +88,56 @@ Command hooks используют стандартную оболочку пл�
 }
 ```
 
-Дополнительные поля зависят от события: `prompt`, `toolOk`, `toolOutput`, `toolError`, `stopReason`, `permission`, `compact`, `notification`, `subagent`, `toolBatch`. Исходные сообщения пользователя хранятся буквально; hook не подменяет их в журнале.
+Event-specific fields include `prompt`, `toolOk`, `toolOutput`, `toolError`, `stopReason`, `permission`, `compact`, `notification`, `subagent`, and `toolBatch`. Raw user prompts remain verbatim in session logs; hooks cannot rewrite recorded user messages.
 
-В режиме JSON ответ является объектом со следующими необязательными полями:
+In `json` mode, the response is a JSON object with optional fields:
 
 ```json
 {
   "decision": "deny",
-  "reason": "Измените файл вручную и повторите запрос.",
-  "additionalContext": "Дополнительные сведения для текущего шага."
+  "reason": "Edit this file manually and retry.",
+  "additionalContext": "Extra context for the current turn."
 }
 ```
 
-`decision` принимает `allow` или `deny`. Пустой stdout или `{}` означает отсутствие решения и контекста. Неизвестные поля ответа отклоняются схемой. В режиме JSON диагностический текст команды пишется в stderr; stdout должен оставаться пустым либо содержать единственный JSON-ответ. HTTP возвращает этот объект с успешным HTTP status.
+`decision` accepts `"allow"` or `"deny"`. Empty `stdout` or `{}` means no decision and no added context. Unknown keys fail schema validation. In `json` mode, write diagnostics to `stderr` and keep `stdout` either empty or containing a single JSON object; HTTP hooks must return a `2xx` status with that JSON body.
 
-| Завершение команды | Значение |
+| Command outcome | Meaning |
 |---|---|
-| 0 в режиме text | Успех; stdout остаётся диагностическим выводом |
-| 0, пустой вывод или валидный JSON в режиме json | Успех; применяются допустимые decision/context |
-| 2 | Явный запрет; объяснение берётся из reason или stderr |
-| Другой ненулевой код | Ошибка; применяется выбранная политика ошибки |
-| Timeout, abort, слишком большой ответ, неверный JSON | Ошибка; частичный ответ не применяется |
+| Exit `0` in `text` mode | Success; `stdout` is recorded as diagnostic text |
+| Exit `0` with empty `stdout` or valid JSON in `json` mode | Success; valid `decision` and `additionalContext` apply |
+| Exit `2` | Explicit deny; explanation comes from `reason` or `stderr` |
+| Any other non-zero exit code | Hook error; `failClosed` determines whether to block |
+| Timeout, abort, output > 64 KiB, or invalid JSON | Hook error; partial responses are never applied |
 
-Успешный transport сам по себе не означает «операция разрешена». В результате отдельно указаны `ok`, `blocked`, `decision`, `error`, `timedOut`, `aborted`, `exitCode`, `outputTruncated` и длительность. `id` и `name`, если заданы, проходят в результат. `index` относится к списку события перед фильтрацией: сначала действия проекта, затем активных модулей, включая отключённые и не совпавшие записи перед ним.
+Transport success alone does not imply authorization: hook results separately record `ok`, `blocked`, `decision`, `error`, `timedOut`, `aborted`, `exitCode`, `outputTruncated`, duration, optional `id`/`name`, and pre-filter `index` (project hooks followed by active module hooks, counting disabled and unmatched entries).
 
-Runtime добавляет `source: { type: "project" }` для действий проекта или `{ type: "module", name, revision }` для действий активного модуля. Имя и ревизия берутся из загруженной версии модуля. Это происхождение результата, а не редактируемое поле конфигурации действия.
+The runtime stamps each result with `source: { type: "project" }` or `{ type: "module", name, revision }` from the loaded module snapshot; `source` is read-only provenance rather than a configurable field.
 
-## Пример защитного действия
+## Guard Hook Example
 
-Создайте событие «Перед вызовом инструмента», задайте tool `write`, path prefix `.secrets`, включите блокировку при ошибке, выберите формат ответа JSON и укажите команду `bun .hooks/protect-secrets.ts`.
-
-Содержимое `.hooks/protect-secrets.ts`:
+Configure a `preToolUse` hook matching `tool: "write"` and `pathPrefix: ".secrets"`, enable `failClosed`, select `responseFormat: "json"`, and set command `bun .hooks/protect-secrets.ts`:
 
 ```ts
 await Bun.stdin.text();
 process.stdout.write(JSON.stringify({
   decision: "deny",
-  reason: "Файлы .secrets изменяются вручную. Выберите другой путь.",
+  reason: "Files under .secrets must be edited manually. Choose a different path.",
 }));
 ```
 
-При проверке `write` с путём `.secrets/config.json` получится запрет. С `src/config.ts` условия не совпадут и скрипт не запустится. Для `edit`, `apply_patch`, shell и других путей изменения требуются соответствующие правила; одно действие для `write` не является универсальной защитой файловой системы.
+Testing `write` against `.secrets/config.json` blocks the call, whereas `src/config.ts` skips spawning the script. Guarding filesystem mutations comprehensively requires matching rules for `edit`, `apply_patch`, `bash`, and other write paths; a single `write` rule is not a full filesystem sandbox.
 
-## Конфигурация и расширения
+## Advanced Config and Modules
 
-Обычная настройка выполняется формой. Advanced-конфиг хранится в `flecten.config.json` как массивы по именам событий:
+Advanced configuration in `flecten.config.json` stores arrays keyed by event name:
 
 ```json
 {
   "hooks": {
     "preToolUse": [{
       "id": "protect-secrets",
-      "name": "Защита .secrets",
+      "name": "Protect .secrets",
       "type": "command",
       "responseFormat": "json",
       "command": "bun .hooks/protect-secrets.ts",
@@ -152,8 +150,6 @@ process.stdout.write(JSON.stringify({
 }
 ```
 
-Существующий строковый matcher сохраняет совместимость с точным именем инструмента. Новый редактор использует структурированные поля. До 64 действий разрешено на одно событие.
+Legacy string `matcher` values remain supported as exact tool-name filters, while the form editor writes structured matcher objects. Up to 64 hooks are allowed per event.
 
-Trusted modules подключают hooks через существующий manifest и жизненный цикл модуля. Замена driver, model stream, tool execution и compaction принадлежит platform services. Отдельного произвольного JavaScript в интерфейсе нет.
-
-Источник решений и сравнение с OpenCode 2, Oh My Pi, Pi, Gemini CLI и Claude Code: внутренние материалы. Канонические схемы и возможности событий находятся в `shared/hooks.ts`; runtime в `src/core/hooks/`, ручная проверка в `src/app/hook-test.ts`.
+Trusted modules register session-scoped hooks through their module manifest and lifecycle, whereas replacing the agent driver, model stream, tool executor, or compactor uses module platform services (`MODULES.md`). Arbitrary user JavaScript never runs inside the renderer outside sandboxed iframes. Canonical schemas live in `shared/hooks.ts`, the execution engine in `src/core/hooks/`, and manual dry-run testing in `src/app/hook-test.ts`.

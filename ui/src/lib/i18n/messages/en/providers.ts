@@ -4,7 +4,7 @@ export default {
   "Responses API with reasoning and tools.": "Responses API with reasoning and tools.",
   "Claude and compatible Messages APIs.": "Claude and compatible Messages APIs.",
   "Google Gemini via generateContent.": "Google Gemini via generateContent.",
-  "The provider's API protocol.": "The provider's API protocol.",
+  "The provider's API protocol.": "Custom API protocol.",
   minimal: "minimal",
   low: "low",
   medium: "medium",
@@ -42,7 +42,6 @@ export default {
   "Reasoning levels": "Reasoning levels",
   "Selected levels will appear in the selector next to the model.":
     "Selected levels will appear in the selector next to the model.",
-  "The model supports reasoning.": "The model supports reasoning.",
   "Reasoning toggle": "Reasoning toggle",
   "Show a reasoning toggle in the model selector.":
     "Show a reasoning toggle in the model selector.",
@@ -84,18 +83,14 @@ export default {
   "defaults to the model key": "defaults to the model key",
   "Catalog ID": "Catalog ID",
   "Knowledge cutoff": "Knowledge cutoff",
-  "The date up to which the model has knowledge.": "The date up to which the model has knowledge.",
   "Release date": "Release date",
   Limits: "Limits",
   "Max input (tokens)": "Max input (tokens)",
   "not set": "not set",
   "Response limit field": "Response limit field",
-  "The API parameter that limits response length.":
-    "The API parameter that limits response length.",
   "Modalities and files": "Modalities and files",
   Input: "Input",
   Output: "Output",
   "Open weights": "Open weights",
-  "The model's weights are open.": "The model's weights are open.",
   "Files and attachments": "Files and attachments",
 } as const;

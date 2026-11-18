@@ -1,8 +1,7 @@
 <script lang="ts">
   import { t } from "../../lib/i18n.svelte";
   import { onMount, tick } from "svelte";
-  import { fade } from "svelte/transition";
-  import { prefersReducedMotion } from "../../lib/motion";
+  import { revealDockFromRight } from "../../lib/motion";
   import type { RunStore } from "../../lib/run.svelte";
   import { isDirty } from "../../lib/ide-document";
   import { splitPath } from "../../lib/file-text";
@@ -164,7 +163,7 @@
     {#if active}<AgentIsland {run} expanded={agentOpen} onToggle={() => execute("toggle-agent")} />{/if}
     <footer class="ide-status"><button class="status-branch" data-tooltip={run.branch || run.project} onclick={() => selectLeft("git")}><Icon name="branch" size={12} />{run.branch || run.project}</button><span class="status-spacer"></span>{#if target && !reviewing}<span class="save-status">{!target.file?.hash ? t("Read-only") : target.saving ? t("Saving…") : isDirty(target) ? t("Unsaved") : t("Saved")}</span><button data-tooltip={t("Go to line")} onclick={() => execute("go-line")}>{t("Ln {0}, Col {1}", [line, column])}</button><button data-tooltip={t("Change indent size")} onclick={() => ide.layout.set({ tabSize: prefs.tabSize === 2 ? 4 : 2 })}>{t("Spaces: {0}", [prefs.tabSize])}</button><span class="encoding">UTF-8 · {target.text.includes("\r\n") ? "CRLF" : "LF"}</span><button data-tooltip={t("Wrap long lines")} aria-pressed={prefs.wrap} onclick={() => execute("wrap")}>{editorLanguage(target.path).label}</button>{/if}</footer>
   </div>
-  {#if agentOpen && active}<div class="ide-agent" in:fade={{ duration: prefersReducedMotion() ? 0 : 140 }}><ResizeHandle value={prefs.agentWidth} min={300} max={600} initial={360} label={t("Agent pane width")} reverse edge="start" onChange={(agentWidth) => ide.layout.set({ agentWidth })} /><AgentSidebar {run} focusToken={agentFocus} onClose={() => agentOpen = false} {onShowAgent} onOpenChanges={() => { leftTab = "changes"; onShowExplorer(); }} onCommand={(name, args) => { if (name === "terminal") { outputOpen = true; outputTab = "agent"; } else { onCommand(name, args); if (["new", "clear", "checkpoints"].includes(name)) onShowAgent(); } }} /></div>{/if}
+  {#if agentOpen && active}<div class="ide-agent" in:revealDockFromRight><ResizeHandle value={prefs.agentWidth} min={300} max={600} initial={360} label={t("Agent pane width")} reverse edge="start" onChange={(agentWidth) => ide.layout.set({ agentWidth })} /><AgentSidebar {run} focusToken={agentFocus} onClose={() => agentOpen = false} {onShowAgent} onOpenChanges={() => { leftTab = "changes"; onShowExplorer(); }} onCommand={(name, args) => { if (name === "terminal") { outputOpen = true; outputTab = "agent"; } else { onCommand(name, args); if (["new", "clear", "checkpoints"].includes(name)) onShowAgent(); } }} /></div>{/if}
 </section>
 {#if active && quickOpen}<QuickOpen files={ide.files} recent={ide.tabs.map((tab) => tab.path)} mode={quickOpen} onOpen={open} onExecute={execute} onClose={() => quickOpen = null} />{/if}
 {#if active && goLine && target}<GoToLine {line} total={target.text.split("\n").length} onGo={(line, column) => ide.locate(target!.path, line, column)} onClose={() => goLine = false} />{/if}

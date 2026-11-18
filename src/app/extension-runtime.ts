@@ -18,7 +18,7 @@ export function extensionRuntime(
   const moduleRuntimes = new Set<McpSessionRuntime>();
   const runtime = (): McpSessionRuntime => {
     const mcp = current().mcp;
-    if (!("reconnect" in mcp)) throw new Error("Сначала подтвердите доверие проекту");
+    if (!("reconnect" in mcp)) throw new Error("Trust this project folder first.");
     return mcp as McpSessionRuntime;
   };
   const reconnect = async (id?: string) => {
@@ -75,7 +75,7 @@ export function extensionRuntime(
     reconnect,
     async authorize(id: string) {
       const provider = authorizations.get(id);
-      if (!provider) throw new Error("Сохраните HTTP сервер с OAuth перед авторизацией");
+      if (!provider) throw new Error("Save the OAuth HTTP server before signing in.");
       return provider.start();
     },
     cancelAuthorization(id: string) {
@@ -87,7 +87,7 @@ export function extensionRuntime(
       runtime().invokePrompt(server, name, args),
     async skillResource(name: string, path: string) {
       const skill = current().skills.skills.find((entry) => entry.name === name);
-      if (!skill) throw new Error("Навык не найден");
+      if (!skill) throw new Error("Skill not found.");
       return readSkillResource(skill, path);
     },
     async skills() {

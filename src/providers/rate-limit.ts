@@ -146,6 +146,10 @@ function resetFromHeaders(
     if (timestamp !== undefined) return { resetAt: Math.max(now, timestamp), source: true };
     const duration = parseDurationMs(genericReset);
     if (duration !== undefined) return { resetAt: now + duration, source: true };
+    const seconds = Number(genericReset.trim());
+    if (genericReset.trim().length > 0 && Number.isFinite(seconds) && seconds >= 0) {
+      return { resetAt: now + Math.round(seconds * 1_000), source: true };
+    }
   }
   return { source: false };
 }
@@ -307,12 +311,10 @@ export function recordRateLimit(
   quotaGroup?: string,
 ): void {
   if (!state) return;
+  const scopedByModel = state.kind === "model_quota";
+  const scopedByGroup = scopedByModel || (state.kind === "rate" && quotaGroup !== undefined);
   states.set(
-    stateKey(
-      providerId,
-      state.kind === "model_quota" ? model : undefined,
-      state.kind === "model_quota" ? quotaGroup : undefined,
-    ),
+    stateKey(providerId, scopedByModel ? model : undefined, scopedByGroup ? quotaGroup : undefined),
     state,
   );
 }

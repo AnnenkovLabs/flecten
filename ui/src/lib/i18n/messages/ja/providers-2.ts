@@ -1,6 +1,5 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "The model accepts attachments.": "モデルが添付ファイルを受け取れます。",
   "Price per 1M tokens": "100万トークンあたりの料金",
   "Cache read": "キャッシュ読み取り",
   "Cache write": "キャッシュ書き込み",
@@ -28,7 +27,8 @@ export default {
   "Expected an array of strings": "文字列の配列が必要です",
   "Advanced protocol settings": "プロトコルの詳細設定",
   "Reasoning, requests, and raw JSON.": "推論、リクエスト、JSONの直接指定。",
-  "How to send and store reasoning between turns.": "ターン間での推論の送信方法と保存方法。",
+  "How to send and store reasoning between turns.":
+    "OpenAI 互換サーバー (DeepSeek、Qwen、GLM、vLLM) 向けの推論フィールド設定。通常は自動のままで構いません。",
   "Resend reasoning": "推論の再送信",
   "Do not send": "送信しない",
   "Reasoning details": "推論の詳細",
@@ -45,8 +45,6 @@ export default {
   Keep: "保持する",
   Clear: "消去する",
   "Request mode": "リクエストモード",
-  "What to send with the response and how to call tools.":
-    "応答とともに送信する内容と、ツールの呼び出し方法。",
   "Parallel tool calls": "ツールの並列呼び出し",
   "Cache prompt": "プロンプトをキャッシュ",
   "The provider reuses the shared request prefix.":
@@ -60,31 +58,21 @@ export default {
   "The app runs a command and reads the API key from its output. Useful for short-lived tokens.":
     "コマンドを実行し、その出力からキーを読み取ります。有効期間の短いトークンに便利です。",
   "Get API key from command": "コマンドで取得したキーを使う",
-  "Instead of the key in the Access field.": "「アクセス」欄のキーの代わりに使います。",
+  "Instead of the key in the Access field.": "固定 API キーおよび環境変数の代わりに使用します。",
   "Arguments (JSON array)": "引数（JSON配列）",
-  "Timeout, ms": "タイムアウト（ミリ秒）",
-  "Key refresh interval, ms": "キーの更新間隔（ミリ秒）",
+  "Timeout, ms": "タイムアウト (ms)",
+  "Key refresh interval, ms": "トークン更新間隔 (ms)",
   "Raw overrides": "直接指定で上書き",
   "Added to every request. For custom servers.":
     "各リクエストに追加されます。独自仕様のサーバー向けの設定です。",
   "Headers (JSON)": "ヘッダー（JSON）",
   "Request body (JSON)": "リクエスト本文（JSON）",
-  "The model calls read, write, bash, and other tools.":
-    "モデルがread、write、bashなどのツールを呼び出します。",
-  "Understands images in the input.": "入力された画像を理解できます。",
   Temperature: "温度",
-  "Accepts the temperature parameter.": "temperatureパラメーターに対応しています。",
-  "Responds using the specified JSON schema.": "指定したJSONスキーマに従って応答します。",
   "WAV and MP3 via Chat Completions, audio files via Gemini.":
-    "Chat CompletionsではWAVとMP3、Geminiでは音声ファイルに対応しています。",
+    "Chat Completions は WAV/MP3、Gemini は各種音声ファイルに対応。",
   "Prompt cache": "プロンプトキャッシュ",
-  "The provider caches the shared request prefix.":
-    "プロバイダーがリクエストの共通プレフィックスをキャッシュします。",
   "Parallel calls": "並列呼び出し",
-  "Multiple tools in one turn.": "1回のターンで複数のツールを呼び出します。",
   "Reasoning between calls": "呼び出し間の推論",
-  "The model reasons after receiving a tool result.":
-    "ツールの結果を受け取った後にモデルが推論します。",
   "Hide from selection": "選択肢に表示しない",
   Capabilities: "機能",
   Test: "動作確認",
@@ -120,4 +108,6 @@ export default {
     "APIからモデル一覧を取得し、カタログからコンテキストと対応機能の情報を補います。",
   "Provider added without checking. Add models manually in the Models tab.":
     "接続を確認せずにプロバイダーを追加しました。「モデル」タブでモデルを手動で追加してください。",
+  "Auto-filled from the model catalog. Override when a proxy or custom endpoint differs.":
+    "モデルカタログから自動入力されます。プロキシや独自サーバーで仕様が異なる場合に変更してください。",
 } as const;

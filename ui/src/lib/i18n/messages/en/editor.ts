@@ -85,9 +85,6 @@ export default {
     "Give the agent a task. Its actions and replies will appear here, while your files stay in view.",
   "Save or close modified files in this folder first.":
     "Save or close modified files in this folder first.",
-  "In t(": "In t(",
-  "Regular t(": "Regular t(",
-  "on line t(": "on line t(",
   "Search failed. {0}. Try searching again.": ["Search failed. ", 0, ". Try searching again."],
   "New file": "New file",
   "New folder": "New folder",

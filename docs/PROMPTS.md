@@ -1,85 +1,81 @@
-# Промпты
+# Prompts
 
-Промпты лежат в `prompts/`. Сборка системного контекста находится в `src/core/prompt.ts`. Контекст использует обычный Markdown, полные имена полей и стандартные tool calls провайдера.
+Prompt templates live in `prompts/`, and system context assembly lives in `src/core/prompt.ts`. Model-facing context uses standard Markdown, unabbreviated field names, and native provider tool calls.
 
-## Состав системного контекста
+## System Context Assembly
 
-`buildPrompt` собирает обязательные части и затем необязательные расширения:
+`buildPrompt` concatenates required sections followed by optional budget-bounded extensions:
 
-1. `base.md`, `talker.md` или `worker.md`: роль сессии и её границы. Базовый промпт не пересказывает описания инструментов и общие приёмы программирования. Стиль и правила общения Talker задаются отдельно в `talker.md`.
-2. `response-summary.md`: HTML по умолчанию для итоговых пользовательских саммари, встроенные элементы для обычных результатов и ссылки на существующие меню харнесса. Простому факту хватает HTML-абзаца, составной результат использует подходящие секции, списки, таблицы и полезные действия. Прогресс и вопросы остаются в Markdown; явно запрошенный формат ответа имеет приоритет. Для `responseFormat: "structured"` эта часть исключена, Worker получает отдельный `worker-response.md` с Markdown.
-3. `# Environment`: рабочий каталог, платформа и текущая дата UTC.
-4. `# Instructions`: найденные инструкции с типом источника, путём и областью действия.
-5. Явные секции вызывающего кода: например роль дочернего агента, схема результата, каталог skills и MCP.
+1. `base.md`, `talker.md`, or `worker.md`: defines the session role and behavioral boundaries without duplicating tool schemas or generic coding boilerplate. Talker communication rules live in `talker.md`.
+2. `response-summary.md`: configures HTML summaries for final user-facing deliverables, inline UI controls, and references to native harness menus (simple facts use a plain HTML paragraph, while multi-part deliverables use structured sections, lists, tables, and actions; interim progress and questions stay in Markdown, and explicit user format requests take precedence). Excluded when `responseFormat: "structured"`; Worker receives Markdown-only `worker-response.md` instead.
+3. `# Environment`: working directory, OS platform, and current UTC date.
+4. `# Instructions`: discovered instruction files annotated with source tier, file path, and subtree scope.
+5. Explicit caller sections: subagent role prompt, required output JSON Schema, skills catalog, and MCP catalogs/instructions.
 
-Имена, описания и JSON Schema аргументов передаются провайдеру как инструменты. Их объём учитывается в бюджете, но схемы не дублируются текстом внутри system prompt. Выбор инструкций не зависит от названия модели.
+Tool names, descriptions, and input JSON Schemas pass through native provider tool definitions: their token footprint counts toward prompt budget, but schemas are never duplicated inside system prompt prose. Prompt selection never branches on model name strings.
 
-## Контракты инструментов
+## Tool Contracts
 
-Точный контракт находится в описании и JSON Schema реально доступного инструмента. Дополнительный системный пересказ каждого инструмента не добавляется. Расширенный base с capability-фрагментами был проверен отдельно, но измеримого выигрыша не показано; после остановки эксперимента по лимиту расходов сохранён компактный default. Подробности и ограничения зафиксированы во внутренних материалах.
+Each tool's authoritative contract lives in its description and JSON Schema in the active registry rather than in redundant system-prompt summaries (an expanded capability-fragment base prompt showed no measurable gain in controlled runs and was dropped in favor of the compact default).
 
-## Проектные инструкции и доверие
+## Project Instructions and Trust
 
-`src/context/instructions.ts` загружает следующие источники:
+`src/context/instructions.ts` loads instruction files in tier order:
 
-- Managed: системный `AGENTS.md`, на Linux `/etc/flecten/AGENTS.md`.
-- User: `~/.config/flecten/AGENTS.md` и `~/.flecten/AGENTS.md`.
-- Project: `AGENTS.md` и `CLAUDE.md` в рабочем каталоге.
-- Local: `AGENTS.local.md` в рабочем каталоге.
-- Nested: `AGENTS.md` и `CLAUDE.md` во вложенных каталогах с указанной областью действия, только при явном включении предзагрузки.
+- **Managed**: system-wide `AGENTS.md` (`/etc/flecten/AGENTS.md` on Linux).
+- **User**: `~/.config/flecten/AGENTS.md` and `~/.flecten/AGENTS.md`.
+- **Project**: `AGENTS.md` and `CLAUDE.md` in the workspace root.
+- **Local**: `AGENTS.local.md` in the workspace root.
+- **Nested**: `AGENTS.md` and `CLAUDE.md` in subdirectories (annotated with `Applies to files under`), preloaded only when nested preloading is explicitly enabled.
 
-По умолчанию вложенные инструкции не собираются рекурсивно. Модель получает правило читать `AGENTS.md` и `CLAUDE.md` только вдоль пути к рабочим файлам и применять их внутри соответствующего поддерева. Открытие родительской папки не добавляет правила соседних проектов в системный контекст.
+By default, nested subdirectories are not crawled upfront: instead, the model is instructed to read `AGENTS.md` and `CLAUDE.md` along paths it touches and apply them only within their respective subtrees, preventing sibling projects from polluting context when opening a monorepo or parent folder.
 
-Общий бюджет тел инструкций при сборке составляет 65 536 байт. Чтение ограничено до загрузки больших файлов в память. Если обязательные managed, user, project или local инструкции не помещаются, сборка останавливается с явной ошибкой и путём файла. При явной вложенной предзагрузке непоместившиеся правила откладываются с уведомлением в контексте. Вложенный поиск по умолчанию ограничен глубиной 3, максимумами 32 файла, 1000 каталогов и 10 000 записей; явная глубина не может превышать 16. Он пропускает symlink, скрытые и служебные каталоги. Инструкции сопровождаются путями, а вложенные ещё и `Applies to files under`. Одинаковые заголовки с разным содержимым фиксируются как диагностические конфликты. Это диагностика текста, а не автоматическое разрешение смысловых противоречий.
+Combined instruction text is capped at 65,536 bytes, enforced before reading oversized files into memory. Exceeding the cap in required tiers (`managed`, `user`, `project`, `local`) fails prompt assembly with an explicit error naming the offending path, while overflow during explicit nested preload defers excess files with an in-context notice. Nested discovery defaults to max depth `3` (configurable up to `16`), max `32` instruction files, `1,000` directories, and `10,000` directory entries, skipping symlinks, hidden directories, and build/cache folders. Duplicate Markdown headings with differing bodies emit diagnostic conflict warnings without attempting automatic semantic resolution.
 
-Доверие к проекту управляет исполняемыми расширениями. До принятия trust не запускаются проектные hooks и MCP, не подключаются проектные агенты и extension tools. Принятие trust пересобирает расширения, инструменты и системный контекст. Само чтение `AGENTS.md` и `CLAUDE.md` не является разрешением на выполнение команд или загрузку расширений.
+Project trust gates executable extensions: untrusted workspaces block project hooks, project MCP servers, project subagent definitions, and module code until trusted, at which point extensions, tool registries, and system prompts rebuild. Merely reading `AGENTS.md` or `CLAUDE.md` never authorizes shell execution or extension loading.
 
-Данные из файлов, shell, web и MCP помечаются происхождением и остаются недоверенными данными. Они не могут выдать разрешение пользователя или изменить иерархию инструкций.
+Outputs from files, shell commands, web fetches, and MCP tools carry explicit provenance headers and remain untrusted data unable to grant permissions or override instruction hierarchy.
 
-## Skills и MCP
+## Skills and MCP
 
-В system prompt попадает компактный каталог доступных skills, а полный `SKILL.md` загружается по запросу через `skill`. Неподтверждённый skill не активируется. Активированный `allowedTools` может ограничить последующие вызовы, но не расширяет permissions. Содержимое кэшируется в пределах сессии с проверкой ревизии; изменение файла требует повторного чтения.
+System prompts include only a compact catalog of available skills (`skills-catalog.md`), while full `SKILL.md` bodies load on demand via `skill` (or `skill-command.md` on slash invocation, without interpolating raw user strings into `base.md`). Untrusted skills cannot activate; an active skill's `allowedTools` can narrow subsequent tool calls within the session (cached per file revision) without expanding permissions.
 
-Общие обёртки находятся в `skills-catalog.md`, `skill-command.md`, `mcp-instructions.md` и `mcp-catalogs.md`. Slash-вызов skill формирует отдельную инструкцию через `skill-command.md`, а не подставляет произвольные переменные в базовый промпт.
+MCP server instructions (`mcp-instructions.md`) and resource/prompt catalogs (`mcp-catalogs.md`) enter context as advisory external data bounded by explicit trust markers, leaving argument validation and permission checks intact on every call.
 
-Инструкции MCP-сервера добавляются как advisory-контекст с явной границей доверия. Каталоги ресурсов и prompts также считаются внешними данными. Их наличие не отменяет проверку аргументов и разрешений удалённых вызовов.
+## Subagents
 
-## Дочерние агенты
+`task` launches an isolated child session sharing the workspace tree while maintaining its own message history, tool registry, permission intersection, and budget. Parents pass an explicit task prompt and optional `context` snippet rather than cloning full conversation history.
 
-`task` запускает дочернюю сессию с отдельной историей, реестром инструментов, permissions и бюджетом. Рабочее дерево общее. Родитель передаёт конкретную задачу и при необходимости отдельный `context`; ребёнок не наследует всю историю автоматически.
+Child system prompts include `base.md`, project instructions, the role prompt from `prompts/subagents/`, and `# Required result schema` (without user-facing HTML summary instructions):
 
-Системный контекст ребёнка содержит общую базу, инструкции проекта, обязательную роль и `# Required result schema` с JSON Schema. Фактические инструменты передаются native schemas. Родительский контекст необязателен и участвует в сокращении по бюджету. Пользовательский HTML summary не добавляется.
-
-| Роль | Назначение | Бюджет | Схема результата |
+| Role | Scope | Budget | Output schema fields |
 |---|---|---|---|
-| Explore | Исследование без записи и shell | 12 ходов, 24 000 токенов | `summary`, `files`, `findings`, `openQuestions` |
-| Implement | Реализация в общем рабочем дереве | 40 ходов, 96 000 токенов | `summary`, `filesChanged`, `testsRun`, `blockers` |
-| Review | Проверка без записи, с read-only git | 20 ходов, 48 000 токенов | `verdict`, `findings`, `evidence` |
+| `Explore` | Read-only codebase reconnaissance (no writes or shell) | 12 turns, 24,000 tokens | `summary`, `files`, `findings`, `openQuestions` |
+| `Implement` | Code changes and verification in shared worktree | 40 turns, 96,000 tokens | `summary`, `filesChanged`, `testsRun`, `blockers` |
+| `Review` | Read-only audit with read-only Git inspection | 20 turns, 48,000 tokens | `verdict`, `findings`, `evidence` |
 
-Роли задаются в `prompts/subagents/`. Результат проверяется схемой роли. Остановка, исчерпание бюджета и лимита ходов возвращаются как неполное выполнение. Дочерняя сессия не запрашивает пользовательские approvals: запрещённый её правилами вызов получает отказ сразу.
+Child outputs are schema-validated on completion; aborts, token exhaustion, or turn caps return structured incomplete results, and any call requiring interactive approval fails immediately rather than prompting the user.
 
-## Продолжение и сжатие истории
+## Continuation and History Compaction
 
-`continue.md` используется для возобновления прерванной работы. Фрагменты в `loop/` соответствуют явным состояниям: лимиту вывода провайдера, пустому ответу, незавершённому протоколу, оставшимся критериям цели и обрезанным аргументам tool call. Обрезанный вызов не исполняется, модель должна повторить полные аргументы.
+`continue.md` and state-specific fragments under `prompts/loop/` resume interrupted turns on explicit runtime states: provider `max_tokens` cutoff, empty model output, incomplete protocol state, open goal criteria, or truncated tool-call JSON (truncated calls never execute; the model must reissue full arguments).
 
-`page-summary.md` работает в отдельном запросе для сжатия старых ходов. Весь transcript, прежние summaries и tool output для него являются недоверенными данными. Summarizer не продолжает задачу и возвращает JSON Schema с полными полями `progress`, `locations`, `instructions`, `nextSteps`, `risks`. Внутри runtime они отображаются в пять полей страницы `changed`, `where`, `rules`, `next`, `risks`.
+`page-summary.md` runs in an isolated compaction call treating the entire transcript, prior summaries, and tool outputs as untrusted data. Instead of continuing the task, the summarizer returns a JSON object (`progress`, `locations`, `instructions`, `nextSteps`, `risks`) mapped into the five page fields (`changed`, `where`, `rules`, `next`, `risks`).
 
-При сжатии вызов связывается с результатом по `Tool call ID` и имени. Вызов без результата не доказывает выполнение. Ошибка не доказывает отсутствие побочных эффектов. Запущенный фоновый процесс не доказывает успешное завершение. При неудаче модельного summary есть детерминированный fallback с тем же пятичастным контрактом; прямой `runLoop` без writer использует тот же builder.
+Compaction pairs tool calls with results by `Tool call ID` and name: an unanswered call does not prove execution, an error does not prove zero side effects, and a started background job does not prove successful completion. If model summarization fails (or `runLoop` runs without a model writer), a deterministic fallback builder produces the same five-field `ContextSummary`.
 
-Типизированный `ContextSummary` переносит пять полей, исходный запрос и последнюю инструкцию через `context.compacted`, durable журнал и replay. Повторная свёртка объединяет это состояние с новыми наблюдениями, не разбирая Markdown. Предел `targetTokens` учитывает ссылки на страницу и лог; старые excerpts могут вытесняться свежими. Исходный запрос в summary ограничен 4000 символами, сырой ввод хранится полностью. Старые события без metadata читаются, но уже потерянные ими сведения не восстанавливаются.
+Typed `ContextSummary` payloads persist through `context.compacted` events and replay so subsequent compactions merge structured fields without reparsing Markdown, respecting `targetTokens` (accounting for page/log path references and evicting oldest excerpts first; raw user prompts stay intact while the summary's prompt copy caps at 4,000 characters).
 
-`context-pages.md` подключается обязательной секцией только при доступном инструменте `context` у Worker. Он задаёт одну страницу по смысловой нагрузке и lifecycle `begin → complete → archive/compact`. `loop/continue-page.md` возвращает к закрытию страницы при попытке финального ответа. Порог окна остаётся аварийной защитой Worker; Talker сжимается по заполнению. Архивные `list`, `read`, `search` работают с собственными страницами сессии, чтение и поиск возвращают недоверенные данные.
+When Worker has the `context` tool enabled, `context-pages.md` enforces single-subtask page lifecycles (`begin -> complete -> archive/compact`) and `loop/continue-page.md` blocks final replies until the active page is closed, keeping context-window thresholds as a fallback safety net (Talker compacts by window utilization). Archived pages remain searchable via session-scoped `list`, `read`, and `search`, returning untrusted data.
 
-## Бюджет и версия
+## Prompt Budget and Versioning
 
-Бюджет по умолчанию составляет 24 000 оценочных токенов. `context.promptBudget` задаёт его в конфигурации, а `FLECTEN_PROMPT_BUDGET_TOKENS` служит fallback для сборщика. Обязательные правила, инструкции проекта, роль, схема результата и tool schemas сохраняются целиком. Необязательные части сокращаются или пропускаются; если обязательные части превышают лимит, это явно отмечается через `overBudget`.
+System prompt budget defaults to 24,000 estimated tokens (`context.promptBudget`, or `FLECTEN_PROMPT_BUDGET_TOKENS` at build/startup). Required rules, project instructions, role definitions, result schemas, and tool schemas are never truncated; optional catalogs shrink or drop first, and exceeding budget with required sections alone sets `overBudget: true`.
 
-В `session.started` сохраняется stamp: `version` системного текста, `base` базового промпта, `hash` полного system вместе со схемами, оценка токенов, бюджет и состояние каждой секции. Stamp содержит пути и виды источников инструкций, а не их содержимое. Изменение только пробелов сохраняет `version` и `base`; полный `hash` отражает точное содержимое.
+Every `session.started` event records a prompt stamp: semantic `version`, `base` hash, full `hash` (including tool schemas), token estimate, budget, and per-section status plus instruction file paths and tiers (never raw instruction text; whitespace-only edits preserve `version` and `base` while updating `hash`).
 
-## Изменение и проверка
+## Authoring and Packaging
 
-`base.md` читается с диска при сборке контекста. Поиск идёт через `FLECTEN_PROMPTS_DIR`, каталог рядом с executable, исходный `prompts/` и рабочий каталог. Остальные перечисленные фрагменты импортируются как текст при сборке Bun. Для packaged sidecar их изменение требует пересборки и перезапуска; текущая сессия сама не перечитывает уже собранный system prompt.
+`base.md` is resolved from disk at prompt-build time (`FLECTEN_PROMPTS_DIR`, executable directory, repository `prompts/`, then `cwd`), whereas remaining prompt fragments are bundled via Bun text imports (requiring a rebuild and sidecar restart for packaged binaries; active sessions keep their initial compiled prompt).
 
-Промпты пишутся на английском без секретов и путей конкретной машины. Сырые сообщения пользователя сохраняются слово в слово. Выходные контракты, бюджет, дочерние роли и сжатие проверяются на границе соответствующего runtime. Универсального дополнительного вызова модели для исправления любого ответа нет.
-
-Неиспользуемые `twin-spec.md`, `critic.md` и `grounding.md` удалены. Промпты сохраняют специфичные для харнесса роли, границы доверия, семантику полей и протоколы завершения. Описания полей и лимитов, уже переданные JSON Schema, повторно не перечисляются; если сервис не передаёт схему модели, его формат остаётся в промпте.
+All prompts are written in English without secrets or machine-specific paths, raw user messages are preserved verbatim, and unused legacy templates (`twin-spec.md`, `critic.md`, `grounding.md`) have been removed. Schema-enforced field constraints are not duplicated in prose unless a downstream call omits native JSON Schema transport.

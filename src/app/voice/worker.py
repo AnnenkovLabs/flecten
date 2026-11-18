@@ -27,12 +27,12 @@ def model_path(args):
 def check(args):
     package = "faster_whisper" if args.engine == "faster-whisper" else "vosk"
     if importlib.util.find_spec(package) is None:
-        return {"ready": False, "message": "Движок не установлен. Нажмите «Установить движок и модель»."}
+        return {"ready": False, "message": 'Engine not installed. Click "Install engine and model".'}
     model = model_path(args)
     files = ["model.bin", "config.json", "tokenizer.json"] if args.engine == "faster-whisper" else ["am/final.mdl", "conf/model.conf"]
     if not all((model / name).is_file() for name in files):
-        return {"ready": False, "message": "Модель не загружена. Нажмите «Установить движок и модель»."}
-    return {"ready": True, "message": "Движок и модель готовы. Диктовка работает без сети."}
+        return {"ready": False, "message": 'Model not downloaded. Click "Install engine and model".'}
+    return {"ready": True, "message": "Engine and model ready. Dictation runs offline."}
 
 
 def prepare(args):
@@ -55,18 +55,18 @@ def prepare(args):
                         break
                     total += len(chunk)
                     if total > 250 * 1024 * 1024:
-                        raise ValueError("Архив модели превышает 250 МБ.")
+                        raise ValueError("Model archive exceeds 250 MB.")
                     output.write(chunk)
             with zipfile.ZipFile(archive_path) as archive:
                 if sum(member.file_size for member in archive.infolist()) > 500 * 1024 * 1024:
-                    raise ValueError("Распакованная модель превышает 500 МБ.")
+                    raise ValueError("Extracted model exceeds 500 MB.")
                 for member in archive.infolist():
                     target = (temporary / member.filename).resolve()
                     if not target.is_relative_to(temporary.resolve()) or (member.external_attr >> 16) & 0o170000 == 0o120000:
-                        raise ValueError("Небезопасный путь в архиве модели.")
+                        raise ValueError("Unsafe path in model archive.")
                 archive.extractall(temporary)
             if destination.exists():
-                raise ValueError("Каталог модели уже существует, но неполон: " + str(destination))
+                raise ValueError("Model directory already exists and is incomplete: " + str(destination))
             shutil.move(str(temporary / args.model), destination)
     result = check(args)
     if not result["ready"]:
@@ -79,13 +79,13 @@ def transcribe(args):
         raise ValueError(check(args)["message"])
     audio = sys.stdin.buffer.read(2_900_045)
     if len(audio) > 2_900_044:
-        raise ValueError("Запись превышает 90 секунд.")
+        raise ValueError("Recording exceeds 90 seconds.")
     source = io.BytesIO(audio)
     with wave.open(source, "rb") as recording:
         if recording.getnchannels() != 1 or recording.getsampwidth() != 2 or recording.getframerate() != 16000:
-            raise ValueError("Нужен WAV: mono, PCM16, 16000 Гц.")
+            raise ValueError("Local speech recognition requires 16 kHz mono PCM16 WAV.")
         if recording.getnframes() > 90 * 16000:
-            raise ValueError("Запись превышает 90 секунд.")
+            raise ValueError("Recording exceeds 90 seconds.")
         frames = recording.readframes(recording.getnframes())
     if args.engine == "faster-whisper":
         import numpy as np
@@ -122,7 +122,7 @@ def main():
     args = parser.parse_args()
     allowed = WHISPER_MODELS if args.engine == "faster-whisper" else VOSK_MODELS
     if args.model not in allowed:
-        raise ValueError("Неизвестная локальная модель.")
+        raise ValueError("Unknown local speech model.")
     if args.action != "prepare":
         os.environ.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1")
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"

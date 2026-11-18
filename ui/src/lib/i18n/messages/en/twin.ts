@@ -1,21 +1,21 @@
 export default {
   "Twin is on": "Twin is on",
   "Twin is off": "Twin is off",
-  "Twin is saying goodbye…": "Twin is saying goodbye…",
-  "Twin is back with you": "Twin is back with you",
+  "Twin is saying goodbye…": "Turning Twin off…",
+  "Twin is back with you": "Twin is active",
   "Represents you while you work.": "Represents you while you work.",
   "Your character stays saved. Turn Twin on whenever you want.":
     "Your character stays saved. Turn Twin on whenever you want.",
   "No new supported user messages were found. No model request was made.":
-    "No new supported user messages were found. No model request was made.",
+    "No new user messages found in selected sources. Skipped model call.",
   "Training finished. No supported traits were found.":
-    "Training finished. No supported traits were found.",
+    "Finished scanning, but found no recurring preferences to save.",
   "On sessions from any harness.": "On sessions from any harness.",
   "Your Twin": "Your Twin",
   "Learning from your decisions": "Learning from your decisions",
   "Ready to work with you": "Ready to work with you",
   "Ready to learn": "Ready to learn",
-  "Same ideas. Same thoughts.": "Same ideas. Same thoughts.",
+  "Same ideas. Same thoughts.": "Your standards, applied automatically",
   "Your taste, your standards, your voice. Twin answers the Worker and sends weak work back.":
     "Your taste, your standards, your voice. Twin answers the Worker and sends weak work back.",
   Anger: "Anger",
@@ -56,7 +56,7 @@ export default {
   ],
   "Would Twin choose what you would?": "Would Twin choose what you would?",
   "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.",
+    "Ask a real design or code tradeoff to see how Twin answers the Worker from your saved traits.",
   "Question for Twin": "Question for Twin",
   "How should we design checkout for this project?":
     "How should we design checkout for this project?",
@@ -65,7 +65,8 @@ export default {
   "Uses your configured model. Each answer shows its sources.":
     "Uses your configured model. Each answer shows its sources.",
   "Twin needs your answer": "Twin needs your answer",
-  "No supported answer. Ask the user directly.": "No supported answer. Ask the user directly.",
+  "No supported answer. Ask the user directly.":
+    "Not enough evidence in saved traits; Twin will ask you directly.",
   "Based on your character": "Based on your character",
   "Input: {0} tokens · Output: {1} tokens": ["Input: ", 0, " tokens · Output: ", 1, " tokens"],
   "Learning…": "Learning…",
@@ -95,7 +96,7 @@ export default {
   "What this means for the Worker": "What this means for the Worker",
   "Use this when": "Use this when",
   "Save character": "Save character",
-  "You, without repeating yourself.": "You, without repeating yourself.",
+  "You, without repeating yourself.": "Learned traits and preferences",
   "Twin learns what makes you angry, what you like and what delights you. It keeps your original voice, including strong language.":
     "Twin learns what makes you angry, what you like and what delights you. It keeps your original voice, including strong language.",
   "Learned traits apply immediately. Edit anything that does not sound like you.":
@@ -108,7 +109,7 @@ export default {
   "No matching traits. Clear the search or change the reaction.":
     "No matching traits. Clear the search or change the reaction.",
   "Your Twin is still getting to know you. Train it on your conversations to begin.":
-    "Your Twin is still getting to know you. Train it on your conversations to begin.",
+    "No traits saved yet. Scan and train on past sessions to build your profile.",
   "Earlier suggestions": "Earlier suggestions",
   "Apply trait": "Apply trait",
   Reject: "Reject",

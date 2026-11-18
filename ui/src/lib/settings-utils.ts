@@ -270,7 +270,7 @@ const PERMISSION_DEFAULTS: Omit<NonNullable<HarnessSettings["permissions"]>, "ru
   approvalTimeoutMs: 300_000,
 };
 
-/** Takes the permission rules the core saved («Всегда» on an approval) into an open form. */
+/** Merges saved permission rules (from "Save exact rule" / folder grants) into an open draft. */
 export function adoptRules(
   target: HarnessSettings | null,
   source: HarnessSettings | undefined,

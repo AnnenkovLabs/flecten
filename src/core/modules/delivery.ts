@@ -20,7 +20,12 @@ export async function deliverModules(messages: Message[], options: LoopOptions):
       "context_overflow",
       "Active module instructions do not fit this model's context. Deactivate modules or use a larger context window.",
     );
-  messages.push({ role: "user", content: delivery.text, moduleReferences: delivery.references });
+  messages.push({
+    role: "user",
+    content: delivery.text,
+    synthetic: true,
+    moduleReferences: delivery.references,
+  });
   options.emit({
     type: "notice.applied",
     text: delivery.text,

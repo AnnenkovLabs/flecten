@@ -163,13 +163,19 @@ export function replayMessages(envelopes: readonly ReplayEvent[]): ReplayResult 
           messages,
           event.references.filter((reference) => reference.level === "invalidated"),
         );
-        messages.push({ role: "user", content: event.text, memoryReferences: event.references });
+        messages.push({
+          role: "user",
+          content: event.text,
+          synthetic: true,
+          memoryReferences: event.references,
+        });
         break;
       case "notice.applied":
         flushTools();
         messages.push({
           role: "user",
           content: event.text,
+          synthetic: true,
           ...(event.moduleReferences ? { moduleReferences: event.moduleReferences } : {}),
           ...(event.attachments?.length ? { attachmentRefs: event.attachments } : {}),
         });

@@ -92,8 +92,37 @@ export function settingsSection(node: HTMLElement, identity: string) {
   };
 }
 
-export function enterPane(node: HTMLElement): void {
+/** Reveal the incoming edge while keeping the page at its final reading position. */
+export function revealSurface(node: HTMLElement, edge: "left" | "right", dock = false) {
   if (prefersReducedMotion()) return;
-  for (const animation of node.getAnimations()) animation.cancel();
-  node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: DRAWER });
+  const depth = dock ? "28%" : "min(12%, 80px)";
+  const from = edge === "left" ? `inset(0 ${depth} 0 0)` : `inset(0 0 0 ${depth})`;
+  return node.animate([{ clipPath: from }, { clipPath: "inset(0)" }], {
+    duration: dock ? 240 : 190,
+    easing: DRAWER,
+  });
+}
+
+export function revealWhenShown(node: HTMLElement, shown: boolean) {
+  let current = shown;
+  let active: Animation | undefined;
+  return {
+    update(next: boolean) {
+      if (next === current) return;
+      current = next;
+      active?.cancel();
+      if (next) active = revealSurface(node, "left");
+    },
+    destroy() {
+      active?.cancel();
+    },
+  };
+}
+
+export function revealDockFromRight(_node: HTMLElement) {
+  return {
+    duration: prefersReducedMotion() ? 0 : 240,
+    easing: (t: number) => 1 - (1 - t) ** 3,
+    css: (t: number) => `clip-path: inset(0 0 0 ${(1 - t) * 28}%)`,
+  };
 }

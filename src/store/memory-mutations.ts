@@ -43,6 +43,10 @@ function memoryPayload(record: MemoryWrite | MemoryRecord): Omit<MemoryWrite, "e
   };
 }
 
+function isExpired(record: MemoryRecord, nowMs: number): boolean {
+  return record.expiresAt !== undefined && Date.parse(record.expiresAt) <= nowMs;
+}
+
 /** Plan every mutation against one snapshot before publishing anything. */
 export function reconcileMemory(
   file: MemoryFile,
@@ -69,7 +73,8 @@ export function reconcileMemory(
   const history = [...file.history];
   const saved: MemoryRecord[] = [];
   const forgotten: MemoryRecord[] = [];
-  const now = new Date().toISOString();
+  const nowMs = Date.now();
+  const now = new Date(nowMs).toISOString();
   const replace = (current: MemoryRecord | undefined, record: MemoryRecord) => {
     if (current) {
       records[records.indexOf(current)] = record;
@@ -96,8 +101,10 @@ export function reconcileMemory(
   }
   for (const draft of input.save) {
     const current = file.records.find((record) => record.key === draft.key);
+    const currentActive =
+      current !== undefined && current.status === "active" && !isExpired(current, nowMs);
     if (
-      current?.status === "active" &&
+      currentActive &&
       JSON.stringify(memoryPayload(current)) === JSON.stringify(memoryPayload(draft))
     ) {
       saved.push(current);
@@ -115,6 +122,19 @@ export function reconcileMemory(
     };
     replace(current, record);
     saved.push(record);
+  }
+  if (records.filter((record) => record.status === "active").length > maxRecords) {
+    for (let index = 0; index < records.length; index += 1) {
+      const record = records[index];
+      if (record?.status !== "active" || !isExpired(record, nowMs)) continue;
+      history.push(record);
+      records[index] = {
+        ...record,
+        status: "forgotten",
+        revision: record.revision + 1,
+        updatedAt: now,
+      };
+    }
   }
   if (records.filter((record) => record.status === "active").length > maxRecords)
     throw new Error("Memory capacity reached; forget an obsolete record before adding another");

@@ -7,19 +7,19 @@ import { MAX_SKILL_BYTES } from "./schema";
 /** A selected resource is previewed as text, never executed or added as instructions. */
 export async function readSkillResource(skill: Skill, path: string) {
   const available = await listSkillResources(skill.directory);
-  if (!available.includes(path)) throw new Error("Выберите файл из списка ресурсов навыка");
+  if (!available.includes(path)) throw new Error("Resource is not listed in this skill.");
   const [root, target] = await Promise.all([
     realpath(skill.directory),
     realpath(resolve(skill.directory, path)),
   ]);
   const local = relative(root, target);
   if (isAbsolute(local) || local === ".." || local.startsWith(`..${sep}`))
-    throw new Error("Ресурс выходит за папку навыка");
+    throw new Error("Resource path resolves outside the skill directory.");
   const info = await stat(target);
-  if (!info.isFile()) throw new Error("Ресурс должен быть обычным файлом");
+  if (!info.isFile()) throw new Error("Skill resource must be a regular file.");
   const blob = Bun.file(target).slice(0, MAX_SKILL_BYTES);
   const bytes = new Uint8Array(await blob.arrayBuffer());
-  if (bytes.includes(0)) throw new Error("Бинарный ресурс нельзя открыть как текст");
+  if (bytes.includes(0)) throw new Error("Binary skill resource cannot be opened as text.");
   return {
     name: skill.name,
     path,

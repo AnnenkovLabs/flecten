@@ -1,5 +1,10 @@
 /* Settings primitives shared by dialogs: .st-dialog, titles, details, status, confirm, empty. */
 
+.st-dialog, .st-dialog::backdrop {
+  --overlay-exit-ms: 140;
+  --overlay-exit-time: calc(var(--overlay-exit-ms) * 1ms);
+}
+
 .st-dialog {
   position: fixed;
   inset: 0;
@@ -9,36 +14,59 @@
   color: var(--text);
   background: var(--bg);
   opacity: 0;
+  translate: 0 5px;
+  scale: 0.99;
   transition:
-    opacity 160ms var(--ease),
-    display 160ms allow-discrete,
-    overlay 160ms allow-discrete;
+    opacity var(--overlay-exit-time) var(--ease),
+    translate var(--overlay-exit-time) var(--ease),
+    scale var(--overlay-exit-time) var(--ease),
+    display var(--overlay-exit-time) allow-discrete,
+    overlay var(--overlay-exit-time) allow-discrete;
+}
+
+.st-dialog:not([open]) {
+  display: none;
+  pointer-events: none;
 }
 
 .st-dialog[open] {
   opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transition-duration: 200ms;
 }
 
 .st-dialog::backdrop {
-  background: rgba(8, 8, 8, 0);
+  background-color: rgba(8, 8, 8, 0);
   transition:
-    background 160ms var(--ease),
-    display 160ms allow-discrete,
-    overlay 160ms allow-discrete;
+    background-color var(--overlay-exit-time) var(--ease),
+    display var(--overlay-exit-time) allow-discrete,
+    overlay var(--overlay-exit-time) allow-discrete;
+}
+
+.st-dialog:not([open])::backdrop {
+  pointer-events: none;
 }
 
 .st-dialog[open]::backdrop {
-  background: rgba(8, 8, 8, 0.66);
+  background-color: rgba(8, 8, 8, 0.66);
+  transition-duration: 200ms;
 }
 
 @starting-style {
   .st-dialog[open] {
     opacity: 0;
+    translate: 0 10px;
+    scale: 0.985;
   }
 
   .st-dialog[open]::backdrop {
-    background: rgba(8, 8, 8, 0);
+    background-color: rgba(8, 8, 8, 0);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-dialog, .st-dialog::backdrop { transition: none !important; }
 }
 
 .st-dialog:focus {

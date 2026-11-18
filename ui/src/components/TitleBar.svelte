@@ -84,10 +84,11 @@
       class="tb-btn"
       type="button"
       aria-label={sidebarLabel}
+      aria-expanded={!sidebarHidden}
       data-tooltip={`${sidebarLabel} (${modLabel}+B)`}
       onclick={onToggleSidebar}
     >
-      <Icon name="panel-left" />
+      <MorphIcon name={sidebarHidden ? "panel-left-open" : "panel-left-close"} />
     </button>
     {#if mode === "ide" || sidebarHidden}
       <button class="tb-btn" type="button" aria-label={t("Settings")} data-tooltip={t("Settings")} onclick={onOpenSettings}>

@@ -21,12 +21,12 @@ export default {
       ". Los permisos se aplican a la siguiente acción; los demás ajustes, a la siguiente ejecución.",
     ],
   Chat: "Chat",
-  "Always ask a person": "Preguntar siempre a una persona",
+  "Always ask a person": "Requerir aprobación manual",
   "These checkpoints cannot be bypassed by saved approvals or automatic review.":
-    "Las aprobaciones guardadas y la revisión automática no pueden omitir estas confirmaciones.",
+    "Las reglas guardadas y el modo Auto nunca omiten estos controles.",
   "Human approval required every time": "Se requiere aprobación humana cada vez",
   "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.":
-    "Permitir acciones integradas limitadas. Revisar las llamadas aptas por separado y preguntar ante dudas.",
+    "Permite acciones seguras en el proyecto; revisa comandos ambiguos y pregunta si hay dudas.",
   "Ask unless this exact action was already approved.":
     "Preguntar salvo que esta acción exacta ya esté aprobada.",
   "Allowed for this chat": "Permitido para este chat",
@@ -43,7 +43,7 @@ export default {
   "Save exact rule": "Guardar regla exacta",
   "Remember…": "Recordar…",
   "Allow bounded built-in actions. Ask before arbitrary code or external tools.":
-    "Permite acciones integradas acotadas. Pregunta antes de ejecutar código arbitrario o herramientas externas.",
+    "Permite acciones integradas seguras; pregunta antes de comandos o herramientas externas.",
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "Permite acciones habituales. Siguen vigentes las reglas destructivas y los límites del entorno aislado.",
   "Saved rules": "Reglas guardadas",
@@ -57,9 +57,9 @@ export default {
   "Destructive actions": "Acciones irreversibles",
   "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.":
     "Confirmación independiente para operaciones irreversibles, aunque las acciones habituales estén permitidas.",
-  "Execution boundary": "Límite de ejecución",
+  "Execution boundary": "Límite del sandbox",
   "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.":
-    "Los límites del entorno aislado se aplican independientemente de los permisos. Las rutas externas siguen bloqueadas mientras esté activo.",
+    "El sandbox del sistema limita los comandos al proyecto y carpetas aprobadas, sin importar los permisos.",
   "Workspace isolation enabled": "Aislamiento de la carpeta activado",
   "Workspace isolation disabled": "Aislamiento de la carpeta desactivado",
   "Only the requests shown here are included. New requests remain pending.":
@@ -96,7 +96,7 @@ export default {
     "El acceso abarca las rutas indicadas y sus subcarpetas.",
   "Access is shared with agents in this chat.":
     "El acceso se comparte con los agentes de este chat.",
-  "Repeat this action in this chat": "Repetir esta acción en este chat",
+  "Repeat this action in this chat": "Permitir en este chat",
   "Remember folder access": "Recordar acceso a la carpeta",
   "Access mode: {0}": ["Modo de acceso: ", 0],
   "Could not change access. Try again. {0}": [

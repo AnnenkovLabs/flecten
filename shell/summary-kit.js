@@ -1,7 +1,7 @@
 // Declarative behavior for HTML summaries: sortable tables, filters and toggles. The model
 // writes attributes, this trusted code writes the behavior, so a summary needs no script.
 (() => {
-  const collator = new Intl.Collator(document.documentElement.lang || "ru", {
+  const collator = new Intl.Collator(document.documentElement.lang || "en", {
     numeric: true,
     sensitivity: "base",
   });
@@ -77,7 +77,7 @@
       item.hidden = !match;
       if (match) shown += 1;
     }
-    input.setAttribute("aria-description", shown === 0 ? "Ничего не найдено" : `Найдено: ${shown}`);
+    input.setAttribute("aria-description", shown === 0 ? "No matches" : `Matches: ${shown}`);
   };
 
   const prepareToggles = (root) => {

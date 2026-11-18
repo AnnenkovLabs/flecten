@@ -80,6 +80,7 @@
   "storage.migrate",
   "storage.status",
   "subagent.stop",
+  "summary.interaction",
   "telemetry.send",
   "tool.cancel",
   "trust.accept",

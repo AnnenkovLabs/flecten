@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from "../lib/i18n.svelte";
   import { modal } from "../lib/modal";
+  import { overlayPresence } from "../lib/overlay-presence";
   import { modelsCount } from "../lib/format";
   import { settings } from "../lib/settings.svelte";
   import { PROTOCOLS, protocolShort } from "../lib/settings-utils";
@@ -26,6 +27,7 @@
   <dialog
     class="add-dialog st-dialog"
     use:modal={() => searchEl}
+    transition:overlayPresence|global
     tabindex="-1"
     aria-labelledby="add-provider-title"
     oncancel={(event) => {

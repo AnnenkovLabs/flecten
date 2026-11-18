@@ -1,28 +1,26 @@
-# Модули
+# Modules
 
-Модуль собирает инструменты, инструкции, wiki, гайды, правила, хуки, нативный код и собственный интерфейс в один пакет. Агент выбирает модуль через постоянный инструмент `module`. Активация инструментов, инструкций и хуков действует в одном чате. Неактивный пакет не добавляет их в запросы модели. Явно доверенные project platform services работают на весь проект, чтобы заменить хранилище ещё до восстановления чата.
+A module packages tools, instructions, reference guides, hooks, a native Bun runtime, platform service overrides, and custom HTML interfaces into a single unit. Agents discover and activate modules per chat through the built-in `module` tool: inactive packages add zero instructions, hooks, or tool schemas to model requests. Explicitly trusted project-scoped platform services load ahead of session recovery so storage adapters can replace the event journal cleanly.
 
-В режиме Talker/Worker один чат владеет общим экземпляром модулей: Worker и пользовательские поверхности видят одинаковые runtime, состояние управления и наблюдения. Связь задаётся явным `shareSession` при создании беседы, без вывода владельца из имени сессии. Другие чаты сохраняют отдельные экземпляры. Истории моделей, события, разрешения и actor каждого вызова остаются раздельными. Talker получает схему `module` только с операциями `list`, `status`, `tools`, `read`; активацию, вызовы и отключение выполняет Worker.
+In Talker/Worker chats, both roles and any mounted UI surfaces share one module instance bound via explicit `shareSession` at conversation creation (never inferred from session ID strings). Other chats keep isolated module instances, and model histories, event streams, permissions, and per-call actors remain separate. Talker receives a restricted `module` schema (`list`, `status`, `tools`, `read`), while Worker handles `activate`, `call`, and `deactivate`.
 
-## Подключение
+## Installation and Trust
 
-В настройках откройте **Modules → Marketplace**, найдите пакет и откройте его описание. **Install module** устанавливает проверенный снимок и недостающие зависимости из выбранного каталога в `.flecten/modules/<name>`. Установка не запускает код, не выдаёт доверие и не перезаписывает существующий пакет. На вкладке **Installed** проверьте содержимое каждого нового модуля и нажмите **Trust this version**. Агент обнаружит модуль без перезапуска приложения.
+Open **Settings > Modules > Marketplace** to browse configured catalogs. **Install module** downloads and verifies the package snapshot plus missing dependencies into `.flecten/modules/<name>` without executing code, granting trust, or overwriting existing directories. Switch to **Installed**, inspect each new package, and click **Trust this version**; agents see trusted modules immediately without restarting the app.
 
-Если при открытии проекта обнаружена исполняемая конфигурация, первая активация модуля показывает в чате карточку **Trust project?** с папкой и объяснением доступа. **Trust and continue** принимает доверие до следующего открытия проекта и продолжает тот же вызов. Отказ, остановка или истечение времени сохраняют запрет. Это отдельное согласие на запуск конфигурации проекта; доверие SHA-256 конкретной версии модуля по-прежнему обязательно.
+If a project contains executable configuration when opened, the first module activation prompts **Trust project?** inline in chat, showing the folder path and requested capabilities. **Trust and continue** grants project trust for the current session of the open workspace and resumes the pending call; declining, stopping, or timing out keeps execution blocked. Project trust is independent from per-revision SHA-256 module trust, which is always required.
 
-Встроенный каталог пуст. **Catalog sources** подключает внешние HTTPS-каталоги. Отключение каталога сохраняет установленные пакеты. Примеры ниже находятся только в тестовых фикстурах репозитория и не поставляются приложением.
+The built-in marketplace catalog is empty; add HTTPS catalogs under **Catalog sources** (removing a catalog source preserves already installed packages) or install local directories via **Installed > Install from folder**. Catalog and bundle schemas are documented in [MODULE-MARKETPLACE.md](MODULE-MARKETPLACE.md).
 
-Для локального пакета откройте **Installed**, укажите папку и нажмите **Install from folder**. Формат внешнего каталога и публикация описаны в [MODULE-MARKETPLACE.md](MODULE-MARKETPLACE.md).
+For local authoring, place a module in `.agents/modules/<name>`, trust its current revision, and optionally toggle **Reload local changes automatically** in its details pane (off by default, as enabling it explicitly trusts future edits in that folder).
 
-Для разработки положите пакет в `.agents/modules/<name>`. Каталог обнаруживается автоматически. Доверьтесь текущей версии, затем включите **Reload local changes automatically** в деталях. Эта настройка явно доверяет будущим изменениям указанной папки и по умолчанию выключена.
+Repository test fixtures illustrate key capabilities (installable from folder in a dev checkout, not bundled in release installers):
 
-Тестовый пример [better-trailer](../tests/fixtures/modules/better-trailer/) содержит инструкции, гайд, нативный MCP runtime и HTML timeline. Он хранится только в тестовых фикстурах и не поставляется приложением; в development checkout его можно установить по пути. Он считает тайминг и кадры; кодирование видео не входит в пример.
+- [better-trailer](../tests/fixtures/modules/better-trailer/): instructions, pacing guide, native MCP runtime, and HTML timeline calculating frame counts and timing (without video encoding).
+- [Computer Use](COMPUTER-USE.md): isolated Linux display, dedicated browser profile, native MCP images, observation-ID-checked input actions, and human takeover, with OS prerequisites and access boundaries shown upfront.
+- [studio-harness](../tests/fixtures/modules/studio-harness/): full UI replacement providing custom chat navigation, composer, run controls, approvals, and a saved project brief. Enable it via **Use module interface** after trusting the revision; mounting a module interface applies project-wide (even before the first prompt) without calling the model or injecting instructions, while UI tool calls start the backend runtime lazily.
 
-[Computer Use](COMPUTER-USE.md) проверяет SDK на примере отдельного Linux-дисплея, browser profile, стандартных MCP images, действий с observation ID и ручной передачи управления. Фикстура доступна для установки из папки в development checkout. Её OS-зависимости и границы доступа показаны перед запуском.
-
-[studio-harness](../tests/fixtures/modules/studio-harness/) заменяет весь интерфейс: свои разговоры, композер, управление агентом, approvals и сохраняемый project brief. Установите пакет, доверьтесь версии и нажмите **Use module interface**. Включение интерфейса действует в проекте, в том числе до первого сообщения. Оно не запускает модель и не загружает инструкции в контекст. Backend инструменты запускают runtime по первому вызову; агент получает актуальные инструкции перед следующим запросом.
-
-## Формат пакета
+## Package Layout and Manifest
 
 ```text
 better-trailer/
@@ -33,7 +31,7 @@ better-trailer/
   timeline.html
 ```
 
-Все секции, кроме `schemaVersion`, `name`, `version` и `description`, необязательны. Схема строго проверяется в `src/modules/manifest.ts`. Произвольные capabilities задаёт автор; харнесс не содержит классификатор задач или список типов модулей.
+Only `schemaVersion`, `name`, `version`, and `description` are required; all other fields are optional and strictly validated by `src/modules/manifest.ts`. Authors define arbitrary `capabilities` tags; the harness contains no hardcoded task classifier or module taxonomy.
 
 ```json
 {
@@ -61,13 +59,13 @@ better-trailer/
 }
 ```
 
-`instructions` загружаются при активации. Объёмные справочники остаются в `resources` и читаются порциями по запросу. Все пути относительны корню пакета. Выход через `..`, абсолютные пути, symlinks и специальные файлы запрещены. Пакет ограничен 32 МиБ и 5000 записями; большие зависимости храните вне него.
+`instructions` load into chat context upon activation, while larger reference manuals belong in `resources` for paginated on-demand reads. Every path must be relative to the package root: `..` traversal, absolute paths, symlinks, and special files are rejected. Packages are capped at 32 MiB and 5,000 files; keep large binaries or model weights external.
 
-`requires` задаёт зависимости по имени. Они активируются раньше потребителя и удерживаются до его отключения. Циклы, отсутствующие зависимости, недоверенные версии и `conflicts` дают ошибку до применения плана. Сбой активации не оставляет частично подключённый набор.
+`requires` lists module names that must activate before the consumer and stay active until the consumer deactivates. Dependency cycles, missing or untrusted dependencies, and `conflicts` fail validation atomically before mutating active state.
 
-## SDK нативного runtime
+## Native Runtime SDK
 
-`runtime.entry` экспортирует setup-функцию. Харнесс запускает её в отдельном процессе своего Bun runtime, в том числе в упакованном приложении. Дополнительная установка Bun, MCP SDK или Zod для этого примера не нужна.
+`runtime.entry` exports a default setup function executed in a dedicated child process of Flecten's embedded Bun runtime (including inside packaged desktop builds, requiring no external Bun, MCP SDK, or Zod installation):
 
 ```javascript
 export default ({ apiVersion, server, z, workspace, moduleRoot }) => {
@@ -80,25 +78,21 @@ export default ({ apiVersion, server, z, workspace, moduleRoot }) => {
 };
 ```
 
-Типы `ModuleHost` и `ModuleSetup` находятся в `src/modules/sdk.ts`. `apiVersion` сейчас равен 1. `server` это стандартный `McpServer` официального SDK с инструментами, ресурсами, prompts и уведомлениями об изменении каталогов. MCP resources/prompts доступны через сгенерированные каталоговые инструменты того же gateway.
+`ModuleHost` and `ModuleSetup` types live in `src/modules/sdk.ts` (`apiVersion` is `1`). `server` is a standard `@modelcontextprotocol` `McpServer` supporting tools, resources, prompts, and catalog-change notifications, exposed through the module gateway.
 
-Необязательный `runtime.readOnlyTools` перечисляет полные точные имена инструментов нативного runtime, например `mcp_module_computer-use__runtime_status`. Объявление входит в SHA-256 доверенной версии. Такие вызовы проходят политику `read` как bounded native descriptor; внешние MCP annotations сами по себе этого права не дают. Явный запрет `mcp` и обязательный human checkpoint сохраняют приоритет, включая родительские политики. Изменение списка требует доверия новой версии пакета. Автор отвечает за правдивость описания: доверенный нативный код сохраняет права OS-аккаунта, а `readOnlyTools` не изолирует его.
+Optional `runtime.readOnlyTools` lists exact canonical tool names (for example, `mcp_module_computer-use__runtime_status`) covered by the trusted revision's SHA-256. Listed tools evaluate against the `read` permission policy rather than mutating `mcp` policy (external MCP `readOnlyHint` annotations alone never grant this), while explicit `mcp` deny rules, parent restrictions, and human checkpoints still take precedence. Changing `readOnlyTools` invalidates the revision hash and requires re-trusting; authors remain responsible for ensuring listed tools have no side effects, as trusted native processes run with the user's OS account privileges.
 
-Setup может вернуть cleanup-функцию, включая асинхронную. Host вызывает её один раз и ждёт завершения при закрытии транспорта, SIGTERM или SIGINT. Верните cleanup для принадлежащих runtime процессов, временных профилей и подключений; не полагайтесь на обработчик `exit` для асинхронной очистки.
+Setup may return a sync or async cleanup callback, invoked once and awaited on transport close, `SIGTERM`, or `SIGINT` to tear down child processes, temp profiles, and sockets cleanly (do not rely on `process.on("exit")` for async teardown).
 
-Ожидание ответа на permission request приостанавливает execution timeout инструмента и внешних gateway, через которые он вызван. После ответа отсчёт продолжается с оставшимся временем. У подтверждения остаётся собственный deadline; остановка пользователя и отмена внешнего прогона продолжают действовать во время ожидания.
+Waiting on an interactive permission approval pauses execution timeouts on both the tool call and enclosing module gateways, resuming with remaining budget once resolved (approvals keep their own expiration deadline, and user stop or run abort signals still cancel immediately).
 
-`workspace` указывает на проект, `moduleRoot` на приватный снимок версии. Разрешены относительные импорты и чтение включённых файлов. Не сохраняйте результаты в `moduleRoot`: снимок удаляется при закрытии runtime. Долговечное состояние сохраняйте в проект или отдельное хранилище модуля.
+`workspace` points to the project root, while `moduleRoot` points to an immutable per-revision staging snapshot deleted when the runtime closes; persist durable state under `workspace` or an external data directory rather than `moduleRoot`.
 
-Runtime может использовать Bun, Node API, процессы, OS API, браузерный драйвер или внешний сервис. Это позволяет реализовать computer-use без изменений харнесса. В харнессе нет специальных функций вроде `add_button` или списка предметных действий.
+Native runtimes have full access to Bun/Node APIs, child processes, OS interfaces, browser automation, and network services. MCP image and audio tool outputs are validated and stored as durable session attachments (delivered natively to multimodal models and restored on reopen without writing base64 into JSONL or text logs). Never bundle credentials inside a module directory, as all package files are hashed and copied into snapshots.
 
-MCP images и audio валидируются и сохраняются как вложения сессии. Модель получает настоящие изображения и аудио, если поддерживает соответствующий вход. Reopen восстанавливает вложения, бинарные payloads не попадают в JSONL и текстовые логи.
+## Platform Service Overrides (`platform`)
 
-Доверенный нативный код исполняется с правами OS-аккаунта пользователя, как локальный MCP-сервер. Проверка `mcp` управляет вызовом инструмента, но не изолирует доверенный процесс. Для изоляции внешних программ автор использует OS-песочницу. Не помещайте ключи в пакет: содержимое копируется и участвует в хешировании.
-
-## Замена внутренних механизмов
-
-Та же папка пакета может содержать `platform.entry` с обычным JavaScript setup. Это расширение действующего module SDK, без отдельного механизма определения и запуска Host/Client-пакетов.
+A module can also declare `platform.entry` to wrap or replace internal core services within the same SDK model:
 
 ```json
 {
@@ -106,19 +100,19 @@ MCP images и audio валидируются и сохраняются как в
 }
 ```
 
-`scope: session` запускает platform при активации модуля в этом чате. При замене драйвера агента новая реализация начинает работать со следующего прогона. Модель, инструменты и compaction выбирают реализацию перед своим следующим вызовом. `scope: project` запускается после доверия пакету и проекту, до восстановления истории. Это явное объявление в manifest, которое показывается перед доверием в настройках. `harness.storage@1` разрешён только в project scope.
+`scope: "session"` activates within the current chat (driver replacements take effect on the next run; model, tool, and compaction overrides apply before their next invocation). `scope: "project"` loads after both project and revision trust are granted, prior to session history recovery, and is surfaced explicitly in Settings before trusting; `harness.storage@1` requires `scope: "project"`.
 
-Типы находятся в `src/modules/platform-sdk.ts`. Setup получает `workspace`, неизменяемый `moduleRoot`, `sessionId` для session scope, lifecycle `signal`, `z`, `defineService`, `contracts`, `services` и `effect`. Код исполняется внутри sidecar с его OS-правами. Он способен повредить или заблокировать процесс, поэтому platform доверяется как native extension. Проверка схем и permission gates не превращает его в песочницу. Автор обязан соблюдать сигналы отмены, протокол событий, лимиты и хранить результаты за пределами снимка версии.
+Types live in `src/modules/platform-sdk.ts`. Setup receives `{ workspace, moduleRoot, sessionId, signal, z, defineService, contracts, services, effect }` and runs in-process inside the sidecar with full sidecar privileges. Schema validation and permission checks do not sandbox in-process code: authors must honor `AbortSignal`, emit valid protocol events, respect resource limits, and write state outside `moduleRoot`.
 
-| Контракт | Что действительно заменяется |
+| Contract | Replaced seam |
 |---|---|
-| `contracts.agent` (`harness.agent@1`) | Драйвер прогона: prompt и `LoopOptions` дают `LoopResult`. Можно полностью заменить цикл либо обернуть штатный |
-| `contracts.model` (`harness.model@1`) | Запросы основной модели агента: `ModelRequest`, signal, provider дают `AsyncIterable<ModelEvent>` |
-| `contracts.tool` (`harness.tool@1`) | Выполнение инструмента после проверки аргументов и разрешений, с действующими timeout, retry и логами |
-| `contracts.compact` (`harness.compact@1`) | Автоматическое и ручное сжатие истории, в том числе в неработающем чате |
-| `contracts.storage` (`harness.storage@1`) | Журнал событий и индекс: append, read, list/search, rename, fork, delete; через тот же backend идут replay, recovery и retention |
+| `contracts.agent` (`harness.agent@1`) | Run driver (`prompt` + `LoopOptions` -> `LoopResult`); wrap or fully replace the agent loop |
+| `contracts.model` (`harness.model@1`) | Primary agent model stream (`ModelRequest`, `signal`, `provider` -> `AsyncIterable<ModelEvent>`) |
+| `contracts.tool` (`harness.tool@1`) | Post-validation, post-permission tool execution under standard timeouts, retries, and logging |
+| `contracts.compact` (`harness.compact@1`) | Automatic and manual history compaction, including in idle chats |
+| `contracts.storage` (`harness.storage@1`) | Session event journal and index (`append`, `read`, `list`/`search`, `rename`, `fork`, `delete`), plus replay, recovery, and retention |
 
-Очередь, вложения, checkpoints, страницы и фоновые jobs продолжают использовать workspace-хранилища. Отдельные запросы переводчика и PageWriter не проходят через `contracts.model`. Для их изменения служат замена драйвера или compaction. Смена backend не переносит существующие JSONL-сессии автоматически: миграцию реализует автор адаптера. Отключение backend возвращает штатное хранилище и сохраняет файлы модуля.
+Message queues, attachments, checkpoints, context pages, and background jobs remain in standard workspace files, and dedicated translation or `PageWriter` requests bypass `contracts.model` (override `contracts.agent` or `contracts.compact` to customize them). Switching `contracts.storage` does not auto-migrate existing JSONL sessions; disabling the module restores the built-in file backend while leaving module database files intact.
 
 ```javascript
 export default async ({ services, contracts, effect }) => {
@@ -130,7 +124,7 @@ export default async ({ services, contracts, effect }) => {
 }
 ```
 
-`services.provide(contract, handler)` объявляет новый сервис. Повторное объявление существующего id отклоняется. `replace` явно заменяет реализацию, `wrap` получает предыдущую функцию `next`. Порядок детерминирован: зависимости, затем потребители, project слои перед session слоями. Нет словаря предметных операций: контракт может описывать любую функцию с входной и выходной Zod-схемой.
+`services.provide(contract, handler)` registers a new typed service (rejecting duplicate IDs), `services.replace` swaps an existing implementation, and `services.wrap` chains around `next` in deterministic order (dependencies before consumers, `project` scope before `session` scope):
 
 ```javascript
 const frames = defineService(
@@ -142,25 +136,21 @@ services.provide(frames, async ({ seconds, fps }, signal) => {
   signal.throwIfAborted();
   return { frames: Math.round(seconds * fps) };
 });
-// В другом модуле, с requires: ["frame-service"] и теми же схемами:
+// In a consumer module declaring requires: ["frame-service"] with matching schemas:
 const measure = services.require(frames);
-// Вызывать из обработчика после завершения setup:
+// Invoke inside a handler after setup completes:
 const result = await measure({ seconds: 2, fps: 24 }, signal);
 ```
 
-Схемы проверяются на каждом входе и выходе. Одинаковый id с несовместимыми схемами, отсутствующие зависимости и дубли `provide` отклоняют весь кандидат до публикации. Регистрация сервисов разрешена только во время setup. `require` разрешает зависимости для вызовов обработчиков после setup; штатные контракты с зависимостями конкретного прогона вызываются через их `next`. Ресурсы регистрируются через `await effect(setup)`, который возвращает cleanup. При откате и выгрузке cleanup вызывается в обратном порядке, снимок исходников удаляется последним. Ошибки cleanup видны в состоянии модулей.
+Every service call validates inputs and outputs with Zod. Schema mismatches, missing dependencies, or duplicate `provide` registrations abort activation atomically. `effect` cleanups run in reverse order on rollback or unload before deleting source snapshots, surfacing any cleanup errors in module status.
 
-Вызов сохраняет композицию всех сервисов до завершения Promise или стрима. Вложенный `require` использует тот же снимок, даже если за время ожидания опубликована новая версия зависимости. Изменения становятся видны новым вызовам. Старый lifecycle signal отменяется после последнего lease. Отмена прогона передаётся отдельно аргументом обработчика; ожидание native model stream прекращается сразу, а освобождение ресурсов ждёт завершения его кода. Принудительно прервать произвольный синхронный JS внутри sidecar невозможно. Bun сохраняет импортированный JS в ESM cache процесса: cleanup освобождает ресурсы и source files, код старых ревизий освобождается при перезапуске sidecar. Часто обновляемую тяжёлую реализацию автор может вынести в worker или отдельный runtime.
+Each in-flight call leases a consistent snapshot of composed services until its `Promise` or async stream settles, so hot-reloading a dependency mid-call affects only subsequent calls and cancels the old lifecycle `signal` once the last lease drains. Note that synchronous infinite loops inside in-process JS cannot be preempted, and Bun retains imported ESM modules in process memory until sidecar restart (offload frequently reloaded heavy code to a worker or `runtime.entry`).
 
-Драйвер возвращает проверяемый `LoopResult` и передаёт обычные типизированные `LoopEvent` через `options.emit`: UI, бюджет и durable журнал остаются общими. Ответы инструментов и события модели также проверяются схемами. Полная замена драйвера отвечает за согласованность emitted events и возвращённой истории, steering, tool permissions, graceful stop и лимиты. Пример [frame-workflow](../tests/fixtures/modules/frame-workflow/) показывает отдельный детерминированный драйвер с проверкой бюджета/остановки и зависимостью от [frame-service](../tests/fixtures/modules/frame-service/). Он считает локальный `trailer-brief.json` вида `{"seconds":2,"fps":24}`, не вызывает модель и не рендерит видео. Для включения сначала активируйте `frame-workflow` штатным агентом, затем отправьте следующий запрос.
+Custom `contracts.agent` drivers return a validated `LoopResult` and emit typed `LoopEvent` items via `options.emit` to share UI projection, budgets, and durable logging. See [frame-workflow](../tests/fixtures/modules/frame-workflow/) (paired with [frame-service](../tests/fixtures/modules/frame-service/)) and [sqlite-journal](../tests/fixtures/modules/sqlite-journal/) (`bun:sqlite` storage backend in `.flecten/module-journal.sqlite`). Active service owners, IDs, and modes appear in Settings and `module status`, consuming zero prompt tokens when no instructions are attached.
 
-[sqlite-journal](../tests/fixtures/modules/sqlite-journal/) предоставляет второй реальный адаптер хранения на встроенном `bun:sqlite`, без новой зависимости. Он обслуживает полный журнал/индекс в `.flecten/module-journal.sqlite`, включая reopening, fork с переносом media/logs и recovery. Архив SQLite сохраняется внутри базы; штатная очистка файловой корзины на него не распространяется. Список строится сканированием журналов, поэтому большой архив потребует SQL-индекса summaries. Формат архива и его очистку контролирует автор адаптера.
+## MCP-Only Modules
 
-В настройках и `module status` видны owner, id и режим каждого применённого сервиса. Сервисы без инструкций не расходуют модельный контекст.
-
-## Модуль только с MCP
-
-Runtime, инструкции и UI не обязательны. Существующий Twitter MCP-сервер подключается одной секцией:
+A module needs neither `runtime`, `instructions`, nor `surfaces` to wrap an external MCP server:
 
 ```json
 {
@@ -172,13 +162,11 @@ Runtime, инструкции и UI не обязательны. Существ�
 }
 ```
 
-Адрес здесь пример: нужен реально работающий сервер. Доступны stdio и Streamable HTTP, `allowTools`, `readOnly`, timeouts, headers и OAuth действующей MCP-схемы. Авторизация использует существующее окно согласия и защищённое хранилище. При ожидании OAuth модуль остаётся подключённым; после авторизации его каталог обновляется в хвосте контекста.
+Both `stdio` and Streamable HTTP transports are supported alongside `allowTools`, `readOnly`, timeouts, custom headers, and OAuth (reusing the native consent dialog and backend secret store; pending OAuth keeps the module active and appends the refreshed tool catalog once authorized). Servers use namespace `module_<module>__<server>` and tool names `mcp_module_<module>__<server>_<tool>` (shortened deterministically with a hash by `mcpToolName` when exceeding length limits; inspect exact names via `module tools`).
 
-Сервер получает namespace `module_<module>__<server>`. Инструмент имеет имя `mcp_module_<module>__<server>_<tool>`. Длинные имена сокращает существующий `mcpToolName` с хешем. Используйте фактические имена из `module tools`. Namespace отделяет разрешения модулей с одинаковыми локальными именами инструментов.
+## Module Hooks
 
-## Хуки
-
-`hooks` использует существующую схему событий, команд и HTTP-хуков. Хуки включаются только в активном чате и проходят обычный runner с timeout, отменой, schema validation и журналом. Решение хука не обходит permission policy.
+Manifest `hooks` reuse the standard hook event, command, and HTTP schemas (`HOOKS.md`), running only in chats where the module is active and respecting timeouts, aborts, schema validation, logging, and permission policies:
 
 ```json
 {
@@ -194,13 +182,13 @@ Runtime, инструкции и UI не обязательны. Существ�
 }
 ```
 
-Команда получает стандартный JSON события в stdin. `FLECTEN_MODULE_ROOT` указывает на ту же версию, что и runtime. Хуки применяются к последующим событиям; прошедший `sessionStart` не воспроизводится при активации в середине прогона. Установка не запускает install scripts.
+`FLECTEN_MODULE_ROOT` resolves to the active revision's snapshot directory. Mid-run activation applies hooks to subsequent events without replaying an already passed `sessionStart`, and installing a module never runs install scripts.
 
-## Произвольный интерфейс
+## Custom HTML Surfaces and Shell Replacement
 
-Каждая запись `surfaces` добавляет вкладку рабочего пространства активного чата. `entry` содержит самостоятельный HTML с inline CSS/JS; автор может собрать его любым фреймворком. Отдельной DSL для кнопок и форм нет.
+Each `surfaces` entry mounts a workspace tab in active chats from a self-contained HTML bundle (`entry`) with inline CSS/JS built with any frontend framework.
 
-Поверхность с `placement` размещается по обычному CSS-селектору после выбора **Use module interface**. Глобальные `styles` содержат пути к bundled CSS: можно менять существующие токены темы, размеры, раскладку и любой элемент штатного интерфейса. CSS и HTML читаются из проверенной ревизии пакета. При отключении или отзыве доверия стили и размещённые поверхности удаляются.
+When **Use module interface** is enabled, surfaces declaring `placement` mount into matching DOM selectors and `styles` load bundled CSS overrides from the trusted revision (removed immediately on disable or trust revocation):
 
 ```json
 {
@@ -223,11 +211,9 @@ Runtime, инструкции и UI не обязательны. Существ�
 }
 ```
 
-`position` принимает стандартные позиции DOM: `replace`, `before`, `after`, `prepend`, `append`. Адресом служит первый подходящий элемент внутри приложения. Поздно появившиеся элементы обнаруживает `MutationObserver`; пересоздание штатного компонента восстанавливает размещение. При нескольких заменах одного элемента побеждает больший `order`, затем порядок имени модуля и id. Вставки других типов могут сосуществовать. Высоту вставки и поведение при resize можно задать CSS по `[data-module-portal="module:surface"]`.
+`position` accepts `"replace"`, `"before"`, `"after"`, `"prepend"`, or `"append"` against the first matching element, tracked dynamically across component remounts via `MutationObserver`. Competing `"replace"` mounts resolve by highest `order`, breaking ties by module name and surface ID; style portal containers via `[data-module-portal="module:surface"]`. Prefer stable `[data-harness-region]` targets (`shell`, `titlebar`, `sidebar`, `workspace`, `header`, `composer`) over internal component classes.
 
-Стабильные адреса штатного интерфейса: `data-harness-region` со значениями `shell`, `titlebar`, `sidebar`, `workspace`, `header`, `composer`. Селектор может обращаться к любому другому элементу. Полная замена `shell` позволяет написать свой харнесс поверх действующего ядра; внутренние CSS-классы могут меняться между версиями, поэтому для крупных областей используйте стабильные адреса.
-
-Выбранный интерфейс получает обычный транспорт данных:
+Authorized surfaces access a typed host bridge:
 
 ```javascript
 const state = await flecten.harness.snapshot();
@@ -238,11 +224,9 @@ const unsubscribe = await flecten.harness.subscribe(async (event) => {
 });
 ```
 
-Snapshot содержит проект, текущий чат, сообщения, список чатов, phase, running, provider/model, доступные модели, approvals, usage, бюджет, очередь и jobs. Подписка передаёт события текущего чата, включая дельты. Сырые ответы settings и ключи в snapshot не входят. Каждое обращение к API сначала проверяет SHA-256, доверие и grant конкретной поверхности на backend.
+Snapshots expose workspace info, active chat, messages, session list, phase, `running`, `provider`/`model`, available models, approvals, usage, budget, queue, and jobs (excluding raw settings payloads and secrets), while `subscribe` streams active chat events and deltas. Every bridge call re-verifies revision SHA-256, trust, and explicit `harness.commands` grants on the backend (no wildcards). `run`, `stop`, and `model.set` route through the shared UI store; UI-level commands include `sessions.new`, `sessions.select` (`id`), `settings.open`, and `window.control` (`minimize`, `maximize`, `close`), while other allowlisted commands forward to the sidecar.
 
-`request` использует действующий sidecar protocol. `run`, `stop` и `model.set` проходят через тот же UI store, что и штатный интерфейс. Дополнительные команды: `sessions.new`, `sessions.select` с `id`, `settings.open`, `window.control` с `action` (`minimize`, `maximize`, `close`). Остальные команды передаются sidecar с обычной валидацией и проверками прав. Все допустимые имена явно перечисляются в `harness.commands`; wildcard нет. Модуль может реализовать собственную навигацию, композер, отображение событий, редакторы и workflow, используя этот общий API.
-
-Для интерактивной смены темы выбранный модуль с grant `interface.styles` может применить обычный CSS:
+Surfaces granted `"interface.styles"` in `harness.commands` can update runtime CSS up to 256,000 characters (static CSS files cap at 256,000 bytes; passing `""` clears dynamic rules):
 
 ```javascript
 await flecten.harness.request({
@@ -251,11 +235,9 @@ await flecten.harness.request({
 });
 ```
 
-Каждый вызов заменяет динамический stylesheet этой ревизии модуля. Пустая строка снимает динамические правила. Текущие токены темы передаются также всем открытым module iframe. Стили удаляются при hot-load новой ревизии, отключении интерфейса, отзыве доверия и восстановлении штатного UI. Обычной вкладке без выбранного интерфейса менять глобальные стили нельзя. Лимит динамического CSS составляет 256 000 символов, одного CSS-файла 256 000 байт.
+**Restore native interface** or `Ctrl+Shift+F12` (supported both inside and outside iframes, and persisted across restarts until **Resume module interfaces**) detaches all module CSS and placements without interrupting active chats or jobs.
 
-Кнопка **Restore native interface** и `Ctrl+Shift+F12` отключают все CSS и размещения, сохраняя чат и работающие задачи. Сочетание работает и из iframe. Режим восстановления сохраняется после перезапуска; **Resume module interfaces** применяет выбранные интерфейсы снова. Штатные компоненты остаются смонтированными для восстановления. Это требует памяти на обе оболочки; для тяжёлых расширений следующий шаг оптимизации: отделить штатные view stores от их ленивого рендера.
-
-В iframe доступны текущие токены интерфейса и неизменяемый мост:
+Every surface iframe also receives theme tokens and a scoped tool/resource bridge:
 
 ```javascript
 const tools = await flecten.tools();
@@ -266,61 +248,43 @@ const result = await flecten.call("mcp_module_better-trailer__runtime_timeline",
 const guide = await flecten.read("pacing");
 ```
 
-`tools`, `call` и `read` возвращают обычный `ToolResult` (`ok`, `output`, `error`). Сбой transport отклоняет Promise. Мост ограничен `tools` и `resources`, явно выданными конкретной поверхности. Вызов проходит те же схемы, permissions, approvals, hooks, timeout и логи, что и вызов модели. UI-вызов не дописывает фиктивную пару tool call/result в историю модели.
+`tools`, `call`, and `read` return `ToolResult` (`ok`, `output`, `error`) restricted to the `tools` and `resources` declared on that surface, running through standard schema validation, permissions, approvals, hooks, timeouts, and logs without injecting synthetic tool turns into model history. MCP `structuredContent` arrives at `result.data.structuredContent`, verified media attachments hydrate into `result.media` (`mediaType`, `data`) without polluting text logs, and native runtimes receive `ctx.mcpReq._meta["flecten.dev/invocation-origin"] === "module-surface"` (unforgeable by model tool arguments) to distinguish human UI actions from agent calls.
 
-MCP `structuredContent` доступен как `result.data.structuredContent`. Если разрешённый вызов поверхности вернул media, ответ дополнительно содержит `result.media` с проверенными `mediaType` и `data` из сохранённых вложений. Эти bytes гидратируются только для ответа интерфейсу и не добавляются в текстовые логи или журнал. UI-origin передаётся native runtime в `ctx.mcpReq._meta["flecten.dev/invocation-origin"]` со значением `module-surface`; модель не может выставить его аргументом инструмента. Это позволяет модулю отделить ручное управление от агентского.
+Surface iframes run on an opaque origin with `sandbox="allow-scripts allow-forms"` and a strict CSP (`form-action 'none'`, no direct network, filesystem, Node, nested frames, or top-level navigation; up to 8 MiB per HTML bundle with `data:`/`blob:` assets). See [studio-harness](../tests/fixtures/modules/studio-harness/) and [MODULE-EXAMPLES.md](MODULE-EXAMPLES.md).
 
-Iframe имеет opaque origin, `sandbox="allow-scripts allow-forms"` и CSP без прямой сети, файлов, Node, вложенных фреймов и навигации родителя. `allow-forms` позволяет форме вызвать JS submit handler; `form-action 'none'` запрещает фактическую отправку формы на другой адрес. Отдельный sandbox document в Electron позволяет исполнять bundled JS без ослабления CSP главного окна. Сеть, OS и файлы доступны через разрешённые backend tools. Используйте один bundled HTML до 8 МиБ; `data:`/`blob:` assets поддерживаются. Поверхность пересоздаётся при смене версии и закрытии вкладки; долговечное состояние сохраняйте через runtime. Неизменные polling-ответы и смена текущего чата не пересоздают выбранную оболочку.
+## The `module` Agent Tool
 
-Рабочий пример полной оболочки находится в [studio-harness](../tests/fixtures/modules/studio-harness/): своя навигация, разговор, композер, approvals, переключение темы и сохраняемый project brief через нативный SDK. [Каталог сценариев](MODULE-EXAMPLES.md) показывает, какие продукты можно собрать на этих механизмах.
-
-## Инструмент агента
-
-| `operation` | Назначение |
+| `operation` | Purpose |
 |---|---|
-| `list` | Каталог по 12 записей, опциональный точный фильтр `capability` |
-| `activate` | Подключить `name` с зависимостями в текущем чате |
-| `deactivate` | Снять явную активацию `name`; зависимости живут, пока нужны |
-| `status` | Активные версии, поверхности, каталог и ошибки |
-| `tools` | Схемы инструментов активного `name`, по 12 записей |
-| `call` | Вызвать `tool` активного `name` с `arguments` |
-| `read` | Прочитать `resource` активного `name`, до 12 000 символов |
+| `list` | Paginated catalog (12 entries per page), optional exact `capability` filter |
+| `activate` | Activate `name` and its `requires` graph in the current chat |
+| `deactivate` | Drop explicit activation of `name` (shared dependencies stay while needed) |
+| `status` | Active revisions, mounted surfaces, catalog summary, and errors |
+| `tools` | Tool schemas for active module `name` (12 per page) |
+| `call` | Invoke `tool` on active module `name` with `arguments` |
+| `read` | Read chunk of `resource` from active module `name` (up to 12,000 characters) |
 
-Каталоги и ресурсы используют `offset` и `nextOffset`. Модель выбирает по описаниям. Харнесс не решает intent через regex, совпадение слов или скрытый отдельный запрос модели.
+Catalogs and resources paginate via `offset` and `nextOffset`; module selection is driven explicitly by the model without regex or keyword heuristics.
 
-## Hot-load и восстановление
+## Hot-Load and Recovery
 
-Watchers отмечают изменения, rescan раз в 10 с восстанавливается после потерянных OS-событий. UI опрашивает состояние раз в 2 с. Прогон принимает новую версию перед следующим запросом модели. Один вызов держит lease на свою версию; старый процесс и исходники закрываются после последнего вызова. Закрытие чата отменяет оставшиеся вызовы.
+Filesystem watchers plus a 10-second fallback rescan detect edits while the UI polls every 2 seconds. New revisions apply before the next model turn while in-flight calls finish on their leased snapshot.
 
-У обычного пакета любое изменение байтов снимает hash trust. Новые вызовы отклоняются; runtime, хуки и поверхности отключаются на следующей границе. Требуется доверие новому SHA-256. В development mode валидная версия заменяет старую автоматически. Если её runtime не запускается, сохраняется безопасный предыдущий набор активных версий, в историю добавляется причина. Сломанная версия не перезапускается на каждом ходе: следующая ревизия разрешает новую попытку. Невалидный manifest или отозванное доверие отключает пакет.
+Modifying any byte of a standard module invalidates its SHA-256 trust and disables its runtime, hooks, and surfaces at the next safe boundary until re-trusted. In development mode, valid edits swap in automatically; if a new revision crashes on startup, the previous working active set stays intact, the failure reason is logged once to chat history, and retry waits for the next file revision.
 
-Явная активация хранится в `.flecten/sessions/<id>/modules.json`. Типизированные snapshots идут в durable transcript и replay. При reopen поднимается текущая разрешённая версия. Fork наследует активацию из typed transcript. После compaction актуальные инструкции доставляются заново, если полные snapshots ушли из окна.
+Explicit chat activations persist in `.flecten/sessions/<id>/modules.json` alongside typed durable transcript snapshots (`fork` inherits activations from transcript state, and compaction re-delivers active instructions when prior snapshots fall out of the window). In Talker/Worker chats, `<id>` belongs to the parent conversation (migrating legacy Worker-only `modules.json` files on link when no parent file exists, while giving precedence to any existing parent file including `[]`).
 
-В беседе Talker/Worker `<id>` принадлежит родительскому чату. Обе роли используют один lifecycle модулей, hooks и session platform services; закрытие одного участника не уничтожает экземпляр, пока второй им владеет. При полном закрытии беседы runtime освобождается один раз. Разговорная и исполнительская истории получают актуальные snapshots независимо.
+## Prompt-Cache Prefix Preservation
 
-При открытии старой беседы, где активация сохранялась только у Worker, явное связывание переносит проверенный список в состояние родителя. Существующий родительский файл, в том числе пустой список после отключения, всегда имеет приоритет. Исходный файл Worker остаётся на диске; обычная проверка схемы, доступности и hash trust продолжает действовать перед запуском.
+Each role keeps a constant `module` tool schema, immutable system prompt, and fixed provider tool list across module activations, deactivations, catalog refreshes, trust changes, and hot-reloads; updates append as ordinary messages or tool results at the tail of history with monotonic `contextRevision`. Platform wrappers delegating to built-in `contracts.agent`/`contracts.model` receive frozen `ModelRequest` objects and are rejected if they mutate the system prompt, provider tool schemas, or historical prefix (actual upstream cache hits remain subject to provider TTL, eviction, model switches, and compaction).
 
-## Кэшируемый префикс
+Defaults allow up to 16 active modules (`modules.maxActive`) and 32,000 combined instruction characters (`modules.contextCharacters`); exceeding context headroom fails explicitly rather than silently dropping instructions.
 
-В запросах одной роли остаётся одна и та же схема `module`; у Talker это inspection schema, у Worker и обычного агента полная схема. Активация, отключение, изменение каталога, доверие и hot-load не меняют системный промпт, порядок или набор provider tool definitions внутри роли. Новый snapshot добавляется обычным сообщением или результатом инструмента в конец истории. Старые сообщения не переписываются. Изменение MCP-каталога также доставляется новым snapshot с `contextRevision`.
+## Implementation and Tests
 
-Модульные операции сохраняют существующий кэшируемый префикс. Обёртки, делегирующие штатному agent/model, обязаны сохранить system, provider tool definitions и исходную историю model request; изменение отклоняется до отправки провайдеру. Model request передаётся как замороженная копия. Native adapter может сам обратиться к другому API, и для него автор отвечает за cache policy; переход к другой модели не может сохранить кэш прежней модели. Это проверяется сравнением запросов реального provider adapter, включая все прежние сообщения и schemas. Сам cache hit остаётся решением провайдера: TTL, eviction, смена модели и обычная compaction могут его изменить. Вечный кэш внешнего API харнесс гарантировать не может.
-
-По умолчанию допустимы 16 активных модулей и 32 000 символов суммарных инструкций. `modules.maxActive` и `modules.contextCharacters` доступны в advanced config. Большие знания выносите в resources. При слишком маленьком контексте модели возвращается явная ошибка вместо молчаливого удаления инструкций.
-
-## Реализация и проверки
-
-- `src/modules/`: manifest, snapshots, catalog/watch, зависимости, поколения runtime и gateway.
-- `src/core/modules/`: session port и append-only доставка контекста.
-- `src/app/modules.ts`, `module-handlers.ts`: установка, доверие и sidecar commands.
-- `ui/src/components/settings/ModulesSettings.svelte`, `ModuleSurface.svelte`: управление и поверхности.
-- `tests/integration/modules.test.ts`, `module-lifecycle.test.ts`: настоящий сервис, MCP runtime, hooks, hot-load, prefix equality, permissions и reopen.
-- `tests/integration/conversation-modules.test.ts`: общий runtime Worker и поверхности, идентичность наблюдения, takeover, stop, закрытие и reopen, schema restriction Talker.
-- `tests/integration/module-read-only.test.ts`: доверенное `readOnlyTools`, политика чтения, запреты MCP, human checkpoints и отзыв hash trust.
-- `tests/e2e/modules.spec.ts`: упакованный runtime, настройки и HTML RPC в скрытом Electron на 1480x940 и 1180x640.
-- `tests/integration/module-interface.test.ts`, `tests/e2e/module-interface.spec.ts`: интерфейс до первого запроса модели, grants, настоящий запуск задачи, смена темы, сохранение данных, hot-load полной оболочки, размещение виджета и аварийное восстановление.
-
-- `src/core/services/`: контракты, схемы и композиция реальных внутренних механизмов.
-- `src/modules/platform.ts`, `project-platforms.ts`: native lifecycle и атомарная публикация project services.
-- `src/app/session-storage.ts`: единый backend журнала/индекса для всех продуктовых путей.
-- `tests/integration/module-platform.test.ts`, `module-contracts.test.ts`, `module-journal.test.ts`: драйвер, модель, инструменты, compaction, schema-defined взаимодействие, nested leases, отмена, rollback, cache guards и SQLite reopening/recovery.
+- `src/modules/`: manifests, snapshots, catalog/watcher, dependency solver, runtime generations, and MCP gateway.
+- `src/core/modules/`: session port and append-only context delivery.
+- `src/app/modules.ts`, `module-handlers.ts`: installation, trust, and sidecar RPC handlers.
+- `ui/src/components/settings/ModulesSettings.svelte`, `ModuleSurface.svelte`: settings UI and sandboxed surfaces.
+- `src/core/services/`, `src/modules/platform.ts`, `project-platforms.ts`, `src/app/session-storage.ts`: typed service contracts, lifecycle leases, atomic project-service publication, and pluggable journal storage.
+- `tests/integration/modules.test.ts`, `module-lifecycle.test.ts`, `conversation-modules.test.ts`, `module-read-only.test.ts`, `module-interface.test.ts`, `module-platform.test.ts`, `module-contracts.test.ts`, `module-journal.test.ts`, plus `tests/e2e/modules.spec.ts` and `tests/e2e/module-interface.spec.ts` (`1480x940` and `1180x640`).

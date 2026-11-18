@@ -56,14 +56,14 @@ export default {
   "Copying…": "Копирование…",
   "Save or close modified files in the IDE before switching projects":
     "Сохраните или закройте изменённые файлы в IDE перед сменой проекта",
-  "Folder selection is available in the app": "Выбор папки доступен в приложении",
+  "Folder selection is available in the app": "Выбор папки доступен только в настольном приложении",
   "## User": "## Пользователь",
   "## Response": "## Ответ",
   "## Work": "## Работа",
   "> Error: {0}": ["> Ошибка: ", 0],
   "Conversation saved as Markdown": "Диалог сохранён в Markdown",
   "Enter text after /search": "Введите текст после /search",
-  "Search is available in the app": "Поиск доступен в приложении",
+  "Search is available in the app": "Поиск доступен только в настольном приложении",
   "“{0}” not found in the conversation": ["«", 0, "» в диалоге не найдено"],
   "Matches found: {0}. Press Esc to clear highlighting": [
     "Найдено совпадений: ",
@@ -75,7 +75,7 @@ export default {
   "Opening task…": "Открытие задачи…",
   "Interface language": "Язык интерфейса",
   "The language of buttons, menus, and app messages. The language of agent replies is set separately.":
-    "Язык кнопок, меню и сообщений приложения. Язык ответов агента настраивается отдельно.",
+    "Меняет язык меню и интерфейса; язык ответов агента настраивается отдельно.",
   "Diagram source": "Исходный код диаграммы",
   "Couldn't save the language setting. Your choice applies until you close the app.":
     "Не удалось сохранить язык. Выбранный язык будет действовать до закрытия приложения.",

@@ -1,6 +1,5 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "The model accepts attachments.": "El modelo admite archivos adjuntos.",
   "Price per 1M tokens": "Precio por 1 M de tokens",
   "Cache read": "Lectura de caché",
   "Cache write": "Escritura en caché",
@@ -30,7 +29,7 @@ export default {
   "Advanced protocol settings": "Ajustes avanzados del protocolo",
   "Reasoning, requests, and raw JSON.": "Razonamiento, solicitudes y JSON sin procesar.",
   "How to send and store reasoning between turns.":
-    "Cómo enviar y guardar el razonamiento entre turnos.",
+    "Ajustes de protocolo para servidores compatibles con OpenAI (DeepSeek, Qwen, GLM, vLLM). Déjalo en Auto salvo que sea necesario.",
   "Resend reasoning": "Reenvío del razonamiento",
   "Do not send": "No enviar",
   "Reasoning details": "Detalles del razonamiento",
@@ -47,8 +46,6 @@ export default {
   Keep: "Conservar",
   Clear: "Borrar",
   "Request mode": "Modo de solicitud",
-  "What to send with the response and how to call tools.":
-    "Qué enviar junto con la respuesta y cómo llamar a las herramientas.",
   "Parallel tool calls": "Llamadas a herramientas en paralelo",
   "Cache prompt": "Guardar el prompt en caché",
   "The provider reuses the shared request prefix.":
@@ -62,31 +59,22 @@ export default {
   "The app runs a command and reads the API key from its output. Useful for short-lived tokens.":
     "La aplicación ejecutará el comando y leerá la clave de su salida. Útil para tokens de corta duración.",
   "Get API key from command": "Obtener la clave de un comando",
-  "Instead of the key in the Access field.": "En lugar de la clave del campo «Acceso».",
+  "Instead of the key in the Access field.":
+    "Sustituye a la clave API fija y a la variable de entorno.",
   "Arguments (JSON array)": "Argumentos (array JSON)",
-  "Timeout, ms": "Tiempo de espera, ms",
-  "Key refresh interval, ms": "Intervalo de actualización de la clave, ms",
+  "Timeout, ms": "Tiempo límite (ms)",
+  "Key refresh interval, ms": "Intervalo de renovación (ms)",
   "Raw overrides": "Sobrescrituras directas",
   "Added to every request. For custom servers.":
     "Se añaden a cada solicitud. Se usan para servidores no estándar.",
   "Headers (JSON)": "Cabeceras (JSON)",
   "Request body (JSON)": "Cuerpo de la solicitud (JSON)",
-  "The model calls read, write, bash, and other tools.":
-    "El modelo llama a read, write, bash y otras herramientas.",
-  "Understands images in the input.": "Comprende las imágenes de entrada.",
   Temperature: "Temperatura",
-  "Accepts the temperature parameter.": "Admite el parámetro temperature.",
-  "Responds using the specified JSON schema.": "Responde según el esquema JSON indicado.",
   "WAV and MP3 via Chat Completions, audio files via Gemini.":
-    "WAV y MP3 mediante Chat Completions, archivos de audio mediante Gemini.",
+    "WAV/MP3 en Chat Completions; contenedores de audio en Gemini.",
   "Prompt cache": "Caché del prompt",
-  "The provider caches the shared request prefix.":
-    "El proveedor guarda en caché el prefijo común de la solicitud.",
   "Parallel calls": "Llamadas en paralelo",
-  "Multiple tools in one turn.": "Varias herramientas en un solo turno.",
   "Reasoning between calls": "Razonamiento entre llamadas",
-  "The model reasons after receiving a tool result.":
-    "El modelo razona tras recibir el resultado de una herramienta.",
   "Hide from selection": "Ocultar en el selector",
   Capabilities: "Capacidades",
   Test: "Comprobación",
@@ -130,4 +118,6 @@ export default {
     "La aplicación obtendrá la lista de modelos de la API y completará los datos de contexto y capacidades con la información del catálogo.",
   "Provider added without checking. Add models manually in the Models tab.":
     "Proveedor añadido sin comprobar. Añade los modelos manualmente en la pestaña Modelos.",
+  "Auto-filled from the model catalog. Override when a proxy or custom endpoint differs.":
+    "Se rellena desde el catálogo de modelos. Cámbialo si tu proxy o servidor difiere.",
 } as const;

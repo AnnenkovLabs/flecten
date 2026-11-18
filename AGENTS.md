@@ -1,10 +1,10 @@
 # AGENTS
 
-## Перед работой
+## Before You Start
 
-Прочитай `docs/ARCHITECTURE.md`, `docs/STRUCTURE.md`, `docs/CONVENTIONS.md` и `design.md`.
+Read `docs/ARCHITECTURE.md`, `docs/STRUCTURE.md`, `docs/CONVENTIONS.md`, and `design.md`.
 
-## Команды
+## Commands
 
 ```bash
 bun test
@@ -15,42 +15,42 @@ bun run build:agent
 bun run app:dev
 ```
 
-Правка не готова, пока не проходят все проверки. Для интерфейса дополнительно `bun run build:ui` и просмотр на 1480x940 и 1180x640.
+A change is not done until all relevant checks pass. UI changes additionally require `bun run build:ui` and visual inspection at 1480x940 and 1180x640.
 
-## Проверки
+## Verification
 
-- Не зацикливайся на тестах. Один прогон релевантной проверки на законченную правку, дальше стоп.
-- Не перезапускай полный E2E, `bun run verify` или уже зелёные тесты после каждого мелкого изменения.
-- Повторный прогон допустим только после реального изменения в проверяемом пути или чтобы разобрать новое падение.
-- Если проверка зелёная на текущем коде, не гоняй её ещё раз для уверенности.
-- E2E не показываются на экране: fixture выставляет `FLECTEN_HEADLESS=1`, окно создаётся скрытым и сразу минимизируется.
+- Do not loop on tests. Run the relevant check once per completed change, then stop.
+- Do not re-run the full E2E suite, `bun run verify`, or already-passing tests after every minor edit.
+- Re-run a check only after an actual change in the tested path, or to diagnose a new failure.
+- Once a check is green on the current code, do not run it again for reassurance.
+- E2E runs stay off-screen: the fixture sets `FLECTEN_HEADLESS=1`, and the window is created hidden and immediately minimized.
 
-## Правила
+## Rules
 
-- Один файл отвечает за одну вещь. Мягкий предел 300 строк, жёсткий 500.
-- Поведение не завязывается на regex, строковые паттерны и эвристики. Regex допустим только для проверки формата на границе, например имени файла. Продолжение, завершение, ретраи, intent, выбор инструмента и UX-логика задаются состоянием, схемой, типизированными событиями или явным API.
-- Мёртвый код запрещён. Модуль либо подключён к реальному продуктовому пути и покрыт тестом этого пути, либо удалён. Нельзя держать заготовку, которую тестируют отдельно от продакшена.
-- Контекст для модели стандартизирован. Всё, что доходит до модели, максимально похоже на обучающие форматы: обычный Markdown, стандартные tool calls, полные имена полей, предсказуемые заголовки. Никаких самодельных сокращений и ребусов.
-- Пользователь не видит сырой JSON в основных настройках. JSON остаётся скрытым advanced-режимом.
-- `core` не импортирует `ui`, `shell` и `store`.
-- Новая зависимость только с записью в журнале решений.
-- Данные из модели, файлов и web проверяются схемой на границе.
-- Ядро не пишет в `console`. События идут через шину.
-- Промпты лежат в `prompts/`, а не в коде.
-- Сырые сообщения юзера хранятся слово в слово.
-- Секреты вырезаются до записи в лог.
-- В документах и интерфейсе не использовать длинное тире.
-- Если упрощаешь с известным пределом, помечай `ponytail:` и пиши путь развития.
-- Интерфейс на Svelte 5 и Vite: компоненты в `ui/src/components`, состояние и чистые функции в `ui/src/lib`, токены в `ui/src/app.css`.
-- Данные экрана приходят из `run.svelte.ts` и props. Компонент не импортирует ядро.
-- `ui` не импортирует `core`, `store` и `tools`. `shell` не содержит логики харнесса.
+- One file, one responsibility. Soft limit: 300 lines; hard limit: 500 lines.
+- Never drive behavior with regexes, string patterns, or heuristics. Regexes are allowed only for format validation at boundaries, such as filenames. Continuation, completion, retries, intent, tool selection, and UX behavior must be driven by state, schemas, typed events, or explicit APIs.
+- Dead code is forbidden. Every module must be wired into a real production path and covered by a test exercising that path, or deleted. Never keep scaffolding tested in isolation from production.
+- Model context is standardized. Everything sent to the model must match standard training formats: plain Markdown, standard tool calls, full field names, and predictable headings. No custom shorthand or ad-hoc encodings.
+- Never expose raw JSON in primary settings. Raw JSON belongs in a hidden advanced mode.
+- `core` never imports `ui`, `shell`, or `store`.
+- Any new dependency requires an entry in the decision log.
+- Validate all data from models, files, and the web against a schema at the boundary.
+- Core never writes to `console`. Emit events through the event bus.
+- Keep prompts in `prompts/`, never inline in code.
+- Store raw user messages verbatim.
+- Redact secrets before writing logs.
+- Never use em dashes (`U+2014`) in documentation or UI copy.
+- Mark deliberate simplifications that have known limits with `ponytail:` and note the upgrade path.
+- UI uses Svelte 5 and Vite: components in `ui/src/components`, state and pure functions in `ui/src/lib`, tokens in `ui/src/app.css`.
+- Screen data comes from `run.svelte.ts` and props. Components never import core.
+- `ui` never imports `core`, `store`, or `tools`. `shell` contains no harness logic.
 
-## Что не делать
+## What Not to Do
 
-- Не добавлять ORM.
-- Не добавлять агентский фреймворк.
-- Не вызывать модель из интерфейса.
-- Не читать файлы из интерфейса.
-- Не смешивать роли в одном файле ради скорости.
-- Не добавлять второй набор токенов, шрифт или декоративный эффект.
-- Не звать ядро напрямую из компонента.
+- Do not add an ORM.
+- Do not add an agent framework.
+- Do not call models from the UI.
+- Do not read files from the UI.
+- Do not mix responsibilities in a single file for speed.
+- Do not add a second token set, font, or decorative effect.
+- Do not call core directly from a component.

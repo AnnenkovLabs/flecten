@@ -15,6 +15,20 @@ export interface DictionaryPort {
   list(): Promise<DictionaryRecord[]>;
 }
 
+const validatedEntries = new WeakSet<DictionaryRecord>();
+
+function parseDictionaryEntries(raw: DictionaryRecord[]): DictionaryRecord[] {
+  if (raw.length > 5_500) {
+    return DictionaryRecordSchema.array().max(5_500).parse(raw);
+  }
+  return raw.map((entry) => {
+    if (typeof entry === "object" && entry !== null && validatedEntries.has(entry)) return entry;
+    const parsed = DictionaryRecordSchema.parse(entry);
+    validatedEntries.add(parsed);
+    return parsed;
+  });
+}
+
 /** Ephemeral request data, never added to the transcript or used as memory evidence. */
 export class DictionaryRuntime {
   readonly #port: DictionaryPort;
@@ -36,19 +50,21 @@ export class DictionaryRuntime {
     if (budgetTokens <= 0) return undefined;
     let matches: DictionaryMatch[];
     try {
-      const entries = DictionaryRecordSchema.array()
-        .max(5_500)
-        .parse(await this.#port.list());
+      const entries = parseDictionaryEntries(await this.#port.list());
       const current = matchDictionary(this.#prompt, entries);
       const effective = new Map<string, DictionaryRecord>();
       for (const entry of entries) {
         if (entry.source === "local" || !effective.has(entry.id)) effective.set(entry.id, entry);
       }
       const latest = new Map(current.map((match) => [match.entry.id, match]));
-      matches = [...current];
+      matches = [];
       for (const [id, matchedAlias] of this.#active) {
         const entry = effective.get(id);
-        if (entry && !latest.has(id)) matches.push({ entry, matchedAlias });
+        if (entry)
+          matches.push({ entry, matchedAlias: latest.get(id)?.matchedAlias ?? matchedAlias });
+      }
+      for (const match of current) {
+        if (!this.#active.has(match.entry.id)) matches.push(match);
       }
       this.#active.clear();
       for (const match of matches) this.#active.set(match.entry.id, match.matchedAlias);

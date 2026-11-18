@@ -13,9 +13,9 @@ export interface BudgetLimits {
 export type UsagePrice = (usage: Usage) => number | undefined;
 
 const LABELS: Record<BudgetKind, string> = {
-  tokens: "лимит токенов",
-  cost: "лимит стоимости",
-  wall_clock: "лимит времени",
+  tokens: "token limit",
+  cost: "cost limit",
+  wall_clock: "time limit",
 };
 
 /**
@@ -123,7 +123,7 @@ export class RunBudget {
   /** Text for the run summary when a limit stopped it. */
   reason(kind: BudgetKind): string {
     const view = this.view();
-    return `Прогон остановлен: исчерпан ${LABELS[kind]} (${describe(kind, view)}).`;
+    return `Run stopped: ${LABELS[kind]} reached (${describe(kind, view)}).`;
   }
 
   stopReason(): string | undefined {
@@ -179,10 +179,10 @@ export class RunBudget {
 }
 
 function describe(kind: BudgetKind, view: BudgetView): string {
-  if (kind === "tokens") return `${view.spent.tokens} из ${view.limits.tokens ?? 0} токенов`;
+  if (kind === "tokens") return `${view.spent.tokens} of ${view.limits.tokens ?? 0} tokens`;
   if (kind === "cost") {
-    return `$${(view.spent.costUsd ?? 0).toFixed(2)} из $${(view.limits.costUsd ?? 0).toFixed(2)}`;
+    return `$${(view.spent.costUsd ?? 0).toFixed(2)} of $${(view.limits.costUsd ?? 0).toFixed(2)}`;
   }
-  const minutes = (ms: number) => `${(ms / 60_000).toFixed(1)} мин`;
-  return `${minutes(view.spent.wallClockMs)} из ${minutes(view.limits.wallClockMs ?? 0)}`;
+  const minutes = (ms: number) => (ms / 60_000).toFixed(1);
+  return `${minutes(view.spent.wallClockMs)} of ${minutes(view.limits.wallClockMs ?? 0)} min`;
 }

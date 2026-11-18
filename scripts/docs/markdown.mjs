@@ -33,11 +33,11 @@ export function parseTableNames(markdown, heading) {
   return [...names];
 }
 
-/** Commands of the "Команды" section: table rows, lines that open with a name and JSON examples. */
+/** Commands of the "Commands" section: table rows, lines that open with a name and JSON examples. */
 export function parseProtocolCommands(markdown) {
   const commands = new Set();
   let fence = false;
-  for (const line of sectionLines(markdown, "Команды")) {
+  for (const line of sectionLines(markdown, "Commands")) {
     if (line.trimStart().startsWith("```")) {
       fence = !fence;
       continue;

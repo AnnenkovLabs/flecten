@@ -258,6 +258,7 @@ export async function createAppService(
     checkpoints,
     pages: sessionPages(cwd, logs, () => configSecrets(config)),
     expandPrompt: commands.expand,
+    takeSummaryContext: (id) => pool.takeSummaryContext(id),
     logDir: (sessionId) => sessionPaths(cwd, sessionId).logs,
     loadHistory: (sessionId) =>
       sessionModelHistory(cwd, sessionId, skillActivations, logs, permissions),
@@ -266,7 +267,7 @@ export async function createAppService(
     saveQueue: (sessionId, queue) => saveQueue(cwd, sessionId, queue),
     onEvent: (event) => logs.persist(event),
   });
-  const pool = new SessionPool({
+  const pool: SessionPool = new SessionPool({
     maxActive: () => config.sessions?.maxConcurrent ?? 4,
     beforeRun: async () => {
       await refreshExtensions();
@@ -436,7 +437,7 @@ export async function createAppService(
     async deleteSession(id, input) {
       const confirmed = input === true || (typeof input === "object" && input.confirm === true);
       if (!confirmed) throw new Error("delete requires confirm: true");
-      if (pool.busy(id)) throw new Error("Нельзя удалить задачу, пока агент работает");
+      if (pool.busy(id)) throw new Error("Stop the active run before deleting this task.");
       await pool.close(id);
       await logs.close(id);
       spend.delete(id);

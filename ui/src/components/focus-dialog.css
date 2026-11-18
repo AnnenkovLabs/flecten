@@ -1,0 +1,63 @@
+/* A blocking decision takes focus in front of the existing workspace. */
+.focus-dialog, .focus-dialog::backdrop {
+  --overlay-exit-ms: 160;
+  --overlay-exit-time: calc(var(--overlay-exit-ms) * 1ms);
+}
+
+.focus-dialog {
+  transition:
+    display var(--overlay-exit-time) allow-discrete,
+    overlay var(--overlay-exit-time) allow-discrete;
+}
+
+.focus-dialog:not([open]), .focus-dialog:not([open])::backdrop {
+  pointer-events: none;
+}
+
+.focus-dialog::backdrop {
+  background-color: rgba(14, 14, 14, 0);
+  backdrop-filter: blur(0px);
+  transition:
+    background-color var(--overlay-exit-time) var(--ease),
+    backdrop-filter var(--overlay-exit-time) var(--ease),
+    display var(--overlay-exit-time) allow-discrete,
+    overlay var(--overlay-exit-time) allow-discrete;
+}
+
+.focus-dialog[open]::backdrop {
+  background-color: rgba(14, 14, 14, 0.82);
+  backdrop-filter: blur(12px);
+  transition-duration: 220ms;
+}
+
+.focus-dialog__content {
+  opacity: 0;
+  translate: 0 5px;
+  transition:
+    opacity 120ms var(--ease),
+    translate var(--overlay-exit-time) var(--ease);
+}
+
+.focus-dialog[open] .focus-dialog__content {
+  opacity: 1;
+  translate: 0 0;
+  transition-duration: 200ms, 240ms;
+}
+
+@starting-style {
+  .focus-dialog[open]::backdrop {
+    background-color: rgba(14, 14, 14, 0);
+    backdrop-filter: blur(0px);
+  }
+
+  .focus-dialog[open] .focus-dialog__content {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-dialog, .focus-dialog::backdrop, .focus-dialog__content {
+    transition: none !important;
+  }
+}

@@ -70,7 +70,7 @@ export default {
   "Authentication refreshed and verified.": "Авторизация обновлена и проверена.",
   "Base URL API address": "Адрес API",
   Proxy: "Прокси",
-  "Request timeout, ms": "Время ожидания запроса, мс",
+  "Request timeout, ms": "Таймаут запроса, мс",
   "Request timeout": "Время ожидания запроса",
   "API key for provider {0}": ["Ключ API провайдера ", 0],
   "API key Key": "Ключ API",

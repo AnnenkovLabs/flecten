@@ -1,6 +1,6 @@
 # Fixtures
 
-Данные для тестов и бенча. Без секретов и без личных файлов.
+Test and benchmark inputs. Contains no secrets or personal files.
 
-- `prompts/sample.txt`: сырой промпт юзера.
-- `repos/example/`: минимальный репозиторий для интеграционных тестов.
+- `prompts/sample.txt`: raw user prompt.
+- `repos/example/`: minimal repository for integration tests.

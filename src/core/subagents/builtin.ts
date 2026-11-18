@@ -51,7 +51,7 @@ export const exploreSubagent: SubagentSpec = {
     { action: "write", policy: "deny" },
     { action: "shell", policy: "deny" },
   ],
-  budget: { maxTurns: 12, maxTokens: 24_000 },
+  budget: { maxTurns: 16, maxTokens: 140_000 },
   resultSchema: exploreResult,
 };
 
@@ -81,7 +81,7 @@ export const implementSubagent: SubagentSpec = {
     { action: "shell", policy: "allow" },
     { action: "network", policy: "deny" },
   ],
-  budget: { maxTurns: 40, maxTokens: 96_000 },
+  budget: { maxTurns: 40, maxTokens: 420_000 },
   resultSchema: implementResult,
 };
 
@@ -97,7 +97,7 @@ export const reviewSubagent: SubagentSpec = {
     { action: "shell", policy: "deny" },
     { action: "write", policy: "deny" },
   ],
-  budget: { maxTurns: 20, maxTokens: 48_000 },
+  budget: { maxTurns: 20, maxTokens: 200_000 },
   resultSchema: reviewResult,
 };
 

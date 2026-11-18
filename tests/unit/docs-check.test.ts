@@ -46,37 +46,37 @@ const { extractStringUnion, extractUnionMembers, objectLiteralStrings } =
 const permissionsSchema = z.toJSONSchema(PermissionsConfigSchema, { io: "input" });
 
 const protocolDoc = [
-  "## Команды",
+  "## Commands",
   "",
-  "`run` запускает сессию.",
+  "`run` starts a session.",
   "",
-  "`stop` просит остановиться.",
+  "`stop` requests a stop.",
   "",
   "```json",
   '{ "type": "run", "prompt": "hello" }',
   "```",
   "",
-  "| Команда | Поля |",
+  "| Command | Fields |",
   "|---|---|",
   "| `queue.add` | `text` |",
   "",
-  "## События",
+  "## Events",
   "",
-  "`ghost` не команда.",
+  "`ghost` is not a command.",
   "",
-  "| Событие | Полезная нагрузка |",
+  "| Event | Payload |",
   "|---|---|",
   "| `turn.started` | `turn` |",
   "| `usage` | `usage` |",
-  "| нет кода | строка без имени |",
+  "| no code | row without a name |",
   "",
-  "## Ошибки",
+  "## Errors",
   "",
-  "| `cancelled` | задачу остановили |",
+  "| `cancelled` | task stopped |",
 ].join("\n");
 
 const toolsDoc = [
-  "| Тул | Аргументы |",
+  "| Tool | Arguments |",
   "|---|---|",
   "| `read` | `path` |",
   "| `write` | `path`, `content` |",
@@ -98,9 +98,9 @@ describe("docs-check parser", () => {
   });
 
   test("reads table names of one section only", () => {
-    expect(parseTableNames(protocolDoc, "События")).toEqual(["turn.started", "usage"]);
-    expect(parseTableNames(protocolDoc, "Ошибки")).toEqual(["cancelled"]);
-    expect(parseTableNames(protocolDoc, "Нет такого")).toEqual([]);
+    expect(parseTableNames(protocolDoc, "Events")).toEqual(["turn.started", "usage"]);
+    expect(parseTableNames(protocolDoc, "Errors")).toEqual(["cancelled"]);
+    expect(parseTableNames(protocolDoc, "Missing")).toEqual([]);
   });
 
   test("extracts documented tool names from the table", () => {

@@ -97,7 +97,7 @@ test("a second window on the same project says why and does not restart its core
       await card.locator("summary").click();
       await expect(card.locator("pre")).toContainText("sidecar.lock");
 
-      // No restart loop: no «Перезапускаю ядро», no second card.
+      // No restart loop: no "Restarting agent…", no second card.
       await second.page.waitForTimeout(2_500);
       await expect(second.page.locator(".toast")).toHaveCount(0);
       await expect(second.page.locator(".error-card")).toHaveCount(1);

@@ -4,11 +4,10 @@
 
 ## Setup
 
-You need Bun 1.4 and Node 20 or newer. Node is only required for Electron.
+You need Bun 1.4.4 and Node 22.12 or newer. Node is only required for Electron.
 
 ```bash
 bun install
-bun run dev help
 bun run app:dev
 ```
 
@@ -21,6 +20,7 @@ bun test
 bun run check
 bun run lint
 bun run build:ui
+bun run build:agent
 ```
 
 If you changed the window, attach a screenshot or describe a browser check at 1480x940 and 1180x640. Check the states: empty, loading, stopped, reduced motion.
@@ -41,9 +41,8 @@ If you changed the window, attach a screenshot or describe a browser check at 14
 
 - Read `design.md` before changing visual behavior.
 - Components live in `ui/src/components`, state and pure functions in `ui/src/lib`.
-- Demo data changes only in `ui/src/lib/demo.ts`. A component does not keep a copy of that data.
 - Tokens, fonts, and base styles live in `ui/src/app.css`. Do not add a second set of tokens.
-- A new component receives data through props. A direct import of `demo.ts` is allowed only in screen containers.
+- Screen state flows through `ui/src/lib/run.svelte.ts` and component props; components never import `core`, `store`, or `tools`.
 - Interactive elements work from the keyboard and have an `aria-label` or a visible label.
 - Animation is not required to understand state. `prefers-reduced-motion` must leave a static frame.
 

@@ -1,21 +1,21 @@
 export default {
   "Twin is on": "Twin はオンです",
   "Twin is off": "Twin はオフです",
-  "Twin is saying goodbye…": "Twin がお別れしています…",
-  "Twin is back with you": "Twin が戻ってきました",
+  "Twin is saying goodbye…": "Twin をオフにしています…",
+  "Twin is back with you": "Twin が有効になりました",
   "Represents you while you work.": "作業中、あなたの代わりに対応します。",
   "Your character stays saved. Turn Twin on whenever you want.":
     "あなたの個性は保存されています。いつでも Twin をオンにできます。",
   "No new supported user messages were found. No model request was made.":
-    "新しく取り込めるユーザーメッセージはありませんでした。モデルへのリクエストは送信していません。",
+    "選択したソースに新しいユーザーメッセージが見つからなかったため、モデル呼び出しをスキップしました。",
   "Training finished. No supported traits were found.":
-    "学習が完了しました。根拠のある特性は見つかりませんでした。",
+    "分析が完了しましたが、保存すべき一貫した好みは見つかりませんでした。",
   "On sessions from any harness.": "あらゆるハーネスのセッションから。",
   "Your Twin": "あなたのTwin",
   "Learning from your decisions": "あなたの判断から学習中",
   "Ready to work with you": "一緒に作業する準備ができました",
   "Ready to learn": "学習を始められます",
-  "Same ideas. Same thoughts.": "同じ発想。同じ考え。",
+  "Same ideas. Same thoughts.": "あなたの基準をそのまま反映",
   "Your taste, your standards, your voice. Twin answers the Worker and sends weak work back.":
     "あなたの好み、基準、言葉で。TwinがWorkerに答え、基準に届かない作業を差し戻します。",
   Anger: "怒り",
@@ -56,7 +56,7 @@ export default {
   ],
   "Would Twin choose what you would?": "Twinはあなたと同じ判断をしますか？",
   "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "実際の判断を試してください。TwinはWorkerに答えるときと同じように、根拠のある選択をあなたの言葉で示します。",
+    "設計や実装の判断を質問し、保存済みの特性から Twin が Worker にどう答えるか確認できます。",
   "Question for Twin": "Twinへの質問",
   "How should we design checkout for this project?": "このプロジェクトの購入手続きはどう設計する？",
   "Asking Twin…": "Twinに確認中…",
@@ -65,7 +65,7 @@ export default {
     "設定したモデルを使います。回答ごとに根拠を表示します。",
   "Twin needs your answer": "あなたの回答が必要です",
   "No supported answer. Ask the user directly.":
-    "回答の根拠が足りません。ユーザーに直接確認してください。",
+    "保存された特性に十分な根拠がないため、Twin はあなたに直接確認します。",
   "Based on your character": "あなたの特徴に基づく判断",
   "Input: {0} tokens · Output: {1} tokens": ["入力: ", 0, "トークン · 出力: ", 1, "トークン"],
   "Learning…": "学習中…",
@@ -96,7 +96,7 @@ export default {
   "What this means for the Worker": "Workerへの指示",
   "Use this when": "適用する場面",
   "Save character": "特徴を保存",
-  "You, without repeating yourself.": "何度も説明しなくても、あなたらしく。",
+  "You, without repeating yourself.": "学習した特性と好み",
   "Twin learns what makes you angry, what you like and what delights you. It keeps your original voice, including strong language.":
     "Twinは、あなたが怒ること、気に入ること、感動することを学びます。強い表現も含め、あなた本来の言葉を保ちます。",
   "Learned traits apply immediately. Edit anything that does not sound like you.":
@@ -109,7 +109,7 @@ export default {
   "No matching traits. Clear the search or change the reaction.":
     "一致する特徴がありません。検索をクリアするか、反応を変更してください。",
   "Your Twin is still getting to know you. Train it on your conversations to begin.":
-    "Twinはまだあなたを知る途中です。まずは会話から学習させてください。",
+    "まだ特性が保存されていません。過去のセッションをスキャンして学習を開始してください。",
   "Earlier suggestions": "以前の提案",
   "Apply trait": "特徴を適用",
   Reject: "却下",

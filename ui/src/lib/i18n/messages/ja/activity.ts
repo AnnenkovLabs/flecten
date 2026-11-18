@@ -21,9 +21,9 @@ export default {
   "Nothing to undo": "取り消す操作がありません",
   "Nothing to retry": "再試行するものがありません",
   "Model: {0}": ["モデル: ", 0],
-  "Resuming the task after the core restarted": "コアの再起動後、タスクを再開します",
+  "Resuming the task after the core restarted": "エージェント再起動後にタスクを再開しています",
   "History, plan, and files are intact; the model checks the current state before acting":
-    "履歴、計画、ファイルは保持されています。モデルは操作前に状態を確認します",
+    "履歴とファイルは保持されています。状態を確認してから続行します",
   "Run interrupted": "実行が中断されました",
   "Stopped at the run budget limit": "実行の予算上限に達したため停止しました",
   "failed to start": "起動できませんでした",
@@ -41,9 +41,8 @@ export default {
   Thinking: "思考中",
   Error: "エラー",
   "Awaiting approval": "許可待ち",
-  "Core restarting": "コアを再起動中",
-  "The model received the background command result":
-    "モデルがバックグラウンドコマンドの結果を受け取りました",
+  "Core restarting": "エージェントを再起動中",
+  "The model received the background command result": "バックグラウンドコマンドの出力を渡しました",
   "Preparing a call": "呼び出しを準備中",
   Writing: "入力中",
   "Untranslated response": "未翻訳の回答",
@@ -89,11 +88,11 @@ export default {
   "[timed out]": "[タイムアウト]",
   "[exit code {0}]": ["[コード ", 0, "]"],
   "Context is almost full (95%). Compress it now, or the core will compress it automatically.":
-    "コンテキストの使用率が95%に達しています。今すぐ圧縮してください。このままだとコアが自動で圧縮します。",
+    "コンテキストが 95% に達しました。100% で自動圧縮されます。",
   "Context is 85% full. You can compress it now, focusing on the topic you need.":
-    "コンテキストの使用率が85%に達しています。必要なトピックを中心に、今すぐ圧縮できます。",
+    "コンテキストが 85% です。焦点を指定して手動圧縮できます。",
   "Context is 70% full. No need to compress it yet, but keep it in mind.":
-    "コンテキストの使用率が70%に達しています。まだ圧縮は不要ですが、今後の圧縮を考えておくとよいでしょう。",
+    "コンテキスト使用率は 70% です。",
   "page {0}": [0, "ページ"],
   "{0} → {1} tokens": [0, " → ", 1, " トークン"],
   "no model": "モデルなし",
@@ -107,5 +106,5 @@ export default {
     "コンテキストの上限を超えました。履歴を圧縮するか、新しいタスクを開始してください。",
   "Run canceled.": "実行がキャンセルされました。",
   "The core could not start. Check your installation and settings.":
-    "コアを起動できませんでした。インストール状況と設定を確認してください。",
+    "エージェントプロセスを起動できませんでした。設定を確認するか再インストールしてください。",
 } as const;

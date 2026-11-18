@@ -25,7 +25,7 @@ test("local speech settings expose models, check missing installs and persist en
     await expect(dialog.getByLabel("Модель распознавания", { exact: true })).toHaveCount(0);
     await dialog.getByRole("button", { name: "Проверить установку", exact: true }).click();
     await expect(
-      dialog.getByRole("status").filter({ hasText: "Движок не установлен" }),
+      dialog.getByRole("status").filter({ hasText: "Engine not installed" }),
     ).toBeVisible();
     await expect(
       dialog.getByRole("button", { name: "Установить движок и модель", exact: true }),
@@ -109,7 +109,7 @@ test("installed Vosk converts the recorded microphone audio and inserts real rec
     );
     await dialog.getByRole("button", { name: "Проверить установку", exact: true }).click();
     await expect(
-      dialog.getByRole("status").filter({ hasText: "Движок и модель готовы" }),
+      dialog.getByRole("status").filter({ hasText: "Engine and model ready" }),
     ).toBeVisible();
     await dialog.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(dialog.getByText("Сохранено", { exact: true })).toBeVisible();

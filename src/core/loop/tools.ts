@@ -30,7 +30,7 @@ function cancelled(result: ToolResult): ToolResult {
     ...result,
     ok: false,
     error:
-      "Пользователь отменил этот вызов из карточки, процесс остановлен. Не повторяйте его без новой причины.",
+      "User canceled this tool call; the process was stopped. Do not retry it without a new reason.",
     data: { ...(isObject(result.data) ? result.data : {}), errorKind: "aborted", cancelled: true },
   };
 }
@@ -71,8 +71,12 @@ export async function executeCalls(
   emit: (event: LoopEvent) => void,
   results: ToolResult[],
 ): Promise<void> {
+  const inputs = calls.map((call) => options.tools.prepare(call));
   const pageGuard = options.toolContext.contextPages?.guard(
-    calls.map((call) => ({ ...call, name: options.tools.canonicalName(call.name) })),
+    calls.map((call, index) => {
+      const candidate = inputs[index]?.call ?? call;
+      return { ...candidate, name: options.tools.canonicalName(candidate.name) };
+    }),
   );
   if (pageGuard) {
     for (const call of calls) {
@@ -84,6 +88,9 @@ export async function executeCalls(
     return;
   }
   const mutex = new Mutex();
+  const hasMutatingInBatch = calls.some((call) =>
+    options.tools.isMutating(options.tools.canonicalName(call.name)),
+  );
   const stopped = (): ToolResult => ({
     ok: false,
     output: "",
@@ -111,7 +118,6 @@ export async function executeCalls(
         },
       },
     };
-  const inputs = calls.map((call) => options.tools.prepare(call));
   calls = calls.map((call, index) => inputs[index]?.call ?? call);
   const display = calls.map((call) => ({ ...call, name: options.tools.canonicalName(call.name) }));
 
@@ -342,9 +348,11 @@ export async function executeCalls(
         return denied("Human authorization changed before execution. Request permission again.");
       return blocked ?? run(prepared.call, latest);
     };
-    let result = options.tools.isMutating(prepared.call.name)
-      ? await mutex.run(task)
-      : await task();
+    const canonical = options.tools.canonicalName(prepared.call.name);
+    const needsLock =
+      options.tools.isMutating(canonical) ||
+      (hasMutatingInBatch && ["read", "grep", "glob"].includes(canonical));
+    let result = needsLock ? await mutex.run(task) : await task();
     if (isSubagent) {
       const after = await options.hooks?.run(
         "subagent",

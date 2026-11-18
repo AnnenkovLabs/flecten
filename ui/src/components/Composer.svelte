@@ -33,6 +33,7 @@
 
   interface Props {
     running: boolean;
+    isTalker: boolean;
     stopping?: boolean;
     canContinue: boolean;
     controlCooldown: boolean;
@@ -72,6 +73,7 @@
 
   let {
     running,
+    isTalker,
     stopping = false,
     canContinue,
     controlCooldown,
@@ -276,7 +278,7 @@
       if (!paths.includes(path)) paths.push(path);
     }
     if (onSend(text, mode, paths, mentions.flatMap((mention) => mention.context ? [mention.context] : [])) === false) return;
-    if (running) onSendModeChange(mode);
+    if (running && !isTalker) onSendModeChange(mode);
     text = "";
     mentions = [];
     // Clear the saved draft now: the hero composer unmounts before its draft effect would run.
@@ -463,6 +465,7 @@
       editing={Boolean(editing)}
       editPending={savingEdit}
       {running}
+      {isTalker}
       {stopping}
       {canContinue}
       {controlCooldown}

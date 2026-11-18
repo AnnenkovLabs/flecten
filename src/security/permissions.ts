@@ -41,7 +41,7 @@ export class PermissionEngine {
 
   constructor(options: PermissionEngineOptions = {}, parent?: PermissionEngine) {
     this.rules = structuredClone(options.rules ?? []);
-    this.destructive = options.destructive ?? "ask";
+    this.destructive = options.destructive ?? parent?.destructive ?? "ask";
     this.now = options.now ?? Date.now;
     this.onRemember = options.onRemember;
     this.parent = parent;
@@ -64,7 +64,7 @@ export class PermissionEngine {
     for (const controller of this.saving.values())
       controller.abort(new Error("Permission policy changed while saving the grant"));
     this.rules = structuredClone(options.rules ?? []);
-    this.destructive = options.destructive ?? "ask";
+    this.destructive = options.destructive ?? this.parent?.destructive ?? "ask";
     this.grantEpoch = options.grantEpoch;
     this.sessionGrants.clear();
     this.directoryGrants.clear();
@@ -108,11 +108,11 @@ export class PermissionEngine {
     if (blocked)
       return {
         policy: "deny",
-        reason: `${blocked.risk.label}: запрещено правилом. ${blocked.risk.detail}`,
+        reason: `${blocked.risk.label}: denied by rule. ${blocked.risk.detail}`,
       };
     const action = actions.reduce(
       (strict, entry) => (ORDER[entry.policy] > ORDER[strict.policy] ? entry : strict),
-      { policy: "auto", reason: "Разрешено автоматически." } as PermissionDecision,
+      { policy: "auto", reason: "Allowed automatically." } as PermissionDecision,
     );
     const key = permissionRequestKey(request);
     const granted =
@@ -123,7 +123,7 @@ export class PermissionEngine {
       actions.some((entry) => entry.humanOnly) ||
       risks.some((entry) => entry.humanOnly);
     if (granted && inherited?.policy !== "ask" && !humanOnly)
-      return { policy: "allow", reason: "Точное действие разрешено пользователем для этого чата." };
+      return { policy: "allow", reason: "Exact operation approved by the user for this session." };
     const needsAction = action.policy === "ask" || inherited?.policy === "ask";
     if (!needsAction && askedRisks.length === 0) return action;
     const asks = [
@@ -191,12 +191,12 @@ export class PermissionEngine {
     if (!rule)
       return {
         policy: "ask",
-        reason: `${request.tool}: нет подходящего правила, нужно подтверждение.`,
+        reason: `${request.tool}: no matching rule; approval required.`,
       };
     if (rule.policy === "auto" && request.safety !== "bounded")
       return {
         policy: "ask",
-        reason: `${request.tool}: непрозрачное действие требует независимой проверки или подтверждения пользователя.`,
+        reason: `${request.tool}: unbounded operation requires independent review or user approval.`,
         review: true,
       };
     return { policy: rule.policy, reason: this.explain(rule, request) };
@@ -343,7 +343,7 @@ export class PermissionEngine {
               target: grantLabel(approval.request),
               cwd: approval.request.cwd,
               policy: "allow",
-              note: "Разрешено пользователем: точное действие",
+              note: "Exact operation approved by the user",
             };
       const rules = [rule, ...(approval.askedRisks ?? []).map((risk) => ({ ...rule, risk }))];
       // Without a persistence port the pure engine is synchronous (tests and embedded callers).
@@ -490,11 +490,11 @@ export class PermissionEngine {
 
   private explain(rule: PermissionRule, request: PermissionRequest): string {
     const policy = {
-      deny: "запрещено правилом",
-      ask: "требуется подтверждение",
-      auto: "разрешено автоматически по правилу",
-      allow: "разрешено правилом",
+      deny: "denied by rule",
+      ask: "approval required",
+      auto: "allowed automatically by rule",
+      allow: "allowed by rule",
     }[rule.policy];
-    return `${request.tool}, действие "${request.action}": ${policy}.${rule.note ? ` Причина: ${rule.note}.` : ""}`;
+    return `${request.tool} (${request.action}): ${policy}.${rule.note ? ` Note: ${rule.note}.` : ""}`;
   }
 }

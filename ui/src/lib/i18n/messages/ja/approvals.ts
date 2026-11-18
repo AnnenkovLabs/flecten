@@ -17,12 +17,12 @@ export default {
   "Tasks in progress: {0}. Permissions apply to the next action; other settings apply to the next run.":
     ["実行中のタスク: ", 0, "。権限は次の操作から、その他の設定は次回の実行から適用されます。"],
   Chat: "チャット",
-  "Always ask a person": "必ず人に確認する",
+  "Always ask a person": "常に手動承認を要求",
   "These checkpoints cannot be bypassed by saved approvals or automatic review.":
-    "保存済みの許可や自動審査でこれらの確認を省略することはできません。",
+    "保存済みルールや自動モードでもこれらの確認は省略されません。",
   "Human approval required every time": "毎回、人による承認が必要です",
   "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.":
-    "範囲が限定された組み込み操作を許可します。対象の呼び出しは個別に審査し、不確かな場合は確認します。",
+    "安全なプロジェクト内操作を自動許可し、判断が分かれるコマンドは確認します。",
   "Ask unless this exact action was already approved.":
     "同一の操作が承認済みでない場合に確認します。",
   "Allowed for this chat": "このチャットで許可済み",
@@ -39,7 +39,7 @@ export default {
   "Save exact rule": "完全一致ルールを保存",
   "Remember…": "記憶する…",
   "Allow bounded built-in actions. Ask before arbitrary code or external tools.":
-    "範囲が限定された組み込み操作を許可します。任意のコードや外部ツールは確認します。",
+    "安全な組み込み操作を許可し、シェルコマンドや外部ツールの前に確認します。",
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "通常の操作を許可します。破壊的操作のルールとサンドボックスの制限は引き続き適用されます。",
   "Saved rules": "保存済みルール",
@@ -53,9 +53,9 @@ export default {
   "Destructive actions": "元に戻せない操作",
   "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.":
     "通常の操作が許可されていても、元に戻せない操作は個別に確認します。",
-  "Execution boundary": "実行の境界",
+  "Execution boundary": "サンドボックス境界",
   "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.":
-    "サンドボックスの制限は権限とは独立しています。作業フォルダーの隔離中は外部パスがブロックされます。",
+    "OS サンドボックスはツール権限に関係なく、コマンドをプロジェクトと承認済みフォルダ内に制限します。",
   "Workspace isolation enabled": "作業フォルダーの隔離は有効",
   "Workspace isolation disabled": "作業フォルダーの隔離は無効",
   "Only the requests shown here are included. New requests remain pending.":
@@ -91,7 +91,7 @@ export default {
     "表示されたパスとそのサブフォルダーがアクセス対象になります。",
   "Access is shared with agents in this chat.":
     "アクセス許可は、このチャットのエージェント間で共有されます。",
-  "Repeat this action in this chat": "このチャットで同じ操作を許可",
+  "Repeat this action in this chat": "このチャットで許可",
   "Remember folder access": "フォルダーへのアクセスを記憶",
   "Access mode: {0}": ["アクセスモード: ", 0],
   "Could not change access. Try again. {0}": [

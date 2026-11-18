@@ -23,10 +23,10 @@ export default {
   Chat: "Чат",
   "Always ask a person": "Завжди запитувати людину",
   "These checkpoints cannot be bypassed by saved approvals or automatic review.":
-    "Ці підтвердження неможливо обійти збереженим дозволом або автоматичною перевіркою.",
+    "Збережені правила та режим «Авто» не обходять ці перевірки.",
   "Human approval required every time": "Підтвердження людини потрібне щоразу",
   "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.":
-    "Дозволяти обмежені вбудовані дії. Інші допустимі виклики перевіряти окремо, за сумніву запитувати.",
+    "Дозволяти безпечні дії в проєкті; сумнівні команди перевіряти й запитувати у разі непевності.",
   "Ask unless this exact action was already approved.":
     "Запитувати, якщо цю точну дію ще не дозволено.",
   "Allowed for this chat": "Дозволено для цього чату",
@@ -43,7 +43,7 @@ export default {
   "Save exact rule": "Зберегти точне правило",
   "Remember…": "Запам’ятати…",
   "Allow bounded built-in actions. Ask before arbitrary code or external tools.":
-    "Дозволяти обмежені вбудовані дії. Запитувати перед довільним кодом і зовнішніми інструментами.",
+    "Дозволяти безпечні вбудовані дії; запитувати перед командами й зовнішніми інструментами.",
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "Дозволяє звичайні дії. Правила небезпечних операцій та обмеження пісочниці залишаються чинними.",
   "Saved rules": "Збережені правила",
@@ -57,9 +57,9 @@ export default {
   "Destructive actions": "Незворотні дії",
   "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.":
     "Окреме підтвердження незворотних операцій, навіть коли звичайні дії дозволено.",
-  "Execution boundary": "Межа виконання",
+  "Execution boundary": "Межа пісочниці",
   "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.":
-    "Обмеження пісочниці діють незалежно від дозволів. Зовнішні шляхи заблоковано, поки ввімкнено ізоляцію робочої папки.",
+    "Пісочниця ОС обмежує команди папкою проєкту та дозволеними шляхами незалежно від прав інструментів.",
   "Workspace isolation enabled": "Ізоляцію робочої папки ввімкнено",
   "Workspace isolation disabled": "Ізоляцію робочої папки вимкнено",
   "Only the requests shown here are included. New requests remain pending.":
@@ -95,7 +95,7 @@ export default {
   "Folder access covers the displayed paths and their subfolders.":
     "Доступ поширюється на вказані папки й усі вкладені папки.",
   "Access is shared with agents in this chat.": "Доступ спільний для агентів цього чату.",
-  "Repeat this action in this chat": "Повторювати цю дію в цьому чаті",
+  "Repeat this action in this chat": "Дозволити в цьому чаті",
   "Remember folder access": "Запам’ятати доступ до папки",
   "Access mode: {0}": ["Режим доступу: ", 0],
   "Could not change access. Try again. {0}": ["Не вдалося змінити доступ. Спробуйте ще раз. ", 0],

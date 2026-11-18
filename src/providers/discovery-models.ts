@@ -142,12 +142,14 @@ export function openAiModel(raw: Record<string, unknown>): ModelConfig | undefin
     raw.supports_tools,
     features?.tool_call,
   );
-  const reasoning = boolean(
+  const explicitReasoning = boolean(
     capabilities?.reasoning,
     raw.reasoning,
     raw.supports_reasoning,
     features?.reasoning,
   );
+  const reasoning =
+    explicitReasoning ?? (id.toLowerCase().endsWith("-thinking") ? true : undefined);
   const structuredOutput = boolean(
     capabilities?.structured_output,
     raw.structured_output,

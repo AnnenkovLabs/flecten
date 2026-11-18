@@ -106,7 +106,7 @@ export async function postStream(options: PostOptions): Promise<Response> {
       {
         requested: false,
         reason: "http",
-        status: known?.status ?? 429,
+        status: known?.status !== undefined && known.status >= 400 ? known.status : 429,
         retryable: false,
         ...(known?.resetAt === undefined ? {} : { retryAfterMs: waitMs }),
         limitKind: known?.kind,

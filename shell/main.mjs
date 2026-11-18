@@ -102,6 +102,7 @@ async function summaryShellDocument() {
   const script = async (name) =>
     (await readFile(join(shellDir, name), "utf8")).replaceAll("</script", "<\\/script");
   const kit = await script("summary-kit.js");
+  const interactions = await script("summary-interactions.js");
   const runtime = await script("summary-runtime.js");
   summaryShell = [
     "<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\">",
@@ -110,7 +111,7 @@ async function summaryShellDocument() {
     "body{color:#f0efed;font-family:system-ui,sans-serif}#summary-root{max-width:100%}</style>",
     '</head><body><div id="summary-root" class="markdown summary"></div>',
     `<script>${kit}<\/script>`,
-    `<script>${runtime}<\/script>`,
+    `<script>(() => {\n${interactions}\n${runtime}\n})();<\/script>`,
     "</body></html>",
   ].join("");
   return summaryShell;

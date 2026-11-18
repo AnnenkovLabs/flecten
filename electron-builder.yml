@@ -18,8 +18,7 @@ protocols:
   - name: Flecten task
     schemes: [flecten, liquid-harness]
 npmRebuild: false
-afterPack: scripts/notarize.cjs
-afterSign: scripts/notarize.cjs
+afterPack: ./scripts/signing-status.cjs
 
 extraResources:
   - from: dist

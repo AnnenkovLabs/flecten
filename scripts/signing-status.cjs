@@ -55,21 +55,3 @@ function recordSigningStatus(context) {
 exports.afterPack = async function afterPack(context) {
   recordSigningStatus(context);
 };
-
-exports.default = async function notarizeApp(context) {
-  if (process.platform !== "darwin") return;
-  const appleId = process.env.APPLE_ID;
-  const appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD;
-  const teamId = process.env.APPLE_TEAM_ID;
-  if (!appleId || !appleIdPassword || !teamId) {
-    console.log(
-      "[signing] notarization skipped: APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD or APPLE_TEAM_ID is not set",
-    );
-    return;
-  }
-
-  const { notarize } = require("@electron/notarize");
-  const appPath = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
-  await notarize({ appPath, appleId, appleIdPassword, teamId });
-  console.log(`[signing] notarized ${appPath}`);
-};

@@ -15,7 +15,7 @@ export default {
   "Enter the hook command.": "Indica el comando de la acción automática.",
   "Exact match condition": "Condición exacta",
   "All filled-in conditions must match. Regular expressions are not used.":
-    "Deben cumplirse todas las condiciones que hayas indicado. No se usan expresiones regulares.",
+    "Todas las condiciones rellenadas deben coincidir literalmente (valor exacto o prefijo).",
   "Example tool": "Herramienta del ejemplo",
   Testing: "Probando",
   "Run saved hook": "Ejecutar la acción automática guardada",

@@ -55,13 +55,13 @@ afterEach(() => {
 });
 
 describe("agent size budget", () => {
-  test("the Windows runtime has a measured budget without raising Linux or macOS caps", () => {
-    const windowsBytes = 89_201_152;
-    expect(checkAgentSize(windowsBytes, agentSizeBudget("win32")).ok).toBe(true);
-    for (const platform of ["linux", "darwin"] as const) {
-      expect(agentSizeBudget(platform)).toBe(85 * 1024 * 1024);
-      expect(checkAgentSize(windowsBytes, agentSizeBudget(platform)).ok).toBe(false);
-    }
+  test("larger runtime builds do not increase the limit on smaller targets", () => {
+    const windowsBytes = 118_514_688;
+    const macIntelBytes = 101_412_320;
+    expect(checkAgentSize(windowsBytes, agentSizeBudget("win32", "x64")).ok).toBe(true);
+    expect(checkAgentSize(windowsBytes, agentSizeBudget("linux", "x64")).ok).toBe(false);
+    expect(checkAgentSize(macIntelBytes, agentSizeBudget("darwin", "x64")).ok).toBe(true);
+    expect(checkAgentSize(macIntelBytes, agentSizeBudget("darwin", "arm64")).ok).toBe(false);
   });
 
   test("accepts a binary at the budget", () => {

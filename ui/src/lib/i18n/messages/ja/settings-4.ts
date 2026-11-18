@@ -15,7 +15,7 @@ export default {
   "Enter the hook command.": "自動処理のコマンドを入力してください。",
   "Exact match condition": "完全一致の条件",
   "All filled-in conditions must match. Regular expressions are not used.":
-    "入力した条件がすべて一致する必要があります。正規表現は使用しません。",
+    "入力されたすべての条件にリテラル一致（完全一致または前方一致）する必要があります。",
   "Example tool": "テスト例のツール",
   Testing: "テスト中",
   "Run saved hook": "保存済みの自動処理を実行",

@@ -1,21 +1,21 @@
 export default {
   "Twin is on": "Twin включён",
   "Twin is off": "Twin выключен",
-  "Twin is saying goodbye…": "Twin прощается…",
-  "Twin is back with you": "Twin снова с вами",
+  "Twin is saying goodbye…": "Отключаю Twin…",
+  "Twin is back with you": "Twin активен",
   "Represents you while you work.": "Представляет вас, пока вы работаете.",
   "Your character stays saved. Turn Twin on whenever you want.":
     "Ваш характер сохранён. Twin можно включить в любой момент.",
   "No new supported user messages were found. No model request was made.":
-    "Новых поддерживаемых сообщений пользователя не найдено. Запрос к модели не отправлялся.",
+    "В выбранных источниках нет новых сообщений пользователя. Запрос к модели не отправлялся.",
   "Training finished. No supported traits were found.":
-    "Обучение завершено. Подтверждённых черт не найдено.",
+    "Анализ завершён, устойчивых предпочтений для сохранения не найдено.",
   "On sessions from any harness.": "На сессиях из любого харнесса.",
   "Your Twin": "Ваш Twin",
   "Learning from your decisions": "Учится на ваших решениях",
   "Ready to work with you": "Готов работать с вами",
   "Ready to learn": "Готов к обучению",
-  "Same ideas. Same thoughts.": "Те же идеи. Те же мысли.",
+  "Same ideas. Same thoughts.": "Ваши стандарты без лишних повторений",
   "Your taste, your standards, your voice. Twin answers the Worker and sends weak work back.":
     "Ваш вкус, ваши требования, ваш голос. Twin отвечает Worker и возвращает слабую работу на доработку.",
   Anger: "Злость",
@@ -56,7 +56,7 @@ export default {
   ],
   "Would Twin choose what you would?": "Twin выберет то же, что и вы?",
   "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "Предложите реальную развилку. Twin выберет обоснованный вариант вашим голосом, как и в разговоре с Worker.",
+    "Задайте реальный вопрос по коду или архитектуре, чтобы проверить, как Twin ответит Worker на основе ваших черт.",
   "Question for Twin": "Вопрос для Twin",
   "How should we design checkout for this project?": "Как оформить чекаут в этом проекте?",
   "Asking Twin…": "Twin отвечает…",
@@ -65,7 +65,7 @@ export default {
     "Использует выбранную модель. Каждый ответ показывает основания.",
   "Twin needs your answer": "Twin нужен ваш ответ",
   "No supported answer. Ask the user directly.":
-    "Недостаточно оснований для ответа. Нужно спросить пользователя.",
+    "В сохранённых чертах недостаточно оснований; Twin спросит вас напрямую.",
   "Based on your character": "На основе вашего характера",
   "Input: {0} tokens · Output: {1} tokens": ["Вход: ", 0, " токенов · Выход: ", 1, " токенов"],
   "Learning…": "Учится…",
@@ -96,7 +96,7 @@ export default {
   "What this means for the Worker": "Что это значит для Worker",
   "Use this when": "Когда применять",
   "Save character": "Сохранить характер",
-  "You, without repeating yourself.": "Вы, без повторных объяснений.",
+  "You, without repeating yourself.": "Изученные черты и предпочтения",
   "Twin learns what makes you angry, what you like and what delights you. It keeps your original voice, including strong language.":
     "Twin учится понимать, что вас злит, что нравится и что восхищает. Сохраняет ваш голос, включая крепкие выражения.",
   "Learned traits apply immediately. Edit anything that does not sound like you.":
@@ -109,7 +109,7 @@ export default {
   "No matching traits. Clear the search or change the reaction.":
     "Черты не найдены. Очистите поиск или выберите другую реакцию.",
   "Your Twin is still getting to know you. Train it on your conversations to begin.":
-    "Twin ещё знакомится с вами. Начните с обучения на ваших разговорах.",
+    "Сохранённых черт пока нет. Просканируйте прошлые сессии и запустите обучение.",
   "Earlier suggestions": "Прежние предложения",
   "Apply trait": "Применить черту",
   Reject: "Отклонить",

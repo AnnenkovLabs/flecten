@@ -106,5 +106,5 @@ export default {
   Trust: "信任",
   Version: "版本",
   About: "关于",
-  Directory: "目录",
+  Directory: "模型目录",
 } as const;

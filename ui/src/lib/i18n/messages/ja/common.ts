@@ -43,17 +43,18 @@ export default {
   "Allows all actions without asking. Use only in a trusted project.":
     "すべての操作を確認せずに許可します。信頼できるプロジェクトでのみ使用してください。",
   "These settings don't match any preset. Check each row before saving.":
-    "設定がどのプリセットとも一致しません。保存する前に各項目を確認してください。",
+    "カスタムルールの組み合わせです。",
   "just now": "たった今",
   "{0} sec": [0, "秒"],
   "{0} min": [0, "分"],
   "{0} hr": [0, "時間"],
   "{0} d": [0, "日"],
-  "Policies must be an object.": "ポリシーはオブジェクトである必要があります。",
+  "Policies must be an object.": "権限ポリシーの形式が無効です。",
   "Unknown action: {0}.": ["不明な操作: ", 0, "。"],
   "Unknown policy for action {0}: {1}.": ["操作「", 0, "」のポリシーが不明です: ", 1, "。"],
-  "Opening a browser is available in the desktop app": "ブラウザーを開く機能はアプリで利用できます",
-  "the core returned no file": "コアからファイルが返されませんでした",
+  "Opening a browser is available in the desktop app":
+    "ブラウザリンクはデスクトップアプリでのみ開けます",
+  "the core returned no file": "ファイルの内容を取得できません",
   model: "モデル",
   models: "モデル",
   "Catalog updated": "カタログを更新しました",
@@ -77,7 +78,7 @@ export default {
   Copied: "コピーしました",
   "Could not copy. Try again.": "コピーできませんでした。もう一度お試しください。",
   "Could not prepare the text. Try again.":
-    "テキストを準備できませんでした。もう一度お試しください。",
+    "コピー用のテキストを生成できませんでした。再試行してください。",
   Reasoning: "推論",
   Images: "画像",
   Audio: "音声",
@@ -105,5 +106,5 @@ export default {
   "No pending approvals.": "承認待ちのリクエストはありません。",
   "Waiting {0}": ["待機時間：", 0],
   "This request has been waiting for over 2 minutes. Check whether the action is still needed.":
-    "リクエストが2分以上待機しています。この操作がまだ必要か確認してください。",
+    "2 分以上待機中です。",
 } as const;

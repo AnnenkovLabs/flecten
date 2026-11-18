@@ -17,7 +17,14 @@ export const NAME_ALIASES: Record<string, string> = {
   shell_command: "bash",
   run_command: "bash",
   execute: "bash",
-  terminal: "bash",
+  apply_diff: "apply_patch",
+  patch: "apply_patch",
+  rm: "delete",
+  remove_file: "delete",
+  delete_file: "delete",
+  mv: "move",
+  rename: "move",
+  move_file: "move",
   finish: "done",
   complete: "done",
   task_done: "done",
@@ -27,6 +34,8 @@ export const PRIMARY_FIELD: Record<string, string> = {
   read: "path",
   write: "path",
   edit: "path",
+  delete: "path",
+  apply_patch: "patch",
   grep: "pattern",
   glob: "pattern",
   bash: "command",
@@ -95,9 +104,63 @@ export const FIELD_ALIASES: Record<string, Record<string, string[]>> = {
     summary: ["message", "result", "text"],
     evidence: ["proofs", "checks", "verification"],
   },
+  apply_patch: {
+    patch: ["diff", "content", "changes", "patchText", "patch_text"],
+    why: ["reason"],
+  },
+  delete: {
+    path: [
+      "file_path",
+      "filePath",
+      "filepath",
+      "filename",
+      "target_file",
+      "absolute_path",
+      "absolutePath",
+    ],
+    why: ["reason"],
+  },
+  move: {
+    from: ["source", "src", "oldPath", "old_path", "source_path"],
+    to: ["destination", "dest", "target", "newPath", "new_path", "target_path"],
+    why: ["reason"],
+  },
+  todo: {
+    op: ["operation", "action"],
+  },
+  terminal: {
+    op: ["operation", "action"],
+    command: ["cmd", "script"],
+    cwd: ["workdir", "working_directory", "workingDirectory", "dir", "directory"],
+    timeoutMs: ["timeout_ms", "timeoutMS", "timeout"],
+  },
+  jobs: {
+    op: ["operation", "action"],
+    command: ["cmd", "script"],
+    cwd: ["workdir", "working_directory", "workingDirectory", "dir", "directory"],
+  },
+  context: {
+    op: ["operation", "action"],
+  },
+  memory: {
+    operation: ["op", "action"],
+  },
+  worker: {
+    operation: ["op", "action"],
+  },
+  criterion: {
+    operation: ["op", "action"],
+  },
+  module: {
+    operation: ["op", "action"],
+  },
+  task: {
+    agent: ["subagent", "role", "type", "typeName"],
+    prompt: ["task", "instructions", "description"],
+  },
 };
 
-export const PATH_KEYS = new Set(["path", "cwd", "file_path", "filePath"]);
+export const PATH_KEYS = new Set(["path", "cwd", "from", "to", "file_path", "filePath"]);
 
 export function resolveToolAlias(
   name: string,

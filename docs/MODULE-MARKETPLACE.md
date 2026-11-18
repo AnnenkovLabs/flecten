@@ -1,18 +1,18 @@
-# Маркетплейс модулей
+# Module Marketplace
 
-**Settings → Modules → Marketplace** показывает модули из явно подключённых каталогов. Встроенный каталог пуст. Установка проходит через действующий module package reader. Модель не запрашивается, новый код до подтверждения доверия не выполняется.
+**Settings > Modules > Marketplace** lists modules from explicitly configured catalog URLs. The built-in catalog ships empty. Installations run through the standard module package reader without invoking any model, and newly installed packages execute no code until explicitly trusted.
 
-## Встроенный каталог
+## Built-In Catalog
 
-`src/marketplace/index.json` содержит пустой каталог `Flecten`. Sidecar проверяет его той же схемой, что HTTPS-каталоги, и включает непосредственно в бинарник. Источник `bundled` не обращается к GitHub, не читает прежние папки пакетов и остаётся пустым без сети. Старый удалённый каталог не может вернуть удалённые предложения после обновления или **Refresh marketplace**.
+`src/marketplace/index.json` ships an empty `Flecten` catalog validated against the same schema as remote HTTPS catalogs and compiled directly into the binary. The `bundled` source makes zero GitHub or network requests, ignores legacy package directories, and stays empty offline. Stale remote caches cannot resurrect removed bundled listings after an app update or **Refresh marketplace**.
 
-Прежние исходники модулей сохранены только как тестовые фикстуры в `tests/fixtures/modules/`. Они проверяют SDK, платформенные сервисы и module lifecycle; приложение и установщики их не поставляют. Сборка удаляет оставшуюся от старых версий папку `dist/module-marketplace`.
+Historical example modules live exclusively under `tests/fixtures/modules/` to test the SDK, platform services, and module lifecycle; neither the app nor release installers ship them, and the build pipeline cleans up any leftover `dist/module-marketplace` directory.
 
-Удаление предложений из каталога не меняет установленные в проектах модули, доверие к ним и явно добавленные HTTPS-источники. Управление установленными пакетами остаётся на вкладке **Installed**.
+Removing an entry from a remote catalog leaves already installed project modules, their trust grants, and configured HTTPS catalog URLs untouched. Installed packages are managed under the **Installed** tab.
 
-## Внешний каталог
+## External Catalogs
 
-В **Catalog sources** укажите URL JSON-каталога и нажмите **Add catalog**. Разрешён HTTPS без credentials и fragment. URL сохраняется в `modules.marketplaces` конфигурации проекта, максимум восемь источников. Перед сохранением проверяется весь каталог. Ошибка источника показывается отдельно; **Refresh marketplace** повторяет загрузку.
+Under **Catalog sources**, enter an HTTPS JSON catalog URL (no embedded credentials or URL fragments) and click **Add catalog**. Up to eight URLs are stored in `modules.marketplaces` in project configuration. The full catalog document is schema-validated before saving; source failures are isolated per catalog, and **Refresh marketplace** retries fetching.
 
 ```json
 {
@@ -37,11 +37,11 @@
 }
 ```
 
-`category` принимает `workflow`, `interface` или `platform`. `manifest` проверяется стандартной схемой пакета. Имена модулей внутри каталога уникальны. Одинаковые имена разных издателей остаются разными предложениями, но в проект устанавливается только один пакет с данным именем.
+`category` accepts `"workflow"`, `"interface"`, or `"platform"`, and `manifest` is validated against the standard module manifest schema. Module names must be unique within a single catalog; distinct publishers may list the same module name across different catalogs, though only one package of a given name can be installed in a project at a time.
 
-## Публикация пакета
+## Publishing a Package
 
-Пакет по `packageUrl` содержит исходные файлы в base64. Относительные пути совпадают с путями в папке модуля:
+Each `packageUrl` serves a JSON bundle mapping relative module paths to base64-encoded file bytes:
 
 ```json
 {
@@ -53,18 +53,18 @@
 }
 ```
 
-Для публикации пакета из корня репозитория используйте `readModule` из `src/modules/package.ts`. Он возвращает `manifest`, `revision` и `files`. Кодирование каждого значения через `Buffer.from(bytes).toString("base64")` даёт содержимое `files` для загрузки на HTTPS-хостинг. В catalog entry поместите возвращённые `manifest` и `revision`; произвольный хеш архива не подходит. Меняйте версию и revision вместе с файлами. Публикация не требует изменения приложения.
+To package a module directory, call `readModule` from `src/modules/package.ts`, base64-encode each returned file (`Buffer.from(bytes).toString("base64")`), upload the JSON bundle to HTTPS hosting, and copy the exact `manifest` and `revision` returned by `readModule` into your catalog entry (arbitrary tarball hashes will fail verification). Bump both `version` and `revision` whenever any file changes. Publishing requires no changes to Flecten itself.
 
-Загрузка ограничена 15 секундами на запрос, 2 МиБ для каталога и 45 МиБ для JSON-пакета; redirects запрещены. После декодирования действуют пределы module reader: 32 МиБ и 5000 entries, без symlink, специальных файлов и выхода за каталог. SHA-256 всех путей и байтов должен совпасть с просмотренной записью, manifest также сравнивается целиком. Несовпадение прерывает установку до публикации.
+Network fetches enforce a 15-second per-request timeout, a 2 MiB cap on catalogs, a 45 MiB cap on package JSON payloads, and zero HTTP redirects. Decoded bundles must pass all `readModule` limits: max 32 MiB and 5,000 files, with no symlinks, special files, or `..` path traversal. Both the full-package SHA-256 `revision` and the embedded `manifest` must match the catalog entry byte-for-byte before anything is written to disk.
 
-## Зависимости и доверие
+## Dependencies and Trust
 
-`requires` разрешается по явному графу в выбранном каталоге. Уже установленные зависимости сохраняются. Цикл или отсутствующий пакет дают ошибку до записи. Одна установка ограничена 32 пакетами и 128 МиБ. Сначала читаются и проверяются все пакеты, затем они устанавливаются. Если запись или сохранение конфигурации не удаётся, новые папки удаляются. Существующие пакеты не перезаписываются.
+`requires` resolves across the selected catalog's dependency graph while reusing dependencies already installed in the project. Dependency cycles or missing packages abort installation before disk writes. A single install operation is capped at 32 packages and 128 MiB: all packages are downloaded and verified first, and any write or config-save failure rolls back newly created directories without overwriting existing modules.
 
-Каждый новый пакет остаётся недоверенным и выключенным до **Trust this version** на вкладке **Installed**. Интерфейс модуля требует отдельного **Use module interface**. Обновления не применяются автоматически: установленные пакеты управляются существующим lifecycle, а новая установка с тем же именем отклоняется. SHA-256 проверяет целостность выбранных байтов, авторство стороннего издателя определяется самим источником каталога.
+Every newly installed package starts disabled and untrusted until the user clicks **Trust this version** under **Installed**, and UI surfaces require a separate **Use module interface** opt-in. Packages never auto-update, and attempting to install a duplicate module name fails cleanly. SHA-256 `revision` verifies byte integrity against the catalog entry; publisher authenticity follows trust in the catalog HTTPS origin.
 
-## Контракт приложения
+## Application Contract
 
-`modules.marketplace` принимает `action: list | install | addSource | removeSource`. Для install передаются `source`, `name` и просмотренный `revision`; ответ содержит `moduleMarketplace` и `moduleState`. Схемы лежат в `shared/module-marketplace.ts`, данные экрана в `ui/src/lib/settings/modules.svelte.ts`. Компоненты получают store через props, файловая система и сеть доступны только sidecar.
+The `modules.marketplace` sidecar command accepts `action: "list" | "install" | "addSource" | "removeSource"`. `install` takes `source`, `name`, and the inspected `revision`, returning updated `moduleMarketplace` and `moduleState` snapshots. Shared schemas live in `shared/module-marketplace.ts`, UI state in `ui/src/lib/settings/modules.svelte.ts`, and components receive state via props while all filesystem and network I/O stays in the sidecar.
 
-`tests/integration/module-marketplace.test.ts` проверяет пустой встроенный каталог без сетевых запросов, сохранность установленных модулей, подключение HTTPS-источников, зависимости, trust, активацию настоящим агентом, целостность, пути и отказ источника. `tests/e2e/module-marketplace.spec.ts` проверяет пустое состояние и управление каталогами в скрытом Electron, включая снимки на 1480×940 и 1180×640. Установка из папки и доверие проверяются в `tests/e2e/modules.spec.ts`.
+`tests/integration/module-marketplace.test.ts` covers the empty offline built-in catalog, preservation of installed modules, HTTPS catalog management, dependency resolution, trust gates, live agent activation, hash mismatches, path traversal rejection, and upstream failures. `tests/e2e/module-marketplace.spec.ts` covers empty states and catalog management in headless Electron with visual checks at `1480x940` and `1180x640`, while folder installs and trust flows are covered in `tests/e2e/modules.spec.ts`.

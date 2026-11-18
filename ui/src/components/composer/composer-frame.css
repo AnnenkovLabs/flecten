@@ -142,6 +142,8 @@
 
 /* On the new-session screen the menus open downward, so the greeting and project stay visible. */
 .composer-wrap.is-hero .lh-menu {
+  --suggestion-clip: inset(-24px -24px calc(100% - 8px));
+  --suggestion-offset: -6px;
   top: calc(100% + 8px);
   bottom: auto;
 }

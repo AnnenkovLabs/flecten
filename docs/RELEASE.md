@@ -1,10 +1,10 @@
-# Релиз
+# Release Process
 
-Версия живёт в `package.json`. Тег начинается с `v`: `v0.1.1`. Каждой версии соответствует отдельный раздел `## 0.1.1` в `CHANGELOG.md`; дата и описание идут под заголовком. Этот раздел становится текстом GitHub Release без списка коммитов, будущих изменений и заметок других версий.
+The canonical version lives in `package.json`. Git tags use a `v` prefix (`v0.1.1`), and each release has a matching `## 0.1.1` section in `CHANGELOG.md` whose body becomes the GitHub Release notes verbatim (without commit dumps, unreleased items, or notes from other versions).
 
-Flecten пока в альфе. Релизы публикуются в GitHub Releases с отметкой Pre-release и установщиками, а не остаются только git-тегами. Альфа не попадает в стабильный канал обновлений.
+Flecten is currently in Alpha: releases publish to GitHub Releases marked **Pre-release** with full installers attached, staying off the `stable` auto-update channel.
 
-## Локальная проверка
+## Local Verification
 
 ```bash
 bun run verify
@@ -12,134 +12,87 @@ bun run package
 bun run smoke:packaged
 ```
 
-`verify` гоняет тесты, типы, линт и обе сборки. `package` собирает распакованное приложение в `release/`. `smoke:packaged` запускает упакованное приложение, ждёт editable composer и реальный preload bridge, получает `status` через renderer и проверяет отображённую модель. Проверяется канонический путь встроенного бинарника агента; dev и agent overrides окружения очищаются. Smoke использует отдельный профиль.
+`verify` runs unit/integration tests, typechecking, lint, and both UI and sidecar builds. `package` builds the unpacked Electron app under `release/`. `smoke:packaged` boots the packaged binary with an isolated profile (scrubbing dev/agent env overrides), waits for an editable composer and live preload bridge, queries `status` from the renderer, and verifies both the rendered model and the embedded sidecar executable path.
 
-Для замера готовности самого окна после packaging: `bun scripts/measure-desktop-startup.mjs release/linux-unpacked/flecten` (подставь executable своей платформы). Скрипт делает пять скрытых запусков со свежими профилями и ждёт отрисованную модель из backend status, editable composer, шрифты и два кадра. На Linux без графической сессии используй `xvfb-run -a`. P95 должен уложиться в8с; cache ОС не сбрасывается. `scripts/measure-startup.mjs` отдельно измеряет compiled sidecar до первого status.
+Measure cold-window startup after packaging with `bun scripts/measure-desktop-startup.mjs release/linux-unpacked/flecten` (substitute your platform binary; prefix with `xvfb-run -a` on headless Linux). The benchmark runs five hidden launches with fresh profiles, waiting for backend `status`, rendered model label, editable composer, loaded fonts, and two animation frames; P95 must stay <= 8s (warm OS page cache). `scripts/measure-startup.mjs` separately benchmarks compiled sidecar time-to-first-`status`.
 
-## Установщики
+## Installers
 
-`electron-builder.yml` задаёт цели: AppImage для Linux, DMG и ZIP для macOS, NSIS для Windows. Иконка лежит в `build/icon.png`. macOS использует hardened runtime и entitlements из `build/entitlements.mac.plist`.
+`electron-builder.yml` targets `AppImage` on Linux, `DMG` and `ZIP` on macOS (hardened runtime + `build/entitlements.mac.plist`), and `NSIS` on Windows, using `build/icon.png`.
 
-## Auto-update
+## Auto-Update
 
-Упакованные сборки по умолчанию берут обновления из GitHub Releases продукта (`AnnenkovLabs/flecten`). Источник можно переопределить: `update.github` (owner и repo) задаёт другой репозиторий, `update.feedUrl` в конфиге или `FLECTEN_UPDATE_URL` в окружении задают свой generic-фид и имеют приоритет над GitHub. В dev без явного источника обновления выключены: окно не делает сетевых запросов и не падает, чип скрыт.
+Packaged builds check `AnnenkovLabs/flecten` GitHub Releases by default. `update.github` (`owner`, `repo`) overrides the GitHub repository, while `update.feedUrl` or `FLECTEN_UPDATE_URL` points to a generic update server and takes precedence over GitHub. Dev runs without an explicit update source disable update checks completely and hide the status chip.
 
-GitHub-источник читает `GET /repos/{owner}/{repo}/releases` и берёт самый свежий опубликованный релиз по `published_at`. Draft не считается никогда; stable пропускает prerelease, beta берёт самый новый включая prerelease. В релизе обязательны assets канала: `latest*.yml` (или `beta*.yml`), соответствующий `*.signed.json` и установщики. Без подписанного manifest релиз отвергается до загрузки байтов.
+The GitHub updater queries `GET /repos/{owner}/{repo}/releases` and picks the newest published release by `published_at` (ignoring drafts; `stable` skips prereleases, `beta` includes them). Valid releases must attach channel metadata (`latest*.yml` or `beta*.yml`), matching `*.signed.json` manifests, and installers; missing signatures abort before downloading any installer bytes.
 
-Feed задаёт базу generic-фида. Пример: `https://updates.example.com/flecten/`. Разрешены `https` и `http` только для loopback (`localhost`, `127.0.0.1`, `[::1]`). URL с логином или паролем отклоняется, ошибка показывается в чипе и в настройках.
+Generic `feedUrl` values (e.g., `https://updates.example.com/flecten/`) require `https://`, allowing `http://` only on loopback (`localhost`, `127.0.0.1`, `[::1]`) and rejecting embedded credentials.
 
-Секция `update` конфига управляет циклом: `channel` (beta по умолчанию, stable для GA-выпусков), `github`, `feedUrl`, `autoCheck`, `autoDownload`, `installOnQuit`. По умолчанию авто-поля включены. Нормализованные настройки приходят в оболочку вместе со `status` и применяются без перезапуска. Проверка идёт через 10 с после старта и затем каждые 4 ч; ошибки повторяются с backoff от 15 мин до 4 ч. Найденное обновление скачивается в фоне с прогрессом в чипе. Установка происходит по кнопке перезапуска (`quitAndInstall(false, true)`) или штатным механизмом electron-updater при выходе с кодом 0, если включён `installOnQuit`. Идущий прогон не прерывается. В automated-режиме фоновые проверки выключены. Ошибки приходят в статус и показываются, IPC не бросает их в renderer.
+Config section `update` controls `channel` (`beta` default, `stable` for GA), `github`, `feedUrl`, `autoCheck`, `autoDownload`, and `installOnQuit` (all auto flags enabled by default), hot-applied via `status`. Checks run 10s after launch and every 4 hours thereafter (with 15m-4h exponential backoff on failure), downloading in the background with progress in the titlebar chip and installing on explicit restart (`quitAndInstall(false, true)`) or clean exit (`0`) when `installOnQuit` is enabled, never interrupting an active agent run. Automated test runs disable background polling.
 
-Сервер обновлений хранит установщики и метаданные electron-builder:
+Update feeds host `electron-builder` metadata alongside installers:
 
-- Windows: `latest.yml` и NSIS `.exe`.
-- macOS: `latest-mac.yml`, `.zip` и `.dmg`.
-- Linux: `latest-linux.yml` и `.AppImage`.
+- Windows: `latest.yml` + NSIS `.exe`
+- macOS: `latest-mac.yml` + `.zip` and `.dmg`
+- Linux: `latest-linux.yml` + `.AppImage`
 
-Канал `stable` читает эти файлы `latest*`. Канал `beta` требует `beta.yml`, `beta-mac.yml`, `beta-linux.yml` и соответствующие установщики; подписанный manifest генерируется для каждого канала отдельно.
+`stable` reads `latest*`, whereas `beta` (used by Alpha builds) reads `beta.yml`, `beta-mac.yml`, and `beta-linux.yml` with per-channel signed manifests. Moving to GA requires switching `publish.channel` in `electron-builder.yml` and the release workflow manifest template together. `electron-builder.yml` uses a URL-free `generic` entry solely to emit local `.yml` metadata; CI uploads artifacts without giving `electron-builder` publish tokens.
 
-Текущая Alpha явно собирает metadata канала `beta`. Для стабильного выпуска переключи `publish.channel` в `electron-builder.yml` и шаблон metadata в release workflow вместе.
+macOS updates require consistent Apple Developer ID signatures for Squirrel.Mac, Windows enforces Authenticode publisher checks, Linux AppImage verifies SHA-512 digests, and every platform enforces Flecten's pinned Ed25519 manifest signature.
 
-`electron-builder.yml` содержит generic publish только для генерации метаданных, без URL внешнего сервера. Artifacts на сервер кладёт CI или оператор. electron-builder не загружает их и не требует токен.
-
-Для macOS обновление должно быть подписано тем же Developer ID, иначе Squirrel.Mac откажется его применять. На Windows остаётся платформенная проверка publisher. На всех платформах приложение дополнительно требует Ed25519-подпись metadata; Linux AppImage проверяет SHA512 скачанных bytes через штатную pipeline.
-
-## SBOM
+## SBOM and Checksums
 
 ```bash
 bun run sbom
 ```
 
-`scripts/sbom.mjs` читает `package.json` и `bun.lock` и пишет CycloneDX 1.5 в `release/sbom.json`. Компоненты это все пакеты lock с версиями и purl. Лицензии берутся из `node_modules/<name>/package.json`, когда пакет установлен локально. Генератор не ходит в сеть и не добавляет зависимостей.
+`scripts/sbom.mjs` generates a CycloneDX `1.5` SBOM at `release/sbom.json` offline from `package.json`, `bun.lock`, and installed `node_modules/<name>/package.json` license fields, with zero extra dependencies. `bun run checksums` (`scripts/release-checksums.mjs`) runs `sbom` first so `release/SHA256SUMS.txt` covers `sbom.json`.
 
-`bun run checksums` вызывает генератор до подсчёта хешей, поэтому `release/SHA256SUMS.txt` покрывает `sbom.json`. Итоговая CI job запускает `bun scripts/release-checksums.mjs` до сохранения candidate. Release публикует готовые metadata, SBOM, signatures и checksums.
+## Two-Phase Fast Release
 
-## Быстрый выпуск
+CI pre-builds and verifies a complete release candidate on every `main` push; publishing promotes that exact verified artifact bundle without rebuilding:
 
-Обычный выпуск состоит из двух независимых этапов: CI заранее готовит проверенный комплект для коммита, Release публикует этот комплект без пересборки. Версия и changelog фиксируются до подготовки. Изменения рабочего дерева в выпуск не попадают.
-
-1. Обнови `package.json` и раздел этой версии в `CHANGELOG.md`, закоммить и отправь `main`.
-2. Дождись зелёного CI и job **ready to release** для этого коммита. Она сохраняет готовый candidate на 14 дней.
-3. Из `main` выполни одну команду:
+1. Bump `version` in `package.json`, add the matching section to `CHANGELOG.md`, commit, and push to `main`.
+2. Wait for green CI and the **ready to release** job on that commit SHA (candidates are retained for 14 days).
+3. From `main`, run:
 
 ```bash
 bun run release:publish
 ```
 
-Команда проверяет, что HEAD уже отправлен в публичный `main`, находит успешный CI именно для этого SHA, проверяет все обязательные jobs и доступность candidate. Только затем создаёт аннотированный тег версии из закоммиченного `package.json` и отправляет его. Тег запускает короткий Release workflow. Альфа публикуется как GitHub Pre-release с описанием и файлами.
+`release:publish` verifies that local `HEAD` matches remote `main`, locates a green `ci.yml` run for that exact SHA with all required gates passing and candidate artifact intact, creates an annotated `v<version>` tag, and pushes it to trigger `release.yml` (typically completing in 30-90 seconds depending on GitHub queue and upload throughput).
 
-Подготовка идёт фоном после push. Быстрая публикация готового комплекта целится в 30-90 секунд; время зависит от очереди GitHub и передачи файлов. Сборка новой версии имеет отдельный бюджет: его определяет самая медленная параллельная job. Эти ориентиры не заменяют измерение реальных runs.
+## CI Pipeline (`ci.yml`)
 
-## CI: подготовка один раз
+`.github/workflows/ci.yml` runs on PRs, `main` pushes, and manual dispatch across three parallel tracks:
 
-`.github/workflows/ci.yml` запускается на PR, push в `main` и вручную. Одновременно работают:
+- **verify** (Linux, macOS, Windows): unit/integration tests, typecheck, lint, and UI/agent builds.
+- **Quality** (reusable workflow): `docs:check`, >= 85% coverage gate, and three parallel headless Electron E2E shards (including visual golden checks at `1480x940` and `1180x640`, preflight, and Computer Use checks), uploading HTML reports, traces, and failure diffs.
+- **Build installers** (Linux x64, Windows x64, macOS arm64, macOS x64): full installers on trusted `main` (unpacked builds without signing secrets on PRs), running packaged smoke tests on every OS (including Chromium sandbox on Linux AppImage and standalone sidecar launch on Windows), plus a non-blocking dependency audit job.
 
-- **verify** на Linux, macOS и Windows: тесты, типы, линт и обе сборки.
-- **Quality** как reusable workflow: docs, coverage с порогом 85% и три параллельных Electron shard. Скрытые окна, committed visual goldens на 1480x940 и 1180x640, обязательный preflight и проверка Computer сохраняются. HTML report, traces и снимки ошибок доступны в artifacts.
-- **Build installers** на Linux, Windows и macOS arm64/Intel. В доверенном `main` собираются реальные установщики; PR проверяет распакованные приложения без signing secrets. Каждый пакет проходит smoke. Linux запускает публикуемый AppImage с Chromium sandbox. На Windows дополнительно проверяется самостоятельный старт агента.
+**ready to release** gates on `verify`, `Quality`, and all four installer jobs: it merges universal macOS update metadata, signs manifests with Ed25519, generates `sbom.json`, `SHA256SUMS.txt`, changelog release notes, and `release-candidate.json` (binding repo, workflow, exact SHA, version, run ID/attempt, filenames, byte sizes, and SHA-256 digests across all six installers, three beta manifests, signatures, SBOM, and notes; missing OS code-signing certs emit explicit `UNSIGNED-macos.txt` / `UNSIGNED-windows.txt` markers).
 
-Неблокирующий dependency audit остаётся отдельной job. Самостоятельные дублирующие запуски Quality на main и повторная packaging job после verify удалены.
+## Release Workflow (`release.yml`)
 
-Итоговая **ready to release** требует успеха verify, Quality и всех четырёх packaging jobs. Она объединяет metadata обеих архитектур macOS, подписывает update metadata Ed25519, готовит SBOM, checksums и текст релиза из changelog. Без ключей подписанный candidate не создаётся. Отсутствие платформенного сертификата остаётся явно отмечено `UNSIGNED-macos.txt` или `UNSIGNED-windows.txt`.
+Triggered by a `v*` tag (which must match `package.json`) or manual dispatch on an existing tag:
 
-Файл `release-candidate.json` связывает repository, workflow, точный SHA, версию, run ID и attempt со всеми именами файлов, размерами и SHA256. Candidate включает шесть обязательных установщиков, metadata трёх каналов beta, подписи, SBOM и changelog. Архив сохраняется без дополнительного сжатия готовых бинарников.
+1. Locate a green `ci.yml` run on `AnnenkovLabs/flecten` `main` (`push` or `workflow_dispatch`) for the exact tagged commit SHA where every required job status is `success` (`skipped`/`neutral` rejected).
+2. Download the immutable candidate artifact for that run attempt and re-verify archive SHA-256, file inventory, sizes, digests, provenance, manifest/SBOM versions, and Ed25519 signatures.
+3. Create a GitHub Release draft, upload verified artifacts, re-confirm tag SHA parity, and publish as a GitHub Pre-release without rebuilding, running tests, or touching private signing keys.
 
-## Release: публикация готовых файлов
+If no verified candidate exists yet, both `release:publish` and `release.yml` fail fast with a link to CI rather than rebuilding ad hoc. Re-prepare expired `main` artifacts via `gh workflow run ci.yml --ref main` (or **Re-run failed jobs** for transient flakes), and resume interrupted uploads via `gh workflow run release.yml --ref v0.1.2` (idempotent when bytes and release notes match; conflicting bytes require bumping a new version, as published tags are never moved).
 
-`.github/workflows/release.yml` принимает тег `v*` или ручной запуск на существующем теге. Тег обязан совпадать с версией в `package.json`.
+## Pre-Release Checklist and Code Signing
 
-1. Найти успешный run доверенного `ci.yml` в `AnnenkovLabs/flecten`: только `main`, события push или workflow_dispatch, точный SHA тега. Каждый обязательный gate должен иметь `success`; skipped и neutral не принимаются.
-2. Скачать конкретный immutable artifact ID этого run attempt. Проверить SHA256 архива из GitHub API, затем точный набор файлов, их размеры и hashes, provenance, версии metadata/SBOM и подписи Ed25519. Проверка повторяется до работы с GitHub Release.
-3. Создать draft, загрузить проверенные bytes и опубликовать GitHub Pre-release. Тег повторно сверяется с исходным коммитом непосредственно перед публикацией.
+Run `bun run verify` once on the finished change (plus visual inspection at `1480x940` and `1180x640` for UI changes). Platform code signing activates when CI secrets are configured:
 
-В Release нет установки Electron, тестовой матрицы, E2E, packaging или повторной генерации SBOM и подписей. Приватный ключ ему не нужен. Он публикует тот же комплект, который прошёл CI.
+- macOS Developer ID & notarization: `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (via `@electron/notarize` `3.1.2`).
+- Windows Authenticode: `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` (falling back to generic `CSC_*`).
 
-### Если candidate ещё не готов
+## Update Signing Key and Binary Budgets
 
-Команда выпуска и Release завершаются с понятной ошибкой и ссылкой на CI. Они не начинают скрытую пересборку и не создают пустой релиз. Дождись текущего CI. Если комплект истёк или удалён, повторно подготовь main:
+CI variable `UPDATE_SIGNING_PUBLIC_KEY` (Ed25519 public PEM) is pinned into `shell/update-public-key.pem` at package time via `bun scripts/sign-update-manifests.mjs --pin` (git-ignored; never read from feeds or runtime env). `UPDATE_SIGNING_PRIVATE_KEY` is exposed solely to `ready to release` on `main` to produce `*.signed.json` manifests; builds without keys emit `UNSIGNED-updates.txt` and are rejected by both the updater and CI release gates. Differential and web installers are disabled.
 
-```bash
-gh workflow run ci.yml --ref main
-```
+Size budgets: <= 350 MiB per installer; standalone Bun `1.4.4` sidecar caps are 109 MiB on Linux x64 (measured 107.2 MiB), 115 MiB on Windows x64 (113.0 MiB), 98 MiB on macOS Intel (96.7 MiB), and 90 MiB on macOS Apple Silicon (88.2 MiB). `app-builder-lib` and `@electron/universal` pin `minimatch` `11.0.9` via scoped overrides while `@electron/asar` and `glob` retain their compatible v3/callable branches.
 
-Для временного сбоя в подготовке используй **Re-run failed jobs**. Успешные платформенные jobs сохраняются; промежуточные artifacts заменяются только внутри этого CI run, финальные candidates имеют отдельное имя для каждого attempt.
-
-### Повторная публикация
-
-После сетевого сбоя можно продолжить существующий draft:
-
-```bash
-gh workflow run release.yml --ref v0.1.2
-```
-
-Совпадающие файлы сохраняются, недостающие догружаются. Конфликт имени, размера или SHA256 блокирует выпуск. Уже опубликованный релиз допускает только успешный повтор без изменений при полном совпадении комплекта и описания. Другие bytes или notes требуют новой версии. Опубликованные теги не перемещаются.
-
-## Проверки перед выпуском
-
-Законченную правку проверяй один раз:
-
-```bash
-bun run verify
-```
-
-При изменениях интерфейса дополнительно просмотри приложение на 1480x940 и 1180x640. Зелёные проверки на текущем коде повторно не запускаются для уверенности. CI подтверждает качество того же коммита перед созданием candidate.
-
-Платформенная подпись включается при наличии секретов:
-
-- `CSC_LINK`, `CSC_KEY_PASSWORD` для Apple Developer ID.
-- `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` для Windows, с fallback к общему сертификату.
-- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` для notarization.
-
-Без платформенных сертификатов установщики остаются unsigned и явно сообщают об этом. Для рабочего auto-update на macOS нужен Developer ID. Подпись Ed25519 metadata обязательна на всех платформах независимо от платформенного сертификата.
-
-## Ключ канала обновлений
-
-CI variable `UPDATE_SIGNING_PUBLIC_KEY` содержит Ed25519 public PEM. Packaging запускает `bun scripts/sign-update-manifests.mjs --pin`, сохраняя его в `shell/update-public-key.pem` внутри приложения. Этот generated file исключён из git. Runtime не читает ключ из feed или environment.
-
-CI secret `UPDATE_SIGNING_PRIVATE_KEY` доступен только итоговой job подготовки candidate в доверенном main. `bun scripts/sign-update-manifests.mjs` сверяет keypair, version, размеры и SHA512 actual artifacts, затем пишет `latest*.signed.json` перед checksums. Их надо публиковать рядом с `latest*.yml` и installer. Без ключей локальная сборка явно получает `UNSIGNED-updates.txt`; приложение отвергает неподписанный канал. CI не допускает такой комплект к публикации.
-
-Updater проверяет подпись, версию и каждый artifact URL/hash/size до availability. Download разрешён только для проверенного immutable snapshot. Замена metadata после check и bytes после подписи блокируется. Differential и web installer paths отключены. Пользователь может отложить загрузку или установку.
-
-Installer больше350МиБ блокируется до публикации checksums. Agent имеет отдельный бюджет85МиБ для Linux и macOS, 86МиБ для Windows. В 0.1.3 с Bun 1.4.2 измерены 80,5МиБ на linux-x64 и 85,1МиБ (89 201 152 bytes) на windows-x64. Windows получает 0,9МиБ запаса из-за большего native runtime; лимиты остальных платформ сохранены.
-
-В 0.1.3 `app-builder-lib` и `@electron/universal` используют исправленный `minimatch` 11.0.8 через scoped overrides. Старые callable API у `@electron/asar` и `glob` сохраняются. Совместимость с реальными правилами упаковки проверена; закреплённый Bun 1.4.2 поддерживает lockfileVersion 3. У build-зависимости `deepmerge` 4.3.1 остаётся low advisory GHSA-gcqx-w48m-w2h4 без исправленной npm-версии. Audit сообщает его отдельно; после upstream-исправления нужно обновить зависимость.
+As of November 17, 2026, `bun audit --production` reports zero known vulnerabilities in production dependencies; full `bun audit` flags dev-only [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) in `picomatch` `4.0.7` (via Vite and `tinyglobby`) pending an upstream npm patch.

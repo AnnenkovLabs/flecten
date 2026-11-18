@@ -2,12 +2,12 @@
 export default {
   "This project is already open in another Flecten window. Close it and send the message again, or open a different project.":
     "このプロジェクトは別のFlectenウィンドウで開かれています。そのウィンドウを閉じてメッセージを再送信するか、別のプロジェクトを開いてください。",
-  "The core returned an invalid response.": "コアから無効な応答が返されました。",
+  "The core returned an invalid response.": "エージェントプロセスから無効な応答が返されました。",
   "The provider is not configured. Open Settings and check the key.":
     "プロバイダーが設定されていません。設定を開いてキーを確認してください。",
   "Connection to the core was lost. Start the task again.":
-    "コアとの接続が切れました。タスクをもう一度実行してください。",
-  "The core is only available in the app.": "コアはアプリ内でのみ利用できます。",
+    "エージェントプロセスとの接続が切れました。「続行」をクリックしてください。",
+  "The core is only available in the app.": "Flecten デスクトップアプリが必要です。",
   "The provider reached its limit.": "プロバイダーの利用上限に達しました。",
   "The provider rate-limited requests.": "プロバイダーによりリクエスト頻度が制限されました。",
   "The subscription's 5-hour limit has been reached.":
@@ -44,14 +44,14 @@ export default {
   "resuming automatically {0}": [0, "に自動で再開"],
   "The task is still running. Stop it first": "タスクはまだ実行中です。先に停止してください",
   "Task moved to trash": "タスクをゴミ箱に移動しました",
-  "The server did not return a new task": "サーバーから新しいタスクが返されませんでした",
+  "The server did not return a new task": "新しいタスクを作成できませんでした",
   "Task copied": "タスクをコピーしました",
   project: "プロジェクト",
   you: "あなた",
   "Could not open task: {0}": ["タスクを開けませんでした：", 0],
   "Message was not queued: {0}": ["メッセージをキューに追加できませんでした：", 0],
   "The core is only available in the app. Open the Electron window.":
-    "コアはアプリ内でのみ利用できます。Electronウィンドウを開いてください。",
+    "Flecten デスクトップアプリが必要です。",
   "Could not stop: {0}": ["停止できませんでした：", 0],
   task: "タスク",
   "Could not open the task. Select it again. {0}": [
@@ -61,9 +61,10 @@ export default {
   "“{0}” is waiting for permission: {1}": ["「", 0, "」が許可を待っています：", 1],
   "“{0}”: background command finished": ["「", 0, "」：バックグラウンドコマンドが終了しました"],
   "The core cannot start. Check Settings and restart the app.":
-    "コアが起動しません。設定を確認してアプリを再起動してください。",
-  "The core stopped during the run. Restarting": "実行中にコアが停止したため、再起動中",
-  "Restarting core": "コアを再起動中",
+    "エージェントプロセスを起動できません。設定を確認して Flecten を再起動してください。",
+  "The core stopped during the run. Restarting":
+    "実行中にエージェントプロセスが終了しました。再起動中…",
+  "Restarting core": "エージェントを再起動中…",
   ", waiting for you: {0}": ["、操作待ち：", 0],
   "Resuming interrupted tasks: {0}{1}": ["中断したタスクを再開中：", 0, 1],
   "Interrupted tasks: {0}. Open a task and click Continue": [
@@ -76,7 +77,7 @@ export default {
   "Hide details": "詳細を非表示",
   "Show details": "詳細を表示",
   "Cancel call: the process will stop and the model will be notified of the cancellation":
-    "呼び出しをキャンセル: プロセスが停止し、キャンセルしたことがモデルに通知されます",
+    "このツール呼び出しと子プロセスを停止",
   "Cancel: {0}": ["キャンセル: ", 0],
   action: "件の操作",
   actions: "件の操作",

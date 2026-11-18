@@ -7,6 +7,7 @@ const chunkMs = Math.max(0, Number(process.env.E2E_MOCK_CHUNK_MS ?? 0));
 const summaryPauseMs = Math.max(0, Number(process.env.E2E_MOCK_SUMMARY_PAUSE_MS ?? 0));
 const holdSummary = process.env.E2E_MOCK_HOLD_SUMMARY === "1";
 const twinLearning = process.env.E2E_MOCK_TWIN_LEARNING === "1";
+const requests = process.env.E2E_MOCK_RECORD_REQUESTS === "1" ? [] : undefined;
 let releaseSummary;
 const summaryReleased = new Promise((resolve) => {
   releaseSummary = resolve;
@@ -77,6 +78,7 @@ const server = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === "/health") return new Response("ok");
+    if (requests && url.pathname === "/control/requests") return Response.json(requests);
     if (twinLearning && url.pathname === "/control/twin") {
       if (request.method === "POST") {
         const value = await request.json();
@@ -103,6 +105,7 @@ const server = Bun.serve({
     if (holdSummary || twinLearning) server.timeout(request, 0);
 
     const body = await request.json();
+    if (requests && requests.length < 32) requests.push(body.messages);
     if (body.model === "eyes")
       return sse(
         `${event({ content: "A screenshot with a small test image." }, "stop")}data: [DONE]\n\n`,
@@ -134,6 +137,23 @@ const server = Bun.serve({
         holdSummary ? summaryReleased : Promise.resolve(),
       )) ?? (await conversationReply(body));
     if (conversation) {
+      if (
+        holdSummary &&
+        !conversation.calls &&
+        body.tools?.some((tool) => tool.function?.name === "worker")
+      ) {
+        return sse(
+          new ReadableStream({
+            async start(controller) {
+              const encode = new TextEncoder();
+              controller.enqueue(encode.encode(event({ content: conversation.text })));
+              await summaryReleased;
+              controller.enqueue(encode.encode(`${event({}, "stop")}data: [DONE]\n\n`));
+              controller.close();
+            },
+          }),
+        );
+      }
       const delta = conversation.calls
         ? {
             ...(conversation.text ? { content: conversation.text } : {}),

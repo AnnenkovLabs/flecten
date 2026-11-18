@@ -1,80 +1,79 @@
-# Что можно собрать из модулей
+# Module Examples and Patterns
 
-Модуль может содержать любую комбинацию инструкций, ленивых знаний, MCP, нативного runtime, hooks, CSS и HTML-интерфейса. Ни один из этих компонентов не обязателен сам по себе. [SDK и manifest](MODULES.md) описывают точный контракт.
+A module can combine instructions, lazy reference guides, MCP servers, a native Bun runtime, hooks, CSS, and custom HTML surfaces in any combination; none of those parts is mandatory on its own. See [MODULES.md](MODULES.md) for exact manifest and SDK contracts.
 
-## Тестовые примеры SDK
+## SDK Test Fixtures
 
-Прежние модули сохранены в `tests/fixtures/modules/` для проверок SDK. Они отсутствуют во встроенном маркетплейсе и не входят в установщики. Из checkout их можно установить по пути через **Install from folder**.
+Reference modules live under `tests/fixtures/modules/` to exercise SDK contracts in automated tests. They are not bundled in the built-in marketplace or release installers, though you can load them from a repository checkout via **Install from folder**.
 
-| Модуль | Что уже работает |
+| Module | Implemented capabilities |
 |---|---|
-| [computer-use](../tests/fixtures/modules/computer-use/) | Приватный Linux-дисплей, реальные скриншоты, ввод с проверкой актуального observation ID, передача управления человеку и поверхность Computer. [Требования и границы](COMPUTER-USE.md). |
-| [better-trailer](../tests/fixtures/modules/better-trailer/) | Инструкции, справочник по темпу, нативный инструмент расчёта кадров и интерактивный таймлайн. Подготовка монтажа, без генерации или рендера видео. |
-| [studio-harness](../tests/fixtures/modules/studio-harness/) | Полностью свой интерфейс поверх ядра: чаты, сообщения, запуск и остановка агента, approvals, тема и сохранение брифа в проекте. |
-| [frame-workflow](../tests/fixtures/modules/frame-workflow/) + [frame-service](../tests/fixtures/modules/frame-service/) | Свой драйвер агента и schema-defined взаимодействие между модулями. Расчёт кадров по локальному брифу. |
-| [sqlite-journal](../tests/fixtures/modules/sqlite-journal/) | Собственный backend журнала и индекса сессий на SQLite, включая reopening, fork и recovery. |
+| [computer-use](../tests/fixtures/modules/computer-use/) | Isolated Linux X display, live screenshots, observation-ID-checked input actions, human control handoff, and the Computer workspace surface. See [COMPUTER-USE.md](COMPUTER-USE.md). |
+| [better-trailer](../tests/fixtures/modules/better-trailer/) | Instructions, pacing guide, native frame-timing tool, and interactive HTML timeline for trailer pre-production (no video encoding or rendering). |
+| [studio-harness](../tests/fixtures/modules/studio-harness/) | Full shell replacement atop the core: conversations, message stream, run/stop controls, approvals, theme switcher, and persistent project brief. |
+| [frame-workflow](../tests/fixtures/modules/frame-workflow/) + [frame-service](../tests/fixtures/modules/frame-service/) | Custom deterministic agent driver plus typed cross-module service calls computing frame counts from a local brief. |
+| [sqlite-journal](../tests/fixtures/modules/sqlite-journal/) | Custom SQLite-backed event journal and session index supporting reopen, fork, and crash recovery. |
 
-## Интерфейс и отдельные продукты
+## Custom Interfaces and Standalone Products
 
-Ниже приведены сценарии для разработки новых пакетов. Названия не означают, что эти интеграции уже установлены.
+The patterns below illustrate packages you can build on the module system (they are not preinstalled integrations):
 
-| Пример модуля | Пользовательский сценарий | Из чего собрать |
+| Example package | User workflow | Building blocks |
 |---|---|---|
-| `theme-studio` | Своя палитра, шрифт из bundled assets, плотность, размеры и отступы. Переключатель тем в модуле. | CSS, HTML, grant `interface.styles`. |
-| `focus-workspace` | Убрать лишние панели, расширить редактор, заменить композер и перенести навигацию. | CSS и `placement` по селекторам, host commands. |
-| `accessible-workspace` | Крупный текст, высокий контраст, другие элементы управления, своя раскладка. | CSS, замена нужных областей HTML-поверхностями. |
-| `my-harness` | Собственный продукт со своей навигацией, историей, composer и workflow. | Замена `shell`, snapshot/events, host commands, runtime для новых функций. |
-| `research-desk` | Источники слева, заметки в центре, проверка утверждений рядом с текстом. | Своя оболочка, MCP поиска, resources с методикой, runtime заметок. |
-| `review-room` | Работать от diff, замечаний и решений, показывать чат как вспомогательную область. | Замена workspace, действующие команды файлов/Git, hooks и review guides. |
-| `operations-console` | Наблюдать за задачами, логами и затратами, запускать типовые операции из собственного экрана. | Snapshot/events, HTML dashboard, backend tools. |
+| `theme-studio` | Custom color palette, bundled fonts, density, sizing, spacing, and in-module theme switcher. | Bundled CSS, HTML surface, `interface.styles` grant. |
+| `focus-workspace` | Strip secondary panes, widen the editor, replace the composer, and relocate navigation. | CSS overrides, selector `placement`, host commands. |
+| `accessible-workspace` | High-contrast palette, large typography, simplified controls, and custom layout. | CSS plus targeted HTML surface replacements. |
+| `my-harness` | Standalone product with custom navigation, session history, composer, and workflow. | `shell` region replacement, `snapshot`/`subscribe`, host commands, native runtime. |
+| `research-desk` | Sources on the left, notes in the center, claim verification inline. | Custom shell, search MCP, methodology resources, notes runtime. |
+| `review-room` | Diff-first code review with findings and decisions upfront and chat as a side pane. | Workspace replacement, `files.*`/`files.git` commands, hooks, review guides. |
+| `operations-console` | Task monitor, log viewer, spend tracker, and one-click runbooks. | `snapshot`/`subscribe`, HTML dashboard, backend tools. |
 
-Пакет можно собрать Svelte, React, Vue или обычным JavaScript в один HTML. В SDK нет отдельного синтаксиса для кнопок, карточек или редакторов. Для адресации крупных областей есть стабильные `data-harness-region`; остальные элементы доступны через стандартные CSS-селекторы. Внешние окна OS и алгоритм агентского цикла не являются DOM-областями приложения.
+Surfaces compile down to a single self-contained HTML bundle using Svelte, React, Vue, or vanilla JavaScript; the SDK imposes no proprietary widget DSL. Major regions expose stable `data-harness-region` attributes, while finer overrides can target standard CSS selectors. Native OS windows and core loop state machines remain outside DOM placement scope.
 
-## Агент, творчество и инженерная работа
+## Agent Workflows, Creative Tools, and Engineering
 
-| Пример модуля | Пользовательский сценарий | Из чего собрать |
+| Example package | User workflow | Building blocks |
 |---|---|---|
-| `better-trailer-pro` | Бриф, раскадровка, клипы, музыка, предпросмотр и экспорт трейлера. | Инструкции и guides, runtime с FFmpeg или сервисом видео, таймлайн, hooks проверки результата. |
-| `computer-use` | Дополнительный OS, VM или облачный backend к готовому модулю. | Сохранить контракт observation/control и пройти те же проверки продуктового пути. |
-| `browser-lab` | Сценарии браузера, скриншоты, сравнение страниц, просмотр шагов. | Backend драйвер браузера, tools, image attachments, custom UI. |
-| `blender-workshop` | Создание сцены, рендер, осмотр результата и правки. | Runtime с Blender, guides, инструменты, изображения и панель сцены. |
-| `game-workshop` | Ассеты, запуск игры, управление сессией и наблюдение за результатом. | Процессы runtime, tools, инструкции и HTML-поверхность. |
-| `data-lab` | SQL, таблицы, графики, воспроизводимые вычисления. | MCP базы или локальные инструменты, методика анализа, UI результатов. |
-| `document-studio` | Документы, слайды, PDF и проверка страниц после рендера. | Runtime с выбранными библиотеками, шаблоны/resources, preview и hooks. |
-| `voice-workspace` | Собственный интерфейс для аудиофайлов, расшифровки и анализа записей. | Аудиоинструменты runtime/MCP, audio attachments и custom UI. |
-| `test-lab` | Запуски тестов, артефакты, диагностика и сравнение результатов. | Backend инструменты, hooks, UI отчётов. |
-| `release-workspace` | Подготовка выпуска, changelog, сборка и просмотр артефактов. | Инструкции, hooks, Git/build tools и собственный workflow. |
-| `project-expert` | Знания о конкретном проекте загружаются только по задаче. | Короткие инструкции, ленивые wiki/resources и при необходимости tools. |
-| `team-rules` | Правила работы, соглашения и проверки одной команды. | Инструкции и hooks без runtime и UI. |
+| `better-trailer-pro` | Brief, storyboard, clips, music sync, preview, and trailer export. | Instructions, guides, FFmpeg/video runtime, timeline surface, output-validation hooks. |
+| `computer-use` | Additional OS, VM, or cloud desktop backends behind the computer-use contract. | Same observation/handoff contract verified against the product test suite. |
+| `browser-lab` | Scripted browser flows, screenshots, visual diffs, and step inspector. | Headless browser runtime, tools, image attachments, custom inspector UI. |
+| `blender-workshop` | Scene assembly, rendering, visual inspection, and iterative tweaks. | Blender CLI runtime, guides, tools, image attachments, scene panel. |
+| `game-workshop` | Asset pipeline, game process launch, session control, and live telemetry. | Managed runtime processes, tools, instructions, HTML control surface. |
+| `data-lab` | SQL queries, tabular views, charts, and reproducible notebooks. | Database MCP or local runtime tools, analysis guides, results surface. |
+| `document-studio` | Docs, slide decks, PDFs, and post-render page inspection. | Rendering libraries in runtime, templates/resources, preview surface, hooks. |
+| `voice-workspace` | Dedicated audio player, transcription browser, and recording analysis. | Runtime/MCP audio tools, audio attachments, custom UI. |
+| `test-lab` | Test matrix runner, failure artifacts, diagnostics, and run comparison. | Backend runner tools, hooks, HTML report viewer. |
+| `release-workspace` | Release checklist, changelog drafting, artifact build, and verification. | Instructions, guard hooks, Git/build tools, custom workflow surface. |
+| `project-expert` | Domain architecture knowledge loaded only when relevant to a chat. | Concise instructions, lazy wiki `resources`, optional helper tools. |
+| `team-rules` | Shared engineering conventions and automated pre-tool checks. | Instructions and hooks alone, without runtime code or UI. |
 
-Программы вроде FFmpeg и Blender, браузерные драйверы, credentials и оплачиваемые API предоставляет окружение или сам пакет. SDK даёт подключение и жизненный цикл, а предметную работу выполняет реализация модуля.
+External binaries (such as FFmpeg or Blender), browser drivers, API keys, and paid upstream services come from the host environment or the package itself; the SDK manages wiring, permissions, and lifecycle.
 
-## Внешние сервисы
+## External Service Connectors
 
-| Пример модуля | Сценарий |
+| Example package | Workflow |
 |---|---|
-| `twitter` | Поиск и чтение публикаций через MCP. Для модуля достаточно одной MCP-секции manifest. |
-| `github-workspace` | Issues, PR, проверки и review в отдельном рабочем экране. |
-| `design-workspace` | Работа с макетами и assets через MCP дизайн-сервиса, правила проекта и preview. |
-| `knowledge-base` | Поиск по документации компании и подключение нужных источников по задаче. |
-| `support-desk` | Обращения, контекст клиента, черновик ответа и инструменты поддержки. |
-| `calendar-workspace` | Календарь, подготовка встречи и управление событиями через backend интеграцию. |
-| `observability` | Метрики, ошибки, трассировки и диагностика инцидента. |
+| `twitter` | Search and read posts via MCP using a manifest with only an `mcp` block. |
+| `github-workspace` | Triage issues, PRs, CI checks, and code reviews in a dedicated view. |
+| `design-workspace` | Inspect design specs and export assets via a design-tool MCP server with live preview. |
+| `knowledge-base` | Query internal documentation and pull relevant pages into chat context on demand. |
+| `support-desk` | Load ticket context, customer history, draft replies, and support actions. |
+| `calendar-workspace` | Inspect schedules, prep meeting briefs, and manage events through backend tools. |
+| `observability` | Query metrics, error traces, and incident timelines during debugging. |
 
-Это подключение реального MCP или runtime выбранного сервиса. Возможности зависят от его API, авторизации и выданных прав; модуль может включать только tools или дополнять их инструкциями и интерфейсом.
+Capabilities follow the underlying MCP server or runtime API, OAuth credentials, and granted permissions; a connector can ship tools alone or pair them with domain instructions and custom surfaces.
 
-## Как они сочетаются
+## How Modules Compose
 
-Пользователь выбирает `studio-harness` как постоянную оболочку проекта. При задаче про трейлер агент подключает `better-trailer`: получает инструкции, tools и timeline. При необходимости модуль может потребовать другой пакет через `requires`. Явные `conflicts` предотвращают несовместимые активации.
+A user can enable `studio-harness` as the persistent project shell while the agent activates `better-trailer` on demand for a trailer task, pulling in its instructions, tools, and timeline tab. Modules declare hard dependencies via `requires` and mutually exclusive packages via `conflicts`.
 
-Постоянная оболочка, runtime и контекст агента имеют отдельный жизненный цикл. Сам выбор темы или интерфейса не запускает модель и не добавляет ей инструкции. Backend tool из интерфейса лениво активирует модуль в текущем чате. Изменения в development mode подхватываются на ходу; текущий вызов заканчивает работу на своей версии. CSS и размещения можно снять аварийной кнопкой или `Ctrl+Shift+F12`.
+Persistent UI shells, backend runtimes, and agent chat context have decoupled lifecycles: enabling a theme or shell neither triggers a model call nor injects agent instructions. Invoking a backend tool from a UI surface lazily activates its runtime for the active chat. In development mode, file edits hot-reload between calls while in-flight executions finish on their leased revision. Emergency UI recovery (**Restore native interface** or `Ctrl+Shift+F12`) strips module CSS and DOM placements immediately.
 
-Системный промпт и provider tool definitions остаются стабильными. Активации и новые инструкции дописываются в историю. Это сохраняет кэшируемый префикс запроса; срок жизни самого кэша определяет провайдер.
+System prompts and provider tool definitions stay immutable within each role; module activations append snapshots to conversation history so upstream prompt caches remain valid (subject to provider cache TTL).
 
+## Executable Core-Replacement Fixtures
 
-## Исполняемые примеры внутренних замен
-
-- `frame-service` и `frame-workflow`: первый предоставляет schema-defined расчёт кадров, второй заменяет весь драйвер агента и вызывает зависимый сервис. Работает с `trailer-brief.json`, без model request. Интеграционный тест проверяет UI-события, persistence/replay и возврат штатного драйвера после отзыва зависимости.
-- `sqlite-journal`: project module с собственным SQLite journal/index. Реализованы append, list/search, read, rename, fork, delete, reopen и crash recovery. Не мигрирует прежние JSONL-файлы, сохраняет собственную корзину в базе. Queue, attachments и checkpoints остаются в workspace.
-- Через `contracts.model` автор может подключить собственный протокол inference или remote router; через `contracts.tool` перенаправить разрешённое выполнение в контейнер/удалённую машину; через `contracts.compact` задать собственный алгоритм сжатия. Эти seams проверены интеграционными тестами, отдельные готовые remote adapters в примеры не включены.
-- Вместе с полной оболочкой `studio-harness` эти механизмы позволяют собрать свой продукт: собственный UX, драйвер, модельный транспорт, tool backend, контекстную политику, durable журнал и общие сервисы модулей. Все части могут поставляться в одной папке или композиции зависимостей. Специального Host/Client package API нет.
+- `frame-service` + `frame-workflow`: `frame-service` provides a schema-validated frame calculator, while `frame-workflow` replaces `contracts.agent` entirely and calls `frame-service` against a local `trailer-brief.json` with zero model calls. Integration tests verify UI event streaming, durable persistence/replay, and clean fallback to the built-in driver when a dependency is revoked.
+- `sqlite-journal`: project-scoped `contracts.storage` adapter backed by `bun:sqlite`, implementing `append`, `list`/`search`, `read`, `rename`, `fork`, `delete`, reopen, and crash recovery (with in-database trash rather than migrating legacy JSONL files, while queues, attachments, and checkpoints stay in the workspace).
+- `contracts.model` lets authors plug in custom inference transports or routers; `contracts.tool` redirects authorized tool execution to containers or remote hosts; `contracts.compact` supplies custom history compaction. All three seams are covered by integration tests.
+- Combined with a full `shell` surface like `studio-harness`, module packages can ship a custom product UX, agent loop, model transport, tool backend, compaction policy, durable event store, and typed cross-module services without a separate host/client plugin API.

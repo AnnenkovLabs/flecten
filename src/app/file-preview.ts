@@ -51,7 +51,7 @@ export async function previewFile(cwd: string, path: string): Promise<FilePrevie
       text: "",
       truncated: false,
       binary: true,
-      readOnlyReason: "Бинарный файл доступен только для просмотра.",
+      readOnlyReason: "Binary file (read-only).",
     };
   }
   const truncated = info.size > bytes.length;
@@ -64,18 +64,17 @@ export async function previewFile(cwd: string, path: string): Promise<FilePrevie
   const safeText = redact(text);
   const internal = shown.split("/")[0];
   let readOnlyReason: string | undefined;
-  if (truncated) readOnlyReason = "Файл больше 512 КБ. Откройте его во внешнем редакторе.";
-  else if (detected.encoding !== "utf-8")
-    readOnlyReason = "Редактирование доступно для файлов UTF-8.";
+  if (truncated) readOnlyReason = "File exceeds 512 KB. Open it in an external editor.";
+  else if (detected.encoding !== "utf-8") readOnlyReason = "Editing requires UTF-8 text.";
   else if (safeText !== text)
-    readOnlyReason = "Секреты скрыты. Откройте исходный файл во внешнем редакторе.";
+    readOnlyReason = "Secrets redacted (read-only). Edit in an external editor.";
   else if ([".git", ".flecten", ".liquid", ".flecten-migration"].includes(internal ?? ""))
-    readOnlyReason = "Служебный файл доступен только для просмотра.";
+    readOnlyReason = "Internal file (read-only).";
   else {
     try {
       new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     } catch {
-      readOnlyReason = "Файл содержит некорректный UTF-8. Откройте его во внешнем редакторе.";
+      readOnlyReason = "Invalid UTF-8 (read-only). Open in an external editor.";
     }
   }
   return {

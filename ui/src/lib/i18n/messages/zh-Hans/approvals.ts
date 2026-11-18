@@ -17,12 +17,12 @@ export default {
   "Tasks in progress: {0}. Permissions apply to the next action; other settings apply to the next run.":
     ["正在执行的任务：", 0, "。权限从下一次操作起生效，其他设置从下一次运行起生效。"],
   Chat: "聊天",
-  "Always ask a person": "始终询问用户",
+  "Always ask a person": "始终需要人工批准",
   "These checkpoints cannot be bypassed by saved approvals or automatic review.":
-    "已保存的批准和自动审查无法绕过这些人工确认。",
+    "已保存规则和自动模式均不会跳过这些检查点。",
   "Human approval required every time": "每次都需要人工批准",
   "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.":
-    "允许范围有限的内置操作。对符合条件的调用单独审查，不确定时询问用户。",
+    "自动允许安全的项目内操作；对存疑命令进行审查并在不确定时询问。",
   "Ask unless this exact action was already approved.":
     "如果此完全相同的操作尚未获批，则询问用户。",
   "Allowed for this chat": "已对此聊天允许",
@@ -39,7 +39,7 @@ export default {
   "Save exact rule": "保存精确规则",
   "Remember…": "记住…",
   "Allow bounded built-in actions. Ask before arbitrary code or external tools.":
-    "允许范围明确的内置操作。执行任意代码或外部工具前询问。",
+    "允许安全的内置操作；运行命令或外部工具前先询问。",
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "允许普通操作。破坏性操作规则和沙盒限制仍然有效。",
   "Saved rules": "已保存的规则",
@@ -53,9 +53,9 @@ export default {
   "Destructive actions": "不可逆操作",
   "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.":
     "即使普通操作已获允许，不可逆操作仍需单独确认。",
-  "Execution boundary": "执行边界",
+  "Execution boundary": "沙盒边界",
   "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.":
-    "沙盒限制独立于权限生效。工作目录隔离启用期间，外部路径仍被阻止。",
+    "无论工具权限如何，系统沙盒都会将命令限制在项目与已批准文件夹内。",
   "Workspace isolation enabled": "工作目录隔离已启用",
   "Workspace isolation disabled": "工作目录隔离已禁用",
   "Only the requests shown here are included. New requests remain pending.":
@@ -89,7 +89,7 @@ export default {
   "Folder access covers the displayed paths and their subfolders.":
     "访问权限涵盖显示的路径及其子文件夹。",
   "Access is shared with agents in this chat.": "访问权限与此聊天中的智能体共享。",
-  "Repeat this action in this chat": "在此聊天中允许重复此操作",
+  "Repeat this action in this chat": "在此对话中允许",
   "Remember folder access": "记住文件夹访问权限",
   "Access mode: {0}": ["访问模式：", 0],
   "Could not change access. Try again. {0}": ["无法更改访问权限。请重试。", 0],

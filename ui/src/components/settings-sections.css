@@ -183,11 +183,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .st-dialog,
-  .st-dialog::backdrop {
-    transition: none;
-  }
-
   .st-details::details-content,
   .st-details[open]::details-content,
   .st-chevron {

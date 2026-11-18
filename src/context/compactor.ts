@@ -61,9 +61,12 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function pageStartIndex(messages: readonly { readonly role: string }[]): number {
+export function pageStartIndex(
+  messages: readonly { readonly role: string; readonly synthetic?: boolean }[],
+): number {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index]?.role === "user") return index;
+    const message = messages[index];
+    if (message?.role === "user" && !message.synthetic) return index;
   }
   return 0;
 }

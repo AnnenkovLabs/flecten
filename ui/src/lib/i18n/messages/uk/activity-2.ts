@@ -2,12 +2,12 @@
 export default {
   "This project is already open in another Flecten window. Close it and send the message again, or open a different project.":
     "Проєкт уже відкрито в іншому вікні Flecten. Закрийте його й надішліть повідомлення ще раз або відкрийте інший проєкт.",
-  "The core returned an invalid response.": "Ядро надіслало некоректну відповідь.",
+  "The core returned an invalid response.": "Некоректна відповідь від процесу агента.",
   "The provider is not configured. Open Settings and check the key.":
     "Провайдера не налаштовано. Відкрийте налаштування й перевірте ключ.",
   "Connection to the core was lost. Start the task again.":
-    "Зв’язок із ядром втрачено. Запустіть завдання ще раз.",
-  "The core is only available in the app.": "Ядро доступне лише в застосунку.",
+    "Зв’язок із процесом агента перервався. Натисніть «Продовжити».",
+  "The core is only available in the app.": "Доступно лише в настільному застосунку Flecten.",
   "The provider reached its limit.": "Провайдер досяг ліміту.",
   "The provider rate-limited requests.": "Провайдер обмежив частоту запитів.",
   "The subscription's 5-hour limit has been reached.": "Вичерпано 5-годинний ліміт передплати.",
@@ -42,14 +42,14 @@ export default {
   "resuming automatically {0}": ["продовжу автоматично ", 0],
   "The task is still running. Stop it first": "Завдання ще виконується: спочатку зупиніть його",
   "Task moved to trash": "Завдання переміщено до кошика",
-  "The server did not return a new task": "Сервер не повернув нове завдання",
+  "The server did not return a new task": "Не вдалося створити нову задачу",
   "Task copied": "Завдання скопійовано",
   project: "проєкт",
   you: "ви",
   "Could not open task: {0}": ["Не вдалося відкрити завдання: ", 0],
   "Message was not queued: {0}": ["Повідомлення не додано до черги: ", 0],
   "The core is only available in the app. Open the Electron window.":
-    "Ядро доступне лише в застосунку. Відкрийте вікно Electron.",
+    "Доступно лише в настільному застосунку Flecten.",
   "Could not stop: {0}": ["Не вдалося зупинити: ", 0],
   task: "завдання",
   "Could not open the task. Select it again. {0}": [
@@ -59,9 +59,10 @@ export default {
   "“{0}” is waiting for permission: {1}": ["«", 0, "» очікує дозволу: ", 1],
   "“{0}”: background command finished": ["«", 0, "»: фонова команда завершилася"],
   "The core cannot start. Check Settings and restart the app.":
-    "Ядро не запускається. Перевірте налаштування й перезапустіть застосунок.",
-  "The core stopped during the run. Restarting": "Ядро зупинилося під час виконання, перезапускаю",
-  "Restarting core": "Перезапускаю ядро",
+    "Процес агента не запускається. Перевірте налаштування та перезапустіть Flecten.",
+  "The core stopped during the run. Restarting":
+    "Процес агента зупинився під час виконання. Перезапускаю…",
+  "Restarting core": "Перезапускаю агента…",
   ", waiting for you: {0}": [", чекають на вас: ", 0],
   "Resuming interrupted tasks: {0}{1}": ["Продовжую перервані завдання: ", 0, 1],
   "Interrupted tasks: {0}. Open a task and click Continue": [
@@ -74,7 +75,7 @@ export default {
   "Hide details": "Приховати подробиці",
   "Show details": "Показати подробиці",
   "Cancel call: the process will stop and the model will be notified of the cancellation":
-    "Скасувати виклик: процес зупиниться, модель дізнається про скасування",
+    "Зупинити цей виклик і завершити його дочірні процеси",
   "Cancel: {0}": ["Скасувати: ", 0],
   action: "дія",
   actions: "дії",

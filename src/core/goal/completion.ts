@@ -82,6 +82,8 @@ function isPlainAt(text: string, target: number): boolean {
 
     if (char === "\n") {
       lineStart = true;
+      quote = "";
+      escaped = false;
       index += 1;
       continue;
     }

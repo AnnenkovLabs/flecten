@@ -45,18 +45,17 @@ export default {
   "Allows all actions without asking. Use only in a trusted project.":
     "Permite todas as ações sem pedir confirmação. Use apenas em um projeto confiável.",
   "These settings don't match any preset. Check each row before saving.":
-    "A configuração não corresponde a nenhuma predefinição. Confira cada linha antes de salvar.",
+    "Combinação personalizada de regras.",
   "just now": "agora mesmo",
   "{0} sec": [0, " s"],
   "{0} min": [0, " min"],
   "{0} hr": [0, " h"],
   "{0} d": [0, " d"],
-  "Policies must be an object.": "As políticas devem ser um objeto.",
+  "Policies must be an object.": "Formato de política de permissões inválido.",
   "Unknown action: {0}.": ["Ação desconhecida: ", 0, "."],
   "Unknown policy for action {0}: {1}.": ["Política desconhecida para a ação ", 0, ": ", 1, "."],
-  "Opening a browser is available in the desktop app":
-    "É possível abrir o navegador pelo aplicativo",
-  "the core returned no file": "o núcleo não retornou o arquivo",
+  "Opening a browser is available in the desktop app": "Abrir links requer o aplicativo desktop",
+  "the core returned no file": "conteúdo do arquivo indisponível",
   model: "modelo",
   models: "modelos",
   "Catalog updated": "Catálogo atualizado",
@@ -79,7 +78,8 @@ export default {
   "Українська · 73 MB": "Ucraniano · 73 MB",
   Copied: "Copiado",
   "Could not copy. Try again.": "Não foi possível copiar. Tente novamente.",
-  "Could not prepare the text. Try again.": "Não foi possível preparar o texto. Tente novamente.",
+  "Could not prepare the text. Try again.":
+    "Não foi possível gerar o texto para cópia. Tente novamente.",
   Reasoning: "Raciocínio",
   Images: "Imagens",
   Audio: "Áudio",
@@ -107,5 +107,5 @@ export default {
   "No pending approvals.": "Nenhuma aprovação pendente.",
   "Waiting {0}": ["Aguardando há ", 0],
   "This request has been waiting for over 2 minutes. Check whether the action is still needed.":
-    "A solicitação está aguardando há mais de 2 minutos. Verifique se a ação ainda é necessária.",
+    "Aguardando há mais de 2 minutos.",
 } as const;

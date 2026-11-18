@@ -32,7 +32,16 @@ import type { LoopOptions } from "./types";
 
 const FULL_OUTPUT_MARKER = "[full output: ";
 const prefixStates = new WeakMap<Message[], { pageStart: number; hash: string }>();
+const providerTokenStates = new WeakMap<Message[], { atCount: number; tokens: number }>();
 const budgetedToolMessages = new WeakSet<Message>();
+
+export function recordProviderContextTokens(
+  messages: Message[],
+  tokens: number,
+  atCount = messages.length,
+): void {
+  if (tokens > 0) providerTokenStates.set(messages, { atCount, tokens });
+}
 
 export interface ToolOutputBudgetContext {
   readonly contextWindow: number;
@@ -52,6 +61,7 @@ function toContextMessages(messages: Message[]): ContextMessage[] {
     const context: ContextMessage = {
       role: "user",
       content: message.content,
+      ...(message.synthetic ? { synthetic: true } : {}),
       ...(message.memorySource === undefined ? {} : { sourceText: message.memorySource }),
       ...(message.contextSummary ? { contextSummary: message.contextSummary } : {}),
       ...(message.images?.length
@@ -194,7 +204,11 @@ export function deepCutIndex(messages: readonly ContextMessage[], keepTokens: nu
     index -= 1;
   }
   while (index < messages.length && messages[index]?.role !== "assistant") index += 1;
-  return index >= messages.length ? Math.max(1, messages.length - 1) : Math.max(1, index);
+  if (index < messages.length) return Math.max(1, index);
+  for (let back = messages.length - 1; back >= 1; back -= 1) {
+    if (messages[back]?.role !== "tool") return back;
+  }
+  return messages.length;
 }
 
 function fromContextMessages(messages: readonly ContextMessage[]): Message[] {
@@ -334,7 +348,17 @@ async function defaultCompaction(
     logDir: options.toolContext.logDir,
   });
 
-  const estimate = estimateContext(system, toContextMessages(messages), toolTokens);
+  const charEstimate = estimateContext(system, toContextMessages(messages), toolTokens);
+  const calibrated = providerTokenStates.get(messages);
+  const estimate =
+    calibrated && messages.length >= calibrated.atCount
+      ? Math.max(
+          charEstimate,
+          calibrated.tokens +
+            estimateMessages(toContextMessages(messages.slice(calibrated.atCount)), PROFILE_4)
+              .tokens,
+        )
+      : charEstimate;
   const request = options.takeCompactionRequest?.();
   if (!request && estimate <= limit) {
     emitUsage(options, estimate);
@@ -364,13 +388,14 @@ async function defaultCompaction(
   const input = {
     system,
     messages: contextMessages,
-    budget: limit + options.reserveTokens - toolTokens,
+    budget: limit + options.reserveTokens - toolTokens - 8,
     reserve: options.reserveTokens,
     summarize,
     signal: options.signal,
     ...(request?.reason === "page_checkpoint"
       ? { pageStart: contextMessages.length, force: true }
       : {}),
+    ...(estimate > charEstimate && request?.reason !== "page_checkpoint" ? { force: true } : {}),
   };
   // A manual request gets its own breaker: a tiny context that cannot shrink is not a failure,
   // and an open automatic breaker must not block an explicit request.
@@ -441,6 +466,7 @@ async function defaultCompaction(
     ...kept,
   );
   prefixStates.delete(messages);
+  providerTokenStates.delete(messages);
   checkStablePrefix(messages, system);
   const after = estimateContext(system, toContextMessages(messages), toolTokens);
   const page = writer?.last;

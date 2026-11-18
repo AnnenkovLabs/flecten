@@ -54,7 +54,7 @@ export default {
   "This event has reached its limit of {0} hooks.": ["此事件已达到 ", 0, " 个钩子的上限。"],
   "This event observes an action that already happened. A deny decision has no effect.":
     "此事件观察已发生的操作。拒绝决定不会产生影响。",
-  "Timeout, seconds": "超时，秒",
+  "Timeout, seconds": "超时 (秒)",
   "Tool name": "工具名称",
   "Tool result": "工具结果",
   "Untitled hook": "未命名钩子",

@@ -2,17 +2,17 @@ export default {
   "Main model": "Основная модель",
   "Default main model": "Основная модель по умолчанию",
   "Used when Talker and Worker is off, and as the fallback for role defaults.":
-    "Используется, когда Talker и Worker отключены, и как запасная модель для ролей.",
+    "Используется в одноагентных чатах и для ролей со значением по умолчанию.",
   "Defaults apply to new chats. You can still choose a model in the message box.":
-    "Настройки применяются к новым чатам. Модель также можно выбрать в поле сообщения.",
+    "Применяется к новым чатам. Для отдельного чата модель выбирается в поле ввода.",
   "Talker handles your conversation. Worker carries out tasks with tools, for any kind of work.":
-    "Talker ведёт диалог. Worker выполняет задачи с инструментами для любого вида работы.",
+    "Talker отвечает в диалоге без ожидания, пока Worker запускает инструменты и правит файлы в отдельной сессии.",
   "Talker model": "Модель Talker",
   "Worker model": "Модель Worker",
   "Understands requests, asks questions, and explains progress and results.":
     "Понимает запросы, задаёт вопросы, объясняет ход работы и результаты.",
   "Executes tasks. A model selected in the message box overrides this default for that chat.":
-    "Выполняет задачи. Модель из поля сообщения заменяет этот выбор в текущем чате.",
+    "Запускает инструменты и правит файлы. Переопределяется выбором модели в поле ввода.",
   "Use chat model": "Как в чате",
   "Use main model": "Основная модель",
   "Subagent models": "Модели субагентов",
@@ -22,9 +22,9 @@ export default {
   Explore: "Исследование",
   Implement: "Выполнение",
   Review: "Проверка",
-  "Find information and understand the task.": "Находит информацию и разбирается в задаче.",
-  "Carry out a focused assignment.": "Выполняет конкретное поручение.",
-  "Check results and identify risks.": "Проверяет результаты и выявляет риски.",
+  "Find information and understand the task.": "Чтение и поиск по коду без внесения изменений.",
+  "Carry out a focused assignment.": "Локальные правки кода и проверка.",
+  "Check results and identify risks.": "Проверка diff, граничных случаев и регрессий.",
   "Choose an enabled model that supports tools.":
     "Выберите включённую модель с поддержкой инструментов.",
   "Choose a variant available for this model.": "Выберите вариант, доступный для этой модели.",

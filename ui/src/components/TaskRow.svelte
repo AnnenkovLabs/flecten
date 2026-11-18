@@ -209,7 +209,7 @@
     align-items: center;
     gap: 6px;
     width: 100%;
-    height: var(--control-h);
+    height: var(--task-row-height, var(--control-h));
     padding: 0 4px 0 8px;
     border-radius: 7px;
     background: transparent;
@@ -279,8 +279,8 @@
   .task-more {
     display: grid;
     place-items: center;
-    width: var(--control-h);
-    height: var(--control-h);
+    width: var(--task-row-height, var(--control-h));
+    height: var(--task-row-height, var(--control-h));
     border-radius: 7px;
     color: var(--muted);
     opacity: 0;
@@ -306,7 +306,7 @@
   .task-rename {
     grid-column: 1 / -1;
     width: 100%;
-    height: var(--control-h);
+    height: var(--task-row-height, var(--control-h));
     margin: 0;
     padding: 0 9px;
     border: 0;

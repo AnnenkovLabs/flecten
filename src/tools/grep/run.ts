@@ -91,7 +91,7 @@ async function runGrepFallbackFile(
     return { truncated: false };
   }
 
-  const lines = text.split("\n");
+  const lines = text.split("\n").map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
   const indices = await matches(lines);
   if (indices.length === 0) return { truncated: false };
   const matchingLines = new Set(indices);

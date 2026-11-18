@@ -21,9 +21,9 @@ export default {
   "Nothing to undo": "Отменять нечего",
   "Nothing to retry": "Нечего повторять",
   "Model: {0}": ["Модель: ", 0],
-  "Resuming the task after the core restarted": "Продолжаю задачу после перезапуска ядра",
+  "Resuming the task after the core restarted": "Возобновляю задачу после перезапуска агента",
   "History, plan, and files are intact; the model checks the current state before acting":
-    "История, план и файлы сохранены; перед действием модель проверяет состояние",
+    "История и файлы сохранены; проверяю состояние рабочей папки перед продолжением",
   "Run interrupted": "Выполнение прервано",
   "Stopped at the run budget limit": "Выполнение остановлено: исчерпан бюджет",
   "failed to start": "не запустилась",
@@ -40,8 +40,8 @@ export default {
   Thinking: "Думаю",
   Error: "Ошибка",
   "Awaiting approval": "Ждёт разрешения",
-  "Core restarting": "Ядро перезапускается",
-  "The model received the background command result": "Модель получила результат фоновой команды",
+  "Core restarting": "Перезапуск агента",
+  "The model received the background command result": "Вывод фоновой команды передан модели",
   "Preparing a call": "Готовит вызов",
   Writing: "Пишу",
   "Untranslated response": "Ответ без перевода",
@@ -87,11 +87,11 @@ export default {
   "[timed out]": "[время истекло]",
   "[exit code {0}]": ["[код ", 0, "]"],
   "Context is almost full (95%). Compress it now, or the core will compress it automatically.":
-    "Контекст почти заполнен (95%). Сожмите его сейчас, иначе он будет сжат автоматически.",
+    "Контекст заполнен на 95%. При 100% сработает автосжатие.",
   "Context is 85% full. You can compress it now, focusing on the topic you need.":
-    "Контекст заполнен на 85%. Можно сжать его сейчас, выделив нужную тему.",
+    "Контекст заполнен на 85%. Сожмите историю через индикатор контекста, если нужен свой фокус.",
   "Context is 70% full. No need to compress it yet, but keep it in mind.":
-    "Контекст заполнен на 70%. Сжатие пока не нужно, но стоит о нём помнить.",
+    "Контекст заполнен на 70%.",
   "page {0}": ["страница ", 0],
   "{0} → {1} tokens": [0, " → ", 1, " токенов"],
   "no model": "без модели",
@@ -105,5 +105,5 @@ export default {
     "Контекст переполнен. Сожмите историю или начните новую задачу.",
   "Run canceled.": "Запуск отменён.",
   "The core could not start. Check your installation and settings.":
-    "Ядро не запустилось. Проверьте установку и настройки.",
+    "Процесс агента не запустился. Проверьте настройки или переустановите приложение.",
 } as const;

@@ -188,7 +188,7 @@ describe("session pool", () => {
     if (!request) throw new Error("no approval request");
 
     await expect(sessions.send({ type: "run", prompt: "task b" })).rejects.toThrow(
-      "Одновременно идёт задач: 1, это лимит sessions.maxConcurrent",
+      "1 tasks are already running (sessions.maxConcurrent limit)",
     );
     await sessions.send({ type: "approval.respond", id: request.approval.id, decision: "deny" });
     await runA;

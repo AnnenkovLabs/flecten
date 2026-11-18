@@ -27,6 +27,9 @@ export interface SessionOptions {
   takeNotices?():
     | import("../loop/types").SteeringMessage[]
     | Promise<import("../loop/types").SteeringMessage[]>;
+  takeSummaryContext?(
+    sessionId: SessionId,
+  ): import("../context-reference").ContextReference | undefined;
   provider: ModelProvider;
   providerId: string;
   model: string;
@@ -61,6 +64,7 @@ export interface SessionOptions {
   approvalTimeoutMs?: number;
   inheritedApprovals?: import("../../security/types").ApprovalGate;
   approvalSessionId?: string;
+  reads?: import("../../tools/util/read-tracker").ReadTracker;
   permissionActor?: string;
   permissionIntent?: ToolContext["permissionIntent"];
   sandbox?: SandboxPolicy | undefined;

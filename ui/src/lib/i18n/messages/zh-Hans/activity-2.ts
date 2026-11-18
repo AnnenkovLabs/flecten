@@ -2,11 +2,12 @@
 export default {
   "This project is already open in another Flecten window. Close it and send the message again, or open a different project.":
     "此项目已在另一个 Flecten 窗口中打开。请关闭该窗口后重新发送消息，或打开其他项目。",
-  "The core returned an invalid response.": "核心返回了无效响应。",
+  "The core returned an invalid response.": "智能体进程返回了无效响应。",
   "The provider is not configured. Open Settings and check the key.":
     "服务商尚未配置。请打开设置并检查密钥。",
-  "Connection to the core was lost. Start the task again.": "与核心的连接已断开。请重新启动任务。",
-  "The core is only available in the app.": "核心仅在应用内可用。",
+  "Connection to the core was lost. Start the task again.":
+    "与智能体进程的连接已断开，请点击“继续”恢复。",
+  "The core is only available in the app.": "需要 Flecten 桌面版应用。",
   "The provider reached its limit.": "已达到服务商限额。",
   "The provider rate-limited requests.": "服务商限制了请求频率。",
   "The subscription's 5-hour limit has been reached.": "订阅的 5 小时额度已用完。",
@@ -39,23 +40,22 @@ export default {
   "resuming automatically {0}": ["将在 ", 0, " 自动继续"],
   "The task is still running. Stop it first": "任务仍在运行，请先停止任务",
   "Task moved to trash": "任务已移至回收站",
-  "The server did not return a new task": "服务器未返回新任务",
+  "The server did not return a new task": "无法创建新任务",
   "Task copied": "任务已复制",
   project: "项目",
   you: "你",
   "Could not open task: {0}": ["无法打开任务：", 0],
   "Message was not queued: {0}": ["消息未加入队列：", 0],
-  "The core is only available in the app. Open the Electron window.":
-    "核心仅在应用内可用。请打开 Electron 窗口。",
+  "The core is only available in the app. Open the Electron window.": "需要 Flecten 桌面版应用。",
   "Could not stop: {0}": ["无法停止：", 0],
   task: "任务",
   "Could not open the task. Select it again. {0}": ["无法打开任务，请重新选择。", 0],
   "“{0}” is waiting for permission: {1}": ["“", 0, "”正在等待授权：", 1],
   "“{0}”: background command finished": ["“", 0, "”：后台命令已结束"],
   "The core cannot start. Check Settings and restart the app.":
-    "核心无法启动。请检查设置并重启应用。",
-  "The core stopped during the run. Restarting": "核心在运行期间停止，正在重启",
-  "Restarting core": "正在重启核心",
+    "智能体进程无法启动，请检查设置并重启 Flecten。",
+  "The core stopped during the run. Restarting": "智能体进程在运行中退出，正在重启…",
+  "Restarting core": "正在重启智能体…",
   ", waiting for you: {0}": ["，等待你处理：", 0],
   "Resuming interrupted tasks: {0}{1}": ["正在继续中断的任务：", 0, 1],
   "Interrupted tasks: {0}. Open a task and click Continue": [
@@ -68,7 +68,7 @@ export default {
   "Hide details": "隐藏详情",
   "Show details": "显示详情",
   "Cancel call: the process will stop and the model will be notified of the cancellation":
-    "取消调用：进程将停止，模型将收到取消通知",
+    "停止此工具调用并终止其子进程",
   "Cancel: {0}": ["取消：", 0],
   action: "项操作",
   actions: "项操作",

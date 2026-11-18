@@ -1,8 +1,10 @@
 <script lang="ts">
   import { t } from "../lib/i18n.svelte";
   import { modal } from "../lib/modal";
+  import { overlayPresence } from "../lib/overlay-presence";
   import { settings } from "../lib/settings.svelte";
   import Icon from "./Icon.svelte";
+  import "./focus-dialog.css";
 
   const pending = $derived(settings.protection.pending);
   const gateway = $derived(pending?.inspection.gateway === "new-api" ? "New API" : pending?.inspection.gateway === "one-api" ? "One API" : "New API / One API");
@@ -11,14 +13,15 @@
 
 {#if pending}
   <dialog
-    class="protection-dialog"
+    class="protection-dialog focus-dialog"
     use:modal={() => enableButton}
+    transition:overlayPresence|global
     aria-labelledby="provider-protection-title"
     aria-describedby="provider-protection-description"
     oncancel={(event) => event.preventDefault()}
     closedby="none"
   >
-    <section class="protection-content">
+    <section class="protection-content focus-dialog__content">
       <Icon name="key" size={30} />
       <p class="protection-eyebrow">{t("Connecting to API {0}", [new URL(pending.baseUrl).host])}</p>
       <h1 id="provider-protection-title">{t("Hide keys and passwords from this API?")}</h1>
@@ -56,7 +59,6 @@
 <style>
   .protection-dialog { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 64px 28px; border: 0; background: transparent; color: var(--text); overscroll-behavior: contain; overflow-y: auto; }
   .protection-dialog[open] { display: grid; place-items: safe center; }
-  .protection-dialog::backdrop { background: rgba(14,14,14,0.82); backdrop-filter: blur(12px); }
   .protection-content { width: min(100%, 600px); padding-block: 24px; }
   .protection-content > :global(.icon) { color: var(--text-2); }
   .protection-eyebrow { margin: 24px 0 12px; font-size: 13px; color: var(--muted); }

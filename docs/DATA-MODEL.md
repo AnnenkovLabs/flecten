@@ -1,26 +1,26 @@
-# Модель данных
+# Data Model
 
-## Раскладка
+## Layout
 
 ```text
 .flecten/
-  sidecar.lock            замок ядра: pid, токен, время старта
-  secrets.json            ключи из настроек, права 0600
-  memory.json             память проекта
-  checkpoints/            pre-image и post-image для /undo и /redo
-  shadow/                 теневой git для снимков shell-команд
+  sidecar.lock            core lock: PID, token, start timestamp
+  secrets.json            API keys from settings, mode 0600
+  memory.json             project memory
+  checkpoints/            pre-image and post-image snapshots for /undo and /redo
+  shadow/                 shadow Git repository for shell command snapshots
   todos/<sessionId>.json
-  cache/                  каталог моделей
-  trash/                  удалённые задачи
-  skills/                 skills проекта
-  profile.json            план
-  terms.jsonl             план
+  cache/                  model catalog
+  trash/                  deleted tasks
+  skills/                 project skills
+  profile.json            planned
+  terms.jsonl             planned
   sessions/
     index.json
     <sessionId>/
       spec.json
       events.jsonl
-      queue.json          очередь сообщений, переживает перезапуск
+      queue.json          durable message queue across restarts
       pages/
         p1.md
         p2.md
@@ -28,13 +28,13 @@
         <toolCallId>.log
 ```
 
-Проект хранит состояние в `.flecten/`. Сессия хранит спеку, события, очередь, выжимки и полные логи тулов. Файлы состояния пишутся атомарно: временный файл и rename. В проекте работает одно ядро: его держит `sidecar.lock`, подробности в [PROTOCOL.md](PROTOCOL.md).
+Project state lives in `.flecten/`. Each session stores its spec, event log, message queue, context page handoffs, and full tool logs. State files are written atomically via a temporary file and rename. A single core process serves each project, coordinated by `sidecar.lock`; see [PROTOCOL.md](PROTOCOL.md).
 
-Старое хранилище `.liquid/` переносится в `.flecten/` при открытии проекта. Миграция сохраняет сессии, вложения, память и checkpoints. Старый каталог остаётся исключённым из Git и защищённым от обычных файловых инструментов.
+Legacy `.liquid/` directories are migrated to `.flecten/` when a project is opened, preserving sessions, attachments, memory, and checkpoints. The legacy directory remains excluded from Git and protected from standard file tools.
 
 ## SQLite
 
-План. Сейчас ядро хранит всё в файлах из раскладки выше, `bun:sqlite` не подключён.
+Planned. The core currently stores everything in the filesystem layout above; `bun:sqlite` is not wired in.
 
 ```sql
 sessions(id, raw, created_at, finished_at)
@@ -43,17 +43,17 @@ profile_entries(id, kind, text, source, weight, created_at)
 terms(term, definition, source, updated_at)
 ```
 
-`kind` принимает `preference`, `vocabulary`, `taste`, `anti_pattern`, `decision`.
+`kind` accepts `preference`, `vocabulary`, `taste`, `anti_pattern`, `decision`.
 
-`weight` растёт, когда запись подтверждается повторно, и падает, когда юзер её отменяет.
+`weight` increases when an entry is reconfirmed and decreases when the user overrides it.
 
-## События
+## Events
 
-`events.jsonl` это append-only лог. Одна строка, одно событие из `Event`. Секреты вырезаны. Сырое сообщение юзера хранится в `sessions.raw` и в первом событии слово в слово.
+`events.jsonl` is an append-only log with one `Event` JSON object per line and secrets redacted. The user's raw message is stored verbatim in `sessions.raw` and in the opening event.
 
-## Профиль
+## Profile
 
-`profile.json` это снимок для чтения. Источник правды для запросов это `profile_entries`.
+`profile.json` is a read snapshot. `profile_entries` is the source of truth for queries.
 
 ```json
 {
@@ -65,24 +65,24 @@ terms(term, definition, source, updated_at)
 }
 ```
 
-## Термины
+## Terms
 
-`terms.jsonl`, одна запись на строку:
+`terms.jsonl` stores one JSON record per line:
 
 ```json
-{"term":"ии слоп","definition":"...","source":"user","date":"2026-10-19"}
+{"term":"ai slop","definition":"...","source":"user","date":"2026-10-19"}
 ```
 
-`source` принимает `user`, `kb`, `docs`, `web`. Запись из web без даты не используется.
+`source` accepts `user`, `kb`, `docs`, `web`. Entries with `source: "web"` without a `date` are ignored.
 
-## Спека
+## Spec
 
-`spec.json` валидируется схемой из `src/core/spec/schema.ts`. Критерии имеют стабильные id `c1`, `c2`.
+`spec.json` is validated against `src/core/spec/schema.ts`. Acceptance criteria use stable IDs (`c1`, `c2`).
 
-## Выжимка страницы
+## Page Handoff
 
-`pages/p1.md` содержит разделы: `Changed`, `Invariants`, `Next`, `Risks`. Пустые разделы остаются, чтобы дешёвая проверка видела пропуск.
+`pages/p1.md` contains four sections: `Changed`, `Invariants`, `Next`, `Risks`. Empty sections are preserved so lightweight validation can flag omissions.
 
-## Логи
+## Logs
 
-Полный вывод тула лежит в `logs/<toolCallId>.log`. В контекст идёт обрезанная версия. Логи не коммитятся; удаление и retention сессий управляются через историю, см. [PRIVACY.md](PRIVACY.md).
+Full tool output is written to `logs/<toolCallId>.log`, while model context receives a truncated excerpt. Logs are excluded from Git; session deletion and retention are managed through history settings (see [PRIVACY.md](PRIVACY.md)).

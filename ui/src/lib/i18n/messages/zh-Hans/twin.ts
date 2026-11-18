@@ -1,20 +1,20 @@
 export default {
   "Twin is on": "Twin 已开启",
   "Twin is off": "Twin 已关闭",
-  "Twin is saying goodbye…": "Twin 正在告别…",
-  "Twin is back with you": "Twin 又回到你身边了",
+  "Twin is saying goodbye…": "正在关闭 Twin…",
+  "Twin is back with you": "Twin 已启用",
   "Represents you while you work.": "在你工作时代表你。",
   "Your character stays saved. Turn Twin on whenever you want.":
     "你的个性设置会保留。随时可以重新开启 Twin。",
   "No new supported user messages were found. No model request was made.":
-    "未找到可导入的新用户消息。未向模型发送请求。",
-  "Training finished. No supported traits were found.": "学习已完成。未找到有依据的特征。",
+    "所选来源中未发现新的用户消息，已跳过模型调用。",
+  "Training finished. No supported traits were found.": "分析完成，未发现可保存的稳定偏好。",
   "On sessions from any harness.": "从任意框架的会话中学习。",
   "Your Twin": "你的 Twin",
   "Learning from your decisions": "正在学习你的决策",
   "Ready to work with you": "准备与你协作",
   "Ready to learn": "准备学习",
-  "Same ideas. Same thoughts.": "同样的想法，同样的思考。",
+  "Same ideas. Same thoughts.": "自动贯彻你的工程标准",
   "Your taste, your standards, your voice. Twin answers the Worker and sends weak work back.":
     "你的品味、你的标准、你的表达。Twin 替你回答 Worker，并将不达标的工作退回修改。",
   Anger: "愤怒",
@@ -53,7 +53,7 @@ export default {
   ],
   "Would Twin choose what you would?": "Twin 会做出和你一样的选择吗？",
   "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "试着提出一个实际决策。Twin 会用你的表达选择最有依据的方案，就像它回答 Worker 时一样。",
+    "输入真实的设计或实现取舍问题，查看 Twin 如何基于已保存特征向 Worker 作答。",
   "Question for Twin": "向 Twin 提问",
   "How should we design checkout for this project?": "这个项目的结账流程该怎么设计？",
   "Asking Twin…": "正在询问 Twin…",
@@ -61,7 +61,7 @@ export default {
   "Uses your configured model. Each answer shows its sources.":
     "使用你配置的模型。每个回答都会显示来源。",
   "Twin needs your answer": "Twin 需要你的回答",
-  "No supported answer. Ask the user directly.": "没有足够依据回答。请直接询问用户。",
+  "No supported answer. Ask the user directly.": "已保存特征中依据不足，Twin 将直接向你确认。",
   "Based on your character": "依据你的性格特征",
   "Input: {0} tokens · Output: {1} tokens": ["输入：", 0, " 个 token · 输出：", 1, " 个 token"],
   "Learning…": "正在学习…",
@@ -90,7 +90,7 @@ export default {
   "What this means for the Worker": "这对 Worker 意味着什么",
   "Use this when": "适用情形",
   "Save character": "保存性格特征",
-  "You, without repeating yourself.": "无需反复解释，也能像你一样。",
+  "You, without repeating yourself.": "已学习的偏好与原则",
   "Twin learns what makes you angry, what you like and what delights you. It keeps your original voice, including strong language.":
     "Twin 会学习什么让你生气、喜欢或惊喜，并保留你原本的表达方式，包括强烈措辞。",
   "Learned traits apply immediately. Edit anything that does not sound like you.":
@@ -103,7 +103,7 @@ export default {
   "No matching traits. Clear the search or change the reaction.":
     "没有匹配的特征。请清空搜索或更换反应类型。",
   "Your Twin is still getting to know you. Train it on your conversations to begin.":
-    "Twin 还在了解你。先用你的对话训练它吧。",
+    "尚无已保存特征。请扫描历史会话并开始训练。",
   "Earlier suggestions": "之前的建议",
   "Apply trait": "应用特征",
   Reject: "拒绝",

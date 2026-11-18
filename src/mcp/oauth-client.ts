@@ -172,7 +172,7 @@ export class McpOAuthClient implements OAuthClientProvider, TokenProvider {
       this.#status = {
         server: this.#id,
         state: "error",
-        error: "Время авторизации истекло. Повторите вход.",
+        error: "Authorization timed out. Sign in again.",
       };
     }, 5 * 60_000);
     this.#timer.unref?.();

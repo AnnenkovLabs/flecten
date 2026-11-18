@@ -1,3 +1,3 @@
-# Example repo
+# Example Repo
 
-Минимальный репозиторий для интеграционных тестов появится в M1. Пока папка пустая намеренно: фикстуры создаются кодом теста, а не руками.
+Minimal repository target for M1 integration tests. Kept empty intentionally: test code generates fixtures programmatically rather than committing static files.

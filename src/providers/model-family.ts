@@ -18,15 +18,17 @@ function digitsAt(text: string, start: number): string {
   return text.slice(start, end);
 }
 
-/** `family-N` or `family-N-M`, like `sonnet-4-5` in `claude-sonnet-4-5-20250929`. */
+/** `family-N`, `family-N-M`, or `family-N.M`, like `sonnet-4-5` or `opus-4.7`. */
 function afterFamily(id: string, family: string): { at: number; version: ModelVersion } | null {
+  const lower = id.toLowerCase();
   const marker = `${family}-`;
-  for (let at = id.indexOf(marker); at >= 0; at = id.indexOf(marker, at + 1)) {
+  for (let at = lower.indexOf(marker); at >= 0; at = lower.indexOf(marker, at + 1)) {
     const majorStart = at + marker.length;
-    const major = digitsAt(id, majorStart);
+    const major = digitsAt(lower, majorStart);
     if (!major) continue;
     const next = majorStart + major.length;
-    const minor = id[next] === "-" ? digitsAt(id, next + 1) : "";
+    const sep = lower[next];
+    const minor = sep === "-" || sep === "." ? digitsAt(lower, next + 1) : "";
     return { at, version: { major: Number(major), ...(minor ? { minor: Number(minor) } : {}) } };
   }
   return null;
@@ -48,28 +50,27 @@ function familyAt(id: string, start: number): boolean {
 
 /** `claude-N[-M]-family`, the older order, like `claude-3-5-sonnet-20241022`. */
 export function versionFirstVersion(modelId: string): ModelVersion | undefined {
+  const lower = modelId.toLowerCase();
   const marker = "claude-";
-  for (let at = modelId.indexOf(marker); at >= 0; at = modelId.indexOf(marker, at + 1)) {
+  for (let at = lower.indexOf(marker); at >= 0; at = lower.indexOf(marker, at + 1)) {
     const majorStart = at + marker.length;
-    const major = digitsAt(modelId, majorStart);
-    if (!major || modelId[majorStart + major.length] !== "-") continue;
+    const major = digitsAt(lower, majorStart);
+    const sep = lower[majorStart + major.length];
+    if (!major || (sep !== "-" && sep !== ".")) continue;
     const next = majorStart + major.length + 1;
-    const minor = digitsAt(modelId, next);
-    if (
-      minor &&
-      modelId[next + minor.length] === "-" &&
-      familyAt(modelId, next + minor.length + 1)
-    ) {
+    const minor = digitsAt(lower, next);
+    if (minor && lower[next + minor.length] === "-" && familyAt(lower, next + minor.length + 1)) {
       return { major: Number(major), minor: Number(minor) };
     }
-    if (familyAt(modelId, next)) return { major: Number(major) };
+    if (sep === "-" && familyAt(lower, next)) return { major: Number(major) };
   }
   return undefined;
 }
 
 /** OpenAI reasoning families take `max_completion_tokens`: gpt-5 and later, o1 to o9. */
 export function usesCompletionTokens(modelId: string): boolean {
-  if (["gpt-5", "gpt-6", "gpt-7"].some((prefix) => modelId.startsWith(prefix))) return true;
-  const second = modelId[1];
-  return modelId[0] === "o" && second !== undefined && second >= "1" && second <= "9";
+  const leaf = (modelId.trim().toLowerCase().split("/").at(-1) ?? "").trim();
+  if (["gpt-5", "gpt-6", "gpt-7"].some((prefix) => leaf.startsWith(prefix))) return true;
+  const second = leaf[1];
+  return leaf[0] === "o" && second !== undefined && second >= "1" && second <= "9";
 }

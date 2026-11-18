@@ -163,7 +163,7 @@ export class SessionCompaction {
           () =>
             emit({
               type: "translation.failed",
-              message: "Не удалось перевести саммари. Показан английский оригинал.",
+              message: "Could not translate summary. Showing English original.",
             }),
         );
       if (language) await language.prepare("", "", history, true);

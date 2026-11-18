@@ -35,6 +35,7 @@
   import type { SummaryDestination } from "./lib/markdown/summary-navigation";
   import { twinPowerContext } from "./lib/twin/context";
   import { readPreference } from "./lib/preference-storage";
+  import { revealWhenShown } from "./lib/motion";
 
   const run = new RunStore();
   setContext(twinPowerContext, () => run.twin.power);
@@ -61,16 +62,21 @@
     })),
   );
 
-  async function chooseFolder(): Promise<void> {
+  async function chooseFolder(projectless = false): Promise<void> {
     if (run.ide.dirty) {
       toast.show(t("Save or close modified files in the IDE before switching projects"));
       return;
     }
-    if (!window.desktop?.chooseProject) {
+    if (!window.desktop?.chooseProject || (projectless && !window.desktop.selectProject)) {
       toast.show(t("Folder selection is available in the app"));
       return;
     }
-    await chooseProject();
+    try {
+      if (projectless) await window.desktop.selectProject?.(null);
+      else await chooseProject();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
   }
 
   let sidebarHidden = $state(false);
@@ -348,7 +354,7 @@
     {:else}
     <TwinWork view={run.view.twin} />
     <div class="work-area" class:is-split={split} class:panel-only={!showThread}>
-    <div class="thread-surface" hidden={!showThread} inert={!showThread}>
+    <div class="thread-surface" hidden={!showThread} inert={!showThread} use:revealWhenShown={showThread}>
     {#if mode === "agent"}
     <MainPane
       taskId={run.activeTask}
@@ -364,10 +370,12 @@
       liveLabel={run.view.liveLabel}
       pendingCalls={run.view.thread.pendingCalls}
       busy={run.busy}
+      isTalker={run.view.isTalker}
       {focusToken}
       {composer}
       onOpenChanges={openChanges}
       onNavigateSummary={navigateSummary}
+      onSummaryInteraction={run.task.summaryInteraction}
       onRepeat={(prompt) => run.repeat(prompt)}
       onEditMessage={(id, text) => run.history.begin(id, text)}
       editing={run.history.editing}
@@ -390,6 +398,7 @@
       onSend={(text, mode, attachments, contexts) => run.submit(text, mode, attachments, contexts)}
       onSelectTask={selectTask}
       onChooseFolder={() => void chooseFolder()}
+      onChooseProjectless={() => void chooseFolder(true)}
       onQueueEdit={(id, text) => run.task.editQueued(id, text)}
       onQueueRemove={(id) => run.task.removeQueued(id)}
       onSendModeChange={(mode) => run.setSendMode(mode)}
@@ -444,6 +453,11 @@
 {/if}
 
 <style>
+  @property --project-sidebar-reveal {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 1;
+  }
   .app {
     display: grid;
     grid-template-rows: 48px minmax(0, 1fr);
@@ -451,12 +465,20 @@
   }
   .body {
     display: grid;
-    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    grid-template-columns: calc(var(--sidebar-w) * var(--project-sidebar-reveal)) minmax(0, 1fr);
     min-height: 0;
   }
-  .body.sidebar-hidden { grid-template-columns: 0 minmax(0, 1fr); }
-  .project-sidebar { display: flex; grid-column: 1; grid-row: 1; min-width: 0; min-height: 0; }
+  .body.sidebar-hidden { --project-sidebar-reveal: 0; }
+  .project-sidebar {
+    display: flex; grid-column: 1; grid-row: 1; width: var(--sidebar-w); min-height: 0;
+    translate: calc((var(--project-sidebar-reveal) - 1) * 100%) 0;
+  }
   .project-sidebar :global(.sidebar) { width: 100%; }
+  .sidebar-hidden .project-sidebar { visibility: hidden; }
+  @media (prefers-reduced-motion: no-preference) {
+    .body { transition: --project-sidebar-reveal 220ms var(--ease-drawer); }
+    .project-sidebar { transition: visibility 220ms; }
+  }
   .workspace { grid-column: 2; grid-row: 1; position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .workspace-content { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
   .task-workspace { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
@@ -469,10 +491,9 @@
   .work-area :global(.panel) { grid-column: 2; grid-row: 1; }
   @media (max-width: 720px) {
     .body { grid-template-columns: 0 minmax(0, 1fr); }
-    .body :global(.sidebar) { visibility: hidden; }
-    .body:not(.sidebar-hidden) :global(.sidebar) {
+    .project-sidebar {
       position: absolute; inset: 48px auto 0 0; z-index: 20;
-      width: min(300px, calc(100vw - 48px)); visibility: visible;
+      width: min(300px, calc(100vw - 48px));
       box-shadow: 12px 0 32px #0006;
     }
   }

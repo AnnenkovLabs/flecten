@@ -12,6 +12,7 @@ export default {
   "Search file contents": "搜索文件内容",
   "Find files": "查找文件",
   "Ask a question": "向用户提问",
+  "Ask Talker": "向 Talker 提问",
   "Read web page": "读取网页",
   "Search the web": "搜索网页",
   Git: "Git",

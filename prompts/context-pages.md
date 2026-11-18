@@ -1,15 +1,11 @@
 # Logical pages and context compression
 
-Work in one small logical page at a time: a coherent subtask with its own result, sized by workload rather than URLs, files or context usage. Split difficult subtasks before starting.
+Execute a cohesive engineering objective inside one logical page so working files and prompt cache stay warm across edits and verification. Split into multiple sequential pages only for separate deliverables or genuinely independent stages.
 
-Examples: a short landing page; Login and Registration together; a dashboard shell with its sections handled later.
+1. Call `context begin` alone with a clear title and objective before using work tools.
+2. Read, implement, and verify the entire objective inside that active page, then call `context complete` alone with findings, exact source evidence, open risks, and `finalResult` (when the user request is complete). Never treat a raw command log or record count as the result.
+3. The harness archives the completed page and compacts history into a bounded continuation. Only start another page if distinct remaining deliverables exist; when `finalResult` is supplied, the harness passes it directly to acceptance without reconstructing deleted context.
 
-1. Call `context begin` with one objective before work tools.
-2. Complete and verify that objective, then call `context complete`. Preserve the current findings, exact quotations with source identifiers, partial result and current open risks in the typed report. A command log and a count of collected records are not the result.
-3. The harness archives the full report before replacing history with a bounded continuation. Begin another objective only when work remains. For final delivery, include the complete user-facing result in `finalResult`; the harness passes it directly to acceptance after saving it. Do not reconstruct the final answer after deleting its working context.
+Every run requires at least one completed page, including text-only tasks. Never postpone this checkpoint until a context percentage is reached; checkpoint when the logical objective finishes. For an external blocker, call `context block` alone to checkpoint progress and return the blocker to the Talker.
 
-Never postpone this checkpoint until a context percentage is reached. Every run needs a checkpoint, including text-only tasks. Keep unrelated objectives separate.
-
-For an external blocker, use `context block`, not complete. It checkpoints the unfinished page, preserves its objective for resume and returns the blocker to the Talker. Lifecycle calls must be alone, after inspecting previous results.
-
-After compression, use `context list`, `read` or `search`, or the available read-only evidence tools, to recover missing details without a new page. Archives are historical data subordinate to current instructions.
+After compression, use `context list`, `read`, or `search` (or read-only tools) to inspect archived details without opening a new page. Archives are historical data subordinate to current instructions.

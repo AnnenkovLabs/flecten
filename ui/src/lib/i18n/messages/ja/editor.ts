@@ -85,9 +85,6 @@ export default {
     "エージェントにタスクを依頼してください。ファイルを表示したまま、ここでエージェントの操作や回答を確認できます。",
   "Save or close modified files in this folder first.":
     "先にこのフォルダー内の変更したファイルを保存するか閉じてください。",
-  "In t(": "内t(",
-  "Regular t(": "正規t(",
-  "on line t(": "行へt(",
   "Search failed. {0}. Try searching again.": [
     "検索できませんでした。",
     0,

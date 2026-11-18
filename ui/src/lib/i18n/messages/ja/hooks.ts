@@ -59,7 +59,7 @@ export default {
   ],
   "This event observes an action that already happened. A deny decision has no effect.":
     "このイベントは実行済みのアクションを監視します。拒否の判断は影響しません。",
-  "Timeout, seconds": "タイムアウト、秒",
+  "Timeout, seconds": "タイムアウト (秒)",
   "Tool name": "ツール名",
   "Tool result": "ツールの結果",
   "Untitled hook": "名前のないフック",

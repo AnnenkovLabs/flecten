@@ -12,6 +12,7 @@ export default {
   "Search file contents": "ファイル内容を検索",
   "Find files": "ファイルを検索",
   "Ask a question": "ユーザーに質問",
+  "Ask Talker": "Talker に質問",
   "Read web page": "ウェブページを読む",
   "Search the web": "ウェブを検索",
   Git: "Git",

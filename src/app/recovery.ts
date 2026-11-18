@@ -71,7 +71,7 @@ export async function markInterrupted(
       type: "run.interrupted",
       sessionId: session.id,
       at: Date.now(),
-      reason: "Ядро остановилось, пока шёл прогон.",
+      reason: "Agent process stopped while this run was active.",
     });
     interrupted.push({ sessionId: session.id, wasResumed });
   }

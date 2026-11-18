@@ -1,7 +1,8 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
   "Speech recognition provider": "Провайдер розпізнавання",
-  "Audio is sent to the selected provider.": "Аудіо надсилається вибраному провайдеру.",
+  "Audio is sent to the selected provider.":
+    "Потрібен сумісний з OpenAI ендпоінт /audio/transcriptions.",
   "Current provider": "Поточний провайдер",
   "Speech recognition model": "Модель розпізнавання",
   "Speech language": "Мова мовлення",
@@ -23,7 +24,7 @@ export default {
   "Vosk language and model": "Мова та модель Vosk",
   "Local Vosk model": "Локальна модель Vosk",
   "After installation, audio is processed on this computer.":
-    "Після встановлення аудіо обробляється на цьому комп’ютері.",
+    "Після встановлення працює офлайн; звук не залишає комп’ютер.",
   "Check installation": "Перевірити встановлення",
   "Install engine and model": "Встановити рушій і модель",
   "Installation options": "Параметри встановлення",
@@ -33,9 +34,9 @@ export default {
   "python3 or full path": "python3 або повний шлях",
   "NVIDIA requires CUDA 12 and cuDNN 9.": "Для NVIDIA потрібні CUDA 12 і cuDNN 9.",
   "Choose folders to load skills from. Your selection is saved in the current configuration.":
-    "Виберіть папки для завантаження навичок. Вибір зберігається в поточній конфігурації.",
+    "Шукати пакети SKILL.md у вибраних каталогах.",
   "Takes effect after saving, with no restart needed. Active tasks use the new set on their next run.":
-    "Зміни застосовуються після збереження без перезапуску. Поточні завдання використовуватимуть новий набір із наступного запуску.",
+    "Застосовується з наступного запуску після збереження.",
   "All sources are disabled. No skills will be loaded after saving.":
     "Усі джерела вимкнено. Після збереження навички не завантажуватимуться.",
   "The saved set of skills is shown below. Save your changes to update the list.":

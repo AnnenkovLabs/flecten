@@ -165,7 +165,7 @@ export function providerOps(context: ProviderOpsContext): ProviderOps {
       const discovered = result.models;
       const modelIds = Object.keys(discovered);
       if (modelIds.length === 0) {
-        throw new Error("Провайдер не вернул ни одной модели; изменения не применены");
+        throw new Error("Provider returned no models; changes were not applied.");
       }
       const next = structuredClone(config);
       const definition = next.providers[id];
@@ -178,7 +178,7 @@ export function providerOps(context: ProviderOpsContext): ProviderOps {
         const kept = definition.models[modelId];
         if (kept) merged.models[modelId] = kept;
         warnings.push(
-          `Активная модель ${modelId} больше не приходит от провайдера. Она оставлена в списке, выберите другую вручную.`,
+          `Active model "${modelId}" is no longer returned by the provider. Kept in your config; select another model if needed.`,
         );
         return false;
       });

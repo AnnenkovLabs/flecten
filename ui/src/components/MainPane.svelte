@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { SummaryInteraction } from "../../../shared/summary-interaction";
   import { t } from "../lib/i18n.svelte";
   import type { PickedFile } from "../lib/composer/attachments";
   import type { MentionItem, QueuedMessage, SendMode, SkillCommand } from "../lib/composer/types";
@@ -45,11 +46,13 @@
     liveLabel: string;
     pendingCalls: PendingToolCall[];
     busy: boolean;
+    isTalker: boolean;
     historyDisabled?: boolean;
     focusToken: number;
     composer: ComposerConfig;
     onOpenChanges: () => void;
     onNavigateSummary: (destination: SummaryDestination) => void;
+    onSummaryInteraction: (taskId: string, summaryId: string, interaction: SummaryInteraction) => void;
     onRepeat: (prompt?: string) => void;
     onEditMessage?: (messageId: string, text: string) => void;
     editing?: ComposerEdit | null;
@@ -72,6 +75,7 @@
     onSend: (text: string, mode: SendMode, attachments: string[], contexts: ContextReference[]) => boolean;
     onSelectTask: (id: string) => void;
     onChooseFolder: () => void;
+    onChooseProjectless: () => void;
     onQueueEdit: (id: string, text: string) => void;
     onQueueRemove: (id: string) => void;
     onSendModeChange: (mode: SendMode) => void;
@@ -93,11 +97,13 @@
     liveLabel,
     pendingCalls,
     busy,
+    isTalker,
     historyDisabled,
     focusToken,
     composer,
     onOpenChanges,
     onNavigateSummary,
+    onSummaryInteraction,
     onRepeat,
     onEditMessage,
     editing,
@@ -120,6 +126,7 @@
     onSend,
     onSelectTask,
     onChooseFolder,
+    onChooseProjectless,
     onQueueEdit,
     onQueueRemove,
     onSendModeChange,
@@ -136,6 +143,7 @@
 {#snippet composerView(layout: "dock" | "hero")}
   <Composer
     running={busy}
+    {isTalker}
     {stopping}
     {canContinue}
     {controlCooldown}
@@ -185,6 +193,7 @@
       composer={heroComposer}
       onSelectProject={() => onChooseFolder()}
       {onChooseFolder}
+      {onChooseProjectless}
       {onSelectTask}
     />
     <!-- The start screen keeps its greeting and project in view: notices rise from the bottom. -->
@@ -200,6 +209,7 @@
       {historyDisabled}
       {onOpenChanges}
       {onNavigateSummary}
+      {onSummaryInteraction}
       {onRepeat}
       {onEditMessage}
       {onSelectVersion}

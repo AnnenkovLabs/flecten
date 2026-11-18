@@ -1,6 +1,7 @@
 import type { FailoverConfig, ProviderConfig } from "../config/schema";
 import { HarnessError } from "../errors";
 import { retryDelayMs } from "./http";
+import type { LimitKind } from "./limit-windows";
 import { type ProviderResponse, ProviderResponseError } from "./response";
 import { StreamError } from "./sse";
 import { TransportError } from "./transport";
@@ -51,6 +52,9 @@ export interface ProviderFailureInit {
   status?: number | undefined;
   retryable?: boolean | undefined;
   retryAfterMs?: number | undefined;
+  limitKind?: LimitKind | undefined;
+  resetAt?: number | undefined;
+  providerCode?: string | undefined;
   cause?: unknown;
 }
 
@@ -60,6 +64,9 @@ export class ProviderFailure extends HarnessError {
   readonly status: number | undefined;
   readonly retryable: boolean;
   readonly retryAfterMs: number | undefined;
+  readonly limitKind: LimitKind | undefined;
+  readonly resetAt: number | undefined;
+  readonly providerCode: string | undefined;
 
   constructor(kind: ProviderFailureKind, message: string, init: ProviderFailureInit = {}) {
     super(
@@ -79,6 +86,9 @@ export class ProviderFailure extends HarnessError {
     this.status = init.status;
     this.retryable = init.retryable ?? defaultRetryable(kind);
     this.retryAfterMs = init.retryAfterMs;
+    this.limitKind = init.limitKind;
+    this.resetAt = init.resetAt;
+    this.providerCode = init.providerCode;
   }
 
   static from(error: unknown): ProviderFailure {
@@ -95,6 +105,9 @@ export class ProviderFailure extends HarnessError {
         ...(error.status === undefined ? {} : { status: error.status }),
         retryable: defaultRetryable(kind) && error.retryable,
         ...(error.retryAfterMs === undefined ? {} : { retryAfterMs: error.retryAfterMs }),
+        ...(error.limitKind === undefined ? {} : { limitKind: error.limitKind }),
+        ...(error.resetAt === undefined ? {} : { resetAt: error.resetAt }),
+        ...(error.providerCode === undefined ? {} : { providerCode: error.providerCode }),
         cause: error,
       });
     }
@@ -157,6 +170,8 @@ function transportKind(error: TransportError): ProviderFailureKind {
   if (error.reason === "proxy") return "proxy";
   if (error.reason === "timeout") return "timeout";
   if (error.reason === "network") return "network";
+  if (error.limitKind === "rate") return "rate_limit";
+  if (error.limitKind !== undefined) return "quota";
   return classifyStatusKind(error.status, error.bodyText);
 }
 

@@ -22,8 +22,8 @@ export interface SnapshotLimits {
 
 const LSTAT_BATCH = 256;
 const MAX_SCAN_BYTES = 16 * 1024 * 1024;
-const WORKSPACE_LIMIT = "рабочая папка превышает лимит снимков shell: выберите папку проекта";
-const TIME_LIMIT = "не уложились во время на проверку файлов";
+const WORKSPACE_LIMIT = "workspace exceeds shell snapshot limits; open a narrower project folder";
+const TIME_LIMIT = "file scan timed out";
 
 export const DEFAULT_SNAPSHOT_LIMITS: SnapshotLimits = {
   maxFileBytes: 16 * 1024 * 1024,
@@ -102,7 +102,7 @@ export class WorkspaceSnapshots {
       this.warm(),
       Bun.sleep(Math.max(0, wait)).then(() => "timeout" as const),
     ]);
-    if (setup === "timeout") return failure("первичная индексация рабочей папки ещё идёт");
+    if (setup === "timeout") return failure("indexing workspace files");
     if (setup !== undefined) return failure(setup);
     const signal = AbortSignal.timeout(Math.max(1, request.deadline - Date.now()));
     return this.#mutex
@@ -115,14 +115,14 @@ export class WorkspaceSnapshots {
         const stale = await this.#update([...new Set([...scan, ...forced])], request.deadline);
         if (typeof stale === "string") return failure(stale);
         const tree = await this.#writeTree(request.deadline);
-        if (tree === undefined) return failure("не удалось записать снимок");
+        if (tree === undefined) return failure("could not write snapshot");
         return {
           ok: true,
           snapshot: { tree, stale, forced, tookMs: Date.now() - started },
         } satisfies SnapshotResult;
       }, signal)
       .catch((error: unknown) => {
-        if (signal.aborted) return failure("не уложились во время ожидания снимка");
+        if (signal.aborted) return failure("snapshot timed out");
         throw error;
       });
   }
@@ -148,7 +148,7 @@ export class WorkspaceSnapshots {
   async #setup(): Promise<string | undefined> {
     const deadline = Date.now() + this.#limits.setupMs;
     if (Date.now() >= deadline) return TIME_LIMIT;
-    if (!(await this.#git.ensure(deadline))) return "git недоступен, снимки shell-команд выключены";
+    if (!(await this.#git.ensure(deadline))) return "git unavailable; shell snapshots disabled";
     if (await this.#oversized(deadline)) return WORKSPACE_LIMIT;
     const user = await findUserRepo(this.#git.workTree, "git", deadline);
     await this.#git.linkObjects(user ? join(user.commonDir, "objects") : undefined);
@@ -176,7 +176,7 @@ export class WorkspaceSnapshots {
     const updated = await this.#update(scan, deadline);
     if (typeof updated === "string") return updated;
     const tree = await this.#writeTree(deadline);
-    return tree === undefined ? "не удалось записать первый снимок" : undefined;
+    return tree === undefined ? "could not write snapshot" : undefined;
   }
 
   async #oversized(deadline: number): Promise<boolean> {
@@ -232,7 +232,7 @@ export class WorkspaceSnapshots {
     );
     if (out.timedOut) return TIME_LIMIT;
     if (out.truncated) return WORKSPACE_LIMIT;
-    if (out.code !== 0) return "не удалось прочитать список файлов рабочей папки";
+    if (out.code !== 0) return "could not list workspace files";
     const paths = [...new Set(nulList(out.stdout))];
     return paths.length > this.#limits.maxPaths ? WORKSPACE_LIMIT : paths;
   }

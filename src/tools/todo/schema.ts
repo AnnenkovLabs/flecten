@@ -3,13 +3,25 @@ import { z } from "zod";
 export const todoStatuses = ["pending", "in_progress", "completed", "cancelled"] as const;
 export const todoPriorities = ["low", "medium", "high"] as const;
 
+const todoBatchItem = z
+  .object({
+    id: z.string().min(1).optional(),
+    content: z.string().min(1),
+    status: z.enum(todoStatuses).optional(),
+    priority: z.enum(todoPriorities).optional(),
+  })
+  .strict();
+
 export const todoSpec = {
   name: "todo",
   description:
-    "Keep a short plan for complex work. list reads the plan; add requires content; update requires id and at least one of content, status or priority; remove requires id; clear removes all items. Persisted per session across context compaction. Mark completed or cancelled work promptly and skip a todo list for a simple one-step request. Every operation returns the full list.",
+    "Optional plan tracker for complex multi-stage work (skip for direct tasks). Prefer set with items to write or update the whole list in one call; list reads; add/update/remove/clear modify entries.",
   schema: z
     .object({
-      op: z.enum(["list", "add", "update", "remove", "clear"]).describe("Operation to perform"),
+      op: z
+        .enum(["list", "set", "add", "update", "remove", "clear"])
+        .describe("Operation to perform"),
+      items: z.array(todoBatchItem).max(50).optional().describe("Full todo list for op=set"),
       content: z.string().min(1).optional().describe("Todo text for add or update"),
       id: z.string().min(1).optional().describe("Todo id for update or remove"),
       status: z.enum(todoStatuses).optional().describe("New status for add or update"),

@@ -1,46 +1,46 @@
 # UI
 
-Svelte 5 и Vite. Интерфейс только показывает данные и отправляет действия. Он не читает файлы, не зовёт модели и не хранит состояние сессии.
+Svelte 5 and Vite frontend. Renders state and dispatches user actions; never reads files, calls models, or owns canonical session persistence.
 
-## Запуск
+## Commands
 
 ```bash
-bun run dev:ui     # браузер
-bun run app:dev    # Electron и Vite
-bun run build:ui   # ui/dist
+bun run dev:ui     # browser dev server
+bun run app:dev    # Electron + Vite
+bun run build:ui   # production build to ui/dist
 ```
 
-## Правила
+## Rules
 
-- Данные приходят через props из контейнера экрана.
-- События ядра приходят через `src/lib/desktop.ts` и `run.svelte.ts`.
-- Компонент не читает файлы и не зовёт модель.
-- Визуальные токены, шрифты и базовые стили лежат в `src/app.css`.
-- Компонент не импортирует оболочку и не знает про Electron.
-- Интерактив работает с клавиатуры, имеет подпись и видимый фокус.
-- `prefers-reduced-motion` оставляет статичное состояние.
-- Новая зависимость требует записи в журнале решений.
+- Components receive screen data via props from top-level view containers.
+- Sidecar events flow through `src/lib/desktop.ts` and `run.svelte.ts`.
+- Components never read files or call models.
+- Design tokens, font declarations, and base styles live exclusively in `src/app.css`.
+- Components never import `shell` or depend directly on Electron APIs.
+- Interactive controls must be keyboard-accessible with accessible names and visible focus states.
+- `prefers-reduced-motion` renders immediate static states.
+- Every new dependency requires an entry in the decision log.
 
-## Дерево
+## Layout
 
 ```text
 src/
-  main.ts                 точка входа
-  App.svelte              состояние окна и горячие клавиши
-  app.css                 токены, шрифты, база
-  assets/fonts/           Manrope и лицензия
+  main.ts                 entry point
+  App.svelte              window state and keyboard shortcuts
+  app.css                 tokens, fonts, base styles
+  assets/fonts/           Manrope font files and license
   lib/
-    types.ts              типы данных интерфейса
-    icons.ts              карта Hugeicons для имени иконки
-    agent.ts              мапперы тулов, диффов и терминала
-    run-machine.ts        чистая машина фаз
-    run.svelte.ts         состояние треда, события sidecar, расход контекста
-    motion.ts             expand, enter, reduced motion
-    media.svelte.ts       реакция на prefers-reduced-motion
-    toast.svelte.ts       одноразовые уведомления
-    format.ts             русские формы слов
-    desktop.ts            мост к окну Electron
-    platform.ts           Ctrl или Cmd
+    types.ts              UI view-model types
+    icons.ts              Hugeicons name map
+    agent.ts              tool, diff, and terminal mappers
+    run-machine.ts        pure run-phase state machine
+    run.svelte.ts         thread state, sidecar events, context usage
+    motion.ts             expand, enter, and reduced-motion helpers
+    media.svelte.ts       reactive prefers-reduced-motion media query
+    toast.svelte.ts       transient notifications
+    format.ts             pluralization and formatting helpers
+    desktop.ts            Electron preload bridge client
+    platform.ts           Ctrl vs Cmd modifier detection
   components/
     TitleBar.svelte
     Sidebar.svelte
@@ -71,19 +71,19 @@ src/
     GooFilters.svelte
 ```
 
-## Поток
+## Data Flow
 
-1. `App.svelte` держит видимость панелей, активную вкладку и `RunStore`.
-2. `Composer` отправляет текст через `RunStore.start`.
-3. `Thread` рисует сообщения, сводку прогона и живой статус.
-4. `InspectorPanel` показывает изменения, проверки и терминал из событий тулов.
-5. `LiveGlow` живёт только пока идёт прогон, останавливает `requestAnimationFrame` вне области и при reduced motion.
+1. `App.svelte` owns panel visibility, active workspace tab, and `RunStore`.
+2. `Composer` submits prompts via `RunStore.start`.
+3. `Thread` renders user messages, run activity summaries, and live run status.
+4. `InspectorPanel` renders file diffs, checks, and terminal output derived from tool events.
+5. `LiveGlow` mounts only during an active run and halts `requestAnimationFrame` when off-screen or under `prefers-reduced-motion`.
 
-## Добавить компонент
+## Adding a Component
 
-Создай файл в `src/components`, опиши props через `$props()` и держи стили в `<style>`. Если компоненту нужны данные экрана, передай их из `App.svelte` или `MainPane.svelte`. Листовой компонент не импортирует состояние ядра.
+Create the component in `src/components`, declare props with `$props()`, and keep styles scoped in `<style>`. Pass screen-level state down from `App.svelte` or `MainPane.svelte`; leaf components never import core or global runtime stores directly.
 
-## Проверки
+## Verification
 
 ```bash
 bun run check
@@ -91,4 +91,4 @@ bun run lint
 bun run build:ui
 ```
 
-Визуальную правку проверяй в браузере на 1480x940 и 1180x640, а также с `prefers-reduced-motion: reduce`.
+Inspect visual changes at 1480x940 and 1180x640, including under `prefers-reduced-motion: reduce`.

@@ -211,7 +211,6 @@
           <label class="st-field">
             <span class="st-label">{t("Knowledge cutoff")}</span>
             <input class="st-input" bind:value={model.knowledge} placeholder="2024-09-30" spellcheck="false" />
-            <span class="st-hint">{t("The date up to which the model has knowledge.")}</span>
           </label>
           <label class="st-field">
             <span class="st-label">{t("Release date")}</span>
@@ -231,7 +230,6 @@
             <span class="st-label">{t("Response limit field")}</span>
             <Select class="st-select" value={model.maxTokensParameter ?? "auto"} onchange={(value) => model.maxTokensParameter = value} aria-label={t("Response limit field")}
               options={[{ value: "auto", label: t("Auto") }, { value: "max_tokens", label: "max_tokens" }, { value: "max_completion_tokens", label: "max_completion_tokens" }]} />
-            <span class="st-hint">{t("The API parameter that limits response length.")}</span>
           </label>
         </div>
       </div>
@@ -261,7 +259,6 @@
         <label class="st-switch">
           <span class="st-switch-copy">
             <strong>{t("Open weights")}</strong>
-            <span>{t("The model's weights are open.")}</span>
           </span>
           <input type="checkbox" bind:checked={model.openWeights} />
           <span class="st-switch-track" aria-hidden="true"></span>
@@ -269,7 +266,6 @@
         <label class="st-switch">
           <span class="st-switch-copy">
             <strong>{t("Files and attachments")}</strong>
-            <span>{t("The model accepts attachments.")}</span>
           </span>
           <input type="checkbox" bind:checked={model.attachment} />
           <span class="st-switch-track" aria-hidden="true"></span>

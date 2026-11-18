@@ -108,9 +108,9 @@ async function protocolSurface(ts) {
     ]),
   ];
   return [
-    ["event", "События", events, "the Event type"],
-    ["service message", "Служебные сообщения", messages, "src/app/server.ts or shell/main.mjs"],
-    ["error code", "Ошибки", codes, "ErrorCode, src/app/server.ts or shell/main.mjs"],
+    ["event", "Events", events, "the Event type"],
+    ["service message", "Service messages", messages, "src/app/server.ts or shell/main.mjs"],
+    ["error code", "Errors", codes, "ErrorCode, src/app/server.ts or shell/main.mjs"],
   ];
 }
 

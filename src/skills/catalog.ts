@@ -3,8 +3,8 @@ import { markdownValue } from "../util/markdown";
 import { oneLine } from "../util/text";
 import type { Skill, SkillSource, SkillTrust } from "./schema";
 
-const MAX_CATALOG_CHARS = 32_000;
-const MAX_DESCRIPTION_CHARS = 1500;
+const MAX_CATALOG_CHARS = 8_000;
+const MAX_DESCRIPTION_CHARS = 320;
 
 export interface SkillCommand {
   name: string;

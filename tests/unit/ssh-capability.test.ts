@@ -206,6 +206,6 @@ test.skipIf(process.platform !== "linux" || !Bun.which("python3"))(
       revoked,
     );
     expect(revoked[0]?.ok).toBe(false);
-    expect(revoked[0]?.error).toContain("сеть запрещена");
+    expect(revoked[0]?.error).toContain("network access is disabled");
   },
 );

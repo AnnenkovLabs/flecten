@@ -4,11 +4,10 @@
 
 ## Preparación
 
-Necesitas Bun 1.4 y Node 20 o superior. Node solo es necesario para Electron.
+Necesitas Bun 1.4.4 y Node 22.12 o superior. Node solo es necesario para Electron.
 
 ```bash
 bun install
-bun run dev help
 bun run app:dev
 ```
 
@@ -21,6 +20,7 @@ bun test
 bun run check
 bun run lint
 bun run build:ui
+bun run build:agent
 ```
 
 Si cambiaste la ventana, adjunta una captura o describe una comprobación en el navegador a 1480x940 y 1180x640. Revisa los estados: vacío, carga, detenido, reduced motion.
@@ -41,9 +41,8 @@ Si cambiaste la ventana, adjunta una captura o describe una comprobación en el 
 
 - Lee `design.md` antes de cambiar el comportamiento visual.
 - Los componentes viven en `ui/src/components`, el estado y las funciones puras en `ui/src/lib`.
-- Los datos de demo solo cambian en `ui/src/lib/demo.ts`. Un componente no guarda una copia de esos datos.
 - Los tokens, fuentes y estilos base viven en `ui/src/app.css`. No añadas un segundo conjunto de tokens.
-- Un componente nuevo recibe datos por props. Importar `demo.ts` directamente solo se permite en los contenedores de pantalla.
+- El estado de pantalla fluye desde `ui/src/lib/run.svelte.ts` y props; los componentes no importan `core`, `store` ni `tools`.
 - Los elementos interactivos funcionan con teclado y tienen `aria-label` o una etiqueta visible.
 - La animación no es necesaria para entender el estado. `prefers-reduced-motion` debe dejar un fotograma estático.
 

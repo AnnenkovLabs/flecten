@@ -75,7 +75,7 @@ test("custom settings controls support keyboard, dismissal and saved values", as
     await dialog.getByRole("button", { name: "Access", exact: true }).click();
     await dialog.getByText("Advanced access settings", { exact: true }).click();
     const source = dialog
-      .getByRole("group", { name: "Always ask a person", exact: true })
+      .getByRole("group", { name: "Require manual approval", exact: true })
       .getByRole("checkbox")
       .first();
     await expect(source).toHaveCSS("appearance", "none");

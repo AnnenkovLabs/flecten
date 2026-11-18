@@ -4,6 +4,7 @@
   import type { QueuedMessage, SendMode } from "../../lib/composer/types";
   import type { IconName } from "../../lib/types";
   import Icon from "../Icon.svelte";
+  import MorphIcon from "../MorphIcon.svelte";
   import "./composer.css";
 
   interface Props {
@@ -98,7 +99,7 @@
         {:else}
           <div class="lh-queue-body">
             <span class="lh-queue-mode" role="img" aria-label={modeLabels[item.mode]} data-tooltip={modeLabels[item.mode]}>
-              <Icon name={modeIcons[item.mode]} size={14} />
+              <MorphIcon name={item.state === "sending" ? "arrow-up" : modeIcons[item.mode]} size={14} />
             </span>
             <span class="lh-queue-text" data-tooltip={item.text}>{item.text}</span>
             {#if item.state === "sending"}

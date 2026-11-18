@@ -62,11 +62,11 @@ export interface ShellCheckpoints {
 const EXECUTABLE_MODE = "100755";
 
 const REASONS = {
-  special: "ссылки и подмодули",
-  stale: "файлы больше 16 МБ или недоступные",
-  limit: "лимит файлов или объёма",
-  time: "не уложились во время",
-  missing: "объект снимка не найден",
+  special: "symlinks and submodules",
+  stale: "files over 16 MB or unreadable",
+  limit: "file count or size limit exceeded",
+  time: "snapshot timed out",
+  missing: "snapshot object missing",
 } as const;
 
 export class ShellCheckpointService implements ShellCheckpoints {
@@ -93,7 +93,7 @@ export class ShellCheckpointService implements ShellCheckpoints {
 
   async status(): Promise<string | undefined> {
     const ready = await Promise.race([this.#snapshots.warm(), Bun.sleep(0).then(() => "pending")]);
-    return ready === "pending" ? "первичная индексация рабочей папки ещё идёт" : ready;
+    return ready === "pending" ? "indexing workspace files" : ready;
   }
 
   async ignored(paths: readonly string[]) {

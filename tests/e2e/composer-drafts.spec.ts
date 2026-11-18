@@ -148,19 +148,21 @@ test("new-task drafts belong to their project, including work without a project"
     await expectDraft(page, "");
     const secondDraft = "Second project\n  separate draft  ";
     await fillDraft(page, secondDraft);
-    await page
-      .locator(".sidebar .project-select")
-      .filter({ hasText: basename(first) })
-      .click();
+    const sidebar = page.getByRole("complementary", { name: "Projects and tasks", exact: true });
+    async function startInProject(path: string): Promise<void> {
+      const name = basename(path);
+      const folder = sidebar.getByRole("group", { name, exact: true });
+      await folder.hover();
+      await folder.getByRole("button", { name: `New task in ${name}`, exact: true }).click();
+    }
+    await startInProject(first);
     await expectDraft(page, firstDraft);
-    await page.locator(".sidebar .project-select").filter({ hasText: "Without a project" }).click();
+    await page.locator(".ns-picker-trigger").click();
+    await page.getByRole("button", { name: "Without a project", exact: true }).click();
     await expectDraft(page, noProject);
     await page.reload();
     await expectDraft(page, noProject);
-    await page
-      .locator(".sidebar .project-select")
-      .filter({ hasText: basename(second) })
-      .click();
+    await startInProject(second);
     await expectDraft(page, secondDraft);
     await page.reload();
     await expectDraft(page, secondDraft);

@@ -29,15 +29,13 @@ export function subagentToolCatalog(
 ): void {
   const task = tools.get("task");
   if (!task) return;
-  const roles = runtime.registry.list().map((spec) => ({
-    id: spec.id,
-    description: spec.description,
-    model: spec.model,
-    provider: spec.provider,
-    allowedTools: spec.allowedTools,
-    budget: spec.budget,
-  }));
+  const roles = runtime.registry.list().map((spec) => {
+    const toolsField = spec.allowedTools?.length
+      ? `, "allowedTools": ${JSON.stringify(spec.allowedTools)}`
+      : "";
+    return `- {"id": ${JSON.stringify(spec.id)}, "description": ${JSON.stringify(spec.description)}${toolsField}}`;
+  });
   const marker = "\n\nAvailable subagents:\n";
   const end = task.description.indexOf(marker);
-  task.description = `${end < 0 ? task.description : task.description.slice(0, end)}${marker}${JSON.stringify(roles, null, 2)}`;
+  task.description = `${end < 0 ? task.description : task.description.slice(0, end)}${marker}${roles.join("\n")}`;
 }

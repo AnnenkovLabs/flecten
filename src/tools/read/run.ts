@@ -168,6 +168,10 @@ export async function runRead(
     if (args.offset === 0) notes.push("Note: offset 0 was treated as 1.");
     offset = 1;
   }
+  const headBudget =
+    context.limits.maxOutputBytes > 512
+      ? context.limits.maxOutputBytes - 256
+      : context.limits.maxOutputBytes;
   if (args.characterOffset !== undefined)
     return readLineSlice(
       path,
@@ -175,8 +179,9 @@ export async function runRead(
       detected.bomBytes,
       offset,
       args.characterOffset,
-      context.limits.maxOutputBytes,
+      headBudget,
       context.signal,
+      context.reads,
     );
 
   let streamed: Streamed;
@@ -219,7 +224,7 @@ export async function runRead(
   }
 
   const numbered = streamed.lines.map((line, index) => `${offset + index}: ${line}`).join("\n");
-  const truncation = truncateHead(numbered, limit, context.limits.maxOutputBytes);
+  const truncation = truncateHead(numbered, limit, headBudget);
   if (truncation.outputLines === 0 || streamed.clipped)
     return readLineSlice(
       path,
@@ -227,8 +232,9 @@ export async function runRead(
       detected.bomBytes,
       offset,
       0,
-      context.limits.maxOutputBytes,
+      headBudget,
       context.signal,
+      context.reads,
     );
   const shownEnd = offset + truncation.outputLines - 1;
   const parts = [truncation.text];

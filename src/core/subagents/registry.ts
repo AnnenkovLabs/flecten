@@ -38,7 +38,7 @@ export class SubagentRegistry {
   }
 
   get(id: string): SubagentSpec | undefined {
-    return this.#specs.get(id);
+    return this.#specs.get(id) ?? this.#specs.get(id.trim().toLowerCase());
   }
 
   list(): SubagentSpec[] {

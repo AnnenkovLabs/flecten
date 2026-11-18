@@ -28,9 +28,9 @@ async function checkedPath(root: string, path: string): Promise<string> {
     target === root ||
     [".git", ".flecten", ".liquid", ".flecten-migration"].includes(relative.split("/")[0] ?? "")
   )
-    throw new Error("Выберите файл или папку внутри проекта, вне .git и .flecten.");
+    throw new Error("Choose a path inside the project, outside .git and .flecten.");
   const parent = await realpath(dirname(target));
-  if (!isInside(root, parent)) throw new Error("Папка находится вне проекта.");
+  if (!isInside(root, parent)) throw new Error("Target folder is outside the project.");
   const canonical = join(parent, basename(target));
   if (
     !isInside(root, canonical) ||
@@ -38,7 +38,7 @@ async function checkedPath(root: string, path: string): Promise<string> {
       canonical.slice(root.length + 1).split("/")[0] ?? "",
     )
   )
-    throw new Error("Служебные папки нельзя менять из проводника.");
+    throw new Error("Protected internal folders cannot be modified here.");
   return canonical;
 }
 
@@ -49,7 +49,7 @@ async function absent(path: string): Promise<void> {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
     throw error;
   }
-  throw new Error("Такое имя уже существует. Выберите другое имя.");
+  throw new Error("A file or folder with that name already exists.");
 }
 
 /** Explicit user operations never overwrite a destination; deletion moves data to local trash. */
@@ -65,7 +65,7 @@ export async function changeWorkspaceFile(cwd: string, input: unknown): Promise<
     }
     const info = await lstat(target);
     if (info.isSymbolicLink() || (!info.isFile() && !info.isDirectory()))
-      throw new Error("Выберите обычный файл или папку, без символической ссылки.");
+      throw new Error("Symlinks cannot be modified from the explorer.");
     if (operation.operation === "rename") {
       const destination = await checkedPath(root, operation.destination);
       await absent(destination);
@@ -74,7 +74,8 @@ export async function changeWorkspaceFile(cwd: string, input: unknown): Promise<
     } else {
       const trash = resolve(root, ".flecten/ide-trash");
       await mkdir(trash, { recursive: true, mode: 0o700 });
-      if (!isInside(root, await realpath(trash))) throw new Error("Корзина находится вне проекта.");
+      if (!isInside(root, await realpath(trash)))
+        throw new Error("Trash path resolves outside the project.");
       await rename(target, join(trash, `${randomUUID()}-${basename(target)}`));
     }
   });

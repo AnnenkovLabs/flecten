@@ -1,7 +1,8 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
   "Speech recognition provider": "Speech recognition provider",
-  "Audio is sent to the selected provider.": "Audio is sent to the selected provider.",
+  "Audio is sent to the selected provider.":
+    "Requires an OpenAI-compatible /audio/transcriptions endpoint.",
   "Current provider": "Current provider",
   "Speech recognition model": "Speech recognition model",
   "Speech language": "Speech language",
@@ -23,7 +24,7 @@ export default {
   "Vosk language and model": "Vosk language and model",
   "Local Vosk model": "Local Vosk model",
   "After installation, audio is processed on this computer.":
-    "After installation, audio is processed on this computer.",
+    "Runs offline after setup; audio stays on this machine.",
   "Check installation": "Check installation",
   "Install engine and model": "Install engine and model",
   "Installation options": "Installation options",
@@ -33,9 +34,9 @@ export default {
   "python3 or full path": "python3 or full path",
   "NVIDIA requires CUDA 12 and cuDNN 9.": "NVIDIA requires CUDA 12 and cuDNN 9.",
   "Choose folders to load skills from. Your selection is saved in the current configuration.":
-    "Choose folders to load skills from. Your selection is saved in the current configuration.",
+    "Scan these directories for SKILL.md packages.",
   "Takes effect after saving, with no restart needed. Active tasks use the new set on their next run.":
-    "Takes effect after saving, with no restart needed. Active tasks use the new set on their next run.",
+    "Applies on the next run after saving.",
   "All sources are disabled. No skills will be loaded after saving.":
     "All sources are disabled. No skills will be loaded after saving.",
   "The saved set of skills is shown below. Save your changes to update the list.":

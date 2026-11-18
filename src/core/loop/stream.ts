@@ -4,7 +4,7 @@ import { TranslationStream } from "../../translation/stream";
 import { serviceModelStream } from "../services/model";
 import type { AssistantMessage, Message, ToolCall, Usage } from "../types";
 import { addUsage } from "../types/message";
-import { contextEstimate } from "./context";
+import { contextEstimate, recordProviderContextTokens } from "./context";
 import type { LoopEvent, LoopOptions } from "./types";
 
 import { visionMessages } from "./vision";
@@ -36,16 +36,37 @@ export interface StreamedTurn {
 
 export async function streamAssistant(
   messages: Message[],
-  options: LoopOptions,
+  options: Pick<
+    LoopOptions,
+    | "contextWindow"
+    | "dictionary"
+    | "language"
+    | "maxTokens"
+    | "memory"
+    | "provider"
+    | "reasoning"
+    | "reserveTokens"
+    | "signal"
+    | "system"
+    | "tools"
+    | "variant"
+    | "workingSetTokens"
+  > & {
+    parallelTools?: boolean | undefined;
+    toolContext: Pick<LoopOptions["toolContext"], "inspectImage" | "services"> & {
+      sessionId?: string | undefined;
+    };
+  },
   usage: Usage,
   emit: (event: LoopEvent) => void,
 ): Promise<StreamedTurn> {
+  const effectiveCeiling = Math.min(
+    options.contextWindow - options.reserveTokens,
+    options.workingSetTokens ?? options.contextWindow - options.reserveTokens,
+  );
   const availableRoom = Math.max(
     0,
-    options.contextWindow -
-      options.reserveTokens -
-      contextEstimate(options.system, messages, options.tools) -
-      160,
+    effectiveCeiling - contextEstimate(options.system, messages, options.tools) - 160,
   );
   const dictionary = await options.dictionary?.delivery(availableRoom);
   const dictionaryTokens = dictionary ? estimateMessages([dictionary], PROFILE_4).tokens : 0;
@@ -54,8 +75,7 @@ export async function streamAssistant(
         0,
         Math.min(
           1200,
-          options.contextWindow -
-            options.reserveTokens -
+          effectiveCeiling -
             contextEstimate(options.system, messages, options.tools) -
             dictionaryTokens -
             160,
@@ -64,10 +84,21 @@ export async function streamAssistant(
     : 0;
   const delivery = await options.memory?.refresh(memoryRoom);
   if (delivery) {
-    messages.push({ role: "user", content: delivery.text, memoryReferences: delivery.references });
+    messages.push({
+      role: "user",
+      content: delivery.text,
+      synthetic: true,
+      memoryReferences: delivery.references,
+    });
     emit({ type: "memory.context", ...delivery });
   }
-  const requestMessages = dictionary ? [...messages, dictionary] : messages;
+  const first = messages[0];
+  const requestMessages =
+    dictionary && first
+      ? [first, dictionary, ...messages.slice(1)]
+      : dictionary
+        ? [dictionary]
+        : messages;
   if (dictionary)
     emit({
       type: "context.usage",
@@ -81,6 +112,7 @@ export async function streamAssistant(
     options.toolContext.inspectImage,
     options.signal,
   );
+  const sessionId = options.toolContext.sessionId;
   const request = {
     model: options.provider.model,
     system: options.system,
@@ -95,6 +127,8 @@ export async function streamAssistant(
     ),
     ...(options.reasoning ? { reasoning: options.reasoning } : {}),
     ...(options.variant ? { variant: options.variant } : {}),
+    ...(options.parallelTools === undefined ? {} : { parallelToolCalls: options.parallelTools }),
+    ...(sessionId ? { promptCacheKey: `flecten:${sessionId}` } : {}),
   };
 
   let text = "";
@@ -236,6 +270,11 @@ export async function streamAssistant(
     guard.done();
   }
   if (requestTokens > 0) {
+    recordProviderContextTokens(
+      messages,
+      Math.max(0, requestTokens - dictionaryTokens),
+      messages.length + 1,
+    );
     // The provider count of this request plus its answer is what the next request starts from.
     emit({
       type: "context.usage",

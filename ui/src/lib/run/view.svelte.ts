@@ -38,6 +38,7 @@ export class TaskView {
   state = $state<SessionState | null>(null);
   pendingSend = $state(false);
   #disconnected = $state(false);
+  isTalker = $state(false);
   live = $state(false);
   #liveLabel = $state<MessageKey>("Working");
   #retryKind = $state<string | null>(null);
@@ -116,6 +117,7 @@ export class TaskView {
     this.#retiredEpochs.clear();
     this.pendingSend = false;
     this.#disconnected = false;
+    this.isTalker = false;
     this.live = false;
     this.liveLabel = "Working";
     this.title = title;
@@ -451,6 +453,7 @@ export class TaskView {
     }
   }
   #started(event: Extract<SessionEvent, { type: "session.started" }>): void {
+    this.isTalker = event.role === "talker";
     const prompt = event.prompt ?? "";
     const local = this.#localStart && !event.queueId && !this.thread.restoring;
     this.#localStart = false;

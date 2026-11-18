@@ -3,21 +3,27 @@
   display: flex;
   align-items: center;
 }
-.composer-bar { justify-content: space-between; gap: var(--space-2); user-select: none; }
+.composer-bar {
+  --action-size: 32px;
+  justify-content: space-between;
+  gap: var(--space-2);
+  user-select: none;
+}
 .composer-left { gap: var(--space-1); min-width: 0; flex-wrap: wrap; }
 .composer-right { gap: var(--space-1); flex: none; margin-left: auto; align-self: flex-end; }
-.composer-bar .attach, .composer-bar .voice, .composer-bar .stop, .composer-bar .send,
-.composer-actions button {
+.composer-bar .attach, .composer-bar .voice, .composer-bar .voice-cancel,
+.composer-action-set button {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: var(--action-size);
+  height: var(--action-size);
   flex: none;
   border-radius: 8px;
   color: var(--muted);
   transition: color 150ms var(--ease), background 150ms var(--ease);
 }
-.composer-bar .attach:hover, .composer-bar .voice:hover:not(:disabled) {
+.composer-bar .attach:hover, .composer-bar .voice:hover:not(:disabled),
+.composer-bar .voice-cancel:hover {
   background: var(--raised);
   color: var(--text-2);
 }
@@ -26,51 +32,98 @@
   color: var(--primary);
 }
 .composer-bar .voice:disabled { opacity: 0.35; }
-.composer-bar .stop { color: var(--text-2); }
-.composer-bar .stop:hover:not(:disabled) { background: var(--raised-hover); }
-.composer-actions {
+.composer-bar .voice-cancel { color: var(--text-2); }
+.composer-action-set {
   display: flex;
   flex: none;
   border-radius: 8px;
+  transition: background-color var(--t-touch) var(--ease), box-shadow var(--t-touch) var(--ease);
+}
+.composer-action-set.composer-actions {
   background: var(--raised);
   box-shadow: inset 0 1px 0 var(--line-strong);
 }
-.composer-actions button { border-radius: 0; color: var(--text-2); }
-.composer-actions button:first-child { border-radius: 8px 0 0 8px; }
-.composer-actions button:last-child { border-radius: 0 8px 8px 0; }
-.composer-actions button:only-child { border-radius: 8px; }
-.composer-actions button + button { border-left: 1px solid var(--line-strong); }
-.composer-actions button:hover:not(:disabled) { background: var(--raised-hover); color: var(--text); }
+.composer-action-set .composer-primary {
+  position: relative;
+  isolation: isolate;
+  transition:
+    background-color var(--t-touch) var(--ease),
+    color var(--t-touch) var(--ease),
+    border-radius 220ms var(--ease-drawer);
+}
+.composer-action-set.is-split .composer-primary {
+  border-radius: 0 8px 8px 0;
+  box-shadow: inset 1px 0 0 var(--line-strong);
+}
+.composer-actions button, .composer-action-set .composer-followups button { color: var(--text-2); }
+.composer-actions button:hover:not(:disabled), .composer-action-set .composer-followups button:hover:not(:disabled) {
+  background: var(--raised-hover);
+  color: var(--text);
+}
 .composer-actions button:disabled { opacity: 0.35; }
-.composer-actions .steer-send { color: var(--primary); }
-.composer-actions .stop.is-stopping {
+.composer-action-set .composer-followups .steer-send { color: var(--primary); }
+.composer-action-set .stop.is-stopping {
   background: var(--error);
   color: var(--bg);
 }
-.composer-actions .stop.is-stopping:hover:not(:disabled) { background: var(--error); color: var(--bg); filter: brightness(1.08); }
-.composer-bar .send-face {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+.composer-action-set .stop.is-stopping:hover:not(:disabled) { background: var(--error); color: var(--bg); filter: brightness(1.08); }
+.composer-action-set .composer-primary::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
   background: linear-gradient(180deg, var(--primary), var(--primary-end));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  color: var(--on-primary);
-  transition: filter 150ms var(--ease);
+  content: "";
+  opacity: 0;
+  transition: opacity var(--t-touch) var(--ease), filter var(--t-touch) var(--ease);
 }
-.composer-bar .send:hover:not(:disabled) .send-face { filter: brightness(1.06); }
-.composer-bar .send:disabled { cursor: default; }
-.composer-bar .send:disabled .send-face {
-  background: var(--raised-hover);
-  box-shadow: none;
+.composer-action-set .composer-primary.send:not(:disabled) {
+  color: var(--on-primary);
+}
+.composer-action-set .composer-primary.send:not(:disabled)::before { opacity: 1; }
+.composer-action-set .composer-primary.send:hover:not(:disabled)::before { filter: brightness(1.06); }
+.composer-action-set .composer-primary.send:disabled {
+  background-color: var(--raised-hover);
   color: var(--muted);
+  cursor: default;
+}
+.composer-followups, .composer-voice-cancel {
+  display: flex;
+  flex: none;
+  inline-size: 0;
+  overflow: clip;
+  transition: inline-size 160ms var(--ease-drawer);
+}
+.composer-followups button:focus-visible, .composer-voice-cancel button:focus-visible { outline-offset: -3px; }
+.composer-followups:focus-within, .composer-voice-cancel:focus-within { transition: none; }
+.composer-followups { justify-content: flex-end; }
+.composer-followups button { border-radius: 0; }
+.composer-followups button + button { border-left: 1px solid var(--line-strong); }
+.composer-followups button:first-child { border-radius: 8px 0 0 8px; }
+.composer-action-set.is-split .composer-followups {
+  inline-size: calc(2 * var(--action-size));
+  transition-duration: 220ms;
+}
+.composer-voice-cancel {
+  margin-inline-end: calc(-1 * var(--space-1));
+  transition: inline-size 160ms var(--ease-drawer), margin-inline-end 160ms var(--ease-drawer);
+}
+.composer-voice-cancel.is-revealed {
+  inline-size: var(--action-size);
+  margin-inline-end: 0;
+  transition-duration: 220ms;
 }
 @container composer (max-width: 520px) {
   .composer-bar { flex-wrap: wrap; }
   .composer-left { flex: 1 0 100%; }
 }
 @media (pointer: coarse) {
-  .composer-bar .attach, .composer-bar .voice, .composer-bar .stop, .composer-bar .send,
-  .composer-actions button, .composer-bar .send-face { width: 44px; height: 44px; }
+  .composer-bar { --action-size: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .composer-followups, .composer-voice-cancel,
+  .composer-action-set .composer-primary, .composer-action-set .composer-primary::before {
+    transition: none !important;
+  }
 }

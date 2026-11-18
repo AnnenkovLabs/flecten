@@ -18,7 +18,7 @@ export default {
   "Talker and Worker": "TalkerとWorker",
   "Separate conversation from execution": "会話と実行を分離",
   "New chats use a Talker and an independent Worker. Both use the selected model. English handoffs replace automatic translation; tool output stays live.":
-    "新しいチャットでは、Talkerと独立したWorkerを使用します。どちらも選択したモデルを使います。自動翻訳の代わりに英語で指示を引き継ぎ、ツールの出力は引き続きリアルタイムで表示されます。",
+    "新しいチャットを 2 セッションに分離します。Talker が対話を続け、Worker がファイル編集とコマンド実行を担当します。",
   Undo: "元に戻す",
   Redo: "やり直す",
   "Worker failed": "Workerでエラーが発生しました",

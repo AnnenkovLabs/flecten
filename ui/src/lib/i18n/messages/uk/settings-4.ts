@@ -15,7 +15,7 @@ export default {
   "Enter the hook command.": "Укажіть команду автоматичної дії.",
   "Exact match condition": "Точна умова",
   "All filled-in conditions must match. Regular expressions are not used.":
-    "Усі заповнені умови мають збігатися. Регулярні вирази не використовуються.",
+    "Усі заповнені умови перевіряються буквально (точний збіг або префікс).",
   "Example tool": "Інструмент у прикладі",
   Testing: "Перевірка",
   "Run saved hook": "Запустити збережену автоматичну дію",

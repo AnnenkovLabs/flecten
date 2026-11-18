@@ -32,30 +32,30 @@ export async function saveProjectFile(cwd: string, input: unknown): Promise<File
   if (!parsed.success) throw new Error(`Invalid file save: ${parsed.error.message}`);
   const command = parsed.data;
   if (Buffer.byteLength(command.text, "utf8") > PREVIEW_BYTES) {
-    throw new Error("Файл больше 512 КБ. Сократите текст или используйте внешний редактор.");
+    throw new Error("File exceeds 512 KB. Open it in an external editor.");
   }
   return saves.run(async () => {
     const root = await realpath(cwd);
     const target = await realpath(resolve(root, command.path));
-    if (!isInside(root, target)) throw new Error("Файл находится вне проекта.");
+    if (!isInside(root, target)) throw new Error("Path is outside the project.");
     const current = await previewFile(root, target);
     if (current.readOnlyReason || !current.hash) {
-      throw new Error(current.readOnlyReason ?? "Файл доступен только для просмотра.");
+      throw new Error(current.readOnlyReason ?? "Read-only file.");
     }
     if (current.hash !== command.expectedHash) {
-      throw new Error("Файл изменился на диске. Откройте актуальную версию перед сохранением.");
+      throw new Error("File changed on disk. Reload before saving.");
     }
     const info = await stat(target);
     if (!info.isFile() || info.size > PREVIEW_BYTES) {
-      throw new Error("Файл изменился на диске. Откройте актуальную версию перед сохранением.");
+      throw new Error("File changed on disk. Reload before saving.");
     }
     const before = await sampleFile(target, info.size, PREVIEW_BYTES);
     if (fileHash(before) !== command.expectedHash) {
-      throw new Error("Файл изменился на диске. Откройте актуальную версию перед сохранением.");
+      throw new Error("File changed on disk. Reload before saving.");
     }
     const bom = before[0] === 0xef && before[1] === 0xbb && before[2] === 0xbf ? "\uFEFF" : "";
     if (Buffer.byteLength(`${bom}${command.text}`, "utf8") > PREVIEW_BYTES) {
-      throw new Error("Файл больше 512 КБ. Сократите текст или используйте внешний редактор.");
+      throw new Error("File exceeds 512 KB. Open it in an external editor.");
     }
     // ponytail: optimistic saves protect edits since open; filesystem-wide locking is needed
     // to exclude a separate process changing the file during the final atomic rename.

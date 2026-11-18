@@ -1,8 +1,8 @@
-# Протокол
+# Protocol
 
-## Сервис
+## Service
 
-Ядро отдаёт один интерфейс:
+The core exposes a single interface:
 
 ```ts
 interface HarnessService {
@@ -11,17 +11,17 @@ interface HarnessService {
 }
 ```
 
-Всё остальное это адаптеры: sidecar для Electron и прямой вызов в тестах. Полный список команд sidecar лежит в `shell/agent-commands.json`, события ядра описывает тип `Event` в `src/core/types/event.ts`. `bun scripts/docs-check.mjs` сверяет этот документ с обоими в обе стороны: команда или событие без строки в таблице и строка без команды или события валят CI.
+Everything else is an adapter: the sidecar process for Electron and direct in-process calls in tests. All sidecar commands are listed in `shell/agent-commands.json`, and core events are defined by `Event` in `src/core/types/event.ts`. `bun scripts/docs-check.mjs` cross-checks this document against both sources in both directions: any undocumented command/event or stale table row fails CI.
 
-## Транспорт
+## Transport
 
-Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в dev) и общается JSON-строками: одна строка, один объект.
+Electron spawns `dist/flecten-agent` (or `src/app/server.ts` in dev) and communicates via newline-delimited JSON (one JSON object per line):
 
-- Команды идут в stdin, события и ответы в stdout, диагностика в stderr.
-- Любая команда может нести `requestId` (строку). Тогда результат приходит ответом `response` с тем же `requestId`: `ok: true` и поля из колонки «Ответ» или `ok: false` и `error`.
-- Без `requestId` ответа нет, а ошибка приходит событием `error` с кодом `invalid_input`.
-- `run` и `hello` возвращают результат событиями (`session.started` и дальше, `status`). `stop` с `requestId` также подтверждает команду и возвращает канонический state.
-- Текст ошибок проходит через `redact`: ключи и токены не попадают в окно и логи.
+- Commands arrive on `stdin`, events and responses write to `stdout`, and diagnostics write to `stderr`.
+- Any command may carry a string `requestId`. When present, the sidecar replies with a `response` carrying the same `requestId`: `ok: true` plus the fields listed under **Response**, or `ok: false` and `error`.
+- Without `requestId`, no `response` envelope is sent; validation failures emit an `error` event with code `invalid_input`.
+- `run` and `hello` stream their results as events (`session.started` onward, or `status`). `stop` with `requestId` also acknowledges the command and returns canonical session `state`.
+- Error messages pass through `redact` so API keys and tokens never reach the window or logs.
 
 ```json
 { "type": "checkpoint.list", "requestId": "r7", "sessionId": "s_1" }
@@ -35,168 +35,169 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 { "type": "response", "requestId": "r8", "ok": false, "error": "id is required" }
 ```
 
-Один проект обслуживает одно ядро. На старте ядро берёт замок `.flecten/sidecar.lock` (pid, токен, время старта; файл появляется целиком через hard link). Замок живого ядра ждут до 5 с: так переоткрытый проект дожидается, пока прошлое ядро закончит запись. Замок мёртвого процесса забирают сразу. Если за 5 с замок не освободился, ядро пишет `error` с кодом `project_locked` и выходит, окно не перезапускает его по кругу. В папке только для чтения ядро работает без замка.
+Each project is served by a single core process. On startup, the sidecar acquires `.flecten/sidecar.lock` (PID, token, start timestamp; created atomically via hard link). If a live process holds the lock, startup waits up to 5 seconds so a reopened workspace lets the previous sidecar flush writes; locks held by dead PIDs are reclaimed immediately. If the lock remains held after 5 seconds, the sidecar emits `error` with code `project_locked` and exits without Electron restart-looping it. On read-only filesystems, the core runs lock-free.
 
-Оболочка проверяет команду до того, как отдать её ядру: объект, `type` из `shell/agent-commands.json`, `requestId` строкой, `prompt` до 200 000 символов, вся строка до 4 МиБ. Ядро ещё раз проверяет каждое поле на своей границе (`src/app/server-input.ts`): `text` и `prompt` до 200 000 символов, идентификаторы, числа и списки по типу.
+The Electron shell validates every command before forwarding it to the sidecar: JSON object, `type` in `shell/agent-commands.json`, string `requestId`, `prompt` <= 200,000 characters, and raw line <= 4 MiB. The sidecar re-validates every field at its own boundary (`src/app/server-input.ts`): `text` and `prompt` <= 200,000 characters, plus typed IDs, numbers, and arrays.
 
-## Миграция перед запуском
+## Pre-Launch Migration
 
-До открытия обычного ядра sidecar может публиковать `storage.migration` со схемой `shared/storage-migration.ts`: `version`, `phase`, `step`, `completed`, `total`, `paths`, `backups`, необязательные `currentPath` и `error`. Фазы: `required`, `running`, `failed`, `complete`. Команды `hello`, `status` и `storage.status` возвращают текущий снимок; остальные команды ядра заблокированы. `storage.migrate` немедленно подтверждает старт, реальный прогресс идёт отдельными событиями. Повторный старт во время работы не создаёт второго переноса. `storage.accept` допустим после `complete`, повторно проверяет опубликованные данные и сохраняет принятие. Модалка исчезает только после настоящего `status` запущенного ядра.
+Before starting the normal core service, the sidecar may emit `storage.migration` events matching `shared/storage-migration.ts`: `version`, `phase`, `step`, `completed`, `total`, `paths`, `backups`, and optional `currentPath` and `error`. Phases are `required`, `running`, `failed`, and `complete`. While migration is pending, `hello`, `status`, and `storage.status` return the current migration snapshot and all other core commands are blocked. `storage.migrate` acknowledges startup immediately and streams progress via events (duplicate calls while running are idempotent). `storage.accept` is valid after `complete`, re-verifies published data, records acceptance durably, and boots the core; the UI modal closes only once a live core `status` arrives.
 
-Транзакция `.flecten-migration/v1/state.json` фиксирует этапы `planned`, `backed-up`, `merged`, `verified`, `retiring`, `retired`, `published`, `ready`. Каждый источник хранит область содержимого `scope`: новый план использует `durable`, прежняя транзакция без поля читается как `full`. На этапах до `retiring`, когда все исходные хранилища на месте и ни одного `retired-*` ещё нет, старый полный план автоматически переходит на новую durable revision без обхода пересоздаваемых деревьев. Точный старый state сохраняется неизменяемой ссылкой `state-N-full.json`, существующие полные или частичные копии остаются как есть, а новый план пишет в следующий `originals-N`. После начала retirement сохраняются прежние full-проверки. Копии `originals/current` и `originals/legacy` проверяются SHA-256 в указанной области, исходные каталоги целиком сохраняются как `retired-current` и `retired-legacy`. Публикация идёт rename с синхронизацией каталогов. После прерывания уже начатый перенос продолжается автоматически; незавершённое принятие снова показывает экран. Доступные запомненные проекты обрабатываются вместе, отсутствующие папки не создаются заново. Новый старый проект проверяется при его открытии. Обнаружение не обходит вложенные проекты или пользовательские файлы: проверяются только служебные хранилища выбранных и запомненных корней.
+The migration transaction log at `.flecten-migration/v1/state.json` advances through `planned`, `backed-up`, `merged`, `verified`, `retiring`, `retired`, `published`, and `ready`. Each source records a content `scope` (`durable` for new plans; legacy transactions without `scope` default to `full`). Prior to `retiring` (while all source stores remain in place and no `retired-*` directory exists), a legacy `full` plan upgrades automatically to a `durable` revision without walking rebuildable trees: the exact prior state is preserved via an immutable `state-N-full.json` link, existing backups stay untouched, and the upgraded plan writes into `originals-N`. Once `retiring` begins, full-scope checks stay pinned. `originals/current` and `originals/legacy` backups are verified by SHA-256 within scope, original directories are preserved intact as `retired-current` and `retired-legacy`, and publication uses atomic directory renames with `fsync`. Interrupted runs resume automatically on restart, unaccepted completions re-open the confirmation screen, remembered accessible projects migrate together without recreating deleted folders, and discovery inspects only metadata directories of selected and remembered roots rather than crawling user trees.
 
-Чтение и копирование выполняются максимум в 16 параллельных операциях. Файлы копируются через открытые дескрипторы средствами Bun, каждый файл синхронизируется, каталоги синхронизируются перед фиксацией этапа. SHA-256 manifest проверяет резервную копию и staging; исходное хранилище повторно проверяется в области источника перед переносом в retired. Новый план не перечисляет, не хеширует и не копирует содержимое `shadow`, `cache`, `diagnostics` и `sidecar.lock`. Это ограничивает перенос долговечными данными независимо от размера пересоздаваемого shadow Git. Успешная проверка повторно используется только внутри текущего вызова под блокировкой, после перезапуска данные проверяются заново. Принятие удерживает блокировки всех ожидающих хранилищ от общей проверки до durable записей принятия. Замер на изолированном хранилище: `bun scripts/measure-storage-migration.ts`; `--source` проверяет отдельную копию указанного каталога.
+File reads and copies run with bounded concurrency of 16, copying via open Bun file descriptors with per-file `fsync` and directory sync before advancing stages. SHA-256 manifests verify backups, staging, and pre-retirement sources. `durable` plans skip enumerating, hashing, or copying rebuildable `shadow`, `cache`, `diagnostics`, and `sidecar.lock` data, bounding migration time regardless of shadow Git size. Verification caches apply only within a single locked invocation and re-run after restart; `storage.accept` holds locks across all pending stores from verification through durable acceptance writes. Benchmark isolated stores via `bun scripts/measure-storage-migration.ts` (`--source` tests an isolated copy of a target directory).
 
-Независимые сессии объединяются; одинаковые файлы и проверенный полный префикс журнала сохраняются без переписывания пользовательских сообщений. Расходящиеся содержательные данные останавливают перенос с путём к оригиналам. Кэш, diagnostics и shadow сохраняются на месте до retirement, затем целиком остаются в переименованном исходном каталоге; новое хранилище пересоздаёт их. Для области `durable` отдельной проверенной копии этих пересоздаваемых данных нет. При изменении содержательных данных retired-каталога перенос останавливается, сохраняя его вместе с пересоздаваемыми оригиналами. Checkpoint objects и manifests всегда копируются и проверяются побайтно. Нехватка места, права доступа, живое другое ядро и повреждённое состояние дают `failed`, не успешное пустое хранилище. Для неоднозначного конфликта требуется разбор сохранённых версий; Retry не выбирает данные за пользователя. До начала retirement исправленные исходные хранилища допускают новый план; прежние копии сохраняются, а следующие лежат в `originals-1`, `originals-2`. Принятые папки пропускаются без записи и проверки устаревшего manifest, чтобы изменения обычного ядра не требовали нового переноса. Копии автоматически не удаляются. SIGKILL проверяет остановку процесса, а гарантия при потере питания зависит от соблюдения fsync накопителем и ОС.
+Disjoint sessions merge cleanly, preserving identical files and verified journal prefixes without rewriting user prompts, whereas conflicting substantive files halt migration with paths to preserved originals. Checkpoint objects and manifests are always copied and verified byte-for-byte. Disk-full errors, permission failures, active competing sidecars, or corrupt state transition to `failed` rather than producing an empty store, and `Retry` never resolves data conflicts automatically. Accepted workspaces skip stale manifest checks on subsequent boots, and backup directories are never auto-deleted (crash safety covers `SIGKILL`; power-loss durability depends on OS/drive `fsync` semantics).
 
-## Задачи и маршрутизация
+## Tasks and Routing
 
-Одновременно идут несколько задач, предел задаёт `sessions.maxConcurrent` (по умолчанию 4). Каждая задача это отдельная сессия со своей очередью, подтверждениями, фоновыми задачами и бюджетом.
+Multiple tasks can run concurrently up to `sessions.maxConcurrent` (default `4`). Each task is an isolated session with its own queue, pending approvals, background jobs, and budget.
 
-- Команды с колонкой «Задача: да» принимают `sessionId`. Без него команда идёт в задачу в фокусе.
-- `approval.respond`, `approval.allowAll` и `approval.denyAll` без `sessionId` находят задачу по `id` подтверждения: ответ из любого окна попадает в ту задачу, которая спросила.
-- Каждое событие задачи несёт `sessionId`. Уведомление о фоновой задаче доходит только до той задачи, которая её запустила.
-- Второй `run` в задачу, которая уже идёт, отклоняется (`a run is already active`). Сообщение в идущую задачу отправляют через `steer` или `queue.add`.
+- Commands marked **Session: yes** accept `sessionId` and fall back to the focused session when omitted.
+- `approval.respond`, `approval.allowAll`, and `approval.denyAll` without `sessionId` resolve the owning session by approval `id`, routing responses from any window to the session that requested them.
+- Every task event carries `sessionId`, and background job completion notices route exclusively to the session that spawned the job.
+- Sending a second `run` to an already active session fails with `a run is already active`; use `steer` or `queue.add` while a run is in flight.
 
-## Порядок событий и повтор
+## Event Ordering and Replay
 
-`sessions.get` возвращает видимые события и `messageVersions` в порядке пользовательских сообщений. Каждый элемент содержит стабильный `messageId`, номер `current` с единицы и список идентификаторов `variants`. `sessions.edit` сохраняет прежнее продолжение, оставляет префикс до выбранного сообщения и сам запускает работу с новым `text`. Ответ приходит после сохранения `session.started`; клиент перечитывает журнал и live replay, не отправляя второй `run`. `sessions.branch` восстанавливает выбранный вариант вместе с его последним продолжением, включая вложенные редакции. Идентификаторы вариантов непрозрачны для клиента.
+`sessions.get` returns visible events alongside `messageVersions` ordered by user turns (`messageId`, 1-based `current` index, and opaque `variants` IDs). `sessions.edit` preserves the prior continuation branch, keeps the history prefix before the edited message, and starts a new run with updated `text`, replying once `session.started` is persisted so clients refresh from journal + live replay without issuing a second `run`. `sessions.branch` switches to a saved variant along with its latest nested continuation.
 
-`messageVersions.attachments` содержит сохранённые вложения выбранного сообщения: `id`, `name`, `kind`, `size`. В `sessions.edit` массив `retainedAttachments` выбирает исходные вложения и context references, которые остаются; новые `attachments` и `contexts` добавляются к ним. Пустой `retainedAttachments` убирает все исходные вложения. Без этого поля каждый переданный массив заменяет свой исходный набор, а пропущенный сохраняет его. Идентификаторы проверяются до изменения истории, новые файлы читаются и сохраняются до создания ветки. `model.set` завершает выбор модели до отправки правки, `reasoning` задаёт уровень нового прогона. Старые snapshots без файловых индексов представлены одним общим вложением.
+`messageVersions.attachments` lists stored attachment metadata (`id`, `name`, `kind`, `size`). On `sessions.edit`, `retainedAttachments` selects which prior attachments and context references carry over before appending new `attachments` and `contexts` (`[]` drops all prior attachments; omitting `retainedAttachments` replaces only the arrays explicitly passed). IDs and newly attached files are validated and persisted before branching; `model.set` commits model changes prior to editing, and `reasoning` sets the new run's level. Legacy unindexed snapshots appear as a single grouped attachment.
 
-Смена истории отклоняется во время работы агента, при непустой очереди, ожидающих approvals, фоновых задачах и работающих субагентах. События `history.edited` и `history.selected` сохраняются только в durable журнале и не входят в видимую проекцию. Изменения файлов не откатываются при выборе ветки.
+History edits and branch switches are rejected while the agent is running or when queued messages, pending approvals, background jobs, or active subagents exist. `history.edited` and `history.selected` persist in the durable journal without appearing in visible UI event projections, and switching conversation branches does not revert workspace files.
 
-При включённом переводе `session.started.prompt` сохраняет исходное сообщение слово в слово. `input.translated` несёт английский `input`, язык пользователя в `language` и stamp фактического системного префикса в `system`. `message.finished` хранит оригинальные английские `text`, `reasoning`, `summary`; отдельный `display` содержит перевод для окна. Аналогично `context.compacted.displaySummary` отделён от канонического `summary`. Replay модели использует оригиналы, renderer использует display. Ошибка обратного перевода сохраняется как `translation.failed` и показывает оригинал. События `usage` с `purpose: translation` несут провайдера, модель и `durationMs`; бюджет учитывает отдельный тариф переводчика. Аналогично `purpose: vision` обозначает описание изображения отдельной моделью и использует её тариф.
+When translation is enabled, `session.started.prompt` keeps the user's original message verbatim while `input.translated` records English `input`, detected `language`, and actual compiled `system` stamp. `message.finished` stores canonical English `text`, `reasoning`, and `summary` alongside translated `display` fields for the UI (similarly, `context.compacted.displaySummary` is separate from canonical `summary`): model replay reads canonical English, while the renderer shows `display` (falling back to canonical text and emitting `translation.failed` if back-translation fails). `usage` events with `purpose: "translation"` or `purpose: "vision"` carry `provider`, `model`, and `durationMs` billed at that model's rates.
 
-- Sidecar нумерует каждое событие полем `seq`. Номер растёт на весь процесс, общий для всех задач.
-- События одной задачи идут по порядку. `tool.finished` приходит в порядке завершения, а результаты попадают в историю модели в порядке вызова.
-- `events.replay` возвращает события текущего (или последнего) запуска задачи от его `session.started`: `{ "replay": { "sessionId", "events", "seq", "running" } }`. Дельты завершённого сообщения в повтор не входят: `message.finished` несёт тот же текст.
-- Окно после перезагрузки или второе окно применяет `events`, а затем пропускает живые события с `seq` не больше `replay.seq`. Так ни одна дельта не теряется и не приходит дважды.
-- В памяти хранятся последние 32 задачи, до 20 000 событий на запуск. Полный журнал задачи хранится на диске, `sessions.get` отдаёт выбранную ветку разговора.
+- Every wire event carries a process-wide monotonically increasing `seq`.
+- Per-session events arrive in causal order; `tool.finished` emits as calls complete while tool results enter model history in invocation order.
+- `events.replay` returns events for the active (or latest) run starting from its `session.started`: `{ "replay": { "sessionId", "events", "seq", "running" } }`. Streaming deltas for already completed messages are omitted because `message.finished` carries the full text.
+- Reconnecting or secondary windows apply `replay.events` and ignore live events with `seq <= replay.seq`, preventing dropped or duplicate deltas.
+- Up to 32 recent sessions (up to 20,000 events per run) stay buffered in memory; full histories live on disk and `sessions.get` loads the active conversation branch.
 
 ```json
 { "type": "events.replay", "requestId": "r9", "sessionId": "s_1" }
 ```
 
-## Команды
+## Commands
 
-| Команда | Задача | Поля | Ответ |
+| Command | Session | Fields | Response |
 |---|---|---|---|
-| `storage.status` | нет | нет | текущий `migration` или `null` после принятия |
-| `storage.migrate` | нет | нет | немедленный ACK, затем `storage.migration` с настоящим прогрессом |
-| `storage.accept` | нет | нет | ACK после проверки и durable принятия, затем запуск ядра |
-| `twin.get` | нет | нет | `twin`: профиль, источники и состояние обучения |
-| `twin.scan` | нет | нет | `twin`: реальные пути и количества сессий |
-| `twin.train` | `sourceIds` | нет | `twin`: немедленный snapshot, обучение в фоне |
-| `twin.cancel` | нет | нет | `twin`: отмена обучения |
-| `twin.configure` | `enabled?`, `sourceIds?` | нет | `twin`: настройки представителя |
-| `twin.review` | `candidateId`, `action`, `edits?` | нет | `twin`: применение старого предложения |
-| `twin.update` | `id`, `expectedRevision`, `edits` | нет | `twin`: CAS правка характера |
-| `twin.forget` | `id`, `expectedRevision` | нет | `twin`: удаление черты |
-| `twin.teach` | `summary`, `content`, `appliesWhen`, `path?`, `before?`, `after?`, `reaction?`, `strength?`, `voice?` | нет | `twin`: явный урок без модели |
-| `twin.consult` | `question` | нет | `twin`, `answer`: пробная реплика с основаниями и usage |
-| `dictionary.list` | нет | нет | `dictionary`, публичные и локальные определения с источником и ревизией |
-| `dictionary.sync` | нет | нет | `dictionary`, проверенный снимок GitHub или предыдущие определения с ошибкой обновления |
-| `dictionary.save` | нет | `entry`, `expectedRevision?` | `dictionary`, локальное определение, сохранённое в памяти проекта |
-| `dictionary.forget` | нет | `id`, `expectedRevision` | `dictionary`, удаление локального определения; публичное снова становится доступным |
-| `sessions.export` | нет | `id` | `exported.path`, копия JSONL истории в `.flecten/exports/` |
-| `context.pull-request` | нет | `url` | `contextReference`, описание публичного GitHub PR |
-| `diagnostics.export` | нет | нет | `diagnostics.path`, `diagnostics.report` |
-| `telemetry.send` | нет | нет | отправка счётчиков только при сохранённом consent |
-| `hooks.test` | нет | `event`, `index` | `hookTest`, результат сохранённого хука |
-| `modules.list` | опционально | `sessionId?` | `moduleState`, каталог, активные версии и поверхности |
-| `modules.marketplace` | нет | `action: list/install/addSource/removeSource`, `refresh?`, `url?`, `source?`, `name?`, `revision?` | `moduleMarketplace`, `moduleState`; поиск каталога, подключение источников и установка проверенных пакетов с зависимостями |
-| `modules.change` | нет | `operation`, `path`, `revision?`, `enabled?` | `moduleState`, install/trust/enable/development/interface/remove |
-| `modules.surface` | опционально | `name`, `surface`, `revision` | `moduleHtml`, проверенная HTML-поверхность |
-| `modules.invoke` | да | `name`, `surface`, `revision`, `request` | `moduleResult`, вызов через общий tool executor |
-| `modules.styles` | нет | `name`, `revision` | `moduleStyles`, CSS выбранного интерфейса |
-| `modules.authorize` | опционально | `name`, `surface`, `revision`, `request` | `moduleAuthorized`, проверка прав поверхности на API харнесса |
-| `skills.list` | нет | нет | `skills`, метаданные и файлы ресурсов |
-| `skills.reload` | нет | нет | `skills`, перечитанный каталог |
-| `skills.resource` | нет | `name`, `path` | ограниченный текст ресурса навыка |
-| `mcp.status` | нет | нет | `mcp`, health, logs, catalogs, запросы авторизации |
-| `mcp.reconnect` | нет | `id?` | `mcp`, пересобранный каталог |
-| `mcp.resource` | нет | `server`, `uri` | `attachedContext`, текст и бюджет ресурса |
-| `mcp.prompt` | нет | `server`, `name`, `args?` | `attachedContext`, готовый prompt сервера |
-| `mcp.oauth.start` | нет | `id` | `authorization`, URL согласия, ключи остаются в sidecar |
-| `mcp.oauth.cancel` | нет | `id` | отмена авторизации |
-| `mcp.elicitation.respond` | нет | `id`, `response` | `answered`, валидация ответа по форме сервера |
-| `hello` | нет | нет | без ответа, sidecar присылает `status` |
-| `status` | опционально | `sessionId?` | с `sessionId`: `state` задачи и её `info`; затем общий `status` |
-| `run` | да | `prompt`, `reasoning?`, `sessionId?`, `clientId?`, `attachments?`, `contexts?`, `resumed?` | без ответа, дальше события задачи |
-| `stop` | да | `sessionId?`, `mode?: graceful / force`, `target?: worker` | `result`, `state`; задача завершается `session.finished` |
-| `steer` | да | `text`, `attachments?`, `contexts?`, `id?` | `result`; сообщение уходит в текущий ход (`steer.applied`) |
-| `queue.add` | да | `text`, `attachments?`, `contexts?`, `id?` | `result`; сообщение уйдёт после текущего запуска |
-| `queue.edit` | да | `id`, `text` | `result` |
-| `queue.remove` | да | `id` | `result` |
-| `approval.respond` | да | `id`, `decision`, `feedback?` | `result` |
-| `approval.allowAll` | да | `ids` | `result` |
-| `approval.denyAll` | да | `ids` | `result` |
-| `tool.cancel` | да | `callId` | `result` |
-| `subagent.stop` | да | `id` | `result.stopped`, `state`; останавливает выбранного субагента, включая субагента Worker |
-| `jobs.list` | да | нет | `jobs` |
-| `jobs.stop` | да | `id` | `job` |
-| `checkpoint.list` | да | нет | `checkpoints` |
-| `checkpoint.diff` | да | `id` | `diff` |
-| `checkpoint.restore` | да | `id`, `target?`, `paths?`, `force?`, `includeProtected?` | `restore` |
-| `context.compact` | да | `focus?` | итог сжатия: `pruned`, `before`, `after`, `summary` |
-| `events.replay` | да | `sessionId` | `replay` |
-| `sessions.list` | нет | `query?`, `limit?`, `offset?` | `sessions` |
-| `sessions.search` | нет | `query`, `limit?`, `offset?` | `sessions` |
-| `sessions.get` | нет | `id` | `events`, `messageVersions` выбранной ветки |
-| `sessions.edit` | нет | `id`, `messageId`, `text`, `reasoning?`, `attachments?`, `contexts?`, `retainedAttachments?` | `events`, `messageVersions`; сам запускает новую работу |
-| `sessions.branch` | нет | `id`, `messageId`, `variantId` | `events`, `messageVersions`; выбирает сохранённое продолжение |
-| `sessions.rename` | нет | `id`, `title` | `session` |
-| `sessions.delete` | нет | `id`, `confirm: true` | итог удаления |
-| `sessions.fork` | нет | `id`, `sequence?` или `turn?` | `session` |
-| `settings.get` | нет | нет | `settings` |
-| `access.set` | нет | `mode: agent/confirm/full` | `info`; затем `status` |
-| `voice.status` | нет | нет | `voice`: engine, providerId, имя провайдера/движка, модель, язык; для локального режима проверяет установку |
-| `voice.transcribe` | нет | `id` (UUID), `audio` (base64: до 2 МиБ для API, 2 900 044 байт WAV для локального), `mimeType`, `destination?` (engine, providerId, model, language из voice.status) | `text`: распознанная речь |
-| `voice.cancel` | нет | `id` | отмена распознавания или установки и дерева процесса |
-| `voice.check` | нет | `id` (UUID), `engine` (faster-whisper или vosk), `local` (python, whisperModel, voskModel, device) | `voiceSetup`: ready, message |
-| `voice.prepare` | нет | `id` (UUID), `engine`, `local` | установка движка и загрузка модели, `voiceSetup`: ready, message |
-| `settings.save` | нет | `config`, `clearApiKeys?` | `info`; затем `status` |
-| `trust.accept` | нет | нет | `info`; сохраняет доверие папке, затем `status` |
-| `trust.reject` | нет | нет | `info`; сохраняет отказ, затем `status` |
-| `projects.list` | нет | нет | `projects`: добавленные папки, trust, sessions и группа с `projectRoot: null` |
-| `model.set` | опционально | `sessionId?`, `provider`, `model`, `reasoning?`, `variant?` | `info` выбранного чата либо общих настроек; затем общий `status` |
-| `model.probe` | нет | `provider`, `model` | итог проверки модели |
-| `provider.discover` | нет | `protocol`, `baseUrl`, `apiKey?`, `headers?` | `result` |
-| `provider.inspect` | нет | `baseUrl` | `result`: публичные признаки шлюза без учётных данных |
-| `provider.draft` | нет | `provider`, `providerId?` | `result` с токеном черновика |
-| `provider.test` | нет | `model` и `providerId` или `draftToken` | `result` |
-| `model.metadata` | нет | `model`, `providerId` или `draftToken`, `refresh?` | `result.model`, `result.warnings`; только чтение API/каталога, без генерации и сохранения |
-| `provider.reauthorize` | нет | `id`, `model` | `result`, обновляет кэш команды авторизации и проверяет модель |
-| `provider.actualize` | нет | `id` | `result`, `info` |
-| `catalog.status` | нет | нет | `status` |
-| `catalog.sync` | нет | нет | `status` |
-| `catalog.list` | нет | нет | `providers` |
-| `catalog.provider` | нет | `id` | `provider` |
-| `files.list` | нет | нет | `files` |
-| `files.change` | нет | `operation`, `path`, `destination?`, `directory?`, `confirm?` | создание, переименование или корзина файла |
-| `files.search` | нет | `query`, `caseSensitive`, `wholeWord`, `include` | `search`, результаты поиска в проекте |
-| `files.replace` | нет | параметры поиска и замены | `replacement`, проверенная замена в проекте |
-| `files.git` | нет | `action`, `path?`, `staged?`, `message?` | `git`, состояние или результат операции |
-| `ide.terminal` | нет | `action`, `data?`, `cursor?`, `cols?`, `rows?` | `terminal`, отдельная пользовательская PTY |
-| `files.read` | нет | `path` | `file`: `path`, `size`, `text`, `truncated`, `binary`, `hash?`, `readOnlyReason?` |
-| `files.write` | нет | `path`, `text`, `expectedHash` | `file` после сохранения |
-| `commands.list` | нет | нет | `commands` |
+| `storage.status` | no | none | current `migration` snapshot, or `null` once accepted |
+| `storage.migrate` | no | none | immediate ACK, followed by live `storage.migration` progress events |
+| `storage.accept` | no | none | ACK after verification and durable acceptance, then core startup |
+| `twin.get` | no | none | `twin`: persona profile, sources, and training state |
+| `twin.scan` | no | none | `twin`: discovered source paths and session counts |
+| `twin.train` | no | `sourceIds` | `twin`: immediate snapshot while training runs in background |
+| `twin.cancel` | no | none | `twin`: cancels active training |
+| `twin.configure` | no | `enabled?`, `sourceIds?` | `twin`: updates Twin configuration |
+| `twin.review` | no | `candidateId`, `action`, `edits?` | `twin`: applies or dismisses a legacy candidate trait |
+| `twin.update` | no | `id`, `expectedRevision`, `edits` | `twin`: CAS update of an existing trait |
+| `twin.forget` | no | `id`, `expectedRevision` | `twin`: removes a trait |
+| `twin.teach` | no | `summary`, `content`, `appliesWhen`, `path?`, `before?`, `after?`, `reaction?`, `strength?`, `voice?` | `twin`: records an explicit user lesson without calling a model |
+| `twin.consult` | no | `question` | `twin`, `answer`: sample Twin reply with trait citations and usage |
+| `dictionary.list` | no | none | `dictionary`: public and local entries with provenance and revision |
+| `dictionary.sync` | no | none | `dictionary`: verified GitHub snapshot, or prior dataset with sync error |
+| `dictionary.save` | no | `entry`, `expectedRevision?` | `dictionary`: saves a local definition in project memory |
+| `dictionary.forget` | no | `id`, `expectedRevision` | `dictionary`: deletes a local override, uncovering any public definition |
+| `sessions.export` | no | `id` | `exported.path`: atomic redacted JSONL + attachments bundle in `.flecten/exports/` |
+| `context.pull-request` | no | `url` | `contextReference`: public GitHub PR metadata and summary |
+| `diagnostics.export` | no | none | `diagnostics.path`, `diagnostics.report` |
+| `telemetry.send` | no | none | sends opt-in event counters when consent is saved |
+| `hooks.test` | no | `event`, `index` | `hookTest`: dry-run execution result for a configured hook |
+| `modules.list` | optional | `sessionId?` | `moduleState`: catalog, active revisions, and surfaces |
+| `modules.marketplace` | no | `action: list/install/addSource/removeSource`, `refresh?`, `url?`, `source?`, `name?`, `revision?` | `moduleMarketplace`, `moduleState`: catalog browsing, source management, and verified installs with dependencies |
+| `modules.change` | no | `operation`, `path`, `revision?`, `enabled?` | `moduleState`: install/trust/enable/development/interface/remove |
+| `modules.surface` | optional | `name`, `surface`, `revision` | `moduleHtml`: verified HTML surface bundle |
+| `modules.invoke` | yes | `name`, `surface`, `revision`, `request` | `moduleResult`: executes surface tool/resource call via shared executor |
+| `modules.styles` | no | `name`, `revision` | `moduleStyles`: bundled CSS for the active module interface |
+| `modules.authorize` | optional | `name`, `surface`, `revision`, `request` | `moduleAuthorized`: verifies surface host-API grant |
+| `skills.list` | no | none | `skills`: discovered skill metadata and resource files |
+| `skills.reload` | no | none | `skills`: reloaded skill catalog |
+| `skills.resource` | no | `name`, `path` | bounded UTF-8 text of a skill resource file |
+| `mcp.status` | no | none | `mcp`: health, logs, catalogs, and pending auth requests |
+| `mcp.reconnect` | no | `id?` | `mcp`: reconnected server catalog |
+| `mcp.resource` | no | `server`, `uri` | `attachedContext`: bounded resource text and budget metadata |
+| `mcp.prompt` | no | `server`, `name`, `args?` | `attachedContext`: rendered MCP server prompt |
+| `mcp.oauth.start` | no | `id` | `authorization`: consent URL (tokens remain in sidecar) |
+| `mcp.oauth.cancel` | no | `id` | cancels pending OAuth flow |
+| `mcp.elicitation.respond` | no | `id`, `response` | `answered`: validates and submits server elicitation form response |
+| `hello` | no | none | no `response`; sidecar emits `status` |
+| `status` | optional | `sessionId?` | with `sessionId`: session `state` and `info`; followed by global `status` |
+| `run` | yes | `prompt`, `reasoning?`, `sessionId?`, `clientId?`, `attachments?`, `contexts?`, `resumed?` | no `response`; streams task events |
+| `summary.interaction` | yes | `sessionId`, `summaryId`, `interaction` (delivery policy, named value, or trigger) | no `response`; delivers interaction payload into the same chat per policy |
+| `stop` | yes | `sessionId?`, `mode?: graceful / force`, `target?: worker` | `result`, `state`; run concludes with `session.finished` |
+| `steer` | yes | `text`, `attachments?`, `contexts?`, `id?` | `result`; injects message into active run (`steer.applied`) |
+| `queue.add` | yes | `text`, `attachments?`, `contexts?`, `id?` | `result`; enqueues message for next run |
+| `queue.edit` | yes | `id`, `text` | `result` |
+| `queue.remove` | yes | `id` | `result` |
+| `approval.respond` | yes | `id`, `decision`, `feedback?` | `result` |
+| `approval.allowAll` | yes | `ids` | `result` |
+| `approval.denyAll` | yes | `ids` | `result` |
+| `tool.cancel` | yes | `callId` | `result` |
+| `subagent.stop` | yes | `id` | `result.stopped`, `state`; stops the target subagent (including Worker subagents) |
+| `jobs.list` | yes | none | `jobs` |
+| `jobs.stop` | yes | `id` | `job` |
+| `checkpoint.list` | yes | none | `checkpoints` |
+| `checkpoint.diff` | yes | `id` | `diff` |
+| `checkpoint.restore` | yes | `id`, `target?`, `paths?`, `force?`, `includeProtected?` | `restore` |
+| `context.compact` | yes | `focus?` | compaction result: `pruned`, `before`, `after`, `summary` |
+| `events.replay` | yes | `sessionId` | `replay` |
+| `sessions.list` | no | `query?`, `limit?`, `offset?` | `sessions` |
+| `sessions.search` | no | `query`, `limit?`, `offset?` | `sessions` |
+| `sessions.get` | no | `id` | `events`, `messageVersions` for the active branch |
+| `sessions.edit` | no | `id`, `messageId`, `text`, `reasoning?`, `attachments?`, `contexts?`, `retainedAttachments?` | `events`, `messageVersions`; launches the edited branch automatically |
+| `sessions.branch` | no | `id`, `messageId`, `variantId` | `events`, `messageVersions`; activates a saved continuation variant |
+| `sessions.rename` | no | `id`, `title` | `session` |
+| `sessions.delete` | no | `id`, `confirm: true` | deletion result |
+| `sessions.fork` | no | `id`, `sequence?` or `turn?` | `session` |
+| `settings.get` | no | none | `settings` |
+| `access.set` | no | `mode: agent/confirm/full` | `info`; followed by `status` |
+| `voice.status` | no | none | `voice`: `engine`, `providerId`, provider/engine label, `model`, `language`, plus local install readiness |
+| `voice.transcribe` | no | `id` (UUID), `audio` (base64: <= 2 MiB for API, <= 2,900,044-byte WAV for local), `mimeType`, `destination?` (`engine`, `providerId`, `model`, `language` from `voice.status`) | `text`: transcribed speech |
+| `voice.cancel` | no | `id` | aborts transcription or setup and kills its process tree |
+| `voice.check` | no | `id` (UUID), `engine` (`faster-whisper` or `vosk`), `local` (`python`, `whisperModel`, `voskModel`, `device`) | `voiceSetup`: `ready`, `message` |
+| `voice.prepare` | no | `id` (UUID), `engine`, `local` | installs Python runtime and downloads model; returns `voiceSetup`: `ready`, `message` |
+| `settings.save` | no | `config`, `clearApiKeys?` | `info`; followed by `status` |
+| `trust.accept` | no | none | `info`; persists workspace trust, followed by `status` |
+| `trust.reject` | no | none | `info`; persists workspace rejection, followed by `status` |
+| `projects.list` | no | none | `projects`: registered folders, trust state, sessions, plus the `projectRoot: null` group |
+| `model.set` | optional | `sessionId?`, `provider`, `model`, `reasoning?`, `variant?` | `info` for target chat or global defaults; followed by global `status` |
+| `model.probe` | no | `provider`, `model` | model connectivity probe result |
+| `provider.discover` | no | `protocol`, `baseUrl`, `apiKey?`, `headers?` | `result` |
+| `provider.inspect` | no | `baseUrl` | `result`: unauthenticated gateway fingerprint |
+| `provider.draft` | no | `provider`, `providerId?` | `result` with temporary draft token |
+| `provider.test` | no | `model` plus `providerId` or `draftToken` | `result` |
+| `model.metadata` | no | `model`, `providerId` or `draftToken`, `refresh?` | `result.model`, `result.warnings` (read-only API/catalog lookup without generation or saving) |
+| `provider.reauthorize` | no | `id`, `model` | `result`; refreshes auth-command token cache and probes model |
+| `provider.actualize` | no | `id` | `result`, `info` |
+| `catalog.status` | no | none | `status` |
+| `catalog.sync` | no | none | `status` |
+| `catalog.list` | no | none | `providers` |
+| `catalog.provider` | no | `id` | `provider` |
+| `files.list` | no | none | `files` |
+| `files.change` | no | `operation`, `path`, `destination?`, `directory?`, `confirm?` | file/directory create, rename, or trash result |
+| `files.search` | no | `query`, `caseSensitive`, `wholeWord`, `include` | `search`: workspace search matches |
+| `files.replace` | no | search and replacement parameters | `replacement`: verified workspace replacement result |
+| `files.git` | no | `action`, `path?`, `staged?`, `message?` | `git`: repository status or operation result |
+| `ide.terminal` | no | `action`, `data?`, `cursor?`, `cols?`, `rows?` | `terminal`: dedicated user IDE PTY |
+| `files.read` | no | `path` | `file`: `path`, `size`, `text`, `truncated`, `binary`, `hash?`, `readOnlyReason?` |
+| `files.write` | no | `path`, `text`, `expectedHash` | updated `file` snapshot |
+| `commands.list` | no | none | `commands` |
 
-Значения полей:
+Field semantics:
 
-- `reasoning`: `none`, `minimal`, `low`, `medium`, `high`, `xhigh` или `max`; без него берётся значение из конфига, а модель без такого уровня получает ближайший поддержанный.
-- `files.read`: путь относительно проекта; symlink раскрывается до проверки, файл вне проекта, FIFO и устройство отклоняются. Отдаётся не больше 512 KB текста по границе строки (`truncated: true`), секреты замаскированы, у бинарного файла `binary: true` и пустой `text`. Так окно открывает файл из карточки и полный лог тула.
-- `files.write`: сохраняет существующий UTF-8 файл до 512 КБ атомарно с прежними правами и BOM. `expectedHash` берётся из последнего `files.read`; несовпадение отклоняет запись и предлагает открыть актуальную версию. Бинарные, усечённые, замаскированные файлы, UTF-16 и служебные пути `.git`/`.flecten` доступны только для просмотра, с `readOnlyReason` вместо `hash`. Путь за пределы проекта не допускается.
-- `decision`: `allow_once`, `allow_session`, `allow_always` или `deny`. Для `external_path` одноразовый ответ покрывает подготовленный вызов, session-ответ разрешает указанную папку с подпапками в памяти чата, always-ответ сохраняет `external_path` + `pathPrefix` в проект. Для остальных действий session и always сохраняют точное действие по аргументам, cwd и ресурсам. Human checkpoint допускает только одноразовое разрешение. `feedback` передаёт модели поправку пользователя.
-- `access.set.mode`: `agent`, `confirm` или `full`. Команда сохраняет согласованные базовые permissions и sandbox, сохраняя providers, rules, checkpoints и остальные поля. В ответе `info.accessMode` и в `status` приходит `agent | confirm | full | custom`; `custom` вычисляется при отличающихся базовых настройках и не принимается как режим команды.
-- `target`: `before` (по умолчанию, состояние до хода) или `after`. `force` перезаписывает файлы, которые пользователь менял после хода; `includeProtected` разрешает защищённые пути.
-- `protocol`: `openai-chat`, `openai-responses`, `anthropic-messages` или `gemini`.
-- `clientId` связывает ошибку `run_failed` с черновиком окна, у которого ещё нет `sessionId`.
-- `resumed` помечает запуск, который продолжает прерванную задачу.
+- `reasoning`: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`; defaults to config when omitted and clamps to the nearest level supported by the model.
+- `files.read`: project-relative path with symlinks resolved prior to boundary checks (external paths, FIFOs, and device nodes are rejected). Returns up to 512 KiB of secret-redacted UTF-8 text aligned to a line boundary (`truncated: true`), or `binary: true` with empty `text` for binary files; backs both the file viewer and full tool-log inspection.
+- `files.write`: atomically updates an existing UTF-8 file up to 512 KiB while preserving permissions and BOM. `expectedHash` must match the latest `files.read` (on mismatch, write rejects and prompts reloading). Binary, truncated, redacted, UTF-16, and protected `.git`/`.flecten` files omit `hash` and expose `readOnlyReason` instead; external paths are rejected.
+- `decision`: `allow_once`, `allow_session`, `allow_always`, or `deny`. On `external_path`, `allow_once` covers the prepared call, `allow_session` authorizes that directory tree in session memory, and `allow_always` writes an `external_path` + `pathPrefix` rule to config; other actions scope session/always grants to exact arguments, `cwd`, and target resources. Human checkpoints permit `allow_once` only. `feedback` forwards user guidance to the model.
+- `access.set.mode`: `agent`, `confirm`, or `full`. Updates baseline permissions and sandbox settings while preserving providers, custom rules, checkpoints, and other config fields. `info.accessMode` and `status` report `agent | confirm | full | custom` (`custom` is computed when baseline fields diverge and is not accepted as an input mode).
+- `target`: `before` (default pre-turn state) or `after`. `force` overwrites files modified manually since the checkpoint; `includeProtected` includes protected paths.
+- `protocol`: `openai-chat`, `openai-responses`, `anthropic-messages`, or `gemini`.
+- `clientId` correlates a pre-session `run_failed` error back to an unsaved UI draft.
+- `resumed` marks a run continuing an interrupted task.
 
 ```json
-{ "type": "run", "prompt": "сделай лендинг", "reasoning": "medium" }
+{ "type": "run", "prompt": "Build a landing page", "reasoning": "medium" }
 ```
 
 ```json
@@ -207,14 +208,14 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 { "type": "checkpoint.restore", "sessionId": "s_1", "id": "c_3", "target": "before", "paths": ["src/app.ts"] }
 ```
 
-## События
+## Events
 
-| Событие | Полезная нагрузка |
+| Event | Payload |
 |---|---|
-| `session.started` | `prompt`, `provider`, `model`, `input?`, `attachments?` (проверенные metadata references), `reasoning?`, `system?`, `queueId?`, `resumed?`, `budget?` |
-| `session.state` | `sessionId`, `state`: канонические phase, epoch/revision, queue, approvals и jobs |
+| `session.started` | `prompt`, `provider`, `model`, `input?`, `attachments?` (validated metadata references), `reasoning?`, `system?`, `queueId?`, `resumed?`, `budget?` |
+| `session.state` | `sessionId`, `state`: canonical phase, epoch/revision, queue, approvals, and jobs |
 | `turn.started` | `turn` |
-| `message.started` | нет; сохраняет позицию первого фрагмента текста в хронологии |
+| `message.started` | none; anchors the chronological slot of the first assistant text chunk |
 | `message.delta` | `text` |
 | `reasoning.delta` | `text` |
 | `message.finished` | `text`, `reasoning`, `toolCalls`, `summary?`, `complete?`, `display?` |
@@ -222,15 +223,15 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `model.fallback` | `provider`, `model`, `reason` |
 | `provider.retry` | `kind`, `attempt`, `delayMs`, `until`, `reason` |
 | `tool_call.progress` | `index`, `name?`, `delta?` |
-| `tool.output` | `callId`, `text`, очищенный поток вывода выполняющегося вызова |
-| `twin.activity` | `activity`: taskId?, phase, state, emotion, voice, instructions, entryIds, corrections, provider, model, usage? | durable диалог Twin с Worker, приёмка и стоимость |
-| `worker.event` | `sessionId` родительского чата, `event` из сессии Worker; вложенный envelope запрещён |
-| `worker.acceptance` | `sessionId`, `acceptance`: критерии задания и состояние приёмки |
-| `provider.response` | `sessionId`, `response`: техническое подтверждение полноты ответа провайдера без содержимого запроса и ответа |
-| `context.summary.failed` | `sessionId`, `stage`, `reason`: стадия и причина сбоя сводки контекста |
-| `subagent.started` | `subagent`: стабильные `id`, `callId`, `name`, `avatar`, `agent`, исходный `prompt` |
-| `subagent.event` | `id`, `event`: типизированное событие дочерней сессии, без вложенных исполнителей |
-| `subagent.finished` | `id`, `result`: проверенный отчёт, usage и ошибка; `cancelled`: явная остановка или предел времени |
+| `tool.output` | `callId`, `text` (redacted live output chunk from an active call) |
+| `twin.activity` | `activity` (`taskId?`, `phase`, `state`, `emotion`, `voice`, `instructions`, `entryIds`, `corrections`, `provider`, `model`, `usage?`): durable Twin-Worker dialogue, acceptance, and cost |
+| `worker.event` | parent `sessionId` plus nested `event` from the Worker session (recursive Worker envelopes disallowed) |
+| `worker.acceptance` | `sessionId`, `acceptance`: assignment criteria and verification state |
+| `provider.response` | `sessionId`, `response`: redacted stream-completeness receipt without prompt or response text |
+| `context.summary.failed` | `sessionId`, `stage`, `reason`: compaction summary failure stage and cause |
+| `subagent.started` | `subagent`: stable `id`, `callId`, `name`, `avatar`, `agent`, and initial `prompt` |
+| `subagent.event` | `id`, `event`: typed child-session event (no nested child runners) |
+| `subagent.finished` | `id`, `result` (validated report, usage, error), `cancelled` (explicit stop or timeout) |
 | `tool.started` | `call` |
 | `tool.finished` | `call`, `result` |
 | `steer.applied` | `text`, `input?`, `queueId?` |
@@ -238,13 +239,13 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `job.started` | `job` |
 | `job.finished` | `job`, `notify`, `checkpoint?` |
 | `budget` | `budget` |
-| `task.budget` | `budget`: общий бюджет задания Talker и Worker |
+| `task.budget` | `budget`: combined chat ledger across Talker, Worker, and auxiliary calls |
 | `run.interrupted` | `at`, `reason` |
 | `context.compacted` | `summary`, `displaySummary?`, `pruned`, `before?`, `after?`, `kept?`, `page?`, `path?`, `source?`, `focus?` |
 | `context.usage` | `used`, `window`, `reserve`, `source` |
-| `memory.context` | `text`, `references`: массив `{id, revision, level}`, уровни `index`, `full`, `invalidated` |
+| `memory.context` | `text`, `references`: array of `{ id, revision, level }` (`index`, `full`, `invalidated`) |
 | `usage` | `usage`, `purpose?`, `provider?`, `model?`, `durationMs?` |
-| `usage.unavailable` | `purpose?`, `provider?`, `model?`: провайдер не сообщил usage |
+| `usage.unavailable` | `purpose?`, `provider?`, `model?` when upstream omitted usage receipts |
 | `input.translated` | `input`, `language`, `system?` |
 | `translation.failed` | `message` |
 | `hook.finished` | `hook` |
@@ -254,79 +255,77 @@ Electron запускает `dist/flecten-agent` (или `src/app/server.ts` в 
 | `approval.resolved` | `id`, `choice`, `by` |
 | `error` | `code`, `message`, `sessionId?`, `limit?`, `resetAt?` |
 
-Каждое событие, кроме части `error`, несёт `sessionId`, а на проводе ещё и `seq`.
+Every event (except non-session `error` events) carries `sessionId` plus wire `seq`.
 
-`memory.context` сохраняется в durable JSONL и восстанавливается replay как внутренний model context: `text` становится отдельным контекстным сообщением, `references` переносятся в его `memoryReferences`. Каждая ссылка содержит `id`, положительную `revision` и `level`: `index`, `full` или `invalidated`. Ссылка `catalog:<SHA-256>` с revision 1 обозначает реально доставленный снимок тематического каталога, не отдельную сохранённую запись. Событие фиксирует фактически доставленные сведения и их ревизии, не новое сообщение человека; `memorySource` пользовательского evidence ему не присваивается. Это позволяет сохранить учёт видимости после reopen и снять его, когда соответствующее содержимое удалено compaction. Контракт памяти и пределы описаны в [MEMORY.md](MEMORY.md).
+`memory.context` persists in durable JSONL and replays into internal model context: `text` becomes a dedicated context message carrying `memoryReferences` (`{ id, revision, level }`, plus `catalog:<SHA-256>` at revision `1` for topic-catalog snapshots) without granting user-quote `memorySource` authority, preserving visibility tracking across reopen and clearing it on compaction ([MEMORY.md](MEMORY.md)). During bulk revocations, `invalidated` references strip stale memory messages from provider projections and replay across the entire 500-entry bank without inflating model-facing prose.
 
-При массовом отзыве invalidated references также снимают прежние memory messages из provider projection и при replay. Сырые tool events не переписываются. Обычный discovery ограничен 16 references; отдельное уведомление массового отзыва допускает references для всего ограниченного банка. Metadata не превращается в тысячи токенов модельного текста.
+- `tool_call.progress`, `message.delta`, `reasoning.delta`, and `provider.retry` are transient live indicators excluded from durable JSONL and post-completion replay.
+- `message.reset` discards a partially streamed assistant message when an upstream stream drops mid-turn and retries.
+- `provider.retry` announces that the request will retry at epoch timestamp `until` (ms).
+- `model.fallback` fires before the first token from a backup route after primary failure `reason` (`rate_limit`, `quota`, `server`, `network`, `timeout`, `circuit_open`, etc.) and persists in the log to record which model answered.
+- `steer.applied` fires when a steered user message enters model context (`queueId` links back to a dequeued item).
+- `notice.applied` fires when the model receives a runtime notice (such as background job completion).
+- `budget` fires on every spend update; `budget.exceeded` names the limit (`tokens`, `cost`, or `time`) that halted the run.
+- `run.interrupted` is appended to sessions cut short by a sidecar crash or restart.
+- `approval.requested` includes `approval.expiresAt`. `approval.resolved.by` is `user`, `timeout`, `aborted`, `policy`, or `persistence`: `policy` re-evaluates pending prompts when rules or grants change (`allow_once` if newly permitted, `deny` if newly blocked, without fabricating a user grant, while keeping `ask` and human checkpoints pending); `persistence` marks a grant-save failure.
+- `error.limit` (`rate`, `five_hour`, `weekly`, `billing`) and `resetAt` arrive when an upstream rate or billing quota halts the run.
 
-- `tool_call.progress`, `message.delta`, `reasoning.delta` и `provider.retry` это индикаторы: они не пишутся в JSONL и не входят в повтор после `message.finished`.
-- `message.reset` отменяет показанный частичный ответ: провайдер оборвал поток, и ход идёт заново.
-- `provider.retry` сообщает, что запрос уйдёт снова в `until` (мс от эпохи).
-- `model.fallback` приходит перед первым токеном резервной модели: основная ответила ошибкой `reason` (`rate_limit`, `quota`, `server`, `network`, `timeout`, `circuit_open` и другие), и запрос ушёл в `provider`/`model` из `failover`. Событие пишется в лог, поэтому история показывает, какая модель ответила.
-- `steer.applied` приходит, когда сообщение пользователя дошло до модели; `queueId` связывает его с элементом очереди.
-- `notice.applied` приходит, когда модель получила уведомление оболочки, например о завершённой фоновой задаче.
-- `budget` приходит при каждом изменении расхода; `budget.exceeded` называет предел (токены, деньги или время), который остановил задачу.
-- `run.interrupted` пишется в лог задачи, которую оборвал перезапуск или падение sidecar.
-- `approval.requested` приходит с `approval.expiresAt`; в этот момент вызов будет отклонён. `approval.resolved.by`: `user`, `timeout`, `aborted`, `policy` или `persistence`. `by: policy` означает повторную оценку изменившихся прав: `choice: allow_once` продолжает уже разрешённый вызов без нового клика, `choice: deny` завершает запрещённый. `by: persistence` означает ошибку сохранения grants. Актуальные ask и human checkpoints остаются ожидающими; исход по политике не является новым ответом пользователя и не создаёт сохранённое правило.
-- `error.limit` (`rate`, `five_hour`, `weekly`, `billing`) и `resetAt` приходят, когда задачу остановил лимит провайдера.
+## Service messages
 
-## Служебные сообщения
+These messages originate from the sidecar wrapper (`src/app/server.ts`) or Electron shell (`shell/main.mjs`) rather than `core`:
 
-Эти строки пишет не ядро, а sidecar (`src/app/server.ts`) или оболочка Electron (`shell/main.mjs`).
-
-| Сообщение | Источник | Полезная нагрузка |
+| Message | Source | Payload |
 |---|---|---|
-| `status` | sidecar | проект, ветка, пользователь, провайдер, модель, окно контекста, список провайдеров, навыки, MCP, песочница, `accessMode`, промпт, снимки shell, `configError?`, `sessions` |
-| `response` | sidecar и оболочка | `requestId`, `ok`, поля ответа или `error` |
+| `status` | sidecar | workspace, Git branch, user, default provider/model, context window, providers list, skills, MCP, sandbox, `accessMode`, prompt info, shell snapshots, `configError?`, `sessions` |
+| `response` | sidecar and shell | `requestId`, `ok`, response payload fields or `error` |
 | `sessions.interrupted` | sidecar | `interrupted`, `resumed` |
-| `agent.exit` | оболочка | `code`, `signal?`, `message?` |
-| `project.changed` | оболочка | `cwd` |
-| `projects.changed` | оболочка | список папок изменён, нужно обновить `projects.list` |
-| `session.open` | оболочка | `id`; открыть сессию после готовности выбранной рабочей папки |
+| `agent.exit` | shell | `code`, `signal?`, `message?` |
+| `project.changed` | shell | `cwd` |
+| `projects.changed` | shell | workspace list changed; refresh via `projects.list` |
+| `session.open` | shell | `id`; open target session once workspace is ready |
 
-`status` содержит `projectRoot: string | null` и `trustState: unknown | trusted | untrusted`. `projectRoot: null` означает работу без проекта.
+`status` carries `projectRoot: string | null` (`null` when running without an open project) and `trustState: "unknown" | "trusted" | "untrusted"`.
 
-Общий `status` передаёт провайдера и модель по умолчанию, без `sessionId`. Ответ на `status` с `sessionId` возвращает отдельную `info` с этим идентификатором и выбором чата. `model.set` с `sessionId` сохраняет служебное событие `model.selected` (`sessionId`, `provider`, `model`, `reasoning?`, `variant?`) в durable журнале чата и публикует его через общий поток событий, не меняя общую настройку. Без `sessionId` команда меняет модель по умолчанию для новых чатов. Существующий чат восстанавливает последний явный выбор, а для старого журнала без `model.selected` использует модель последнего основного запуска. Уже выполняющийся запрос завершается на своей модели; сохранённый выбор применяется при следующем запуске.
+Global `status` broadcasts the default `provider` and `model` without `sessionId`, whereas `status` called with `sessionId` returns chat-scoped `info` first. `model.set` with `sessionId` appends a durable `model.selected` event (`sessionId`, `provider`, `model`, `reasoning?`, `variant?`) to that chat without altering global defaults; omitting `sessionId` updates the default model for new chats. Reopened chats restore their latest `model.selected` (or latest primary run model on legacy logs), applying changes on the next turn after any in-flight request finishes.
 
-`status` приходит при старте, после `hello`, `status`, `trust.accept`, `trust.reject`, `settings.save`, `access.set` и `model.set`. `sessions` это активность всех задач: `sessionId`, `running`, `turns`, `queue`, `approvals`, `jobs`. Если провайдер не настроен, `configError` содержит причину, но sidecar продолжает работать.
+`status` is emitted on boot and after `hello`, `status`, `trust.accept`, `trust.reject`, `settings.save`, `access.set`, and `model.set`. `sessions` summarizes all active sessions (`sessionId`, `running`, `turns`, `queue`, `approvals`, `jobs`). Missing provider credentials populate `configError` while keeping the sidecar alive.
 
-`sessions.interrupted` приходит после старта, если прошлый процесс оборвал задачи. `interrupted` перечисляет их, `resumed` те, которые sidecar сам продолжил (`sessions.autoResume`, не больше `sessions.maxConcurrent`; задачу, которая уже была продолжением, повторно не продолжает).
+`sessions.interrupted` emits on boot when prior sessions were cut short, listing all `interrupted` IDs alongside any auto-`resumed` IDs (`sessions.autoResume`, capped at `sessions.maxConcurrent` and never re-resuming an already resumed run).
 
-`agent.exit` значит, что процесс ядра завершился; окно показывает ошибку и предлагает запустить задачу снова. `project.changed` приходит, когда пользователь открыл другой проект: оболочка перезапускает ядро в новой папке.
+`agent.exit` notifies the UI that the sidecar process exited so the user can retry; `project.changed` announces that the shell switched workspaces and restarted the sidecar.
 
-## Ошибки
+## Errors
 
-Ошибка команды без `requestId` и ошибка задачи приходят событием:
+Uncorrelated command failures (without `requestId`) and fatal task errors emit an `error` event:
 
 ```json
 { "type": "error", "code": "invalid_input", "message": "prompt is required" }
 ```
 
-| Код | Когда |
+| Code | Condition |
 |---|---|
-| `invalid_input` | команда или поле не прошли проверку |
-| `provider_failed` | провайдер не ответил после всех повторов и запасных моделей |
-| `context_overflow` | запрос не влез в окно контекста даже после сжатия |
-| `provider_limit` | лимит провайдера, с `limit` и `resetAt` |
-| `cancelled` | задачу остановили |
-| `run_failed` | `run` не стартовал, с `sessionId` или `clientId` |
-| `startup_failed` | sidecar не смог запуститься |
-| `project_locked` | в этом проекте уже работает другое ядро Flecten, в сообщении его pid и путь к замку |
-| `protocol` | оболочка получила от ядра строку, которая не JSON |
+| `invalid_input` | Command envelope or field failed schema validation |
+| `provider_failed` | Upstream provider failed after all retries and failover routes |
+| `context_overflow` | Prompt still exceeds context window after compaction |
+| `provider_limit` | Provider rate or quota limit hit (includes `limit` and `resetAt`) |
+| `cancelled` | Task stopped by user or abort signal |
+| `run_failed` | `run` failed to start (includes `sessionId` or `clientId`) |
+| `startup_failed` | Sidecar failed during initialization |
+| `project_locked` | Another Flecten sidecar holds `.flecten/sidecar.lock` (message includes PID and lock path) |
+| `protocol` | Shell received a non-JSON line from the sidecar |
 
-## Версии
+## Versioning
 
-Ломающее изменение протокола поднимает версию sidecar и версию приложения. Клиент обязан показать ошибку, а не молча ждать событий.
+Breaking protocol changes bump both sidecar and app versions; mismatched clients must surface an explicit error rather than hanging silently.
 
-## Открытие задачи из ссылки
+## Deep Links
 
-Установленное приложение принимает `flecten://session/<id>?project=<absolute-path>` через OS protocol handler. Оболочка проверяет схему, id, абсолютную существующую папку и отсутствие дополнительных полей. После подключения окна приходит `session.open` с `id`. Ссылка выбирает сохранённую задачу, не отправляет сообщения модели и не меняет доверие проекту. Тестовые и dev-запуски не меняют обработчик ссылок в системе.
+Installed builds handle `flecten://session/<id>?project=<absolute-path>` via the OS protocol handler. The shell validates URL scheme, session `id`, existing absolute project directory, and absence of extra query parameters, then emits `session.open` once the window connects. Opening a deep link selects the saved session without invoking the model or altering workspace trust; dev and test runs never mutate OS protocol registrations.
 
-## События Talker и Worker
+## Talker and Worker Events
 
-`session.started` может содержать `role: talker | worker`. Поле `internal: true` обозначает запуск Talker по уведомлению харнесса; оно не является сырым пользовательским сообщением и не меняет последний запрос. Внешняя команда `run` не может назначить себе эти поля.
+`session.started` may carry `role: "talker" | "worker"`, plus `internal: true` when Talker wakes on an internal harness notification (preserving the user's last raw prompt untouched); external `run` commands cannot spoof either field.
 
-`worker.event` содержит `sessionId` родительского чата и проверенное вложенное событие `event` из сессии Worker. Рекурсивные Worker envelopes не допускаются. Scoped `call.id` одинаков в начале, выводе, результате и ссылке `[[id]]`. `tool.output` содержит `callId` и очищенный фрагмент `text`; результат `tool.finished` остаётся окончательным источником статуса и полного лога.
+`worker.event` wraps a validated Worker event under the parent chat's `sessionId` (disallowing nested `worker.event` envelopes). Scoped `call.id` (`w_<uuid>`) stays identical across `tool.started`, `tool.output`, `tool.finished` (authoritative final status and full log), and `[[id]]` card references.
 
-`stop` с `target: worker` останавливает только исполнителя с указанным mode. Обычный `stop` останавливает оба цикла разговорной сессии. Субагенты продолжают работать в обоих случаях, а ожидание их результата завершается. `subagent.stop` принимает id дочернего исполнения, `task` с operation stop даёт Worker или основному агенту тот же контроль. `tool.cancel` принимает scoped идентификатор и разрешает его только в своём родительском чате. Закрытие приложения завершает дочерние исполнения; отдельного фонового процесса вне runtime нет.
+`stop` with `target: "worker"` halts only Worker using `mode`, whereas plain `stop` halts both Talker and Worker loops. Child subagents keep running unless stopped explicitly via `subagent.stop` or `task` (`operation: "stop"`), while parent wait calls return immediately. `tool.cancel` resolves scoped call IDs strictly within their owning parent chat, and quitting the application terminates all child executions cleanly.

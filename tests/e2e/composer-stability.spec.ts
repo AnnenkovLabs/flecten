@@ -5,6 +5,9 @@ import { hiddenScreenshot } from "./hidden-screenshot";
 test.skip(Boolean(environmentProblem()), environmentProblem());
 
 async function geometry(page: Page) {
+  await page.locator(".composer:visible .composer-followups").evaluate(async (element) => {
+    await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+  });
   return page.evaluate(() =>
     [
       ".composer",

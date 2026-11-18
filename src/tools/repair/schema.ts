@@ -95,7 +95,7 @@ export function fieldKey(path: PathSegment[]): string | undefined {
 }
 
 export function isEmptyValue(value: unknown): boolean {
-  return value === undefined || value === null || value === "";
+  return value === undefined || value === null;
 }
 
 export function unwrapMarkdownLink(value: string): string | undefined {

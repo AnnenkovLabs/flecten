@@ -55,7 +55,8 @@ export class StreamEvents {
   fail(kind: StreamErrorKind, message: string): never {
     this.tracker.feed({ type: "error", kind, message });
     const assessment = assessStream(this.tracker);
-    throw new StreamError(`provider stream failed: ${assessment.reason}`, kind);
+    const detail = message && !assessment.reason.includes(message) ? `: ${message}` : "";
+    throw new StreamError(`provider stream failed: ${assessment.reason}${detail}`, kind);
   }
 
   requireDone(terminal: string): void {

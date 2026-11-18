@@ -18,7 +18,7 @@ export default {
   "Talker and Worker": "Talker 与 Worker",
   "Separate conversation from execution": "将对话与执行分开",
   "New chats use a Talker and an independent Worker. Both use the selected model. English handoffs replace automatic translation; tool output stays live.":
-    "新对话使用 Talker 和独立的 Worker，两者均使用所选模型。任务交接使用英语，不再自动翻译；工具输出仍实时显示。",
+    "将新对话拆分为两个会话：Talker 保持即时对话，Worker 独立编辑文件并运行命令。",
   Undo: "撤销",
   Redo: "重做",
   "Worker failed": "Worker 执行失败",

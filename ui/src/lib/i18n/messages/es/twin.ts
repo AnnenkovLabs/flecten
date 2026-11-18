@@ -1,21 +1,21 @@
 export default {
   "Twin is on": "Twin activado",
   "Twin is off": "Twin desactivado",
-  "Twin is saying goodbye…": "Twin se está despidiendo…",
-  "Twin is back with you": "Twin vuelve a estar contigo",
+  "Twin is saying goodbye…": "Desactivando Twin…",
+  "Twin is back with you": "Twin está activo",
   "Represents you while you work.": "Te representa mientras trabajas.",
   "Your character stays saved. Turn Twin on whenever you want.":
     "Tu perfil sigue guardado. Activa Twin cuando quieras.",
   "No new supported user messages were found. No model request was made.":
-    "No se encontraron mensajes de usuario nuevos compatibles. No se envió ninguna solicitud al modelo.",
+    "No se encontraron mensajes nuevos en las fuentes seleccionadas. No se llamó al modelo.",
   "Training finished. No supported traits were found.":
-    "El aprendizaje ha terminado. No se encontraron rasgos respaldados.",
+    "Análisis completado; no se encontraron preferencias recurrentes para guardar.",
   "On sessions from any harness.": "Con sesiones de cualquier harness.",
   "Your Twin": "Tu Twin",
   "Learning from your decisions": "Aprende de tus decisiones",
   "Ready to work with you": "Listo para trabajar contigo",
   "Ready to learn": "Listo para aprender",
-  "Same ideas. Same thoughts.": "Las mismas ideas. Los mismos pensamientos.",
+  "Same ideas. Same thoughts.": "Tus criterios, aplicados automáticamente",
   "Your taste, your standards, your voice. Twin answers the Worker and sends weak work back.":
     "Tu gusto, tus exigencias, tu voz. Twin responde al Worker y devuelve el trabajo que no está a la altura.",
   Anger: "Enfado",
@@ -56,7 +56,7 @@ export default {
   ],
   "Would Twin choose what you would?": "¿Twin elegiría lo mismo que tú?",
   "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "Prueba con una decisión real. Twin elige la opción mejor fundamentada con tu voz, igual que al responder al Worker.",
+    "Plantea una decisión real de diseño o código para ver cómo Twin responde al Worker según tus rasgos.",
   "Question for Twin": "Pregunta para Twin",
   "How should we design checkout for this project?":
     "¿Cómo diseñamos el proceso de pago de este proyecto?",
@@ -66,7 +66,7 @@ export default {
     "Usa el modelo configurado. Cada respuesta muestra sus fuentes.",
   "Twin needs your answer": "Twin necesita tu respuesta",
   "No supported answer. Ask the user directly.":
-    "No hay fundamentos para responder. Pregunta directamente al usuario.",
+    "No hay suficiente evidencia en los rasgos guardados; Twin te preguntará directamente.",
   "Based on your character": "Según tu carácter",
   "Input: {0} tokens · Output: {1} tokens": ["Entrada: ", 0, " tokens · Salida: ", 1, " tokens"],
   "Learning…": "Aprendiendo…",
@@ -97,7 +97,7 @@ export default {
   "What this means for the Worker": "Qué significa para el Worker",
   "Use this when": "Cuándo aplicarlo",
   "Save character": "Guardar carácter",
-  "You, without repeating yourself.": "Tú, sin tener que repetirte.",
+  "You, without repeating yourself.": "Rasgos y preferencias aprendidos",
   "Twin learns what makes you angry, what you like and what delights you. It keeps your original voice, including strong language.":
     "Twin aprende qué te enfada, qué te gusta y qué te entusiasma. Conserva tu forma de hablar, incluidas las expresiones fuertes.",
   "Learned traits apply immediately. Edit anything that does not sound like you.":
@@ -110,7 +110,7 @@ export default {
   "No matching traits. Clear the search or change the reaction.":
     "No hay rasgos coincidentes. Borra la búsqueda o cambia la reacción.",
   "Your Twin is still getting to know you. Train it on your conversations to begin.":
-    "Twin aún te está conociendo. Entrénalo con tus conversaciones para empezar.",
+    "Aún no hay rasgos guardados. Escanea sesiones anteriores y entrena a Twin para empezar.",
   "Earlier suggestions": "Sugerencias anteriores",
   "Apply trait": "Aplicar rasgo",
   Reject: "Rechazar",

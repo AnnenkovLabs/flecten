@@ -2,12 +2,12 @@
 export default {
   "This project is already open in another Flecten window. Close it and send the message again, or open a different project.":
     "Проект уже открыт в другом окне Flecten. Закройте это окно и отправьте сообщение снова или откройте другой проект.",
-  "The core returned an invalid response.": "Ядро вернуло некорректный ответ.",
+  "The core returned an invalid response.": "Некорректный ответ от процесса агента.",
   "The provider is not configured. Open Settings and check the key.":
     "Провайдер не настроен. Откройте настройки и проверьте ключ.",
   "Connection to the core was lost. Start the task again.":
-    "Соединение с ядром потеряно. Запустите задачу снова.",
-  "The core is only available in the app.": "Ядро доступно только в приложении.",
+    "Связь с процессом агента прервалась. Нажмите «Продолжить».",
+  "The core is only available in the app.": "Доступно только в настольном приложении Flecten.",
   "The provider reached its limit.": "Достигнут лимит провайдера.",
   "The provider rate-limited requests.": "Провайдер ограничил частоту запросов.",
   "The subscription's 5-hour limit has been reached.": "Исчерпан лимит подписки на 5 часов.",
@@ -42,14 +42,14 @@ export default {
   "resuming automatically {0}": ["продолжу автоматически ", 0],
   "The task is still running. Stop it first": "Задача ещё выполняется: сначала остановите её",
   "Task moved to trash": "Задача перемещена в корзину",
-  "The server did not return a new task": "Сервер не вернул новую задачу",
+  "The server did not return a new task": "Не удалось создать новую задачу",
   "Task copied": "Задача скопирована",
   project: "проект",
   you: "вы",
   "Could not open task: {0}": ["Не удалось открыть задачу: ", 0],
   "Message was not queued: {0}": ["Не удалось поставить сообщение в очередь: ", 0],
   "The core is only available in the app. Open the Electron window.":
-    "Ядро доступно только в приложении. Откройте окно Electron.",
+    "Доступно только в настольном приложении Flecten.",
   "Could not stop: {0}": ["Не удалось остановить: ", 0],
   task: "задача",
   "Could not open the task. Select it again. {0}": [
@@ -59,10 +59,10 @@ export default {
   "“{0}” is waiting for permission: {1}": ["«", 0, "» ждёт разрешения: ", 1],
   "“{0}”: background command finished": ["«", 0, "»: фоновая команда завершилась"],
   "The core cannot start. Check Settings and restart the app.":
-    "Ядро не запускается. Проверьте настройки и перезапустите приложение.",
+    "Процесс агента не запускается. Проверьте настройки и перезапустите Flecten.",
   "The core stopped during the run. Restarting":
-    "Ядро остановилось во время выполнения задачи, перезапускаю",
-  "Restarting core": "Перезапускаю ядро",
+    "Процесс агента остановился во время работы. Перезапускаю…",
+  "Restarting core": "Перезапускаю агента…",
   ", waiting for you: {0}": [", ждут вас: ", 0],
   "Resuming interrupted tasks: {0}{1}": ["Продолжаю прерванные задачи: ", 0, 1],
   "Interrupted tasks: {0}. Open a task and click Continue": [
@@ -75,7 +75,7 @@ export default {
   "Hide details": "Скрыть подробности",
   "Show details": "Показать подробности",
   "Cancel call: the process will stop and the model will be notified of the cancellation":
-    "Отменить вызов: процесс остановится, модель узнает об отмене",
+    "Остановить этот вызов и завершить его дочерние процессы",
   "Cancel: {0}": ["Отменить: ", 0],
   action: "действие",
   actions: "действия",

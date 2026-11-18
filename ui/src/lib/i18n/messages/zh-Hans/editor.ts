@@ -83,9 +83,6 @@ export default {
   "Give the agent a task. Its actions and replies will appear here, while your files stay in view.":
     "给 AI 助手安排任务。它的操作和回复将显示在这里，文件仍会保留在你眼前。",
   "Save or close modified files in this folder first.": "请先保存或关闭此文件夹中已修改的文件。",
-  "In t(": "Вt(",
-  "Regular t(": "正则 t(",
-  "on line t(": "在行 t(",
   "Search failed. {0}. Try searching again.": ["搜索失败。", 0, "。请重新搜索。"],
   "New file": "新建文件",
   "New folder": "新建文件夹",

@@ -91,7 +91,7 @@ export async function runMove(args: MoveArgs, context: ToolContext): Promise<Too
       });
       checkpointId = checkpoint.id;
     } catch (error) {
-      checkpointNote = `\nCheckpoint не создан: ${message(error)}`;
+      checkpointNote = `\nCheckpoint skipped: ${message(error)}`;
     }
   }
 
@@ -111,7 +111,7 @@ export async function runMove(args: MoveArgs, context: ToolContext): Promise<Too
     try {
       await context.checkpoints.recordAfter(checkpointId);
     } catch (error) {
-      checkpointNote += `\nCheckpoint не завершён: ${message(error)}`;
+      checkpointNote += `\nCheckpoint incomplete: ${message(error)}`;
     }
   }
 

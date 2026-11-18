@@ -83,8 +83,9 @@ function finish(args: GlobArgs, results: string[], limit: number, capped: boolea
   const shown = results.slice(offset, offset + limit);
   const parts = [shown.join("\n")];
   if (total > offset + limit) {
+    const noun = args.mode === "entries" ? "entries" : "files";
     parts.push(
-      `[Showing ${shown.length} of ${capped ? "at least " : ""}${total} entries. Use offset=${offset + shown.length} to continue, or narrow path/pattern.]`,
+      `[Showing ${shown.length} of ${capped ? "at least " : ""}${total} ${noun}. Use offset=${offset + shown.length} to continue, or narrow path/pattern.]`,
     );
   } else if (capped) {
     parts.push(`[File list capped at ${MAX_COLLECT} bytes; refine the pattern.]`);

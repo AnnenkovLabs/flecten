@@ -17,6 +17,7 @@ import {
   parsePageSummary,
   renderContinuation,
   renderPage,
+  stripJsonFence,
 } from "./summary";
 import { pageTranscript } from "./transcript";
 
@@ -157,7 +158,7 @@ export class PageWriter {
     const result = parsePageSummary(text);
     if (result) return result;
     try {
-      const parsed = PageSummaryResponseSchema.safeParse(JSON.parse(text));
+      const parsed = PageSummaryResponseSchema.safeParse(JSON.parse(stripJsonFence(text)));
       this.#schemaFailure = parsed.success
         ? "summary_schema_invalid"
         : parsed.error.issues
@@ -232,6 +233,7 @@ export class PageWriter {
           ],
           tools: [],
           maxTokens: outputTokens,
+          ...(this.#options.reasoning ? { reasoning: this.#options.reasoning } : {}),
         },
         signal,
       )) {
@@ -273,7 +275,7 @@ export class PageWriter {
     if (!checkpoint) return this.#parseSummary(text);
     let value: unknown;
     try {
-      value = JSON.parse(text);
+      value = JSON.parse(stripJsonFence(text));
     } catch {
       this.#schemaFailure = "summary_json_invalid";
       return undefined;

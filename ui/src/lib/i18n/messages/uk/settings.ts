@@ -109,5 +109,5 @@ export default {
   Trust: "Довіра",
   Version: "Версія",
   About: "Про програму",
-  Directory: "Каталог",
+  Directory: "Каталог моделей",
 } as const;

@@ -297,7 +297,7 @@ describe("provider test boundary", () => {
 
   test("a missing key is described from the typed error, not from its text", () => {
     const missing = new MissingKeyError("openai", "OPENAI_API_KEY");
-    expect(describeProviderError(missing, "openai")).toContain("нужен ключ OPENAI_API_KEY");
+    expect(describeProviderError(missing, "openai")).toContain("requires OPENAI_API_KEY");
     expect(describeProviderError(new Error("model needs FOO_KEY"), "x")).toBe(
       "model needs FOO_KEY",
     );

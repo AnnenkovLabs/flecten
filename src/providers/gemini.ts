@@ -130,7 +130,9 @@ function buildBody(request: ModelRequest, runtime: ProviderRuntime): Record<stri
         : undefined,
     generationConfig: {
       maxOutputTokens: request.maxTokens,
-      ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
+      ...(request.temperature === undefined || model?.temperature === false
+        ? {}
+        : { temperature: request.temperature }),
       ...(thinking.thinkingConfig ? { thinkingConfig: thinking.thinkingConfig } : {}),
       ...(format
         ? {
@@ -280,7 +282,13 @@ export function createGemini(runtime: ProviderRuntime): ModelProvider {
                 };
                 calls.push(call);
                 yield events.emit({ type: "tool_call_progress", index: callIndex - 1, name });
-                yield events.emit({ type: "tool_call", id, name, args });
+                yield events.emit({
+                  type: "tool_call",
+                  id,
+                  name,
+                  args,
+                  ...(call.extraContent === undefined ? {} : { extraContent: call.extraContent }),
+                });
               }
             }
           }

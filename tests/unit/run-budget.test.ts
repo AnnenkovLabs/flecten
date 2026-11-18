@@ -66,7 +66,7 @@ describe("run budget", () => {
     now = 5_000;
     budget.add({ input: 30, output: 10, cached: 0 });
     expect(budget.exhausted()).toBe("tokens");
-    expect(budget.reason("tokens")).toContain("100 из 100 токенов");
+    expect(budget.reason("tokens")).toContain("100 of 100 tokens");
     expect(budget.view().spent.wallClockMs).toBe(5_000);
   });
 

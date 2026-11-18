@@ -131,7 +131,7 @@ export class TranslationClient {
       if (combined.aborted && !signal.aborted) {
         throw new HarnessError(
           "provider_failed",
-          `Переводчик не завершил ответ за ${this.timeoutMs / 1000} с. Увеличьте время ожидания перевода или выберите более быструю модель.`,
+          `Translation timed out after ${this.timeoutMs / 1000} s. Increase the translation timeout or select a faster model.`,
           { cause: error },
         );
       }

@@ -17,9 +17,7 @@ test("segmented composer actions and copy buttons preserve keyboard and failure 
       actions.getByRole("button", { name: "Добавить в очередь", exact: true }),
     ).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(
-      actions.getByRole("button", { name: "Уточнить сейчас", exact: true }),
-    ).toBeFocused();
+    await expect(actions.getByRole("button", { name: "Направить", exact: true })).toBeFocused();
     await page.locator("#prompt").fill("");
     await expect(page.locator(".answer-actions")).toHaveCount(0);
     await expect(page.locator(".answer-foot")).toHaveCount(0);

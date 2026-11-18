@@ -1,330 +1,273 @@
-# Архитектура
+# Architecture
 
-## 1. Что это
+## 1. Overview
 
-Харнесс держит три вопроса раздельно: чего хочет юзер, что делает воркер, что видит модель. Клон юзера, Jev, память и страницы это сервисы вокруг трёх вопросов, а не отдельные фичи.
+Flecten keeps three questions strictly separate: what the user wants, what the worker executes, and what the model sees. User persona (Twin), Jev, project memory, and context pages operate as services around those three boundaries rather than standalone bolt-on features.
 
-Цель: максимальное качество за меньшие деньги. Не за счёт промпт-магии, а за счёт контекста, памяти и проверки.
+Goal: higher engineering quality at lower token cost - achieved through context discipline, verified memory, and deterministic gates rather than prompt magic.
 
-Контракты stream, рабочего контекста, сохранённого результата, общего бюджета чата и remote jobs после аудита Physicss описаны в [EXECUTION-CONTRACTS.md](EXECUTION-CONTRACTS.md).
+Contracts governing streams, working context, persisted outcomes, shared chat budgets, and remote jobs following the Physicss audit live in [EXECUTION-CONTRACTS.md](EXECUTION-CONTRACTS.md).
 
-## 2. Чего не делает
+## 2. Non-Goals
 
-- Не заменяет модель. Провайдер подключается адаптером.
-- Не обещает самоулучшение.
-- Не строит агентский фреймворк общего назначения.
-- Не держит всю историю в одном окне.
-- Не смешивает ядро с интерфейсом.
+- Does not replace the underlying model; providers attach via protocol adapters.
+- Makes no recursive self-improvement claims.
+- Is not a general-purpose agent framework.
+- Never stuffs full session history into a single context window.
+- Never mixes core runtime logic with the UI or window shell.
 
-## 2a. База (сейчас)
+## 2a. Current Baseline
 
-Обновление хранилища выполняется до замка проекта, чтения конфигурации, загрузки модулей и восстановления задач. `StorageBootstrap` перечисляет выбранную папку, desktop profile и доступные запомненные проекты. Существующие данные требуют обязательного модального экрана; новое пустое хранилище инициализируется без него. Продолжение разрешено после проверки переноса и отдельной durable записи принятия. Состояние и оригиналы находятся в `.flecten-migration/v1/`, эта папка закрыта для модели и исключена из IDE, поиска и checkpoints. Протокол и ограничения описаны в [PROTOCOL.md](PROTOCOL.md).
+Storage migration executes before acquiring the project lock, loading config, initializing modules, or recovering sessions. `StorageBootstrap` enumerates the active folder, desktop profile, and accessible saved workspaces. Pre-existing `.liquid` data triggers a mandatory blocking migration screen, while fresh storage initializes directly. Runtime startup proceeds only after migration verification and a separate durable acceptance record. Migration state and untouched originals live in `.flecten-migration/v1/`, which is hidden from models and excluded from the IDE, search, and checkpoints. Wire details and failure bounds live in [PROTOCOL.md](PROTOCOL.md).
 
-Подтверждение записи события означает fsync журнала до публикации индекса. Атомарная замена настроек и очереди синхронизирует временный файл до rename и каталог после него. Ошибка IO передаётся вызывающему коду и не превращается в успешное сохранение. Эти гарантии опираются на контракт файловой системы и накопителя; физическая потеря диска и неподдерживаемый directory fsync не покрываются.
+A confirmed event write guarantees `fsync` on `events.jsonl` prior to index publication. Atomic updates to config and message queues `fsync` the temporary file before `rename` and `fsync` the parent directory afterward. IO failures propagate directly to callers rather than masquerading as successful saves. These guarantees rely on OS filesystem and drive contracts; physical media loss and filesystems lacking directory `fsync` remain outside scope.
 
-Реализовано:
+Implemented subsystems:
 
-- **Twin.** Отдельный характер пользователя и фоновый представитель между Talker и Worker: направление до старта, ответы на вопросы вкуса, проверка этапов и до четырёх возвратов до финального отчёта. Обучение на раздражении, одобрении и восторге автоматически применяет черты, оставляя их редактируемыми. Память проекта не подменяется. Рабочий путь и ограничения описаны в [TWIN.md](TWIN.md).
+- **Twin.** Dedicated user persona and background delegate sitting between Talker and Worker: provides pre-run direction, answers subjective taste questions, reviews stage outputs, and requests up to four revision passes before final reporting. Learning from user frustration, approval, and delight applies editable persona traits without polluting project memory. See [TWIN.md](TWIN.md).
+- **Term Dictionary.** Public JSON term categories in `src/dictionary/data/` sync from `AnnenkovLabs/flecten` into a verified offline cache, while project-local definitions in memory take precedence. Matching terms inject bounded Markdown reference definitions alongside the turn while preserving the raw user prompt verbatim. See [DICTIONARY.md](DICTIONARY.md).
+- **Talker and Worker.** Default dual-session architecture with independent per-role models: Talker owns user conversation, skills, and HTML summaries; Worker receives a structured task brief with completion criteria and returns a Markdown summary. Runtime provenance checks distinguish tool-backed evidence from unverified model claims, and unresolved checklist items block final completion. Delegations and reviews share one durable journal while steering, continuation, and stop commands route to the active target session. Role, subagent, and vision models are configured in **Models**. See [TALKER-WORKER.md](TALKER-WORKER.md).
+- **Agent Language.** A dedicated translation model translates user prompts and system context into English for execution and translates responses and summaries back into the user's language. Model-facing history and localized display text stay separate in the event log; code blocks and external tool outputs pass through untouched. Translation streams in chunks with a bounded cache, cancellation support, and separate cost accounting.
+- **Module Marketplace.** Settings browse and install packages from configured HTTPS catalog feeds. The compiled-in catalog (`src/marketplace/index.json`) is intentionally empty so removed remote listings never resurrect from binary defaults; legacy sample modules remain solely under `tests/fixtures/modules/`. Before installation, the sidecar verifies schemas, SHA-256 digests, and dependency graphs, keeping code trust and UI surface activation as explicit lifecycle steps. Catalogs never inject prompt context or invoke models. See [MODULE-MARKETPLACE.md](MODULE-MARKETPLACE.md).
+- **Platform Modules.** Trusted `platform.entry` bundles provide, wrap, or replace typed runtime services across the agent driver, primary model streams, guarded tool execution, compaction, and session storage/indexing. Custom services validate contracts via Zod schemas. Session-scoped modules activate within a single chat; project-scoped modules boot after workspace trust and prior to session replay. Atomic generation swaps and active leases keep superseded service graphs alive until in-flight promises and streams settle, while the UI surfaces native privileges and active overrides. There is no separate Host/Client split package system. See [MODULES.md](MODULES.md).
+- **Providers.** Four wire protocols: OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, and Gemini. Each provider entry in `flecten.config.json` declares its protocol, `baseUrl`, `headers`, `proxy`, `transportTimeoutMs`, and credential source (`apiKeyEnv`, `apiKey`, or `auth.command`), allowing compatible gateways to be added with zero code changes. Adding a model fetches API and catalog capabilities via `model.metadata` (leaving unknown limits blank); manual card refreshes mutate only the unsaved settings draft.
 
-- **Словарь терминов.** Публичные JSON-категории в `src/dictionary/data/` обновляются из `AnnenkovLabs/flecten`; проверенный кэш сохраняется для работы без сети. Локальные определения живут в памяти проекта и имеют приоритет. Перед запросом модель получает ограниченный Markdown-контекст подходящих терминов, исходный prompt сохраняется дословно. Контракт и пределы описаны в [DICTIONARY.md](DICTIONARY.md).
+  In each provider's **Advanced** tab, `modelAutoRefresh.enabled` schedules hourly metadata syncs while the app is open. `overwriteManual` defaults to `false`: `modelMetadataBaseline` tracks prior automated field values so user-edited fields stay intact even if the upstream API temporarily matches them; enabling `overwriteManual` refreshes manual fields too. Custom headers, variants, and hidden-model flags always survive syncs. Background refresh never runs test completions or deletes a missing active model, and legacy entries without a baseline keep existing values while backfilling missing fields. Saving a settings draft opened before a background sync merges model edits cleanly via `shared/model-draft.ts` against schema-validated `settings.save.baseline`.
+- **Execution Loop.** Streams model output, assembles tool calls, runs read-safe tools in parallel while serializing file mutations behind a shared mutex, returns results, and loops until `done` or stream end. Handles automatic continuation after `max_tokens`, empty turns, or mid-thought cutoffs. `RetryPolicy` and stream recovery retry transient failures on the active model; `src/providers/failover.ts` wraps providers with error classification, fallback plans, and a circuit breaker to route exhausted requests to configured backup models.
+- **Settings.** General settings cover messaging and task behavior, with Terminal and History in dedicated tabs and no manual turn-cap sliders in the UI. Config schema v3 removes artificial turn ceilings (`maxTurns: 0`) and derives output token caps automatically (`maxOutputTokens: 0`), while `context.reserve` guarantees headroom for the response after accounting for the system prompt, history, attachments, and active tool schemas. `ui.sendShortcut` and `ui.followUpBehavior` flow through runtime `status` to the composer.
+- **Tools.** 18 built-in tools (`memory`, `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `done`) plus `skill` and MCP tools. Enforces content-hash read-before-edit, atomic writes, bounded inline output, and full disk logs under `.flecten/sessions/<id>/logs/`. Outputs from `read`, `grep`, web tools, and MCP arrive inside fenced Markdown `Untrusted data` blocks tagged with provenance, keeping exit codes and timing metadata separate from payload text.
+- **Argument Repair.** Runs schema validation first, then applies deterministic coercions for field aliases, `null` values, stringified JSON, single-element arrays, numeric strings, Markdown-wrapped paths, and truncated JSON - returning structured repair notices or actionable schema errors to the model.
+- **Sessions and History.** The Bun sidecar reads JSONL commands from `stdin` and emits sequenced envelopes (`seq`, `ts`, `schemaVersion`, `sessionId`) to `stdout` and `events.jsonl`. `DurableEventLog` serializes writes through a single queue, tolerant readers skip corrupted tail lines, `replayMessages` rebuilds model context per `sessionId`, and `sessions.list` / `sessions.get` serve history to the UI. Exhaustive coverage in `src/store/events/envelope.ts` (`Record<EventType, true>`) fails `tsc` if a new core event omits persistence rules, backed by `stored-events` round-trip tests covering context meters, budgets, approvals, background jobs, interrupted runs, and failover badges.
+- **Dialogue Branches.** Clicking edit on a user message loads it into the main composer with a dedicated edit frame while keeping model selection, reasoning, file/screenshot attachments, and voice input available. Existing attachments render as removable chips, and any unsent new-message draft stays isolated and restores on cancel. Submitting appends a new branch (`history.edited`, `history.selected`) in the same chat while keeping prior turns and branches switchable via `src/store/events/branches.ts`, recreating Talker/Worker handles and scoping page archives to the selected branch. Active runs and non-empty queues block history mutation.
+- **Concurrent Sessions.** `SessionPool` (`src/app/session-pool.ts`) runs up to `sessions.maxConcurrent` tasks in parallel (default `4`), each with isolated queues, approvals, background jobs, and budgets. Commands omitting `sessionId` target the focused chat; approval replies route by request `id`. `src/app/event-journal.ts` assigns monotonic `seq` cursors and buffers active-run events in memory so a reloaded renderer stitches `events.jsonl`, `events.replay`, and live deltas without gaps.
 
-- **Talker и Worker.** Включённый по умолчанию режим двух независимых сессий с отдельными моделями: Talker ведёт разговор и применяет навыки/HTML summaries, Worker получает универсальное задание с критериями готовности и возвращает Markdown summary. Происхождение инструментальных доказательств проверяет runtime; открытые пункты блокируют итоговое завершение. Вызовы и приёмка доступны в общем журнале; steering, продолжение и остановка идут в реальную сессию. Модели ролей, субагентов и изображений настраиваются в разделе «Модели». Подробности в [TALKER-WORKER.md](TALKER-WORKER.md).
-- **Язык агента.** Отдельная выбранная модель переводит пользовательскую речь и системный контекст на английский, а ответы и summaries обратно. История модели и локализованное представление разделены в журнале. Код и внешние tool outputs сохраняются буквально. Перевод идёт блоками во время генерации, с ограниченным кэшем, отменой и отдельным учётом цены. Обоснование и ограничения зафиксированы во внутренних материалах.
+  Model selection belongs to each chat: `session-models.ts` persists `model.selected` (provider, model, reasoning, variant) and reconstructs matching transport, context window, and modality capabilities (falling back to the last primary run's model on legacy chats, or global config defaults on brand-new chats). `ui/src/lib/run/model.ts` serializes per-chat changes so late responses from background chats never overwrite the active view.
+- **Crash Recovery and Draft Persistence.** Queued messages persist atomically in per-session `queue.json` with idempotent message IDs. On sidecar restart, `recovery.ts` detects unfinished runs from `events.jsonl`, resumes them from durable history, and notifies the renderer via `sessions.interrupted`; Electron supervises sidecar restarts with `1`, `2`, `4`, `8`, and `15 s` backoff.
 
-- **Маркетплейс модулей.** Настройки показывают модули подключённых HTTPS-каталогов. Встроенный каталог пуст и включён в бинарник; старый удалённый каталог не восстанавливает удалённые предложения. Исходники прежних пакетов остаются только в тестовых фикстурах и не поставляются приложением. Sidecar проверяет схемы, SHA-256 и граф зависимостей перед установкой; доверие к коду и включение интерфейса остаются отдельными действиями существующего module lifecycle. Каталог не добавляет контекст и не вызывает модель. Формат публикации описан в [MODULE-MARKETPLACE.md](MODULE-MARKETPLACE.md).
+  Unsent composer drafts persist in the Chromium profile keyed by canonical `cwd` and chat ID (including new chats and `projectless` mode), storing raw text, structured `@` mentions, and attachment metadata without heavy preview blobs. Modified drafts flush `200 ms` after the first edit in a burst (without sliding the timer on continuous typing) and flush immediately on chat/project switch, blur, hide, or window close; sending or clearing deletes the draft immediately. Startup reopens the last active chat (prioritizing chats with active runs). Chromium profile storage validates schemas on read and surfaces write errors while retaining in-memory edits, though it cannot guarantee OS-level `fsync` across sudden power loss within the `200 ms` window.
+- **Single Sidecar per Workspace, Single Window per Profile.** The sidecar acquires `.flecten/sidecar.lock` (`src/app/project-lock.ts`) atomically via hard link, waiting up to `5 s` on a live PID, reclaiming stale locks from dead processes immediately, and reporting `project_locked` without restart loops if contended. Electron holds a single-instance profile lock so subsequent launches focus the existing window, restoring monitor-validated window bounds via `shell/window-state.mjs`.
+- **Chat and Run Budgets.** `RunBudget` (`src/core/session/budget.ts`) accumulates primary and auxiliary model usage in a durable per-chat ledger across continuations and restarts while tracking wall-clock limits per run. Missing provider usage receipts mark total cost as incomplete; crossing a configured ceiling halts the next request with an explicit budget error.
+- **Destination-Bound Credentials.** OS keychain entries partition by canonical workspace path and bind each credential envelope to `protocol`, `baseUrl`, and `proxy`. Keys never cross workspaces or endpoints silently, legacy unbound keys prompt for re-entry, and the renderer receives redacted metadata only.
+- **On-Demand External Schemas.** External MCP tools stay out of active model specs until explicitly enabled via `tool_catalog` (`list` / `activate`), after which calls traverse standard `prepare`/`run` validation, permissions, and logging. Active selections survive compaction and model switches via successful call history and typed `contextSummary.activeMcpTools`, giving each run an isolated registry view.
+- **System Prompt Assembly.** Assembles `prompts/`, `AGENTS.md`, skill catalog, MCP summary, and active tool schemas within `promptBudget` (default `24,000` tokens, counted with the active model's tokenizer). Tool JSON Schemas pass natively via provider tool parameters without prose duplication in the system prompt; child roles share project instructions but return strict JSON Schema outputs without HTML summaries. `session.started` logs `prompt.version`, `prompt.base`, and `prompt.hash`. See [PROMPTS.md](PROMPTS.md).
+- **Context Compaction.** Worker closes each coherent subtask via `context complete`, immediately archiving the transcript and replacing it with a compact summary before the next model turn regardless of window fill. Talker compacts on window threshold. When tokens approach `context.window - context.reserve`, emergency pruning trims old tool outputs first and then invokes `PageWriter` under a strict JSON Schema with a deterministic canonical fallback. Three consecutive compaction failures trip a circuit breaker and emit `context.compacted`. Typed `ContextSummary` records carry outcomes, the original request, and the latest user instruction across replay without parsing Markdown.
+- **Permissions and Approvals.** Every schema-validated immutable tool call passes hooks, resource extraction, sandbox checks, and `PermissionEngine` before running. `shared/access-mode.ts` coordinates permissions and OS sandboxing across `agent` (normal workspace work), `confirm` (prompts before writes, shell, and MCP), and `full` (disables sandbox), defaulting new profiles to `agent` while preserving explicit legacy rules. Explicit `deny` rules and mandatory human checkpoints override all modes and grants. Out-of-workspace paths trigger a dedicated `external_path` prompt (once, chat-wide, or saved project `pathPrefix`) shared across logical sandbox checks, OS writable roots, Worker, and subagents; other grants bind via SHA-256 over exact tool, args, `cwd`, and target resources. Advanced `auto` mode permits bounded safe calls, delegates ambiguous opaque calls to a reviewer model, and escalates uncertainty to the user. `ApprovalWaiters` manages deadlines, cancellation, routing, a 100-receipt reconnect cache, and live policy re-evaluation (`allow_once` / `deny` with `by: policy`) whenever rules or covering grants change. Access modes and sandbox controls live together in **Access**. See [SECURITY.md](SECURITY.md).
+- **File Checkpoints.** Content-addressed store in `.flecten/checkpoints` records pre- and post-images before `write`, `edit`, `apply_patch`, `delete`, and `move`, powering Git-independent `/undo` and `/redo`.
+- **Shell Rollback.** `bash` and `terminal` snapshot working-tree state in `.flecten/shadow`. Initial indexing is capped at `5 s`, `50,000` paths, `256 MiB` total file bytes, and `16 MiB` path-list size (checked prior to hashing; existing shadows above `1 GiB` stay intact without rebuilding). Exceeding caps disables automatic shell snapshots with a clear notice rather than faking partial rollbacks. Per-command snapshots budget `5 s` (`1.5 s` pre, `1.5 s` post, `2 s` save), recording diffs above `2,000` files or `128 MiB` as explicit gaps while protecting settings and secrets during `/undo`.
+- **Persistent PTY.** One persistent `Bun.Terminal` session per chat supporting `run`, `write`, `read`, `resize`, `kill`, and `list`, with env allowlists, scrollback caps, ANSI handling, timeouts, structured exit reports, process-tree termination on stop, and live `terminal` config reload.
+- **Background Jobs.** `bash` with `background: true` and the `jobs` tool (`list`, `read`, `wait`, `stop`) track job IDs, status, logs, and elapsed time, routing completion events strictly to the owning chat and exposing per-card `tool.cancel` process-tree termination.
+- **Resource Monitoring.** Tracks memory, child processes, and listening ports via `procfs` on Linux (catching `setsid` orphans), `ps`/`lsof` on macOS, and async schema-validated CIM snapshots on Windows. Platform-specific bounds are documented in [SECURITY.md](SECURITY.md).
+- **Queue and Steering.** Persists `queue` and `steer` follow-ups on disk across restarts: `steer` injects at the next safe turn boundary, while `queue` starts after `done` or run completion.
+- **Two-Stage Stop.** Active runs swap Send for `Stop` (alongside `Queue` and `Steer` when a draft is present). First click sends `mode: graceful` (`SessionState.stopRequested`), letting the in-flight stream and already-spawned commands finish while cancelling pending tool calls and halting queued turns; clicking red `Force stop` sends `mode: force` to abort the shared `AbortSignal` immediately.
+- **Voice Dictation.** Records up to `90 s` via `MediaRecorder`: cloud API mode posts multipart audio to `/audio/transcriptions`, while offline `faster-whisper` and `Vosk` convert audio to `16 kHz` mono PCM16 WAV via Web Audio and stream it over `stdin` to a bundled Python worker (`Escape` kills the worker tree; zero network calls or cloud fallback in local mode). See [VOICE.md](VOICE.md).
+- **Vision.** Pasting an image inserts an atomic `Image 1` token backed by session media artifacts. Vision-capable models receive native image content parts; text-only models route through `src/app/vision.ts` using either the lowest-cost vision model on the active provider (requiring explicit selection if pricing is unknown) or configured `vision.provider` / `vision.model`, supporting `focus` prompts on `read`, per-session content caching, and helper-rate billing.
+- **Attachments.** Accepts `png`, `jpeg`, `webp`, `gif`, `avif`, and `pdf` (up to `5` files at `10 MB` each), encoding base64 content parts and gating `pdf` on model modality support. `WAV`/`MP3` audio routes to OpenAI Chat and supported audio containers route to Gemini, while unsupported protocols fail explicitly; token budgets account for image dimensions, conservative PDF reserves, and `WAV`/`MP3`/`FLAC` duration.
+- **Sandboxed HTML Summaries.** Renders Markdown via `marked` + `DOMPurify` allowlists, and streams final `<summary>` / `<complete>` blocks into a `sandbox="allow-scripts"` iframe (without `allow-same-origin`) behind a skeleton loader. Inline CSS/JS is permitted with scripts executed once after stream completion, zero network/external resource access, theme tokens + `Manrope` injected inline, and height/navigation events validated over `postMessage` (`flecten://settings/SECTION`, `flecten://panel/PANEL`, `flecten://models`, `flecten://file?path=...&line=...`, and `data-summary-action="navigate"` via `summary-navigation.ts`) with no IPC exposure. Interactive `window.flectenSummary` state capture and delivery modes (next message, post-summary delay, post-interaction delay, or explicit submit button) run tool-free follow-up turns as specified in [response-summary.md](../prompts/response-summary.md).
+- **Tool Cards and Subagents.** `tool-presentation.ts` maps built-in tools to plain-language labels and targets while keeping raw JSON arguments inside disclosures. `task` calls spawn dedicated header tabs with live journals, expandable briefs, schema-validated reports (`subagent-report.ts`), and independent `Stop` controls (`SubagentTasks` owns child `AbortSignal`s so stopping the parent run merely stops awaiting children; `task` `list`/`wait`/`stop` manages them explicitly). Malformed subagent reports get one tool-free `submit_report` repair pass within remaining budget. Consecutive `read`, `grep`, and `glob` calls collapse into a single summary row (`ui/src/lib/run/action-groups.ts`) unless one fails; file chips and full logs open in the bounded viewer via `files.read` (`src/app/file-preview.ts`) at the target line `offset`; backup-model responses carry an explicit failover notice.
+- **Verification.** `bun run verify` runs unit/integration tests, typecheck, lint, `docs-check`, and both builds. Packaged smoke tests verify the compiled sidecar, preload bridge, editable composer, and live `status` model display (including AppImage smoke on Linux). Headless Playwright E2E exercises Electron + sidecar + mock provider across core flows and visual snapshots at `1480x940` and `1180x640`. `bun scripts/coverage.mjs` enforces an `85%` line-coverage gate, and `bun scripts/docs-check.mjs` cross-checks `PROTOCOL.md`, `TOOLS.md`, config schemas, and security contracts against code in both directions.
+- **Extensions.** Supports user/project Agent Skills, MCP over `stdio` and Streamable HTTP with OAuth PKCE and UI elicitation, MCP resource attachments, and command/HTTP hooks (`shared/hooks.ts`) sharing timeouts, cancellation, output caps, `failClosed` semantics, pre-save draft dry-runs, and a 50-run live/replayed execution log. See [HOOKS.md](HOOKS.md) and [EXTENSIONS.md](EXTENSIONS.md).
 
-- **Platform-модули.** Доверенный `platform.entry` в действующем пакете предоставляет, заменяет и оборачивает typed services. Рабочие контракты подключены к драйверу агента, основным model streams, guarded tool execution, compaction и журналу/индексу сессий. Custom services задаются Zod-схемами. Session scope активируется агентом в одном чате, project scope поднимается после доверия до replay. Атомарная публикация и leases сохраняют старую композицию, её зависимости и исходники до завершения Promise/стрима. UI показывает native privileges и реально применённые замены. Отдельной системы Host/Client-пакетов нет. SDK, права и ограничения описаны в [MODULES.md](MODULES.md).
+Implementation and external-infrastructure boundaries: signed production releases require CI signing keys; persistent Windows PTY relies on Bun 1.4.2 ConPTY while Windows AppContainer and per-command Job Objects remain open; Bun's no-orphans cleanup reaps children on sidecar exit but does not replace per-command sandboxing. Auto-update (`update` config section: `stable`/`beta` channel, `update.github` or custom HTTPS feed, auto-check `10 s` after launch and every `4 h` with `15 min` to `4 h` error backoff, background download, restart/quit install) verifies Ed25519 channel manifests before checking installer SHA512 and byte size, blocking unsigned updates. Custom user modes are excluded by design; `done` ends a run loop without replacing acceptance gates; full Spec/Gates/Critic orchestration remains the target architecture below.
 
-- **Провайдеры.** Четыре протокола: OpenAI Chat Completions, OpenAI Responses, Anthropic Messages и Gemini. Провайдер это запись в `flecten.config.json`: протокол, `baseUrl`, `headers`, `proxy`, `transportTimeoutMs`, ключ из `apiKeyEnv`, `apiKey` или `auth.command`. Новый совместимый сервис добавляется без кода. Добавление модели читает характеристики API и каталога через `model.metadata`; неизвестные лимиты остаются пустыми. Явное обновление карточки освежает каталог и меняет только черновик до сохранения настроек.
+Skills reload before each new run and when opening the `/` menu, verifying SHA-256 trust before loading bodies and enforcing `allowed-tools` immediately even within the same tool batch, with restrictions replayed from durable events. Structured `@` mentions pass validated `ContextReference` payloads (editor selection/AST symbol, task item, public GitHub PR, or MCP resource) as untrusted data alongside verbatim prompts. Session export streams logs and copied attachments atomically into a private directory while rejecting symlinks and irregular files; retention never prunes active sessions or non-empty queues. `DiagnosticsRuntime` writes bounded structured logs and redacted config-shape bundles, while opt-in HTTPS telemetry sends counters only - never messages, files, or keys.
 
-  Во вкладке «Дополнительно» каждого провайдера `modelAutoRefresh.enabled` включает ежечасное обновление списка и характеристик, пока приложение открыто. `overwriteManual` по умолчанию выключен: `modelMetadataBaseline` хранит историю автоматических значений каждого поля, поля с ручными изменениями сохраняются даже при временном совпадении с API. При разрешении перезаписи обновляются и ручные характеристики. Заголовки запросов, варианты и скрытие моделей сохраняются. Фоновый путь читает только метаданные API и каталога, не вызывает генерацию и не удаляет пропавшую активную модель. Для старых записей без истории импорта существующие значения сохраняются до явного обновления, а отсутствующие характеристики дополняются. После обновления окно получает свежий status. Сохранение открытого до синхронизации черновика применяет его правки моделей поверх свежих данных через `shared/model-draft.ts`; оригинальный снимок передаётся в `settings.save.baseline` и проверяется схемой. Таймер закрывается вместе с сервисом.
-- **Цикл.** Поток ответа, сборка tool calls, выполнение тулов, возврат результатов, повтор до `done` или конца. Параллельные тулы, запись под общим мьютексом. Продолжение после `max_tokens`, пустого ответа и обрыва на «сейчас посмотрю». RetryPolicy и stream recovery повторяют запрос в ту же модель. Failover с классификацией ошибок, plan и circuit breaker (`src/providers/failover.ts`) оборачивает активного провайдера в реестре: после исчерпанных повторов запрос уходит в резервные модели из конфига.
-- **Настройки.** Общий раздел управляет сообщениями и задачами; терминал и история вынесены отдельно. Настроек лимитов прогона в интерфейсе нет. Схема 3 снимает штатный потолок ходов (`maxTurns: 0`) и автоматически использует лимит ответа модели (`maxOutputTokens: 0`). `context.reserve` отдельно оставляет место для рабочего ответа; каждый запрос ограничивает ответ свободным местом после системного промпта, истории, вложений и схем инструментов. `ui.sendShortcut` и `ui.followUpBehavior` передаются через status и применяются композером. Подробности и источники зафиксированы в журнале решений.
-- **Тулы.** 18 встроенных: `memory`, `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `done`. Плюс `skill` и MCP tools. Read-before-edit по хешу, атомарная запись, лимиты вывода, полные логи в `.flecten/sessions/<id>/logs/`. Вывод `read`, `grep`, web и MCP приходит модели в Markdown-секции `Untrusted data` с источником и fenced content, служебная строка с exit code и временем идёт отдельно от вывода.
-- **Ремонт аргументов.** Проверка схемой, затем точечные исправления: синонимы полей, `null`, строки с JSON, массивы, числа, markdown в пути, обрезанный JSON. Модель получает читаемую ошибку и Markdown-секцию исправления.
-- **Сессия и история.** Sidecar на Bun читает команды из stdin и пишет события в stdout. Electron передаёт их в Svelte. `events.jsonl` хранит конверты с `seq`, `ts`, `schemaVersion` и `sessionId`. DurableEventLog пишет через одну очередь, tolerant read пропускает битые строки, `replayMessages` восстанавливает сообщения для продолжения по `sessionId`. Список сессий и чтение треда идут через `sessions.list` и `sessions.get`. Читатель знает каждый тип события ядра: список в `src/store/events/envelope.ts` это `Record<EventType, true>`, и `tsc` падает, если новое событие в него не внесли; тест `stored-events` проверяет, что всё записанное возвращается при переоткрытии задачи (метр контекста, бюджет, approvals, фоновые задачи, прерванный прогон, резервная модель).
-- **Ветки диалога.** Карандаш у пользовательского сообщения переносит его в основной композер с рамкой и заголовком редактирования. Выбор модели, reasoning, файлов, скриншотов и голосовой ввод остаются доступны. Исходные вложения показаны отдельными удаляемыми chips; несохранённый черновик нового сообщения хранится отдельно и возвращается при выходе из редактирования. Сохранение создаёт новое продолжение в том же чате. Исходный текст и скрытый хвост сохраняются, переключатель версий возвращает сохранённую переписку. `history.edited` и `history.selected` дописываются в журнал; единый проектор `src/store/events/branches.ts` выбирает события для UI, истории модели и восстановления. После изменения оба handle Talker/Worker создаются заново, архив страниц ограничивается выбранной веткой. Очередь и работающие задачи блокируют смену истории.
-- **Много задач сразу.** `SessionPool` (`src/app/session-pool.ts`) держит до `sessions.maxConcurrent` задач (по умолчанию 4), у каждой своя очередь, подтверждения, фоновые задачи и бюджет. Команда без `sessionId` идёт в задачу в фокусе, ответ на подтверждение находит задачу по `id`. Каждое событие несёт `sessionId`, журнал (`src/app/event-journal.ts`) нумерует их `seq` и держит в памяти события идущего прогона, поэтому перезагруженное окно собирает задачу из `events.jsonl`, `events.replay` и событий с большим `seq` без потери дельт.
+## 3. Target Execution Loop
 
-  Модель в композере принадлежит чату: `session-models.ts` сохраняет `model.selected` с провайдером, reasoning и вариантом, восстанавливает выбор и собирает соответствующие transport, context и capabilities. Старые чаты без явного события используют модель последнего основного запуска. Общий конфиг задаёт начальный выбор новых чатов. `run/model.ts` разделяет общие defaults и выбор чата, сериализует его изменения и не применяет поздний ответ другого чата к текущему экрану.
-- **Падение и перезапуск.** Очередь сообщений лежит в `queue.json` сессии (атомарная запись, у сообщения стабильный `id`, повтор не отправляет его дважды). После падения sidecar `recovery.ts` находит прерванные прогоны по журналу и продолжает их из истории, окно получает `sessions.interrupted`. Окно перезапускает ядро с паузами 1, 2, 4, 8 и 15 с.
-
-  Неотправленный текст композера хранится в Chromium profile отдельно для канонического cwd и чата, включая новый чат и режим без проекта. Сохраняются буквальный текст, структурированные упоминания и метаданные вложений без preview payload. Каждый изменённый черновик записывается отдельно через 200 мс после первой правки в пакете; непрерывный ввод не сдвигает таймер. Смена чата или проекта, потеря фокуса, скрытие и закрытие окна принудительно записывают остаток. Отправка и очистка удаляют сохранённый текст сразу. При запуске возвращается последний открытый чат; активный прогон имеет приоритет. Временное редактирование прежнего сообщения остаётся отдельным состоянием в памяти. Значения профиля проверяются схемой, ошибка записи сохраняет pending-данные и показывает уведомление. При падении renderer восстанавливается завершённая запись; последние изменения в пределах 200 мс могут не успеть сохраниться. Chromium storage не предоставляет контракт fsync для внезапной потери питания или диска.
-- **Одно ядро на проект, одно окно на профиль.** Ядро берёт `.flecten/sidecar.lock` (`src/app/project-lock.ts`): pid и токен публикуются целиком через hard link, живой замок ждут до 5 с, замок мёртвого процесса забирают сразу, иначе `project_locked` без перезапуска по кругу. Electron держит single-instance lock: второй запуск фокусирует первое окно, размер и положение окна восстанавливаются с проверкой видимости на мониторах (`shell/window-state.mjs`).
-- **Бюджет чата и прогона.** `RunBudget` (`src/core/session/budget.ts`) считает основной и вспомогательный usage через общий ledger чата; продолжение и рестарт не обнуляют сумму. У прогонов отдельный wall-clock. Отсутствующий receipt делает стоимость неизвестной. Окно показывает расход и остаток, превышение известного лимита останавливает следующий запрос с понятной причиной.
-- **Назначение ключа.** Account системного хранилища разделён по каноническому проекту, credential envelope связан с protocol/baseUrl/proxy. Сохранённый ключ другого проекта или адреса не подставляется; legacy ключ без назначения требует повторного ввода. Renderer получает только metadata.
-- **Внешние schemas.** Product registry хранит внешние MCP tools отдельно от видимых model specs. `tool_catalog list/activate` явно включает выбранные schemas, после чего вызовы проходят обычные prepare/run, permissions и logs. Selection восстанавливается по успешным вызовам и typed `contextSummary.activeMcpTools`, переживает compaction и смену модели; каждый run получает собственный view реестра. Встроенные role tools и module gateway остаются стабильными.
-
-- **Промпт.** Системный промпт собирается из `prompts/`, AGENTS.md, skills, MCP и схем тулов в общем бюджете `promptBudget` (по умолчанию 24 000 токенов, счёт тем же токенайзером, что и контекст). Описания и схемы реально доступных инструментов передаются провайдеру отдельно; системный пересказ контрактов не добавляется. Дочерние роли используют ту же базу и инструкции проекта, но возвращают результат по своей JSON Schema без пользовательского HTML-формата. `session.started` несёт `prompt.version`, `prompt.base` и `prompt.hash`, поэтому видно, каким промптом шла задача. Устройство и источники решений описаны в [PROMPTS.md](PROMPTS.md).
-- **Сжатие контекста.** Worker завершает одну смысловую страницу через `context complete`, после чего харнесс архивирует и сжимает её до следующего запроса независимо от заполнения окна. Talker сохраняет прежний порог. Tokenizer выбирается по модели и протоколу. При аварийном приближении к `context.window - context.reserve` сначала срезаются старые tool outputs, затем PageWriter запрашивает summary по строгой JSON Schema с детерминированным fallback. После трёх неудач подряд breaker закрывает автосжатие, событие `context.compacted` уходит в тред. Общий canonical fallback используется и прямым циклом без PageWriter. Типизированный `ContextSummary` переносит результаты, исходный запрос и последнюю инструкцию через журнал и replay без разбора Markdown; бюджет учитывает пути к странице и логам.
-- **Права и approvals.** Один schema-validated immutable tool call проходит hooks, извлечение всех ресурсов, sandbox и PermissionEngine до исполнения. Общий контракт `shared/access-mode.ts` согласует permissions и изоляцию: `agent` разрешает обычную работу, `confirm` спрашивает перед записью/shell/MCP, `full` отключает sandbox; новая конфигурация начинает с `agent`, прежние явные настройки сохраняются. Deny любого ресурса и обязательные human checkpoints сильнее режима и grants. Внешняя папка проходит отдельный `external_path` запрос: один вызов, память текущего чата или сохранённый `pathPrefix` проекта. Тот же набор канонических папок применяется к logical sandbox и writable roots процесса и разделяется с Worker/субагентами чата. Остальные grants сохраняют SHA-256 точного действия, аргументов, cwd и ресурсов. Сохранение ожидает записи конфига; перед исполнением повторно проверяются пути и запреты. Продвинутый `auto` разрешает bounded операции, допустимые непрозрачные вызовы отправляет reviewer и при неопределённости спрашивает человека. ApprovalWaiters владеет deadline, отменой, routing и последними 100 receipts для reconnect. Через подписку на PermissionEngine и родительскую политику ожидающие вопросы переоцениваются после смены правил или покрывающего grant: разрешённые завершаются как `allow_once/by: policy`, запрещённые как `deny/by: policy`, актуальные ask и human checkpoints продолжают ждать. Компактная карточка показывает цель и область доступа, детали раскрываются отдельно. Режим выбирается только в настройках Access, где также собраны правила и процессная изоляция. Контракт и границы в [SECURITY.md](SECURITY.md), сравнение источников зафиксировано во внутренних материалах по UX доступа.
-- **Checkpoints.** Content-addressed store в `.flecten/checkpoints` хранит pre-image и post-image. `write`, `edit`, `apply_patch`, `delete` и `move` снимают checkpoint до изменения; `/undo` и `/redo` работают без git, список и восстановление идут через sidecar.
-- **Откат shell-команд.** `bash` и `terminal` снимают снимок рабочего дерева в отдельном `.flecten/shadow`. Первичная подготовка ограничена 5 с, 50 000 путями, 256 МиБ суммарных файлов и 16 МиБ списка путей. Объём проверяется до хеширования; существующий shadow свыше 1 ГиБ сохраняется без пересоздания. Превышение сообщает недоступность автоматического снимка и предлагает выбрать папку проекта. Команды продолжают работать, частичный снимок не выдаётся за полный откат. Бюджет снимка отдельной команды остаётся 5 с: 1,5 с до, 1,5 с после и 2 с на сохранение. Изменения сверх 2000 файлов и 128 МиБ отражаются как gaps. Destructive-команды проходят существующее подтверждение риска; `/undo` защищает настройки и секреты.
-- **PTY.** Один persistent shell на сессию через `Bun.Terminal`. Операции `run`, `write`, `read`, `resize`, `kill`, `list`, env allowlist, scrollback, ANSI, таймаут и структурированный отчёт команды. Остановка убивает дерево процессов. Настройки `terminal` (shell, env allowlist, scrollback, таймауты, ANSI, уведомления) применяются без перезапуска.
-- **Фоновые задачи.** `bash` с `background: true` и тул `jobs` (`list`, `read`, `wait`, `stop`) дают задаче id, статус, лог и время. Уведомление о завершении приходит только той задаче, которая её запустила; в окне её видно в полосе над композером с кнопкой остановки. Долгий тул прерывается из карточки (`tool.cancel`) вместе с деревом процессов.
-- **Ресурсы.** Общий monitor памяти/процессов/портов использует procfs на Linux, ps/lsof на macOS и schema-validated CIM snapshot на Windows. Linux scope находит setsid orphan. Windows monitor асинхронный, ошибка запроса завершает инструмент. Sampling, Windows orphan после потери PPID, AppContainer/Job Object и native платформенная приёмка имеют явные ограничения в [SECURITY.md](SECURITY.md).
-- **Очередь и steering.** Очередь `queue` и `steer` с двумя режимами отправки. Steering вклинивается на безопасной границе хода, очередь запускает следующее сообщение после `done` или `end`. Очередь сохраняется на диск и переживает перезапуск ядра и окна.
-- **Остановка.** Композер заменяет отправку на стоп; при непустом черновике показывает общий блок стоп, queue и steer. Первое нажатие передаёт `stop` с `mode: graceful`: текущий ответ модели и уже запущенные команды завершаются, незапущенные tool calls получают результаты отмены, следующий запрос и очередь не запускаются. `SessionState.stopRequested` сохраняет ожидание при переоткрытии. Красный стоп передаёт `mode: force` и прерывает общий AbortSignal. Внутренние команды `stop` без mode сохраняют немедленную отмену.
-- **Голосовой ввод.** MediaRecorder записывает до 90 секунд. Для API sidecar отправляет multipart на `/audio/transcriptions`; для локальных faster-whisper и Vosk окно конвертирует запись в mono PCM16 WAV 16 кГц через Web Audio. Sidecar запускает встроенный Python worker, передаёт WAV в stdin, получает проверенный текст и отменяет дерево процесса по Escape. Настройки устанавливают выбранный движок и модель в отдельный cache; при диктовке сеть не используется и облачного fallback нет. Подробности в [VOICE.md](VOICE.md).
-- **Зрение.** Вставка изображения создаёт атомарный `Image 1` внутри текста. Буфер сохраняется в закрытую временную папку, отправка копирует media в артефакты сессии и передаёт модели доступный локальный путь. Зрячая модель получает content parts; для незрячей `src/app/vision.ts` описывает изображения через отдельного провайдера. По умолчанию выбирается зрячая модель рабочего провайдера с минимальной суммой цен входа и выхода; неизвестная цена требует явного выбора. `vision.provider/model` и общий ModelPicker задают ручной выбор в настройках. `read` определяет изображения по сигнатуре и у незрячей модели принимает `focus`. Описания кэшируются в пределах сессии по содержимому и focus, usage учитывает тариф помощника.
-- **Вложения.** Композер принимает изображения png, jpeg, webp, gif и avif и PDF, до 5 файлов по 10 МБ. Core кодирует их в base64 и отдаёт провайдеру как content part; PDF уходит только модели с модальностью `pdf`. Audio WAV/MP3 передаётся OpenAI Chat, поддерживаемые контейнеры передаются Gemini; протоколы без input audio возвращают явную ошибку. Изображения учитывают размеры, PDF получает консервативный резерв, WAV/MP3/FLAC оцениваются по длительности.
-- **HTML summary.** Markdown рендерится через marked и DOMPurify по allowlist. Финальный `<summary>` или `<complete>` разбирается потоком и рендерится в iframe с `sandbox="allow-scripts"` без `allow-same-origin`: сырой код не показывается, вместо него скелетон, готовые элементы появляются по мере прихода. Инлайн CSS и JS разрешены; скрипты остаются неактивными во время потока и запускаются один раз после завершения. Сеть и внешние ресурсы запрещены, высота и действия идут через проверенный postMessage. В iframe встроены Manrope и токены темы. Ссылки `flecten://settings/SECTION`, `flecten://panel/PANEL`, `flecten://models` и `flecten://file?path=...&line=...`, а также кнопки `data-summary-action="navigate"` проходят закрытую проверку назначения в `summary-navigation.ts`. `App.svelte` открывает существующие настройки, панели, выбор модели или bounded file viewer; HTML не получает доступ к IPC.
-- **Карточки тулов.** `tool-presentation.ts` задаёт понятные названия, назначение и операции встроенных инструментов. Строка показывает объект действия и явный статус; аргументы скрыты в технических деталях. Вызов `task` отображается компактно: имя, персонаж и роль. Каждый субагент получает верхнюю вкладку с live журналом, раскрываемым поручением, проверенным отчётом (`subagent-report.ts`) и отдельным stop. Общий stop родителя не прерывает детей: `SubagentTasks` владеет их сигналами, а родитель прекращает ожидание. `task` с operation list/wait/stop позволяет основному агенту или Worker собрать результаты и явно остановить ребёнка. Если ответ не прошёл JSON-схему, выполняется один шаг оформления через submit_report без рабочих инструментов и с учётом оставшегося бюджета. Ошибка схемы сохраняется, если оформление не удалось. Обычные незавершённые инструменты после stop получают статус «Прервано». Подряд идущие `read`, `grep` и `glob` сворачиваются в один шаг «Прочитал N файлов, искал M раз» (`ui/src/lib/run/action-groups.ts`), упавший вызов раскрывает группу сам. Файл из карточки `read`, `write`, `edit`, из diff и полный лог тула открываются во встроенном просмотрщике через `files.read` (`src/app/file-preview.ts`); `read` с `offset` открывается на этой строке. Ответ резервной модели помечается в треде заметкой с провайдером и причиной.
-- **Проверки.** `bun run verify` прогоняет тесты, типы, линт, `docs-check` и обе сборки. Packaged smoke проверяет встроенный бинарник, preload bridge, editable composer и отображение модели из `status`; Linux release проверяет публикуемый AppImage. Playwright E2E поднимает Electron, sidecar и локальный mock-провайдер: сценарии, среди них новый экран, tool call, просмотрщик файла и HTML-саммари, очередь, блоки кода и Mermaid, уведомления, второе окно на том же проекте, отсутствие скролла документа и снимки на 1480x940 и 1180x640. `bun scripts/coverage.mjs` держит порог покрытия 85% строк (актуальный результат фиксируется в отчёте приёмки), `bun scripts/docs-check.mjs` сверяет PROTOCOL, TOOLS, конфиг и security с кодом в обе стороны.
-- **Расширения.** Agent Skills из пользовательских и проектных каталогов, MCP через stdio и Streamable HTTP с OAuth PKCE и elicitation через окно, ресурсы как прикреплённый контекст. Command и HTTP hooks используют общий каталог из `shared/hooks.ts`, именованные действия, буквальные условия и явный формат ответа text/JSON. Черновик проверяется тем же runner до сохранения; последние 50 реальных запусков текущей задачи доступны через live events и replay. Таймаут, отмена, лимиты вывода и failClosed общие для ручного и рабочего пути. Контракт описан в [HOOKS.md](HOOKS.md), остальные расширения в [EXTENSIONS.md](EXTENSIONS.md).
-
-Границы реализации и внешней приёмки: подписанные релизы требуют сертификатов CI. Persistent PTY использует ConPTY Bun 1.4.2; Windows AppContainer, отдельный Job Object для каждой команды и native run остаются открытыми. Bun no-orphans завершает потомков при выходе sidecar или его родителя, что не заменяет изоляцию каждой команды. Auto-update проверяет Ed25519 manifest канала встроенным публичным ключом и затем SHA512/size installer; без ключа или подписи обновление блокируется. Секция `update` конфига задаёт канал (stable/beta), источник (GitHub Releases репозитория `update.github` или свой feed), автопроверку, автозагрузку и установку при выходе; нормализованные настройки доходят до оболочки через `status` и применяются без перезапуска. Упакованные сборки без явного источника читают GitHub Releases продукта: самый свежий опубликованный релиз, draft исключены, stable пропускает prerelease. Фоновая проверка идёт через 10 с после старта и затем каждые 4 ч, ошибки повторяются с backoff от 15 мин до 4 ч. Загрузка не прерывает работу, установка происходит по кнопке перезапуска или при штатном выходе. Реальная публикация обновления требует release infrastructure. Custom modes исключены владельцем. Спека, gates, Twin и Critic остаются целевой архитектурой. `done` завершает прогон и не заменяет приёмку.
-
-Skills перечитываются перед новым прогоном и при открытии slash-меню. Trust проверяется до загрузки тела, активированный allowed-tools применяется в registry, даже когда активация и другой вызов пришли одним batch. Ограничения восстанавливаются из durable events. Модули объединяют инструкции, ресурсы, MCP, hooks, native services и интерфейс. Активация требует доверия хешу содержимого; изменение пакета снимает доверие.
-
-Структурированный `@` передаёт `ContextReference` с типом, источником, названием и ограниченным текстом. Выделение и символ берутся из редактора и его синтаксического дерева, задача из текущего списка, PR из публичного GitHub API, MCP ресурс из каталога сервера. Core валидирует ссылки и передаёт их как недоверенные данные; исходный prompt сохраняется буквально. Экспорт атомарно публикует отдельную закрытую папку с журналом и независимыми копиями вложений; копирование потоковое, symlinks и нерегулярные файлы отклоняются. Retention не удаляет идущие задачи и непустые очереди.
-
-DiagnosticsRuntime пишет ограниченные structured logs с trace id, длительностью тулов, usage и кодами ошибок. Отдельная команда создаёт локальный bundle с формой конфига без его значений. Consent и HTTPS endpoint нужны для отправки счётчиков; сообщения, файлы и ключи в телеметрию не включаются.
-
-## 3. Целевой цикл
-
-raw message (ru, как есть)
+```text
+raw message (user language, verbatim)
   │
-  ├─ intake: разметка терминов, перевод, профиль
+  ├─ intake: term tagging, translation, persona profile
   ▼
-spec.json: цель, non-goals, критерии, голос юзера
+spec.json: goal, non-goals, acceptance criteria, user voice
   │
-  ├─ Scout (параллельно): brief.md
+  ├─ Scout (parallel): brief.md
   ▼
-page N: Worker ─► Gates ─► pages/N.md ─► сжатие
+page N: Worker ─► Gates ─► pages/N.md ─► compaction
   │
-  ▼ пока критерии не закрыты
-Critic в чистом окне ─► PASS / REJECT
+  ▼ repeat until all criteria pass
+Critic in clean context window ─► PASS / REJECT
   │
   ▼
-ответ юзеру (ru)
+localized answer to user
 ```
 
-Страница Worker равна одной небольшой, связной подзадаче с самостоятельным результатом. Размер задаёт нагрузка, а не URL, файл или процент окна. Один критерий приёмки может требовать нескольких страниц.
+A Worker page corresponds to one cohesive, self-contained subtask sized by cognitive load rather than file count, URL, or window percentage; a single acceptance criterion may span multiple pages.
 
-## 4. Роли
+## 4. Roles
 
 ### Twin
 
-Клиент сессии, не ассистент. Считает себя юзером, отвечает его голосом, имеет право отклонить работу.
+Acts as the session's client rather than a helpful assistant: speaks in the user's voice, enforces user taste, and holds veto power over deliverables.
 
-Вход: сырое сообщение на двух языках, профиль, карта репозитория.
-Выход: `spec.json`, steer-сообщения на развилке, вердикт в чистом окне.
+- **Input:** verbatim bilingual prompt, persona profile, repository map.
+- **Output:** `spec.json`, mid-run steering decisions, and clean-window final verdict.
+- **Rule:** every persona claim requires provenance from prior sessions or `spec.json` - otherwise Twin asks the user directly. A fabricated persona is worse than none.
 
-Клоном его делают ссылки на прошлые сессии и право отклонить. Нет ссылки, спрашивает или берёт из спеки. Выдуманный клон хуже отсутствия клона.
+### Orchestrator
 
-### Оркестратор
-
-Дешёвая модель плюс правила. Выбирает шаг и границу страницы, запускает Scout, гоняет Gates, перепланирует после падения. Задачу не обсуждает и код не пишет.
+Lightweight model paired with deterministic state rules: selects the next step and page boundary, dispatches Scout, executes Gates, and replans on failure. Never debates requirements or writes product code.
 
 ### Scout
 
-Read-only разведчик. Стартует после выбора шага, умирает на `brief.md`. Приносит файлы, символы, готовый код и риски. Кода не пишет.
+Ephemeral read-only researcher spawned per step and terminated upon writing `brief.md` (relevant files, symbols, reusable code, and risks). Writes zero product code.
 
 ### Worker
 
-Видит спеку, brief, выжимку прошлой страницы и текущую страницу. Историю сессии не видит. Пишет выжимку сам.
+Sees `spec.json`, `brief.md`, the prior page's summary, and the active page - never raw session history - and authors its own page summary on completion.
 
 ### Critic
 
-Тот же Twin, чистое окно. Видит сырое сообщение, спеку и diff. Работы не видел. Проверяет критерии, голос юзера, лишний код и нарушенные правила.
+Twin instantiated in a fresh context window seeing only the raw user request, `spec.json`, and the resulting diff/evidence (never intermediate Worker chatter), auditing acceptance criteria, user voice, dead/unrequested code, and project rules.
 
-### Основная модель и память
+### Primary Model and Memory
 
-Основная модель ведёт проектную память через `memory` в обычном рабочем ходе. Отдельного Janitor и анализа пользовательского diff нет. Перед compaction до трёх кандидатов добавляются в уже существующий summary response; обычный done также может принять кандидатов без отдельного save turn. Новый observer request и finalization loop не запускаются.
+The primary model curates workspace memory directly via the `memory` tool during normal turns without a background Janitor or user-diff observer. Up to three memory candidates can piggyback on existing compaction summary or `done` turns without extra model round-trips.
 
-## 5. Стыки
+## 5. Handoffs
 
-Каждый стык это файл на диске и правило, кто его пишет.
+Every inter-role boundary is an explicit disk artifact or typed payload with a single writer:
 
-| Стык | Что переходит | Кто пишет | Кто читает |
+| Boundary | Payload | Writer | Reader |
 |---|---|---|---|
-| сообщение → термины | совпадения названий, aliases и допустимых исправлений | `src/dictionary/match.ts` | `DictionaryRuntime` |
-| термины → модель | ограниченные справочные определения в Markdown | `src/core/dictionary/runtime.ts` | текущий запрос провайдеру |
-| Twin → оркестратор | `spec.json` | Twin | оркестратор, Critic |
-| оркестратор → Scout | шаг и критерий | оркестратор | Scout |
-| Scout → Worker | `brief.md` | Scout | Worker |
-| Worker → Gates | изменённые файлы | Worker | команды из спеки |
-| Worker → выжимка | `pages/N.md` | Worker | бюджет, следующая страница |
-| выжимка → бюджет | выжимка страницы | `context.ts` | следующий запрос |
-| diff → Critic | diff, спека, сырое сообщение | цикл | Critic |
-| разговор → память | запись с точной цитатой и ревизией | основная модель через `memory` | ограниченный индекс, затем `read` по необходимости |
+| message -> terms | matched term IDs, aliases, and safe spelling fixes | `src/dictionary/match.ts` | `DictionaryRuntime` |
+| terms -> model | bounded Markdown reference definitions | `src/core/dictionary/runtime.ts` | active provider request |
+| Twin -> orchestrator | `spec.json` | Twin | orchestrator, Critic |
+| orchestrator -> Scout | step target and acceptance criterion | orchestrator | Scout |
+| Scout -> Worker | `brief.md` | Scout | Worker |
+| Worker -> Gates | mutated workspace files | Worker | verification commands from `spec.json` |
+| Worker -> page summary | `pages/N.md` | Worker | context budget, next page |
+| page summary -> budget | compacted page summary | `context.ts` | subsequent model request |
+| diff -> Critic | workspace diff, `spec.json`, verbatim prompt | loop | Critic |
+| conversation -> memory | entry with verified source quote and revision | primary model via `memory` | bounded index, plus on-demand `read` |
 
-## 6. Спека
+## 6. Spec
 
-`spec.json` содержит:
+`spec.json` defines:
 
-- цель одним абзацем;
-- non-goals, что делать нельзя;
-- критерии приёмки, каждый проверяемый;
-- голос юзера, чего он не потерпит;
-- правила источников, если задача ресёрчерская;
-- команды проверки, если они известны.
+- Single-paragraph goal.
+- Explicit non-goals.
+- Verifiable acceptance criteria.
+- User voice and dealbreakers.
+- Source requirements (for research tasks).
+- Verification commands (when known).
 
-Понял значит все критерии закрыты. Нет доказательства, нет закрытия.
+"Done" means every criterion is backed by concrete evidence; no evidence means not done.
 
-## 7. Контекст
+## 7. Context
 
-### Страница
+### Page
 
-Страница это одна подзадача, которую модель способна выполнить с полным вниманием к инструкциям. Лендинг на один-два экрана, связка Login + Registration и каркас dashboard без внутренних секций считаются одной страницей каждый. Сложную подзадачу Worker делит до начала работы.
+A page represents one bounded unit of work a model can execute at full instruction fidelity (for example, a 1-2 screen landing page, a Login + Registration flow, or a dashboard shell without inner feature tabs). Complex subtasks are split before execution begins.
 
-Worker получает инструмент `context`, когда настроено хранилище страниц. Перед рабочими тулами обязателен `begin` с названием и целью. Как только результат проверен, Worker вызывает `complete` с итогом, доказательствами и следующим шагом. Оба вызова выполняются отдельно. Харнесс отклоняет работу без открытого блока, новый блок до закрытия предыдущего и финальный ответ с активной страницей. Успешный `complete` принудительно архивирует весь завершённый блок и заменяет его выжимкой до следующего запроса модели, независимо от заполнения окна.
+When page storage is configured, Worker must call `context` `begin` (title and goal) before invoking working tools, and `complete` (outcome, evidence, next step) in a separate turn once verified. The harness rejects work outside an open page, opening a second page before closing the current one, or finishing a run with an unclosed page. A successful `complete` archives the full segment and replaces it with its summary before the next model request regardless of window utilization.
 
-Talker и односессионный режим сохраняют прежнее сжатие по заполнению окна. У Worker лимит окна остаётся аварийной защитой длинного незавершённого блока: выжимка переносит типизированный `activePage`, поэтому закрытие по-прежнему обязательно. Семантическую полноту объявляет модель, runtime проверяет lifecycle без regex и эвристик.
+Talker and single-session mode retain threshold-based compaction; for Worker, window limits act strictly as an emergency safety net on runaway open pages, carrying typed `activePage` state across compaction so explicit `complete` remains mandatory. Semantic completeness is declared by the model while lifecycle state is enforced deterministically without regexes or heuristics.
 
-### Выжимка
+### Page Archive and Summary
 
-`pages/N.md` хранит выжимку: что изменено, где, правила, следующий шаг, открытые риски. `pages/N.transcript.md` сохраняет текст сообщений, аргументы и результаты завершённого сегмента; длинные результаты ссылаются на полные tool logs. Архив записывается до замены истории, сбой записи сохраняет исходный контекст. `context list`, `read` по номеру страницы и строкам, `search` по буквальной подстроке позволяют восстановить детали любого сегмента после сжатия и перезапуска. Копия чата получает собственные архивы до выбранной границы.
+`pages/N.md` records what changed, where, active constraints, next step, and open risks; `pages/N.transcript.md` preserves full segment messages, tool arguments, and outputs (linking oversized outputs to session tool logs). Archives fsync before history replacement so write failures leave active context intact. `context` `list`, line-ranged `read`, and literal substring `search` recover exact prior details across compactions and restarts; forked chats copy archives up to the branch point.
 
-### Стабильный префикс
+### Prefix Stability
 
-Внутри страницы не меняются: системный промпт, спека, выжимка профиля, текущая страница. Меняется только хвост: новые результаты тулов и сообщения. Поэтому кэш живёт всю страницу, а не рвётся каждые 12-15 тысяч токенов.
+Within an active page, the system prompt, `spec.json`, persona summary, and prior page summaries stay byte-identical; only the trailing messages and tool results append, keeping provider KV-cache hits intact across an entire page rather than thrashing every 12-15k tokens.
 
-### Обрезка
+### Output Truncation
 
-Выводы тулов режутся до первых и последних строк. Ошибки и diff остаются целиком. Полные логи лежат в `.flecten/sessions/<id>/logs/`. Обрезка детерминированная, чтобы префикс совпадал байт в байт.
+Oversized tool outputs keep deterministic head and tail lines while preserving errors and diffs intact and writing full payloads to `.flecten/sessions/<id>/logs/`, ensuring byte-stable prefixes.
 
-### Лестница сжатия
+### Compaction Ladder
 
-1. Бюджет результата каждого тула.
-2. Срез старых результатов.
-3. Сжатие диалога по границе страницы.
-4. Полная выжимка сессии.
+1. Per-tool inline output cap.
+2. Old tool-output pruning.
+3. Page-boundary dialogue compaction.
+4. Full-session summary fallback.
 
-После трёх неудачных сжатий подряд автосжатие выключается, иначе сессия жжёт API в цикле.
+Three consecutive compaction failures trip the circuit breaker and disable auto-compaction rather than burning API quota in a retry loop.
 
-## 8. Память
+## 8. Memory
 
-Проектный `MemoryPort` общий для разговоров одного канонического workspace. Основная модель выбирает смысл и нужные тела через `memory`: `topics`, `list`, `read`, `sources`, `save`, `forget`, `reconcile`. Основные виды `preference`, `lesson`, `decision`, `commitment`, `context`, `procedure`; собственные виды разрешены схемой. Model-authored topics образуют семантические маршруты к старым записям, appliesWhen обозначает момент применения. Нет user-global банка, автоматического графа и отдельной extraction модели.
+`MemoryPort` is shared across all chats belonging to the same canonical workspace. The primary model curates entries explicitly via `memory` (`topics`, `list`, `read`, `sources`, `save`, `forget`, `reconcile`) across built-in kinds (`preference`, `lesson`, `decision`, `commitment`, `context`, `procedure`) or schema-valid custom kinds, using model-authored `topics` and `appliesWhen` routing with no global cross-project bank, auto-graph, or background extraction model.
 
-Runtime проверяет точные цитаты реальных user/tool sources, вычисляет роль и SHA-256. `preference` и `lesson` требуют user evidence. Summaries, notices и задания Worker не становятся пользовательскими словами. Точность цитаты подтверждает происхождение, но смысл вывода и исключение знания, доступного из кода/инструкций, остаются задачей модели.
+The runtime verifies exact verbatim quotes against real user or tool events, recording role and SHA-256 provenance; `preference` and `lesson` entries require direct user quotes (summaries, system notices, and Worker briefs never count as user speech). Up to `1,200` estimated tokens inject before each request (invalidations, topic catalog, unseen index entries, or critical bodies scaled to available context), with paginated listing and batch `read` (up to six bodies per call) tracking `index`/`full`/`invalidated` visibility across pruning, compaction, and replay.
 
-Перед запросом доставляется до 1200 оценочных токенов: необходимые invalidations, тематический каталог, отсутствующий индекс или critical bodies с учётом свободного контекста. Полная навигация доступна с пагинацией, read читает до шести тел одним вызовом. Идентификаторы, ревизии и уровни `index`/`full`/`invalidated` следуют за фактически сохранёнными сообщениями через обрезку, compaction и replay. Семантической гарантии отсутствия произвольного парафраза в контексте нет.
+`.flecten/memory.json` (v2) stores active entries (up to `500` with zero silent eviction), tombstones, and audit history using CAS revisions, atomic `reconcile`, mutex serialization, metadata-cached snapshots, and explicit failure on corruption. Legacy v1 entries migrate as `unverified` and are excluded from automatic injection; `forget` suppresses active recall while preserving the audit log and `events.jsonl`. Full budgets and constraints live in [MEMORY.md](MEMORY.md).
 
-`.flecten/memory.json` version 2 хранит записи, tombstones и audit history. CAS предотвращает устаревшее обновление, reconcile атомарно заменяет противоречащие записи, общий mutex и atomicWrite сериализуют публикацию. Неизменённый validated snapshot кэшируется по metadata; corrupt file сохраняется и даёт явный отказ. До 500 active записей без молчаливого eviction. Legacy записи мигрируют как unverified и автоматически не доставляются. Forget убирает активный recall, сохраняя audit и raw transcript.
+## 9. Verification
 
-Подробные бюджеты, права, стоимость и ограничения описаны в [MEMORY.md](MEMORY.md). `events.jsonl` сохраняет сырые сообщения пользователя буквально; AGENTS.md и другие project docs остаются авторитетным домом правил проекта.
+- **Gates:** Verification commands from `spec.json` run automatically after each page; failures return to Worker as structured tool errors rather than prompt persuasion.
+- **`done`:** Returns `REJECTED` until Critic issues `PASS`.
+- **Criteria -> Evidence:** Sessions close with a strict criterion-to-evidence mapping; unverified criteria block completion.
+- **Sources:** Research specs enforce `sources_required` (count, domain/date logging, freshness, and `independence: strict` forbidding single-source claims).
+- **Untrusted Input:** File reads, web fetches, MCP responses, and tool outputs wrap inside fenced `Untrusted data` Markdown sections (`src/core/loop/tool-message.ts`) paired with system-prompt non-execution rules - enforced structurally rather than via regex sanitization.
 
-## 9. Проверка
+## 10. Comprehension
 
-### Gates
+Intake flags uncertain term spans and resolves them in order across the term dictionary, local docs, and web search, attaching dated, source-attributed definitions beside the user turn rather than mutating the system prompt. Unresolved ambiguity triggers a single targeted Twin question whose answer persists with `source: user`. `message.raw` is stored character-for-character; Worker executes against `message.en`, and localized replies verify identifier, path, and numeric fidelity.
 
-Команды из спеки гоняются после каждой страницы. Падение возвращается воркеру результатом тула, не уговорами.
+## 11. Reuse
 
-### done
+Prior to the first `write`, Scout checks the local cross-project index, installed package types/docs, and web references. If a diff introduces more than `40` lines duplicating an indexed local pattern, Critic requires explicit justification.
 
-`done` возвращает `REJECTED`, пока Critic не поставил PASS.
+## 12. Runtime
 
-### Критерий и доказательство
+The Electron shell passes a stable `FLECTEN_PROFILE` directory (`userData`) to the sidecar, consolidating all settings (including permissions, sandbox, MCP, hooks, modules, and slash commands) into a single global `flecten.config.json` and ignoring repo-local config files (unless an explicit `FLECTEN_CONFIG` override is set for tests/integrations). First launch non-destructively imports legacy settings and destination-bound credentials.
 
-В конце сессии таблица «критерий → доказательство». Нет доказательства, не готово.
+`shared/project-index.cjs` tracks the active canonical workspace, saved folders, and trust decisions (`unknown`, `trusted`, `untrusted`). Selecting a new or undecided folder prompts in the UI (`trust.accept` / `trust.reject`, editable anytime from the project menu); `untrusted` workspaces keep built-in tools active while disabling repo-local executable extensions. Legacy profiles with a global config but no project index register the startup `cwd` as `unknown` (or fall back to `projectless` if inaccessible), while fresh profiles write an empty index immediately and honor explicit `FLECTEN_CWD` overrides.
 
-### Источники
+Fresh profiles boot in `projectless` mode: the shell provisions an isolated `projectless` directory inside the profile with `FLECTEN_PROJECTLESS=1` and `AppInfo.projectRoot = null`, keeping sessions, memory, attachments, and logs self-contained without scanning parent directories for `AGENTS.md`, local skills, commands, subagents, or shadow Git (inspired by `/home/oleksandr/reverse_codex`).
 
-Спека задаёт `sources_required`: число, независимость, свежесть. Харнесс пишет домен и дату каждого источника. Critic сверяет таблицу утверждений. `independence: strict` запрещает утверждение с одним источником.
+Opening a broad parent directory never recursively preloads sibling project instructions. Workspace file indexing streams entries under a `1.5 s` budget capped at `5,000` files, `2,000` directories, `10,000` total entries, depth `32`, and `1 MiB` Git output, setting `files.list.limited` so the explorer and search warn when results are truncated and suggest opening a narrower project root. `projects.list` aggregates saved workspaces and standalone sessions. The Agent sidebar groups standalone sessions under the collapsible **Separate chats** section below the folders. Removing a folder from the list never deletes files or session history on disk.
 
-### Недоверенный ввод
+Stack summary:
 
-Всё, что пришло из файлов, web, MCP и вывода тулов, помечается как данные: модель получает его в Markdown-секции `Untrusted data` с источником и fenced content (`src/core/loop/tool-message.ts`), а базовый промпт велит не исполнять инструкции из таких блоков. Нейтрализации текста по шаблонам нет: правило держится разметкой, а не regex.
+- **Bun 1.4:** `Bun.serve`, `Bun.spawn`, `Bun.Terminal`, `Bun.WebView`, `bun:sqlite`, `Bun.cron`, `bun test`, and `bun build --compile`.
+- **Core sidecar (`dist/flecten-agent` / `src/app/server.ts`):** Separate Bun process speaking newline-delimited JSON over `stdin`/`stdout` with zero open network ports, auth tokens, or Electron/Svelte imports, and no standalone user CLI.
+- **UI (`ui/`):** Svelte 5 + Vite with zero direct filesystem or model access; state enters via props and `window.desktop.agent`.
+- **Shell (`shell/`):** Electron 45 serving `flecten://app/index.html` and `preload.cjs`, packaged via `electron-builder` with `flecten-agent` and `prompts/` in `resources/`. Electrobun remains the long-term shell target per ADR-003 without changing the renderer contract.
 
-## 10. Понимание
+## 13. Modules and Layer Boundaries
 
-Intake-модель помечает спаны, в которых не уверена. Дальше поиск: база терминов, локальные доки, web. Определение идёт рядом с сообщением, с источником и датой. Не в системный промпт.
+Reference module [Computer Use](COMPUTER-USE.md) (`tests/fixtures/modules/computer-use/`) builds strictly on the public module SDK ([MODULES.md](MODULES.md)) without a second agent loop: serializing input actions, requiring current observation IDs, separating human control from model calls via trusted transport metadata, isolating Xvfb/D-Bus and Firefox profiles from the host pointer (within OS user permissions), and routing screenshots through content-addressed session attachments. `src/modules` manages verified module generations while `core` depends only on the abstract session port. Full directory ownership lives in [STRUCTURE.md](STRUCTURE.md).
 
-Не нашлось: Twin задаёт один вопрос. Ответ уходит в базу с источником `user`.
-
-Язык: `message.raw` хранится символ в символ. Worker получает `message.en`. Ответ переводится обратно. Перевод сверяется по именам, путям и числам.
-
-## 11. Переиспользование
-
-Перед первым `write` идёт шаг поиска: индекс прошлых проектов на диске, потом установленные доки и типы, потом web.
-
-Гейт: если diff добавляет больше 40 строк паттерна, который уже есть в индексе, Critic требует объяснить, почему не переиспользовали.
-
-## 12. Рантайм
-
-Desktop передаёт sidecar стабильный `FLECTEN_PROFILE` из Electron userData. Все настройки, включая permissions, sandbox, MCP, hooks, модули и команды, хранятся в одном глобальном `flecten.config.json`. Существующий профиль полностью исключает чтение и запись локального конфига. При первом запуске профиль получает прежние настройки и destination-bound ключи без изменения исходных файлов. Явный `FLECTEN_CONFIG` остаётся изолированным входом для интеграций и тестов.
-
-`shared/project-index.cjs` хранит в профиле выбранный канонический путь, добавленные папки и решение `unknown`, `trusted` или `untrusted`. UI спрашивает доверие сразу после выбора новой папки и при входе в прежнюю папку без решения. Подтверждение сохраняется через `trust.accept`, отказ через `trust.reject`; меню проекта позволяет передумать. Отказ оставляет встроенные инструменты, отключая проектные исполняемые расширения. В процессе активации модуля новых вопросов доверия нет.
-
-При обновлении прежний профиль с глобальным конфигом, но без индекса проектов, сохраняет стартовую директорию процесса как проект с решением `unknown`. Недоступная директория открывает режим без проекта. Старый диалог выбора папки не сохранял путь, поэтому его последний выбор восстановить нельзя. Свежий профиль сразу записывает пустой индекс, чтобы последующее создание глобального конфига не запускало миграцию. Явный `FLECTEN_CWD` имеет приоритет над восстановлением.
-
-Свежий профиль открывается без проекта. Оболочка создаёт собственную рабочую папку `projectless` внутри профиля и передаёт `FLECTEN_PROJECTLESS=1`; `AppInfo.projectRoot` равен `null`. История, память, вложения и логи остаются внутри этой папки. Runtime не ищет проектные AGENTS, локальные навыки, команды и субагентов и не индексирует shadow Git. Пользовательские глобальные инструкции и доступ к явным внешним путям сохраняются. Подход с выделенной рабочей папкой взят из `/home/oleksandr/reverse_codex`.
-
-Выбор широкой папки не запускает рекурсивную предзагрузку инструкций соседних проектов. Файловый индекс читает потоки с бюджетом 1,5 с, максимумами 5000 файлов, 2000 каталогов, 10 000 записей и глубиной 32. Git output ограничен 1 МиБ и завершается при лимите. Ответ `files.list.limited` сообщает неполноту проводнику; поиск сохраняет этот признак даже при отсутствии совпадений. Проводник предлагает открыть конкретную папку проекта.
-
-`projects.list` читает историю только добавленных папок и группы без проекта. Sidebar показывает все группы и их сессии; переход переключает sidecar и затем открывает выбранный чат. Удаление из списка не удаляет файлы или сессии. Пропавшая выбранная папка возвращает приложение в режим без проекта и остаётся в списке с ошибкой доступа.
-
-- Bun 1.4: `Bun.serve`, `Bun.spawn`, `Bun.Terminal`, `Bun.WebView`, `bun:sqlite`, `Bun.cron`, `bun test`, `bun build --compile`.
-- Ядро работает в отдельном процессе на Bun. Electron запускает `dist/flecten-agent` и общается JSON-строками через stdin и stdout. Интерфейс не получает доступ к файлам и ключам.
-- Svelte 5 и Vite: интерфейс в `ui/`. Доступа к файлам и моделям нет. Данные приходят через props, команды и события уходят через `window.desktop.agent`.
-- Electron 45: рабочая оболочка в `shell/`. Окно грузит `flecten://app/index.html`, preload отдаёт управление окном и мост к ядру. Пакет собирается через `electron-builder`.
-- Electrobun остаётся целью продакшн-оболочки по ADR-003. Переезд не меняет контракт рендерера.
-- Ядро не импортирует Electron и Svelte. Пользовательского CLI нет: `src/app/server.ts` это sidecar, который запускает оболочка.
-- Sidecar читает команды из stdin и пишет события в stdout. Портов и токенов нет.
-- Промпты и бинарник ядра кладутся в `resources/` пакета.
-
-## 13. Модули
-
-Тестовый пример [Computer Use](COMPUTER-USE.md) в `tests/fixtures/modules/computer-use/` использует действующий SDK без второго агентского цикла. Runtime сериализует input, требует текущий observation ID и отделяет human control от model calls доверенной transport metadata. Отдельный authenticated Xvfb/D-Bus и Firefox profile не трогают host pointer, но сохраняют права OS-аккаунта. MCP images проходят стандартное durable attachment storage; поверхность получает гидратированные media только в своём разрешённом ответе.
-
-Действующий SDK модулей описан в [MODULES.md](MODULES.md): один постоянный model gateway, пакетные инструкции/resources/hooks/MCP и произвольный HTML UI. `src/modules` управляет проверенными поколениями, `core` видит только session port. Активация и hot-load дописывают историю, сохраняя provider tools и системный префикс.
-
-Полное дерево и правило размера лежат в [STRUCTURE.md](STRUCTURE.md).
-
-Границы:
-
-- `core` не импортирует `ui`, `shell` и `store`.
-- `store` знает про типы, но не про роли.
-- `context` считает токены и сжимает сообщения, но не зовёт модель.
-- `security` проверяет права, approvals и политику путей, но не исполняет тулы.
-- `terminal` держит PTY и отчёт команды, но не решает, какую команду запускать.
-- `tools` знают про типы и утилиты.
-- `providers` не знают про тулы и цикл.
-- `skills` читают файлы и отдают каталог и один тул активации.
-- `mcp` знает про SDK, конфиг и реестр тулов; цикл про SDK не знает.
-- `core/hooks` исполняет команды по событиям цикла и не зависит от `app`.
-- `app` собирает зависимости, но не содержит логики харнесса.
-
-Один файл отвечает за одну вещь. Мягкий предел 300 строк, жёсткий 500.
-
-## 14. Инварианты
-
-1. Минимум хардкода. Список слов, три состояния, чеклист палитры: вырезать.
-2. Правило держится кодом и гейтом. Просьба в промпте не считается.
-3. Префикс запроса не меняется внутри страницы. Сжатие только на границе.
-4. Дорогая модель заходит один раз, в чистое окно, на готовую выжимку.
-5. Дешёвая модель работает там, где её ошибку дешево поймать.
-6. Ядро не знает про интерфейс и оболочку.
-7. Сырые сообщения юзера хранятся слово в слово.
-8. На каждой границе данные проверяются схемой.
-
-## 15. Границы безопасности
-
-- Sidecar общается с Electron через stdin/stdout. Loopback listener открывается только для явного OAuth callback.
-- Вывод тулов ограничен по размеру, полный лог на диске. Окно читает файл или лог только внутри проекта через `files.read`: symlink раскрывается до проверки, не больше 512 KB, секреты замаскированы.
-- Секреты маскируются до JSONL, логов, live-потока окна и replay.
-- Запись вне заявленного набора файлов требует поля `why`.
-- Всё из web, файлов, скиллов, MCP и hooks считается недоверенным.
-- MCP tools получают только безопасный набор переменных окружения и явные `env` из конфига.
-- Command hooks и MCP запускают процессы только при явной записи в `flecten.config.json`.
-- Permissions и approvals проверяются на границе tool call до исполнения.
-- SandboxPolicy проверяет canonical path, симлинки, защищённые префиксы, сеть и env allowlist.
-- `bash` и терминал запускаются внутри bubblewrap на Linux и Seatbelt на macOS, если они есть в системе; AppContainer для Windows ещё не подключён. Hook с `failClosed` при своём сбое блокирует действие.
-
-## 16. Что отрезано
-
-- `Hardness` и три фиксированных состояния.
-- Чеклист «не делай фиолетовые градиенты».
-- Jev в суммаризации, фактах и оценке качества.
-- Отдельное окно Talker. Talker и Worker работают в одном диалоге, без второго интерфейса.
-- Cron каждые 30 секунд на команды.
-- Свой эмулятор терминала.
-- Go, Rust и C# для ядра в первой версии.
-- Tauri в первой версии. Остаётся планом Б.
-- LangChain и агентские SDK.
-
-Бинарные вложения копируются при отправке в закрытые content-addressed артефакты сессии. Durable events хранят проверенные ссылки, reopen и fork восстанавливают исходные content parts даже после удаления источников. Кэш auth.command учитывает конфигурацию и срок, повторная авторизация провайдера обновляет уже созданный адаптер.
-
-Lifecycle, queue, approvals и jobs публикуются ядром как проверенный SessionState с epoch/revision. UI применяет канонические snapshots, не отвечает локально за фазу и не подтверждает queue/approval до успешного IPC. После reconnect backend восстанавливает state из durable typed events, очередь и status возвращают тот же снимок.
+Layer rules (one responsibility per file; `300` lines soft limit, `500` hard limit):
+
+- `core` never imports `ui`, `shell`, or `store`.
+- `store` knows domain types, never agent roles.
+- `context` counts tokens and compacts messages, never calling models directly.
+- `security` evaluates permissions, approvals, and path policies without executing tools.
+- `terminal` manages PTYs and command framing without choosing what to run.
+- `tools` depend only on core types and utilities.
+- `providers` translate wire protocols with zero knowledge of tools or the agent loop.
+- `skills` discover skill files and expose the catalog plus activation tool.
+- `mcp` encapsulates the MCP SDK, config, and tool registry away from the core loop.
+- `core/hooks` runs lifecycle hooks without depending on `app`.
+- `app` wires dependencies together without embedding harness business logic.
+
+## 14. Invariants
+
+1. Minimal hardcoding: no brittle keyword lists, arbitrary three-state enums, or aesthetic ban checklists.
+2. Enforce rules in runtime code and deterministic gates - prompt reminders do not count as guarantees.
+3. Keep request prefixes byte-stable within an active page; compact strictly at page boundaries.
+4. Invoke frontier models cleanly on distilled context rather than polluted transcripts.
+5. Use lightweight models only where deterministic checks catch mistakes cheaply.
+6. Core stays completely agnostic of UI and desktop shell internals.
+7. Store raw user messages verbatim, character for character.
+8. Validate every external boundary with an explicit schema.
+
+## 15. Security Boundaries
+
+- Sidecar IPC runs exclusively over `stdin`/`stdout`; loopback HTTP listeners open solely during explicit interactive OAuth callbacks.
+- Inline tool outputs are size-capped with full logs on disk; renderer `files.read` previews resolve symlinks prior to workspace bounds checks, cap payloads at `512 KB`, and redact secrets.
+- Secrets redact before hitting `events.jsonl`, tool logs, live IPC streams, or replay.
+- File writes outside declared task scope require an explicit `why` justification.
+- All content from the web, workspace files, skills, MCP servers, and hooks is treated as untrusted data.
+- MCP child processes receive only a minimal safe environment allowlist plus explicit `env` entries from `flecten.config.json`.
+- Command hooks and MCP servers spawn processes only when configured in `flecten.config.json` and workspace trust permits.
+- `PermissionEngine` and `SandboxPolicy` verify canonical paths, symlinks, protected prefixes, network rules, and env allowlists before any tool executes.
+- `bash` and interactive terminals run inside `bubblewrap` on Linux and `Seatbelt` on macOS when available on the host (Windows AppContainer isolation remains pending); hooks configured with `failClosed` block execution on hook failure.
+
+## 16. Cut Scope and State Guarantees
+
+Explicitly cut: `Hardness` three-state toggles, "no purple gradients" prompt checklists, Jev in summarization/fact-extraction/grading, a separate Talker window, 30-second command polling crons, a custom terminal emulator, Go/Rust/C# core rewrites for v1, Tauri for v1 (retained as fallback), and LangChain or third-party agent SDKs.
+
+Binary attachments copy into private content-addressed session storage on send so durable events, chat reopens, and branch forks restore full multimodal parts even if source files are deleted. `auth.command` token caches key on provider config and expiry, updating live adapters on re-authorization. Lifecycle phase, queue, approvals, and background jobs publish from core as schema-validated `SessionState` snapshots carrying `epoch` and `revision` - the UI projects canonical backend snapshots rather than guessing local phases or optimistically confirming queued/approved actions before IPC acknowledgement.

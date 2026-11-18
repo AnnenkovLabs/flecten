@@ -90,56 +90,56 @@ const DISK_PROGRAMS = [
 ];
 
 export const DEFAULT_DESTRUCTIVE_RULES: readonly DestructiveRule[] = [
-  rule("rm-files", "rm", "Удаление файлов", "workspace", { confirm: "never" }),
-  rule("rm-recursive", "rm", "Рекурсивное удаление", "workspace", {
+  rule("rm-files", "rm", "Delete files", "workspace", { confirm: "never" }),
+  rule("rm-recursive", "rm", "Recursive delete", "workspace", {
     flags: ["-r", "-R", "--recursive"],
     deletesGitDir: true,
   }),
-  rule("git-clean", "git", "Удаление неотслеживаемых файлов", "workspace", {
+  rule("git-clean", "git", "Delete untracked files", "workspace", {
     subcommand: ["clean"],
     flags: ["-f", "--force"],
     emptyMeansCwd: true,
   }),
-  rule("git-clean-ignored", "git", "Удаление игнорируемых файлов", "workspace", {
+  rule("git-clean-ignored", "git", "Delete ignored files", "workspace", {
     subcommand: ["clean"],
     flags: ["-x", "-X"],
     emptyMeansCwd: true,
   }),
-  rule("git-reset-hard", "git", "Сброс рабочей копии и HEAD", "workspace", {
+  rule("git-reset-hard", "git", "Hard reset working tree and HEAD", "workspace", {
     subcommand: ["reset"],
     flags: ["--hard"],
     operands: "tree",
   }),
-  rule("git-push-force", "git", "Перезапись истории на удалённом репозитории", "outside", {
+  rule("git-push-force", "git", "Force-push remote history", "outside", {
     subcommand: ["push"],
     flags: ["-f", "--force", "--force-with-lease", "--mirror", "-d", "--delete"],
   }),
-  rule("git-branch-delete", "git", "Удаление ветки без проверки слияния", "outside", {
+  rule("git-branch-delete", "git", "Force-delete branch", "outside", {
     subcommand: ["branch"],
     flags: ["-D"],
   }),
-  rule("git-stash-drop", "git", "Удаление сохранённых изменений", "outside", {
+  rule("git-stash-drop", "git", "Drop stash entry", "outside", {
     subcommand: ["stash", "drop"],
   }),
-  rule("git-stash-clear", "git", "Удаление всех сохранённых изменений", "outside", {
+  rule("git-stash-clear", "git", "Clear all stashes", "outside", {
     subcommand: ["stash", "clear"],
   }),
-  rule("git-filter-branch", "git", "Переписывание истории", "outside", {
+  rule("git-filter-branch", "git", "Rewrite Git history", "outside", {
     subcommand: ["filter-branch"],
   }),
-  rule("git-filter-repo", "git", "Переписывание истории", "outside", {
+  rule("git-filter-repo", "git", "Rewrite Git history", "outside", {
     subcommand: ["filter-repo"],
   }),
-  rule("git-reflog-expire", "git", "Удаление журнала ссылок", "outside", {
+  rule("git-reflog-expire", "git", "Expire reflog", "outside", {
     subcommand: ["reflog", "expire"],
   }),
-  ...DISK_PROGRAMS.map((program) => rule(`disk-${program}`, program, "Запись на диск", "outside")),
+  ...DISK_PROGRAMS.map((program) => rule(`disk-${program}`, program, "Raw disk write", "outside")),
   ...["docker", "podman"].flatMap((program) =>
     DOCKER_SUBCOMMANDS.map((subcommand) =>
       rule(
         `${program}-${subcommand.join("-")}`,
         program,
-        "Удаление контейнеров или данных",
+        "Delete containers or volumes",
         "outside",
         {
           subcommand: [...subcommand],
@@ -147,32 +147,34 @@ export const DEFAULT_DESTRUCTIVE_RULES: readonly DestructiveRule[] = [
       ),
     ),
   ),
-  rule("kubectl-delete", "kubectl", "Удаление ресурсов кластера", "outside", {
+  rule("kubectl-delete", "kubectl", "Delete cluster resources", "outside", {
     subcommand: ["delete"],
   }),
-  rule("helm-uninstall", "helm", "Удаление релиза", "outside", { subcommand: ["uninstall"] }),
-  rule("terraform-destroy", "terraform", "Удаление инфраструктуры", "outside", {
+  rule("helm-uninstall", "helm", "Uninstall Helm release", "outside", {
+    subcommand: ["uninstall"],
+  }),
+  rule("terraform-destroy", "terraform", "Destroy infrastructure", "outside", {
     subcommand: ["destroy"],
   }),
-  rule("npm-publish", "npm", "Публикация пакета", "outside", { subcommand: ["publish"] }),
-  rule("npm-unpublish", "npm", "Снятие пакета с публикации", "outside", {
+  rule("npm-publish", "npm", "Publish package", "outside", { subcommand: ["publish"] }),
+  rule("npm-unpublish", "npm", "Unpublish package", "outside", {
     subcommand: ["unpublish"],
   }),
-  rule("pnpm-publish", "pnpm", "Публикация пакета", "outside", { subcommand: ["publish"] }),
-  rule("cargo-publish", "cargo", "Публикация пакета", "outside", { subcommand: ["publish"] }),
-  rule("gh-repo-delete", "gh", "Удаление репозитория", "outside", {
+  rule("pnpm-publish", "pnpm", "Publish package", "outside", { subcommand: ["publish"] }),
+  rule("cargo-publish", "cargo", "Publish package", "outside", { subcommand: ["publish"] }),
+  rule("gh-repo-delete", "gh", "Delete repository", "outside", {
     subcommand: ["repo", "delete"],
   }),
-  rule("gh-release-delete", "gh", "Удаление релиза", "outside", {
+  rule("gh-release-delete", "gh", "Delete release", "outside", {
     subcommand: ["release", "delete"],
   }),
-  rule("aws-s3-rm", "aws", "Удаление объектов S3", "outside", { subcommand: ["s3", "rm"] }),
-  rule("aws-s3-rb", "aws", "Удаление бакета S3", "outside", { subcommand: ["s3", "rb"] }),
-  rule("crontab-remove", "crontab", "Удаление всех задач cron", "outside", { flags: ["-r"] }),
+  rule("aws-s3-rm", "aws", "Delete S3 objects", "outside", { subcommand: ["s3", "rm"] }),
+  rule("aws-s3-rb", "aws", "Remove S3 bucket", "outside", { subcommand: ["s3", "rb"] }),
+  rule("crontab-remove", "crontab", "Clear crontab", "outside", { flags: ["-r"] }),
   ...["shutdown", "reboot", "halt", "poweroff"].map((program) =>
-    rule(`system-${program}`, program, "Выключение или перезагрузка системы", "outside"),
+    rule(`system-${program}`, program, "Shut down or reboot system", "outside"),
   ),
-  rule("find-delete", "find", "Удаление найденных файлов", "workspace", {
+  rule("find-delete", "find", "Delete matched files", "workspace", {
     flags: ["-delete"],
     operands: "leading-paths",
     emptyMeansCwd: true,
@@ -216,7 +218,7 @@ const GIT_VALUE_OPTIONS = new Set(["-C", "-c", "--git-dir", "--work-tree", "--na
 const FIND_EXEC = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
 const SAFE_DEVICES = new Set(["/dev/null", "/dev/stdout", "/dev/stderr", "/dev/zero", "/dev/tty"]);
 
-const DEVICE_RULE = rule("device-write", ">", "Запись в устройство", "outside");
+const DEVICE_RULE = rule("device-write", ">", "Write to device", "outside");
 
 function values(words: readonly ShellWord[]): string[] {
   return words.map((word) => word.value);

@@ -2,7 +2,9 @@
   import type { StorageMigrationState } from "../../../shared/storage-migration";
   import { i18n, t } from "../lib/i18n.svelte";
   import { modal } from "../lib/modal";
+  import { overlayPresence } from "../lib/overlay-presence";
   import Icon from "./Icon.svelte";
+  import "./focus-dialog.css";
 
   let { state: migration, onStart, onAccept }: {
     state: StorageMigrationState;
@@ -54,16 +56,17 @@
 </script>
 
 <dialog
-  class="storage-migration"
+  class="storage-migration focus-dialog"
   bind:this={dialog}
   use:mandatoryModal
+  transition:overlayPresence|global
   closedby="none"
   tabindex="-1"
   aria-labelledby={`${id}-title`}
   aria-describedby={`${id}-description`}
   oncancel={(event) => event.preventDefault()}
 >
-  <section class="migration-content">
+  <section class="migration-content focus-dialog__content">
     <Icon name="folder" size={30} />
     <p class="migration-eyebrow">{t("Saved chats")}</p>
     <h1 id={`${id}-title`}>{heading}</h1>
@@ -115,7 +118,6 @@
 <style>
   .storage-migration { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 64px 28px; border: 0; background: transparent; color: var(--text); overscroll-behavior: contain; overflow-y: auto; }
   .storage-migration[open] { display: grid; place-items: center; }
-  .storage-migration::backdrop { background: rgba(14,14,14,0.82); backdrop-filter: blur(12px); }
   .migration-content { width: min(100%, 520px); padding-block: 24px; }
   .migration-content > :global(.icon) { color: var(--text-2); }
   .migration-eyebrow { margin: 24px 0 12px; font-size: 13px; color: var(--muted); }

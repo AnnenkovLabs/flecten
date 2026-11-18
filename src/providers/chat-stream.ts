@@ -50,10 +50,10 @@ function usageEvent(usage: NonNullable<ChatChunk["usage"]>): ModelEvent {
     usage.output_tokens_details?.reasoning_tokens;
   return {
     type: "usage",
-    input: usage.prompt_tokens ?? 0,
-    output: usage.completion_tokens ?? 0,
+    input: usage.prompt_tokens ?? usage.input_tokens ?? 0,
+    output: usage.completion_tokens ?? usage.output_tokens ?? 0,
     cached: usage.prompt_tokens_details?.cached_tokens ?? usage.prompt_cache_hit_tokens ?? 0,
-    ...(reasoning === undefined ? {} : { reasoning }),
+    ...(typeof reasoning === "number" ? { reasoning } : {}),
   };
 }
 
@@ -139,17 +139,15 @@ export async function* streamChatResponse(
       }
       const chunk = parsed.data;
       if (chunk.error !== undefined) events.fail("server", "provider returned a stream error");
-      if (
-        chunk.usage &&
-        typeof chunk.usage.prompt_tokens === "number" &&
-        typeof chunk.usage.completion_tokens === "number"
-      ) {
+      const promptTokens = chunk.usage?.prompt_tokens ?? chunk.usage?.input_tokens;
+      const completionTokens = chunk.usage?.completion_tokens ?? chunk.usage?.output_tokens;
+      if (chunk.usage && typeof promptTokens === "number" && typeof completionTokens === "number") {
         usage = usageEvent(chunk.usage);
         evidence.usage = "reported";
       }
       const choice = chunk.choices?.[0];
       if (!choice) {
-        if (!chunk.usage) {
+        if (!chunk.usage && !Array.isArray(chunk.choices)) {
           evidence.unsupportedFrames += 1;
           fail("unsupported_chunk");
         }
@@ -244,8 +242,10 @@ export async function* streamChatResponse(
     const completed: Array<Extract<ModelEvent, { type: "tool_call" }>> = [];
     for (const [, call] of [...calls].sort(([a], [b]) => a - b)) {
       let args: unknown;
+      const rawArgs =
+        call.arguments.trim().length === 0 && finish === "tool_calls" ? "{}" : call.arguments;
       try {
-        args = JSON.parse(call.arguments);
+        args = JSON.parse(rawArgs);
       } catch {
         if (reason === "max_tokens") continue;
         fail("incomplete_tool_arguments");

@@ -19,6 +19,8 @@ export type Command =
       /** The run continues an interrupted one. */
       resumed?: boolean;
       internal?: boolean;
+      /** A summary event may wake the model to converse, without any tools. */
+      summaryWake?: true;
     }
   | { type: "stop"; mode?: "graceful" | "force"; target?: "worker" }
   | { type: "status" }
@@ -28,6 +30,7 @@ export type Command =
       text: string;
       mode?: QueueItemMode;
       attachments?: string[];
+      attachmentSnapshot?: AttachmentSnapshot;
       contexts?: ContextReference[];
       /** Id the client picked; adding the same id again returns the existing item. */
       id?: string;

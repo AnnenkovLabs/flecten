@@ -85,9 +85,6 @@ export default {
     "Доручіть агенту завдання. Тут будуть його дії та відповіді, а файли залишаться перед вами.",
   "Save or close modified files in this folder first.":
     "Спочатку збережіть або закрийте змінені файли в цій папці.",
-  "In t(": "Вt(",
-  "Regular t(": "Регулярний t(",
-  "on line t(": "на рядt(",
   "Search failed. {0}. Try searching again.": [
     "Не вдалося виконати пошук. ",
     0,

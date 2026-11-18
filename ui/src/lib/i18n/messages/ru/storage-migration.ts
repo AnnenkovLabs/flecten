@@ -1,13 +1,13 @@
 export default {
   "The core stopped. Retry to resume the migration.":
-    "Ядро остановилось. Повторите попытку, чтобы продолжить перенос.",
-  "Saved chats": "Сохранённые чаты",
-  "Update your saved chats": "Обновите сохранённые чаты",
-  "Updating your saved chats": "Обновляем сохранённые чаты",
-  "Migration needs another try": "Нужно повторить перенос",
-  "Your chats are ready": "Ваши чаты готовы",
+    "Процесс агента остановился. Повторите попытку, чтобы продолжить с сохранённого шага.",
+  "Saved chats": "Локальное хранилище",
+  "Update your saved chats": "Обновить хранилище сессий",
+  "Updating your saved chats": "Обновление хранилища сессий",
+  "Migration needs another try": "Обновление приостановлено",
+  "Your chats are ready": "Хранилище обновлено",
   "Flecten needs to update how your chats are stored. Your original data will be preserved.":
-    "Flecten нужно обновить способ хранения чатов. Исходные данные будут сохранены.",
+    "Перед открытием проектов нужно обновить локальный формат сессий. Исходные файлы предварительно сохраняются в резервной копии.",
   "If the app closes or power is lost, migration resumes when you open it again.":
     "Если приложение закроется или пропадёт питание, перенос продолжится при следующем запуске.",
   "Your original data has been preserved. Retry to continue from the saved progress.":
@@ -16,7 +16,7 @@ export default {
     "Чаты снова доступны. Копии исходных данных сохранены.",
   "Checking saved data": "Проверяем сохранённые данные",
   "Backing up saved data": "Создаём резервные копии",
-  "Bringing chats together": "Объединяем чаты",
+  "Bringing chats together": "Объединение сессий",
   "Checking restored chats": "Проверяем восстановленные чаты",
   "Finishing migration": "Завершаем перенос",
   "Folders completed: {0} of {1}": ["Папок обработано: ", 0, " из ", 1],

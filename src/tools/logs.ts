@@ -7,6 +7,7 @@ import type { ToolLimits } from "./types";
 export interface ToolLog {
   excerpt: string;
   path: string;
+  truncated: boolean;
 }
 
 export interface ToolLogInput {
@@ -32,5 +33,5 @@ export async function writeToolLog(input: ToolLogInput): Promise<ToolLog> {
   }
   const byLines = truncateLines(input.text, input.limits.maxOutputLines);
   const byBytes = truncateMiddle(byLines.text, input.limits.maxOutputBytes);
-  return { excerpt: byBytes.text, path };
+  return { excerpt: byBytes.text, path, truncated: byLines.truncated || byBytes.truncated };
 }

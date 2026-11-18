@@ -178,10 +178,7 @@
       </div>
 
       <div class="st-block">
-        <div>
-          <h3 class="st-block-title">{t("Request mode")}</h3>
-          <p class="st-hint">{t("What to send with the response and how to call tools.")}</p>
-        </div>
+        <h3 class="st-block-title">{t("Request mode")}</h3>
         <label class="st-field">
           <span class="st-label">{t("Parallel tool calls")}</span>
           <Select

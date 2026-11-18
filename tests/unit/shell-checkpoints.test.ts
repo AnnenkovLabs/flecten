@@ -90,7 +90,7 @@ describe("shell checkpoints", () => {
       const result = await handle.finish();
       expect(performance.now() - started).toBeLessThan(4000);
       expect(result.id).toBeUndefined();
-      expect(result.gap?.reason).toContain("время");
+      expect(result.gap?.reason).toContain("timed out");
       resume();
       await blocker;
       const next = await store.capture({
@@ -164,7 +164,7 @@ describe("shell checkpoints", () => {
     const summary = await handle.finish();
     expect(summary.files).toBe(3);
     expect(summary.gap?.files).toBe(5);
-    expect(summary.gap?.reason).toContain("лимит");
+    expect(summary.gap?.reason).toContain("limit");
   });
 
   test("on a big tree a command checkpoint follows the change, not the tree size", async () => {

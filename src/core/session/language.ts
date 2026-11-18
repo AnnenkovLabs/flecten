@@ -50,7 +50,7 @@ export function runLanguage(
         type: "translation.failed",
         sessionId: state.sessionId,
         message:
-          "Не удалось перевести ответ. Показан английский оригинал; проверьте модель перевода в настройках.",
+          "Could not translate reply. Showing English original; check your translation model in Settings.",
       }),
   );
 }

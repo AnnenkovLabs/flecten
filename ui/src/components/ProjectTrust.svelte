@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { t } from "../lib/i18n.svelte";
+  import { modal } from "../lib/modal";
+  import { overlayPresence } from "../lib/overlay-presence";
   import type { AgentInfo } from "../lib/types";
   import Icon from "./Icon.svelte";
+  import "./focus-dialog.css";
 
   let { info, onResolve, onClose }: { info: AgentInfo; onResolve: (trusted: boolean) => Promise<void>; onClose: () => void } = $props();
-  let dialog: HTMLDialogElement;
   let confirming = $state(false);
   let saving = $state(false);
   let error = $state("");
-  onMount(() => { dialog.showModal(); });
   async function resolve(trusted: boolean): Promise<void> {
     if (saving) return;
     saving = true;
@@ -20,9 +20,9 @@
   }
 </script>
 
-<dialog class="project-trust" bind:this={dialog} aria-labelledby="project-trust-title" aria-describedby="project-trust-description" oncancel={(event) => event.preventDefault()}>
+<dialog class="project-trust focus-dialog" use:modal transition:overlayPresence|global aria-labelledby="project-trust-title" aria-describedby="project-trust-description" oncancel={(event) => event.preventDefault()}>
   <button class="trust-close" type="button" aria-label={t("Close")} data-tooltip={t("Close")} disabled={saving} onclick={onClose}><Icon name="x" size={20} /></button>
-  <section class="trust-content">
+  <section class="trust-content focus-dialog__content">
     <Icon name="folder" size={30} />
     <p class="trust-eyebrow">{t("Project access")}</p>
     <h1 id="project-trust-title">{confirming ? t("Continue without trusting this folder?") : t("Do you trust this folder?")}</h1>
@@ -42,7 +42,6 @@
 <style>
   .project-trust { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 64px 28px; border: 0; background: transparent; color: var(--text); overscroll-behavior: contain; overflow-y: auto; }
   .project-trust[open] { display: grid; place-items: center; }
-  .project-trust::backdrop { background: rgba(14,14,14,0.82); backdrop-filter: blur(12px); }
   .trust-close { position: fixed; top: 20px; right: 20px; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 8px; background: var(--surface); color: var(--text-2); }
   .trust-content { width: min(100%, 520px); padding-block: 24px; }
   .trust-content > :global(.icon) { color: var(--text-2); }

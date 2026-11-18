@@ -4,7 +4,7 @@ export default {
   "Responses API with reasoning and tools.": "Responses API con razonamiento y herramientas.",
   "Claude and compatible Messages APIs.": "Claude y las API compatibles con Messages API.",
   "Google Gemini via generateContent.": "Google Gemini a través de generateContent.",
-  "The provider's API protocol.": "Protocolo de la API del proveedor.",
+  "The provider's API protocol.": "Protocolo de API personalizado.",
   minimal: "mínimo",
   low: "bajo",
   medium: "medio",
@@ -42,7 +42,6 @@ export default {
   "Reasoning levels": "Niveles de razonamiento",
   "Selected levels will appear in the selector next to the model.":
     "Los niveles marcados aparecerán en el selector junto al modelo.",
-  "The model supports reasoning.": "El modelo admite razonamiento.",
   "Reasoning toggle": "Interruptor de razonamiento",
   "Show a reasoning toggle in the model selector.":
     "Mostrar la opción de activar el razonamiento en el selector de modelo.",
@@ -89,19 +88,14 @@ export default {
   "defaults to the model key": "por defecto, la clave del modelo",
   "Catalog ID": "ID en el catálogo",
   "Knowledge cutoff": "Conocimientos hasta",
-  "The date up to which the model has knowledge.":
-    "Fecha hasta la que llega el conocimiento del modelo.",
   "Release date": "Fecha de lanzamiento",
   Limits: "Límites",
   "Max input (tokens)": "Máximo de entrada en tokens",
   "not set": "sin definir",
   "Response limit field": "Campo del límite de respuesta",
-  "The API parameter that limits response length.":
-    "Parámetro de la API que limita la longitud de la respuesta.",
   "Modalities and files": "Modalidades y archivos",
   Input: "Entrada",
   Output: "Salida",
   "Open weights": "Pesos abiertos",
-  "The model's weights are open.": "Los pesos del modelo son abiertos.",
   "Files and attachments": "Archivos y adjuntos",
 } as const;

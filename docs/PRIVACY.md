@@ -1,58 +1,58 @@
-# Приватность и наблюдаемость
+# Privacy and Observability
 
-Документ описывает, какие данные харнесс хранит локально, как их удалить и что уходит наружу.
+This document specifies what Flecten stores locally, how to delete or export it, and what data leaves the machine.
 
-## Что хранится
+## Local Storage
 
-- `.flecten/sessions/<id>/events.jsonl`: события сессии и сырые сообщения юзера слово в слово.
-- `.flecten/sessions/<id>/logs/`: полные redacted выводы тулов.
-- Артефакты сессии: копии отправленных изображений, PDF, audio и текстовых вложений. Бинарные файлы имеют режим 0600; события содержат metadata references, не base64. Они нужны для reopen/fork после удаления исходного файла.
-- `.flecten/sessions/<id>/pages/N.md`: страницы сжатия контекста (что изменено, где, правила, следующий шаг, риски).
-- `.flecten/checkpoints/`: pre-image и post-image изменённых файлов.
-- `.flecten/diagnostics/`: ограниченный журнал, counters, recent-errors, crash report и созданные пользователем пакеты.
-- `.flecten/sessions/exports/`: явные экспорты истории.
-- Backend secret store: ключи провайдеров и MCP OAuth tokens в keychain или закрытом файле fallback. Окно получает источник и isSet.
+- `.flecten/sessions/<id>/events.jsonl`: session event log, including raw user messages stored verbatim.
+- `.flecten/sessions/<id>/logs/`: full redacted tool outputs.
+- Session attachments: copies of submitted images, PDFs, audio, and text attachments stored with mode `0600`. Events store metadata references rather than inline base64 so sessions can reopen or fork even if the original source file is deleted.
+- `.flecten/sessions/<id>/pages/N.md`: context compaction pages (`Changed`, `Where`, `Rules`, `Next`, `Risks`).
+- `.flecten/checkpoints/`: pre-image and post-image file snapshots.
+- `.flecten/diagnostics/`: bounded operational log, counters, recent errors, crash reports, and user-generated diagnostics bundles.
+- `.flecten/sessions/exports/` and `.flecten/exports/`: explicit user-initiated session exports.
+- Backend secret store: provider API keys and MCP OAuth tokens stored in the OS keychain or a mode-`0600` fallback file; the renderer receives only `isSet` and source metadata.
 
-Пути задаются рабочим каталогом проекта. Ядро не отправляет эти файлы по сети.
+All project paths live under the workspace root, and the core never uploads these files automatically.
 
-## Удаление
+## Deletion and Export
 
-Удаление сессии из интерфейса (команда `sessions.delete` с `confirm: true`) переносит каталог сессии в корзину `.flecten/trash/`, поэтому случайное удаление можно откатить вручную. Настройки «История» задают retentionDays, maxSessions и trashDays. Политика архивирует завершённые старые сессии, не затрагивает активные, прерванные и задачи с очередью; корзина очищается по сроку. «Экспортировать историю» копирует durable redacted events.jsonl в новый файл `.flecten/exports/`. Экспорт создаёт отдельный закрытый каталог с events.jsonl и копиями attachments, публикует его атомарно и отклоняет symlink. Вложение сохраняется вместе с экспортом после удаления исходной сессии. Экспорт не отправляется наружу и хранится до ручного удаления.
+Deleting a session from the UI (`sessions.delete` with `confirm: true`) moves its directory to `.flecten/trash/` so accidental deletions can be recovered manually until expired. **Settings > History** configures `retentionDays`, `maxSessions`, and `trashDays`: retention archives old completed sessions without touching active, interrupted, or queued tasks, while trash purges entries past `trashDays`.
+
+**Export history** (`sessions.export`) writes a private mode-`0700` export bundle under `.flecten/exports/` containing redacted `events.jsonl` plus copied session attachments, published atomically with symlinks rejected. Exported bundles survive deletion of the source session, are never transmitted over the network, and remain on disk until deleted manually.
 
 ## Redaction
 
-Правила лежат в `src/util/redact.ts`, структурная обёртка для диагностики в `src/observability/redact.ts`.
+Core redaction rules live in `src/util/redact.ts`, with structured diagnostics wrappers in `src/observability/redact.ts`:
 
-- Строки проверяются на ключи, Bearer, `api_key=`, `api-key:` и похожие форматы.
-- Поля с именами `apiKey`, `authorization`, `cookie`, `headers`, `password`, `token`, `secret` и их вариантами заменяются на `[redacted]` целиком.
-- Streaming redaction применяется до общих listeners, live UI и replay, затем до записи полных выводов тулов в `logs/`, страниц сжатия `pages/N.md`, crash report и диагностического пакета. Состояния stdout, stderr, текста и reasoning разделены; секреты, разбитые между chunks, задерживаются до безопасной границы. Известные конфигурационные секреты редактируются независимо от формата.
-- Глубина обхода ограничена, циклические ссылки помечаются.
+- Strings are scrubbed for known API key prefixes, `Bearer` tokens, `api_key=`, `api-key:`, AWS/Google/GitHub credentials, JWTs, and PEM blocks.
+- Object keys matching `apiKey`, `authorization`, `cookie`, `headers`, `password`, `token`, `secret`, and their variants are replaced wholesale with `"[redacted]"`.
+- Streaming redaction runs before shared event listeners, live UI updates, and replay buffers, and again before writing `logs/`, `pages/N.md`, crash reports, and diagnostics bundles. Separate stream buffers for `stdout`, `stderr`, assistant text, and reasoning hold partial chunks across boundaries so split secrets cannot leak, and configured secret values are scrubbed regardless of token format.
+- Object traversal depth is bounded and circular references are tagged safely.
 
-## Crash report
+## Crash Reports
 
-`buildCrashReport` собирает имя, сообщение, код и стек ошибки, `traceId`, `sessionId`, версию и последние логи. Стек и сообщения проходят redaction. Отчёт не содержит ключей и заголовков провайдера.
+`buildCrashReport` captures error name, message, code, stack trace, `traceId`, `sessionId`, app version, and recent log lines after running stack traces and messages through redaction. Provider keys and auth headers are never included.
 
-## Diagnostics bundle
+## Diagnostics Bundle
 
-`buildDiagnosticsBundle` собирает:
+`buildDiagnosticsBundle` collects:
 
-- версию приложения, commit, платформу;
-- пути рабочего каталога, конфига, сессий, логов и диагностики, с заменой домашнего каталога на `~`;
-- провайдеров без секретов: имя, протокол, host и имя переменной ключа, без `apiKey`, `headers` и тела запроса;
-- последние ошибки в redacted виде;
-- форму конфига: только ключи и типы, без значений.
+- app version, Git commit, and OS platform;
+- workspace, config, session, log, and diagnostics paths with `$HOME` collapsed to `~`;
+- sanitized provider metadata (name, protocol, host, and env-var name, omitting `apiKey`, `headers`, and request bodies);
+- recent redacted errors;
+- config structure (field keys and value types only, without values).
 
-В настройках «О программе» кнопка собирает локальный пакет, показывает путь и позволяет скопировать отчёт. CLI: `bun scripts/diagnostics.mjs --out <path> --format directory|tar`. Operational events, counters и trace id сохраняются в ограниченном локальном журнале; prompts и tool output в metrics не входят. Пакет содержит локальные пути, поэтому перед отправкой его нужно просмотреть. Сам пакет ничего не отправляет.
+Generate a bundle via **Settings > About** (which reveals the local output path and copies a summary) or via CLI: `bun scripts/diagnostics.mjs --out <path> --format directory|tar`. Operational counters and trace IDs stay in a bounded local log excluding prompts and tool outputs. Review the bundle for sensitive filenames or paths before sharing; generating a bundle transmits nothing on its own.
 
-## Границы
+## Privacy Boundaries
 
-Голосовой ввод использует микрофон только после нажатия кнопки. Аудио хранится в памяти, не записывается в файлы, логи или историю. Распознанный текст остаётся в черновике до отправки пользователем. Escape и «Отмена» освобождают микрофон и отменяют активный запрос или локальный процесс. Максимум 90 секунд на запись.
-
-- В режиме API запись отправляется на `/audio/transcriptions` выбранного в `voice.provider` провайдера (по умолчанию текущего), с его ключом и сетевыми настройками. Лимит аудио 2 МиБ.
-- В режиме faster-whisper или Vosk запись преобразуется в mono PCM16 WAV 16 кГц, передаётся локальному Python-процессу через stdin и распознаётся на компьютере. Лимит WAV 2 900 044 байта. Облачного fallback нет. Whisper открывает только локальную модель, Hugging Face работает в offline-режиме, телеметрия отключена.
-- Кнопка «Установить движок и модель» обращается к PyPI и хостам его пакетов, Hugging Face для Whisper или alphacephei.com для Vosk. Они получают обычные данные загрузки (IP, имя пакета/модели), аудио им не отправляется. Python-окружения и модели остаются в cache приложения. Пути и удаление описаны в [VOICE.md](VOICE.md).
-
-- Redaction не заменяет ручную проверку диагностического пакета.
-- Checkpoints живут отдельно от сессий и удаляются своим жизненным циклом.
-- Телеметрия выключена по умолчанию. После явного opt-in и указания HTTPS endpoint кнопка «Отправить счётчики» отправляет только schemaVersion, версию приложения, платформу и счётчики событий. Prompts, пути, credentials, диагностический пакет и вывод инструментов не отправляются. Loopback HTTP допускается для локальной проверки; redirect запрещён. Отключение не удаляет локальную диагностику.
-- Явные продуктовые операции обращаются к выбранным провайдерам, MCP, web-инструментам, публичному GitHub PR API, каталогу моделей, update channel и хостам установки голосового движка. OAuth открывает сайт авторизации после consent, токены хранятся в backend secret store.
+- **Voice input**: microphone capture starts only on explicit button press, buffers audio in memory without writing audio files or logs, and places transcribed text in the composer draft until sent. Pressing `Escape` or **Cancel** releases the microphone and aborts any active request or local Python process. Recordings cap at 90 seconds:
+  - **Provider API mode**: sends up to 2 MiB of audio to `/audio/transcriptions` on the configured `voice.provider` (defaulting to the active provider) using its credentials and network settings.
+  - **Local `faster-whisper` / `Vosk` mode**: converts audio in memory to 16 kHz mono PCM16 WAV (max 2,900,044 bytes) and pipes it via `stdin` to a local Python process with Hugging Face offline mode forced, telemetry disabled, and zero cloud fallback.
+  - **Engine & model setup**: clicking **Install engine and model** downloads packages and weights from PyPI, Hugging Face (Whisper), or `alphacephei.com` (Vosk), exposing standard HTTP download metadata (IP address, package/model name) without ever sending user audio. Cache locations and cleanup are documented in [VOICE.md](VOICE.md).
+- Automated redaction is defense-in-depth and does not replace human review before sharing a diagnostics bundle.
+- File checkpoints follow their own lifecycle independent of session deletion.
+- **Telemetry**: disabled by default (`telemetry.enabled: false`). Even after explicit opt-in and configuring an `https://` endpoint (loopback `http://` allowed for local testing; redirects blocked), **Send counters** transmits only `schemaVersion`, app version, OS platform, and event counters, excluding prompts, file paths, credentials, diagnostics bundles, and tool outputs. Disabling telemetry preserves local diagnostics.
+- Explicit user/agent actions connect to configured LLM providers, MCP servers, `web_fetch`/`web_search` targets, the public GitHub PR API, the model catalog, the release update feed, and voice model hosts; OAuth flows open the browser only after explicit user consent and store tokens in the backend secret store.

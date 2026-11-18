@@ -2,12 +2,12 @@
 export default {
   "This project is already open in another Flecten window. Close it and send the message again, or open a different project.":
     "This project is already open in another Flecten window. Close it and send the message again, or open a different project.",
-  "The core returned an invalid response.": "The core returned an invalid response.",
+  "The core returned an invalid response.": "Invalid response from the agent process.",
   "The provider is not configured. Open Settings and check the key.":
     "The provider is not configured. Open Settings and check the key.",
   "Connection to the core was lost. Start the task again.":
-    "Connection to the core was lost. Start the task again.",
-  "The core is only available in the app.": "The core is only available in the app.",
+    "Agent process disconnected. Click Continue to resume.",
+  "The core is only available in the app.": "Requires the Flecten desktop app.",
   "The provider reached its limit.": "The provider reached its limit.",
   "The provider rate-limited requests.": "The provider rate-limited requests.",
   "The subscription's 5-hour limit has been reached.":
@@ -44,14 +44,14 @@ export default {
   "resuming automatically {0}": ["resuming automatically ", 0],
   "The task is still running. Stop it first": "The task is still running. Stop it first",
   "Task moved to trash": "Task moved to trash",
-  "The server did not return a new task": "The server did not return a new task",
+  "The server did not return a new task": "Could not create a new task",
   "Task copied": "Task copied",
   project: "project",
   you: "you",
   "Could not open task: {0}": ["Could not open task: ", 0],
   "Message was not queued: {0}": ["Message was not queued: ", 0],
   "The core is only available in the app. Open the Electron window.":
-    "The core is only available in the app. Open the Electron window.",
+    "Requires the Flecten desktop app.",
   "Could not stop: {0}": ["Could not stop: ", 0],
   task: "task",
   "Could not open the task. Select it again. {0}": [
@@ -61,9 +61,9 @@ export default {
   "“{0}” is waiting for permission: {1}": ["“", 0, "” is waiting for permission: ", 1],
   "“{0}”: background command finished": ["“", 0, "”: background command finished"],
   "The core cannot start. Check Settings and restart the app.":
-    "The core cannot start. Check Settings and restart the app.",
-  "The core stopped during the run. Restarting": "The core stopped during the run. Restarting",
-  "Restarting core": "Restarting core",
+    "Agent process failed to start. Check Settings and restart Flecten.",
+  "The core stopped during the run. Restarting": "Agent process exited during the run. Restarting…",
+  "Restarting core": "Restarting agent…",
   ", waiting for you: {0}": [", waiting for you: ", 0],
   "Resuming interrupted tasks: {0}{1}": ["Resuming interrupted tasks: ", 0, 1],
   "Interrupted tasks: {0}. Open a task and click Continue": [
@@ -76,7 +76,7 @@ export default {
   "Hide details": "Hide details",
   "Show details": "Show details",
   "Cancel call: the process will stop and the model will be notified of the cancellation":
-    "Cancel call: the process will stop and the model will be notified of the cancellation",
+    "Stop this tool call and terminate its child processes",
   "Cancel: {0}": ["Cancel: ", 0],
   action: "action",
   actions: "actions",

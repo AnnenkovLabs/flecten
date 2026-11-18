@@ -79,7 +79,8 @@ export class ConversationAcceptance {
       !this.state ||
       event.type !== "tool.finished" ||
       shown.type !== "tool.finished" ||
-      event.call.name === "criterion"
+      event.call.name === "criterion" ||
+      event.call.name === "ask_talker"
     )
       return;
     this.#results.set(event.call.id, {
@@ -87,8 +88,9 @@ export class ConversationAcceptance {
       tool: event.call.name,
       result: event.result,
     });
-    // ponytail: the last 128 results per task; use the durable tool log for earlier evidence on very long tasks.
-    if (this.#results.size > 128) this.#results.delete(this.#results.keys().next().value as string);
+    // ponytail: the last 2,048 results per task; use the durable tool log for earlier evidence on multi-hour tasks.
+    if (this.#results.size > 2_048)
+      this.#results.delete(this.#results.keys().next().value as string);
   }
 
   report(report: CriterionReport): WorkerAcceptance {

@@ -30,9 +30,7 @@ async function git(cwd: string, args: string[], allowFailure = false): Promise<s
       process.exited,
     ]);
     if (code !== 0 && !allowFailure)
-      throw new Error(
-        redact(stderr.trim()) || "Git не выполнил команду. Проверьте состояние репозитория.",
-      );
+      throw new Error(redact(stderr.trim()) || "Git command failed. Check repository status.");
     return code === 0 ? stdout : "";
   } finally {
     clearTimeout(timer);
@@ -71,7 +69,7 @@ export async function workspaceGit(cwd: string, input: unknown): Promise<unknown
   const command = Command.parse(input);
   const current = await status(cwd);
   if (command.action === "status") return current;
-  if (!current.repository) throw new Error("В этой папке нет Git-репозитория.");
+  if (!current.repository) throw new Error("No Git repository in this folder.");
   if (command.action === "commit") {
     const prefix = (await git(cwd, ["rev-parse", "--show-prefix"])).trim();
     const visible = new Set(
@@ -85,13 +83,13 @@ export async function workspaceGit(cwd: string, input: unknown): Promise<unknown
       .filter(Boolean);
     if (staged.some((path) => !visible.has(path)))
       throw new Error(
-        "В index есть изменения вне открытого проекта. Откройте корень репозитория перед коммитом.",
+        "Staged changes include files outside the open project. Open the repository root to commit.",
       );
     await git(cwd, ["commit", "-m", command.message]);
     return status(cwd);
   }
   const entry = current.entries.find((entry) => entry.path === command.path);
-  if (!entry) throw new Error("Изменение уже исчезло. Обновите список Git.");
+  if (!entry) throw new Error("Change no longer exists. Refresh Git status.");
   if (command.action === "diff") {
     const text =
       entry.index === "?"

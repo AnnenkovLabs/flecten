@@ -53,8 +53,9 @@ export function requestExtra(
 export function effectiveParallelTools(
   runtime: { config: { parallelToolCalls?: boolean | undefined } },
   model: ModelConfig | undefined,
+  request?: { parallelToolCalls?: boolean | undefined },
 ): boolean | undefined {
-  return model?.parallelToolCalls ?? runtime.config.parallelToolCalls;
+  return model?.parallelToolCalls ?? runtime.config.parallelToolCalls ?? request?.parallelToolCalls;
 }
 
 export function promptCacheEnabled(

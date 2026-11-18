@@ -40,18 +40,17 @@ export default {
   "Full access": "完全访问",
   "Allows all actions without asking. Use only in a trusted project.":
     "允许所有操作，不再询问。请仅在可信项目中使用。",
-  "These settings don't match any preset. Check each row before saving.":
-    "当前设置与预设不符。保存前请逐项检查。",
+  "These settings don't match any preset. Check each row before saving.": "自定义规则组合。",
   "just now": "刚刚",
   "{0} sec": [0, " 秒"],
   "{0} min": [0, " 分钟"],
   "{0} hr": [0, " 小时"],
   "{0} d": [0, " 天"],
-  "Policies must be an object.": "策略必须是对象。",
+  "Policies must be an object.": "权限策略格式无效。",
   "Unknown action: {0}.": ["未知操作：", 0, "。"],
   "Unknown policy for action {0}: {1}.": ["操作 ", 0, " 的策略未知：", 1, "。"],
-  "Opening a browser is available in the desktop app": "打开浏览器功能仅在应用内可用",
-  "the core returned no file": "内核未返回文件",
+  "Opening a browser is available in the desktop app": "仅桌面版支持打开外部链接",
+  "the core returned no file": "文件内容不可用",
   model: "模型",
   models: "模型",
   "Catalog updated": "目录已更新",
@@ -74,7 +73,7 @@ export default {
   "Українська · 73 MB": "乌克兰语 · 73 MB",
   Copied: "已复制",
   "Could not copy. Try again.": "复制失败，请重试。",
-  "Could not prepare the text. Try again.": "无法准备文本，请重试。",
+  "Could not prepare the text. Try again.": "无法生成要复制的文本，请重试。",
   Reasoning: "推理",
   Images: "图像",
   Audio: "音频",
@@ -102,5 +101,5 @@ export default {
   "No pending approvals.": "没有待批准的请求。",
   "Waiting {0}": ["已等待 ", 0],
   "This request has been waiting for over 2 minutes. Check whether the action is still needed.":
-    "请求已等待超过 2 分钟。请检查是否仍需执行此操作。",
+    "已等待超过 2 分钟。",
 } as const;

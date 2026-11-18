@@ -289,7 +289,7 @@ export class ThreadView {
     }
   }
 
-  /** A note inside the run, as «Контекст сжат». */
+  /** An inline lifecycle note inside the run, such as "Context compacted". */
   note(icon: IconName, label: string, meta: string, output: string): void {
     const action = $state<RunAction>({ id: nextId("note"), icon, label, meta, duration: "" });
     if (output) action.detail = { output };

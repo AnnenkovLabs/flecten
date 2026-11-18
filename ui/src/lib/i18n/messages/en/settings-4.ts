@@ -15,7 +15,7 @@ export default {
   "Enter the hook command.": "Enter the hook command.",
   "Exact match condition": "Exact match condition",
   "All filled-in conditions must match. Regular expressions are not used.":
-    "All filled-in conditions must match. Regular expressions are not used.",
+    "Every non-empty condition must match literally (exact value or prefix).",
   "Example tool": "Example tool",
   Testing: "Testing",
   "Run saved hook": "Run saved hook",

@@ -85,9 +85,6 @@ export default {
     "Asigna una tarea al agente. Aquí verás sus acciones y respuestas, sin perder de vista los archivos.",
   "Save or close modified files in this folder first.":
     "Primero guarda o cierra los archivos modificados en esta carpeta.",
-  "In t(": "En t(",
-  "Regular t(": "Expresión regular t(",
-  "on line t(": "en la línea t(",
   "Search failed. {0}. Try searching again.": [
     "No se pudo realizar la búsqueda. ",
     0,

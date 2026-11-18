@@ -109,5 +109,5 @@ export default {
   Trust: "Trust",
   Version: "Version",
   About: "About",
-  Directory: "Directory",
+  Directory: "Model catalog",
 } as const;

@@ -48,6 +48,7 @@ export interface ContextUserMessage {
   readonly sourceText?: string;
   readonly role: "user";
   readonly content: string;
+  readonly synthetic?: boolean;
   readonly contextSummary?: ContextSummary;
   readonly images?: number;
   readonly mediaTokens?: number;

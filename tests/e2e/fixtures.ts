@@ -73,6 +73,7 @@ async function startMockProvider(
   calls?: Array<{ name: string; arguments: Record<string, unknown> }>,
   usage?: LaunchOptions["usage"],
   twinLearning = false,
+  recordRequests = false,
 ): Promise<MockProvider> {
   const child = spawn("bun", [mockScript], {
     cwd: repoRoot,
@@ -84,6 +85,7 @@ async function startMockProvider(
       E2E_MOCK_SUMMARY_PAUSE_MS: String(summaryPauseMs),
       E2E_MOCK_HOLD_SUMMARY: holdSummary ? "1" : "0",
       E2E_MOCK_TWIN_LEARNING: twinLearning ? "1" : "0",
+      E2E_MOCK_RECORD_REQUESTS: recordRequests ? "1" : "0",
       ...(calls ? { E2E_MOCK_CALLS: JSON.stringify(calls) } : {}),
       ...(usage ? { E2E_MOCK_USAGE: JSON.stringify(usage) } : {}),
       ...(reply === undefined ? {} : { E2E_MOCK_REPLY: reply }),
@@ -253,6 +255,8 @@ export interface LaunchOptions {
   holdSummary?: boolean;
   /** Hold a valid Twin extraction until releaseSummary, so real training remains observable. */
   twinLearning?: boolean;
+  /** Expose model message history to the test via the mock provider's local control port. */
+  recordRequests?: boolean;
   /** Final answer of the mock model instead of the README summary. */
   reply?: string;
   directory?: string;
@@ -299,6 +303,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
       options.firstCalls,
       options.usage,
       options.twinLearning,
+      options.recordRequests,
     );
     const configPath = join(cwd, "flecten.config.json");
     if (owned) {

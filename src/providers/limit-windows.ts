@@ -29,7 +29,7 @@ export function headerValue(headers: HeaderSource, name: string): string | undef
 
 export function epochMs(value: string): number | undefined {
   const parsed = Number(value.trim());
-  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  if (!Number.isFinite(parsed) || parsed < 1_000_000_000) return undefined;
   return parsed >= 1_000_000_000_000 ? Math.round(parsed) : Math.round(parsed * 1_000);
 }
 

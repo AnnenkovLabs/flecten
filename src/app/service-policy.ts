@@ -107,7 +107,7 @@ export function sandboxStatus(config: HarnessConfig): AppInfo["sandbox"] {
     available,
     reason: detection.reason,
     ...(enabled && !available
-      ? { warning: `OS sandbox включён, но недоступен: ${detection.reason}` }
+      ? { warning: `OS sandbox is enabled in settings, but unavailable: ${detection.reason}` }
       : {}),
   };
 }

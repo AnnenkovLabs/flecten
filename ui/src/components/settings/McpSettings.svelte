@@ -9,7 +9,7 @@
   import McpCatalog from "./McpCatalog.svelte";
   const config = $derived(settings.settings);
   let pendingRemove = $state("");
-  const stateLabels = $derived({ connecting: t("Connection"), ready: t("Connected"), degraded: t("Unstable"), closed: t("Disabled"), failed: t("Error") });
+  const stateLabels = $derived({ connecting: t("Connecting…"), ready: t("Connected"), degraded: t("Unstable"), closed: t("Disabled"), failed: t("Error") });
   onMount(() => { void extensions.refresh(); });
   function add(): void {
     if (!config) return;

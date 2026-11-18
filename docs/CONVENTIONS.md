@@ -1,109 +1,109 @@
-# Соглашения
+# Conventions
 
-## Язык и среда
+## Language and Runtime
 
-- TypeScript, строгий режим, ESM.
-- Запуск и тесты через Bun.
-- Никаких `any` на границах. Внутри допустимо, но лучше `unknown` плюс проверка.
+- TypeScript in strict mode, ESM modules.
+- Execution and testing via Bun.
+- No `any` at module or external boundaries. Prefer `unknown` plus schema validation internally as well.
 
-## Файлы и имена
+## Files and Naming
 
-- Файлы TypeScript в `kebab-case.ts`, компоненты Svelte в `PascalCase.svelte`.
-- Типы и интерфейсы в `PascalCase`.
-- Функции и переменные в `camelCase`.
-- Один модуль отвечает за одну роль. `twin.ts` не содержит цикла, `context.ts` не зовёт модель.
+- TypeScript files use `kebab-case.ts`; Svelte components use `PascalCase.svelte`.
+- Types and interfaces use `PascalCase`.
+- Functions and variables use `camelCase`.
+- One module, one role: `twin.ts` contains no agent loop; `context.ts` never calls a model.
 
-## Размер файлов
+## File Size
 
-- Мягкий предел 300 строк, жёсткий 500.
-- Один файл отвечает за одну ответственность.
-- Домены группируются в папки, файлы называют концепт.
-- Реэкспорт только для типов. Остальные импорты прямые.
-- Если файл импортирует пять доменов, граница протекла.
+- Soft limit: 300 lines; hard limit: 500 lines.
+- One file owns a single responsibility.
+- Directories group domains; filenames name the concept.
+- Re-exports are allowed for types only; runtime imports must point directly to the defining module.
+- Importing from five distinct domains signals a leaky boundary.
 
-## Данные на границе
+## Boundary Validation
 
-- Всё, что пришло из модели, файлов и web, сначала проверяется схемой.
-- Аргументы тулов проверяются до запуска.
-- События провайдера проверяются на каждом шаге потока.
-- Ошибка проверки возвращается как результат, не как исключение наружу.
+- Validate all inputs from models, files, and the web against schemas before use.
+- Validate tool arguments prior to execution.
+- Validate provider stream events at every step of the stream.
+- Return validation failures as typed result values rather than throwing exceptions across boundaries.
 
-## Ошибки
+## Error Handling
 
-- Ошибка тула это `ToolResult` с `ok: false` и текстом.
-- Ошибка программиста это исключение.
-- Ошибка модели это событие с причиной и повтор, если он безопасен.
-- Молча глотать ошибки нельзя.
+- Tool failures return `ToolResult` with `ok: false` and an actionable message.
+- Programmer bugs throw exceptions.
+- Model/provider failures emit typed events with a reason and retry only when safe.
+- Never swallow errors silently.
 
-## Асинхронность
+## Async and Cancellation
 
-- Каждый долгий вызов принимает `AbortSignal`.
-- Отмена идёт сверху вниз: юзер, оркестратор, тул, процесс.
-- Таймаут есть у каждого тула.
-- Фоновые процессы не переживают сессию без явного флага.
-- Субагенты принадлежат чату: stop родительского прогона снимает ожидание, но не их исполнение. Отдельная команда stop по id, лимит дочерней роли или закрытие runtime завершает субагента.
+- Every long-running operation accepts an `AbortSignal`.
+- Cancellation propagates top-down: user -> orchestrator -> tool -> child OS process.
+- Every tool enforces an explicit timeout.
+- Background processes never outlive their session unless started with an explicit background flag.
+- Subagents belong to the chat: stopping the parent run cancels awaiting them without killing their execution. A subagent terminates only on an explicit `stop` by ID, its child role budget/limit, or runtime shutdown.
 
-## Логи
+## Logging
 
-- Ядро не пишет в `console`.
-- События идут в `events.jsonl`.
-- Полные выводы тулов лежат в `.flecten/sessions/<id>/logs/`.
-- Секреты и токены вырезаются до записи.
+- Core never writes to `console`.
+- Session events append to `events.jsonl`.
+- Unabridged tool outputs live in `.flecten/sessions/<id>/logs/`.
+- Redact secrets and tokens before any disk or IPC write.
 
-## Тесты
+## Testing
 
-- `bun test`.
-- Один дымовой тест на модуль.
-- Золотые тесты для промптов и разбора потока.
-- Моков ядра нет. Тестируем настоящий сервис.
-- Тест должен падать, если сломать логику, а не только если сломать импорт.
+- Run via `bun test`.
+- Include at least one smoke test per module.
+- Maintain golden tests for assembled prompts and stream parsers.
+- Do not mock core internals; test real services against local fixtures.
+- Tests must fail when behavior breaks, not merely when imports break.
 
-## Промпты
+## Prompts
 
-- Лежат в `prompts/` в Markdown.
-- Не содержат данных юзера.
-- Версионируются в git.
-- Длинные строки в коде запрещены. Промпт это файл, не шаблон в функции.
+- Stored as Markdown files in `prompts/`.
+- Contain zero user data.
+- Versioned in git.
+- Never embed multi-line prompts inline in TypeScript functions.
 
-## Расширения
+## Extensions
 
-- Скилл читается по Agent Skills: `SKILL.md`, frontmatter, мягкая валидация, загрузка тела только по запросу.
-- Каталог скиллов в промпте компактный. Полные файлы и resources в него не вставляются.
-- MCP tools получают префикс `mcp_<server>_`, валидируются SDK и считаются недоверенным вводом.
-- MCP аннотации не дают прав. `readOnlyHint` не снимает блокировку записи.
-- Hooks запускаются только на объявленных событиях, получают JSON в stdin и не пишут в `console`.
-- Hook с кодом 2 блокирует только события, у которых есть право блокировки.
-- Таймаут, отмена и лимит вывода обязательны для hook и MCP.
+- Skills follow Agent Skills: `SKILL.md` with frontmatter, lenient discovery validation, and lazy body loading on activation.
+- Keep the prompt's skill catalog compact; never inline full skill bodies or bundled resources up front.
+- MCP tools take the `mcp_<server>_` prefix, validate through the SDK, and return untrusted data.
+- MCP tool annotations confer zero trust: `readOnlyHint` never bypasses write blocks.
+- Hooks execute strictly on declared events, read JSON on `stdin`, and never write to `console`.
+- Hook exit code `2` blocks execution only on events permitted to block.
+- Timeouts, cancellation (`AbortSignal`), and output size caps are mandatory for both hooks and MCP calls.
 
-## Зависимости
+## Dependencies
 
-- Новая зависимость только с записью в журнале решений.
-- Сначала стандартная библиотека Bun, потом пакет.
-- Пакет без поддержки Bun и без типов не берём.
+- Every new dependency requires an entry in the decision log.
+- Prefer Bun's standard library before adding third-party packages.
+- Reject packages lacking Bun compatibility or TypeScript types.
 
-## Комментарии
+## Comments
 
-- Комментарий объясняет причину, а не действие.
-- Временное упрощение помечается `ponytail:` с пределом и путём развития.
-- Закомментированный код удаляется.
+- Explain why, never what.
+- Tag intentional simplifications that have known limits with `ponytail:`, stating both the limit and the upgrade path.
+- Delete commented-out code rather than committing it.
 
 ## Git
 
-- Один коммит это одно изменение смысла.
-- Сообщение в повелительном наклонении: `add spec parsing`, `fix page boundary`.
-- Секреты и `.flecten/` не коммитятся.
+- One logical change per commit.
+- Imperative commit subjects: `add spec parsing`, `fix page boundary`.
+- Never commit secrets or `.flecten/`.
 
-## Документы
+## Documentation
 
-- `ARCHITECTURE.md` описывает, как система устроена.
-- План работ описывает, что делаем дальше.
-- Журнал решений хранит причины.
-- Этот файл хранит правила.
+- `ARCHITECTURE.md` documents system design and runtime invariants.
+- Roadmap documents track planned work.
+- `DECISIONS.md` records architectural decisions and trade-offs.
+- `CONVENTIONS.md` defines engineering rules.
 
-## Языки интерфейса
+## UI Localization
 
-По умолчанию интерфейс на английском. Поддерживаются `en`, `zh-Hans`, `pt-BR`, `es`, `ja`, `uk` и `ru`. Выбор хранится в профиле окна (`flecten.locale`) и не меняет язык запросов и ответов агента.
+English (`en`) is the default UI locale. Supported locales are `en`, `zh-Hans`, `pt-BR`, `es`, `ja`, `uk`, and `ru`. The selected locale persists in the window profile (`flecten.locale`) without altering the language of agent prompts or model responses.
 
-Текст интерфейса получает `t()` из `ui/src/lib/i18n.svelte.ts`. Ключ это обычная английская фраза; переводы лежат в `ui/src/lib/i18n/messages/<locale>/`. Предложения с данными переводятся целиком, значения передаются отдельным массивом. В каталоге числа обозначают позиции значений, а не текст для разбора. Не собирайте предложение из переведённых слов. Для количества файлов, моделей и действий используйте `countLabel`, для дат и чисел передавайте `i18n.locale` в `Intl`.
+UI strings resolve through `t()` in `ui/src/lib/i18n.svelte.ts`. Keys are plain English phrases; translations live under `ui/src/lib/i18n/messages/<locale>/`. Translate complete sentences and pass dynamic values as a positional array (numeric placeholders index the value array and are never parsed as prose). Never concatenate translated fragments. Format counts via `countLabel` and pass `i18n.locale` to `Intl` for dates and numbers.
 
-Перевод должен звучать просто и естественно. Сохраняйте смысл, а не порядок слов. Сообщения пользователя, ответы модели, код, пути, имена моделей и вывод команд не переводятся средствами интерфейса. Новые подписи добавляются сразу во все семь каталогов. Готовые подписи в метаданных вычисляются при чтении, чтобы смена языка обновляла уже открытый экран.
+Keep translations natural and idiomatic rather than word-for-word literal. Never translate user messages, model output, code, file paths, model IDs, or command output in the UI layer. Ship new UI keys across all seven locale catalogs simultaneously, and compute localized metadata labels on read so switching locales updates open screens immediately.

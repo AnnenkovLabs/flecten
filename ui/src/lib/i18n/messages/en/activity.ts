@@ -21,9 +21,9 @@ export default {
   "Nothing to undo": "Nothing to undo",
   "Nothing to retry": "Nothing to retry",
   "Model: {0}": ["Model: ", 0],
-  "Resuming the task after the core restarted": "Resuming the task after the core restarted",
+  "Resuming the task after the core restarted": "Resuming after agent restart",
   "History, plan, and files are intact; the model checks the current state before acting":
-    "History, plan, and files are intact; the model checks the current state before acting",
+    "Session history and files are intact; verifying workspace state before continuing",
   "Run interrupted": "Run interrupted",
   "Stopped at the run budget limit": "Stopped at the run budget limit",
   "failed to start": "failed to start",
@@ -41,9 +41,8 @@ export default {
   Thinking: "Thinking",
   Error: "Error",
   "Awaiting approval": "Awaiting approval",
-  "Core restarting": "Core restarting",
-  "The model received the background command result":
-    "The model received the background command result",
+  "Core restarting": "Restarting agent",
+  "The model received the background command result": "Background command output delivered",
   "Preparing a call": "Preparing a call",
   Writing: "Writing",
   "Untranslated response": "Untranslated response",
@@ -81,11 +80,10 @@ export default {
   "[timed out]": "[timed out]",
   "[exit code {0}]": ["[exit code ", 0, "]"],
   "Context is almost full (95%). Compress it now, or the core will compress it automatically.":
-    "Context is almost full (95%). Compress it now, or the core will compress it automatically.",
+    "Context is 95% full. Auto-compaction runs at 100%.",
   "Context is 85% full. You can compress it now, focusing on the topic you need.":
-    "Context is 85% full. You can compress it now, focusing on the topic you need.",
-  "Context is 70% full. No need to compress it yet, but keep it in mind.":
-    "Context is 70% full. No need to compress it yet, but keep it in mind.",
+    "Context is 85% full. Compact now from the context meter to set a custom focus.",
+  "Context is 70% full. No need to compress it yet, but keep it in mind.": "Context is 70% full.",
   "page {0}": ["page ", 0],
   "{0} → {1} tokens": [0, " → ", 1, " tokens"],
   "no model": "no model",
@@ -99,5 +97,5 @@ export default {
     "Context is full. Compress the history or start a new task.",
   "Run canceled.": "Run canceled.",
   "The core could not start. Check your installation and settings.":
-    "The core could not start. Check your installation and settings.",
+    "Agent process failed to start. Check Settings or reinstall.",
 } as const;

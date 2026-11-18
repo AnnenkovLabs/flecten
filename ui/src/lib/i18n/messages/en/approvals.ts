@@ -21,12 +21,12 @@ export default {
       ". Permissions apply to the next action; other settings apply to the next run.",
     ],
   Chat: "Chat",
-  "Always ask a person": "Always ask a person",
+  "Always ask a person": "Require manual approval",
   "These checkpoints cannot be bypassed by saved approvals or automatic review.":
-    "These checkpoints cannot be bypassed by saved approvals or automatic review.",
+    "Saved rules and Auto mode never bypass these checkpoints.",
   "Human approval required every time": "Human approval required every time",
   "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.":
-    "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.",
+    "Allow safe project actions automatically; review ambiguous commands and ask when unsure.",
   "Ask unless this exact action was already approved.":
     "Ask unless this exact action was already approved.",
   "Allowed for this chat": "Allowed for this chat",
@@ -43,7 +43,7 @@ export default {
   "Save exact rule": "Save exact rule",
   "Remember…": "Remember…",
   "Allow bounded built-in actions. Ask before arbitrary code or external tools.":
-    "Allow bounded built-in actions. Ask before arbitrary code or external tools.",
+    "Allow safe built-in actions; ask before shell commands or external tools.",
   "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
     "Allows ordinary actions. Destructive rules and sandbox limits still apply.",
   "Saved rules": "Saved rules",
@@ -57,9 +57,9 @@ export default {
   "Destructive actions": "Destructive actions",
   "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.":
     "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.",
-  "Execution boundary": "Execution boundary",
+  "Execution boundary": "Sandbox boundary",
   "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.":
-    "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.",
+    "OS sandbox restricts commands to the project and approved folders, regardless of tool permissions.",
   "Workspace isolation enabled": "Workspace isolation enabled",
   "Workspace isolation disabled": "Workspace isolation disabled",
   "Only the requests shown here are included. New requests remain pending.":
@@ -94,7 +94,7 @@ export default {
   "Folder access covers the displayed paths and their subfolders.":
     "Folder access covers the displayed paths and their subfolders.",
   "Access is shared with agents in this chat.": "Access is shared with agents in this chat.",
-  "Repeat this action in this chat": "Repeat this action in this chat",
+  "Repeat this action in this chat": "Allow in this chat",
   "Remember folder access": "Remember folder access",
   "Access mode: {0}": ["Access mode: ", 0],
   "Could not change access. Try again. {0}": ["Could not change access. Try again. ", 0],

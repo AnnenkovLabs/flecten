@@ -13,6 +13,7 @@ export async function readLineSlice(
   characterOffset: number,
   maxBytes: number,
   signal?: AbortSignal,
+  reads?: { record(path: string, content: string): void },
 ): Promise<ToolResult> {
   if (signal?.aborted) return { ok: false, output: "", error: "Read aborted" };
   const decoder = new TextDecoder(encoding);
@@ -26,6 +27,7 @@ export async function readLineSlice(
   let complete = false;
   let more = false;
   let found = false;
+  let sawTrailingLines = false;
   for await (const chunk of createReadStream(path, { start: bomBytes, highWaterMark: 64 * 1024 })) {
     if (signal?.aborted) return { ok: false, output: "", error: "Read aborted" };
     const decoded = decoder.decode(chunk, { stream: true });
@@ -54,6 +56,7 @@ export async function readLineSlice(
         if (more) break;
         if (newline >= 0) {
           complete = true;
+          sawTrailingLines = end + 1 < decoded.length;
           break;
         }
       }
@@ -65,6 +68,10 @@ export async function readLineSlice(
   }
   if (!found || line < offset || skipped < characterOffset)
     return { ok: false, output: "", error: "Read cursor is beyond the requested line." };
+  if (offset === 1 && characterOffset === 0 && !more && !sawTrailingLines && reads) {
+    const prefix = bomBytes === 3 ? "\uFEFF" : "";
+    reads.record(path, `${prefix}${text}${complete ? "\n" : ""}`);
+  }
   const nextCharacterOffset = skipped + text.length;
   const cursor = more ? { offset, characterOffset: nextCharacterOffset } : { offset: offset + 1 };
   return {

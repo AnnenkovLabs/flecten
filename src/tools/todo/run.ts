@@ -108,7 +108,19 @@ export async function runTodo(args: TodoArgs, context: ToolContext): Promise<Too
   if (args.op === "list") return result(args.op, todos);
 
   try {
-    if (args.op === "add") {
+    if (args.op === "set") {
+      if (!args.items) throw new Error("set needs items");
+      todos = args.items.map((item, idx) => {
+        const content = item.content.trim();
+        if (content.length === 0) throw new Error(`set item ${idx + 1} needs non-empty content`);
+        return {
+          id: item.id ?? `todo_${Date.now().toString(36)}_${idx}_${randomUUID().slice(0, 6)}`,
+          content,
+          status: item.status ?? "pending",
+          ...(item.priority === undefined ? {} : { priority: item.priority }),
+        };
+      });
+    } else if (args.op === "add") {
       if (args.content === undefined) throw new Error("add needs content");
       const content = args.content.trim();
       if (content.length === 0) throw new Error("add needs non-empty content");

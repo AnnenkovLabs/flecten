@@ -5,7 +5,8 @@
   import FloatingMenu from "./FloatingMenu.svelte";
   import Icon from "./Icon.svelte";
 
-  let { user, onRename, onOpenSettings }: {
+  let { hidden, user, onRename, onOpenSettings }: {
+    hidden: boolean;
     user: { name: string; initial: string };
     onRename: (name: string) => void;
     onOpenSettings: () => void;
@@ -18,6 +19,10 @@
   let editing = $state(false);
   let draft = $state("");
   let error = $state("");
+
+  $effect(() => {
+    if (hidden) menuOpen = false;
+  });
 
   function focus(node: HTMLElement): void { node.focus(); }
 

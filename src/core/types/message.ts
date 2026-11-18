@@ -22,6 +22,8 @@ export interface UserMessage {
   contextSummary?: ContextSummary;
   /** Exact human input, distinct from hooks, translations and memory context. */
   memorySource?: string;
+  /** Harness-injected notice, memory block or loop continuation, not a human turn. */
+  synthetic?: boolean;
   memoryReferences?: MemoryReference[];
   moduleReferences?: ModuleReference[];
   images?: ImagePart[];

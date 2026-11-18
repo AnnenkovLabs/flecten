@@ -27,17 +27,18 @@ export async function dispatch(
       const existing = command.id ? queue.list().find((item) => item.id === command.id) : undefined;
       if (existing) return { item: existing, queue: queue.list() };
       const sessionId = runtime.reserveSessionId();
-      const loaded =
-        command.attachments?.length && options.saveMedia
-          ? await sessionAttachments(command.attachments, sessionId, options)
-          : undefined;
+      const snapshot =
+        command.attachmentSnapshot ??
+        (command.attachments?.length && options.saveMedia
+          ? (await sessionAttachments(command.attachments, sessionId, options)).snapshot
+          : undefined);
       const item = queue.add(
         command.text,
-        command.mode ?? "queue",
+        runtime.active()?.summaryWake ? "queue" : (command.mode ?? "queue"),
         command.attachments,
         command.id,
         command.contexts,
-        loaded ? { media: loaded.media, blocks: loaded.blocks } : undefined,
+        snapshot,
       );
       if (item.mode === "steer" && item.state === "pending") steering.push(item);
       await runtime.saveQueue();

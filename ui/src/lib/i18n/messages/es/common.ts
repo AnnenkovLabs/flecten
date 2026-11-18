@@ -45,18 +45,18 @@ export default {
   "Allows all actions without asking. Use only in a trusted project.":
     "Permite todas las acciones sin preguntar. Úsalo solo en proyectos de confianza.",
   "These settings don't match any preset. Check each row before saving.":
-    "Esta combinación no coincide con ningún ajuste predefinido. Revisa cada fila antes de guardar.",
+    "Combinación personalizada de reglas.",
   "just now": "ahora mismo",
   "{0} sec": [0, " s"],
   "{0} min": [0, " min"],
   "{0} hr": [0, " h"],
   "{0} d": [0, " d"],
-  "Policies must be an object.": "Las políticas deben ser un objeto.",
+  "Policies must be an object.": "Formato de política de permisos no válido.",
   "Unknown action: {0}.": ["Acción desconocida: ", 0, "."],
   "Unknown policy for action {0}: {1}.": ["Política desconocida para la acción ", 0, ": ", 1, "."],
   "Opening a browser is available in the desktop app":
-    "Puedes abrir el navegador desde la aplicación",
-  "the core returned no file": "el núcleo no devolvió el archivo",
+    "Abrir enlaces requiere la aplicación de escritorio",
+  "the core returned no file": "contenido del archivo no disponible",
   model: "modelo",
   models: "modelos",
   "Catalog updated": "Catálogo actualizado",
@@ -79,7 +79,8 @@ export default {
   "Українська · 73 MB": "Ucraniano · 73 MB",
   Copied: "Copiado",
   "Could not copy. Try again.": "No se pudo copiar. Inténtalo de nuevo.",
-  "Could not prepare the text. Try again.": "No se pudo preparar el texto. Inténtalo de nuevo.",
+  "Could not prepare the text. Try again.":
+    "No se pudo generar el texto para copiar. Inténtalo de nuevo.",
   Reasoning: "Razonamiento",
   Images: "Imágenes",
   Audio: "Audio",
@@ -107,5 +108,5 @@ export default {
   "No pending approvals.": "No hay solicitudes pendientes de aprobación.",
   "Waiting {0}": ["En espera desde hace ", 0],
   "This request has been waiting for over 2 minutes. Check whether the action is still needed.":
-    "La solicitud lleva más de 2 minutos en espera. Comprueba si la acción sigue siendo necesaria.",
+    "En espera desde hace más de 2 minutos.",
 } as const;

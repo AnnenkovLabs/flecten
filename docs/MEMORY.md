@@ -1,123 +1,119 @@
-# Память агента
+# Agent Memory
 
-Память сохраняет важные пожелания, коррекции и опыт между разговорами одного проекта. Основная модель сама решает, что запомнить, прочитать, обновить и забыть. Хост не извлекает факты отдельной моделью после каждого сообщения и не требует от пользователя вручную вести банк памяти.
+Project memory persists user preferences, corrections, and hard-won lessons across chats within the same project. The primary model decides what to save, read, update, and forget directly during normal turns; the host neither runs a background fact-extractor after every message nor asks users to curate a memory bank manually.
 
-Это описание текущего кода. Обоснование, сравнение с другими реализациями и результаты прогонов находятся во внутренних материалах.
+## What Gets Stored
 
-## Что сохраняется
+Built-in kinds: `preference`, `lesson`, `decision`, `commitment`, `context`, and `procedure`. Custom kinds (such as `reference` or `deployment-caveat`) are also accepted: up to 64 characters matching `^[a-z][a-z0-9_-]*$`.
 
-Основные виды: `preference`, `lesson`, `decision`, `commitment`, `context`, `procedure`. Разрешены собственные виды, например `reference` или `deployment-caveat`: имя до 64 символов, начинается с латинской строчной буквы, дальше буквы, цифры, `_` и `-`.
+Each entry records a `kind`, canonical `key`, short `summary`, actionable future `content`, persistence `reason`, `priority`, and optional absolute `expiresAt`. Search `cues` are optional (default `[]`). Optional `topics` hold up to three descriptive navigation tags, and `appliesWhen` states the observable trigger condition shown in the index. `kind` captures knowledge shape while `topics` drive retrieval. Each `key` should represent one coherent topic or failure root cause; updates reuse the same `key` with the current `expectedRevision`.
 
-Модель выбирает вид, канонический `key`, краткую подсказку `summary`, применимое в будущем действие `content`, причину сохранения `reason`, приоритет и при необходимости абсолютное время `expiresAt`. Поисковые `cues` необязательны, по умолчанию `[]`. Необязательные `topics` содержат до трёх описательных тем для навигации, `appliesWhen` обозначает наблюдаемую ситуацию применения и показывается в индексе. Вид отвечает за форму знания, тема за момент поиска. Один ключ должен описывать одну тему или причину ошибки. Для обновления используется тот же ключ и актуальная ревизия.
+A `lesson` must state what the agent misunderstood, which correction exposed it, and what to do in comparable situations. The model must not record speculative user wishes as facts or copy transient task progress, tool logs, code facts, or active project instructions into memory. Most ordinary runs produce zero memory writes.
 
-`lesson` должен объяснять, что агент понял неверно, какая коррекция это показала и что делать в похожей ситуации. Модель не должна записывать предположения о скрытых желаниях как факты. Не следует копировать текущую задачу, progress, tool logs, факты из кода и доступных project instructions. Обычный результат работы может не дать ни одной записи.
+Runtime validation enforces provenance rather than semantic truth: `preference` and `lesson` require a verbatim user quote, whereas other kinds (including custom kinds) accept user or tool evidence. Choosing an appropriate `kind` and drawing sound conclusions remain the model's responsibility.
 
-Код проверяет происхождение, а не правильность интерпретации. Для видов `preference` и `lesson` обязательна пользовательская цитата. Для остальных, включая собственные виды, допустимы пользовательские или инструментальные источники; верный выбор вида и смысл вывода остаются ответственностью модели. Схема не является классификатором истинности.
+## Lifecycle
 
-## Жизненный цикл
+1. `src/app/memory.ts` instantiates one project-scoped `MemoryStore` and injects it into sessions via `MemoryPort`; `core` never imports `store`.
+2. `MemoryRuntime` binds to the session, message history, and system instructions. Before every standard provider request, it reloads active entries and computes a bounded delta.
+3. The delta is appended after conversation history as a dedicated context message carrying `memoryReferences`, marked as historical data subordinate to current user and project instructions. The system prompt prefix is never rebuilt from memory contents.
+4. The model reads full bodies via `memory`, saves verified corrections during regular turns, and may finish without writing anything. There is no post-run finalizer, background observer, or extraction timer.
+5. Before compaction, the existing `PageWriter` may emit up to three `memoryCandidates` alongside its summary in the same model call, avoiding extra requests.
+6. `done` accepts up to three optional `memoryCandidates` and commits them atomically with run completion without an extra turn. If an optional memory candidate fails validation or policy checks, `done` reports that failure in the tool result without aborting task completion. Native write policy is checked without opening hidden approval prompts.
 
-1. `src/app/memory.ts` создаёт один проектный `MemoryStore` и передаёт его сессиям через `MemoryPort`. Ядро не импортирует слой store.
-2. `MemoryRuntime` привязан к текущей сессии, истории и системным инструкциям. Перед каждым обычным provider request он перечитывает актуальные записи и строит ограниченную дельту.
-3. Дельта добавляется после истории как отдельное контекстное сообщение с `memoryReferences`. Она помечена historical data и подчинена текущим пользовательским и проектным инструкциям. Системный префикс не пересобирается из содержимого банка.
-4. Модель читает нужные тела через `memory`, сохраняет подтверждённую коррекцию в обычном рабочем ходе и может завершиться без записи. Отдельного finalization run, observer и таймера извлечения нет.
-5. Перед compaction существующий PageWriter может вернуть до трёх `memoryCandidates` в том же ответе, что и summary. Новый модельный запрос ради памяти не создаётся.
-6. Обычный `done` принимает до трёх `memoryCandidates` и сохраняет их вместе с завершением, без отдельного save turn. Отказ необязательной памяти явно отражается в tool result и не отменяет выполненную задачу. Нативная write policy проверяется без скрытого approval.
+Raw user input and memory context stay strictly separated. Standard user prompts and `steer` inputs preserve verbatim `memorySource` authority even when working text is translated. Hooks, runtime notices, summaries, internal prompts, Worker assignments, and `memory` tool outputs themselves never qualify as user-quote evidence, preventing self-confirming entries.
 
-Исходный запрос пользователя и контекст памяти являются разными данными. Обычный пользовательский ввод и steering сохраняют `memorySource` буквально, даже если рабочий текст переведён. Hooks, notices, summaries, внутренние задания и Worker assignments не получают authority пользовательской цитаты. Результаты самого `memory` также исключены из новых источников, чтобы запись не подтверждала сама себя.
+## Retrieval and Deduplication
 
-## Чтение и отсутствие повторов
+Before each turn, delivery prioritizes pending invalidations first, then a compact topic catalog, then unseen entries. Topics are assigned by the model at write time rather than inferred by keyword heuristics in host code. The model browses relevant topics via `list(topic)` and batch-reads full bodies via `read`, keeping older entries reachable regardless of age or phrasing. `topics` paginates the topic catalog explicitly, while untagged entries appear under `Uncategorized`.
 
-Сначала доставляются необходимые invalidations, затем небольшой каталог тем, затем отсутствующие записи. Темы выбирает основная модель при записи; код не классифицирует пользовательский запрос по словам. Модель выбирает тему по смыслу, открывает её через `list(topic)` и читает нужные тела пакетно. Старые записи остаются достижимы независимо от возраста и формулировки запроса. Полный каталог тем имеет явную пагинацию через `topics`; записи без тем доступны в `Uncategorized`.
+Within remaining discovery budget, `normal` entries arrive as index lines, whereas `critical` entries include their full body if space permits (falling back to an index line otherwise). Ordering: `critical` before `normal`, then most recently updated, then stable ID. Host code performs no semantic ranking. Topic-catalog snapshots carry a content-derived reference (`catalog:<SHA-256>`) so subsequent turns do not re-send unchanged catalogs unless clipping or compaction drops them from view.
 
-В оставшемся бюджете обычная запись доставляется как строка индекса. Для `critical` runtime сначала пытается вместить полное тело; если места недостаточно, остаётся индекс. Порядок: critical раньше normal, затем недавно изменённые, затем стабильный identifier. Семантический ranking кода не выполняется: нужную тему и запись выбирает основная модель. Снимок каталога получает content-derived reference, поэтому повторные ходы не копируют тот же каталог; clipping/compaction снимает его видимость.
+Delivered entries track `{ id, revision, level }` (`index`, `full`, or `invalidated`). Calling `read` on an already fully visible revision returns a short confirmation instead of duplicating the body; an `index` line does not count as `full`. Output clipping and compaction clear visibility markers for evicted messages while retaining them for kept messages. Durable events and replay tie references to actual context messages rather than a permanent "seen once" flag.
 
-Для фактически доставленного текста сохраняются identifier, revision и уровень `index`, `full` или `invalidated`. Повторное `read` уже полностью видимой ревизии возвращает короткое подтверждение. Сам индекс не считается полным телом. Обрезка результата и compaction должны снимать coverage удалённого содержимого; retained original сохраняет его. Durable events и replay переносят ссылки вместе с реальным контекстом, а не с вечным флагом «когда-то видел».
+Auto-delivery also skips an entry when full digests of all its evidence sources are already present in active history, or when its entire `content` appears verbatim in the system prompt. Partial source overlap does not suppress delivery. At save time, verbatim duplication of full `content` from the system prompt is rejected, whereas quoting a phrase that also happens to appear in the system prompt is allowed.
 
-Автодоставка также пропускает запись, если в текущей истории доступны полные digests всех её источников, либо её content целиком буквально включён в system. Видимость только части sources не подавляет доставку всей записи. При save из этих проверок действует только запрет полного копирования content из system; отдельная evidence quote, встречающаяся в system, сама по себе не вызывает отказ. Это точные проверки присутствия, а не гарантия семантического отсутствия: перефразирование, частичное совпадение и эквивалентный факт из другого файла распознаёт модель.
+When an entry changes revision, expires, or is forgotten, the runtime strips stale memory messages from the next provider request projection and appends a brief invalidation notice. This works even during bulk revocations exceeding the 16-entry discovery cap or when discovery budget is full. Stripping removes the entire message containing a stale body, making any unaffected entries from that mixed message eligible for fresh delivery. Typed invalidation references persist in durable `memory.context` events so replay reproduces message removal while leaving raw tool events and transcripts intact. Material dropped due to budget limits never receives a `full` read marker. Tokens already processed by an upstream provider in earlier turns cannot be retroactively erased, so the model must re-evaluate prior assumptions after an invalidation notice.
 
-При изменении ревизии, expiry или forget runtime убирает устаревшие memory messages из проекции следующего provider request и добавляет короткое общее уведомление. Это работает и при массовом отзыве за пределами обычного лимита 16 записей, даже без свободного discovery budget. Убирается всё сообщение с устаревшим телом; другие записи из смешанного сообщения снова доступны для доставки. Typed invalidation references сохраняются в durable `memory.context`, replay повторяет снятие старых сообщений. Сырые tool events и transcript сохраняются. Недоставленный из-за бюджета материал не получает marker полного чтения. Уже обработанные провайдером токены физически удалить задним числом нельзя; собственные прежние выводы модели требуют переоценки.
+## The `memory` Tool
 
-## Инструмент `memory`
-
-| Операция | Контракт |
+| Operation | Contract |
 |---|---|
-| `topics` | Каталог тем активной verified памяти, до 12 за страницу, необязательный `cursor`. |
-| `list` | Каталог активных неистёкших записей, до 12 за страницу. Необязательные точная `topic`, `kind`, `query`, `cursor`; следующий cursor возвращается явно. |
-| `read` | Одно `id` или массив `ids` до шести записей. Тела включают причину, область источника, цитаты и ревизию. При чтении нескольких разных IDs тела ограничены 6000 оценочных токенов; отложенные IDs явно возвращаются. Для одной записи действует обычный tool-output limit. Forgotten и expired не читаются. |
-| `sources` | До 12 последних подходящих источников разговора с ролью, reference, SHA-256 и фрагментом. |
-| `save` | Создание или обновление одного `key`; `expectedRevision: 0` для нового, текущая ревизия для изменения. Обязательны evidence и причина; `cues` необязательны, по умолчанию `[]`. |
-| `forget` | `id` и `expectedRevision`; создаёт tombstone с новой ревизией и исключает запись из активного чтения. |
-| `reconcile` | До восьми `save` и восьми `forget` в одном commit. Все источники и ревизии проверяются до публикации; дубли целей и keys отклоняются. Замена устаревших правил может освободить место для нового в том же commit. |
+| `topics` | Paginated active verified memory topics, up to 12 per page, optional `cursor`. |
+| `list` | Paginated active non-expired entries, up to 12 per page. Optional exact `topic`, `kind`, literal `query`, and `cursor`; returns next cursor explicitly. |
+| `read` | Single `id` or `ids` array (up to 6). Returns bodies with reason, source scope, quotes, and revision. Multi-ID reads cap combined bodies at 6,000 estimated tokens and list deferred IDs explicitly; single-ID reads use the standard tool-output cap. Forgotten and expired entries cannot be read. |
+| `sources` | Up to 12 recent eligible conversation sources with role, reference, SHA-256 digest, and text excerpt. |
+| `save` | Creates (`expectedRevision: 0`) or updates (current `expectedRevision`) a single `key`. Requires `evidence` and `reason`; `cues` default to `[]`. |
+| `forget` | Takes `id` and `expectedRevision`; writes a tombstone revision and removes the entry from active recall. |
+| `reconcile` | Applies up to 8 `save` and 8 `forget` operations in one atomic commit after validating all sources, revisions, and duplicate keys/targets. Retiring obsolete entries can free capacity for new ones in the same commit. |
 
-`query` в `list` является буквальной подстрокой после NFKC и приведения регистра. Ищутся key, summary и cues, но не всё тело. Пустой запрос показывает каталог. Навигация по смыслу и между языками выполняется основной моделью через темы, а не embeddings API или строковый relevance score. Фильтр `topic` точный, `kind` использует тот же формат вида, что и запись.
+`list.query` performs a literal substring match after Unicode NFKC normalization and case folding across `key`, `summary`, and `cues` (excluding full `content`); omitting `query` lists the catalog. Cross-language and semantic navigation happens through model-chosen `topics` rather than embeddings or lexical scoring. `topic` matches exact strings, and `kind` follows entry kind validation.
 
-`sources` показывает до 2400 символов источника, а tool evidence допускает цитату длиной 8-1200 символов. Цитата должна буквально содержаться в настоящем источнике той же роли, доступном в этой сессии. Runtime сам выставляет sessionId, reference и digest полного исходного сообщения. Модель не может объявить произвольный путь или свой ответ достаточным доказательством. Пользовательская ссылка имеет вид `user:<позиция>`, инструментальная использует toolCallId; digest позволяет проверить исходный текст, но не заменяет его смысловую проверку.
+`sources` previews up to 2,400 characters per source, while evidence quotes must be 8-1,200 characters copied verbatim from an eligible session source of matching role. The runtime populates `sessionId`, `reference` (`user:<position>` or `toolCallId`), and full-message SHA-256 digest automatically; the model cannot fabricate arbitrary file paths or cite its own assistant turns as evidence.
 
-Known secrets и распознаваемые credentials в кандидатах отклоняются до записи. Store дополнительно применяет redaction известных секретов перед публикацией. Это не разрешение хранить чувствительный вывод под другим видом.
+Known secrets and recognizable credential formats in memory candidates are rejected before commit, and the store applies secret redaction again prior to disk write.
 
-## Доступ и интерфейс
+## Scope, Permissions, and UI
 
-Раздел «Память и словарь» показывает публичные и локальные определения терминов. Локальный `DictionaryEntry` хранится в поле `dictionary`, с `kind: vocabulary` и `key: dictionary/<id>`, используя те же evidence, ревизии и историю. Он исключён из автоматического каталога общей памяти: подходящие определения доставляет словарь перед запросом провайдеру. Запись доступна через существующий `memory save` с полем `dictionary` или через пользовательскую форму. Формат публичных категорий, распознавание и синхронизация описаны в [DICTIONARY.md](DICTIONARY.md).
+**Settings > Memory & Dictionary** displays public and local term definitions. Local `DictionaryEntry` records live inside `.flecten/memory.json` with `kind: "vocabulary"`, `key: "dictionary/<id>"`, and structured field `dictionary`, sharing the same evidence, revisions, and audit history. Vocabulary entries are excluded from general memory auto-discovery because the dictionary matcher injects relevant definitions before provider calls; they can be edited via the UI form or `memory save` with `dictionary`. Public categories, matching rules, and sync are covered in [DICTIONARY.md](DICTIONARY.md).
 
-Банк находится в `.flecten/memory.json` канонической рабочей папки. Он общий для concurrent sessions этого проекта, без автоматического user-global банка или чтения других проектов. Shell `cd` не меняет bank identity. Разные рабочие деревья с разными каноническими корнями получают разные банки; symlink на тот же корень разрешается к тому же файлу.
+The memory bank resides at `.flecten/memory.json` under the canonical workspace root and is shared across concurrent sessions of that project, with no implicit user-global bank or cross-project reads. Shell `cd` commands do not alter bank identity; distinct canonical worktrees get separate banks while symlinks to the same root resolve to the same file.
 
-В обычной сессии и Talker/Worker память передаётся через session options. Worker не получает assignment как пользовательское evidence. Универсальный child subagent получает read-only port при наличии памяти у родителя. Каталог инструментов ограничивает явные вызовы `memory`, а нативная автодоставка отдельно подчиняется read policy. Он не может менять общую память и передаёт новые выводы родительской модели.
+Standard sessions and Talker/Worker pass memory through session options (Worker assignments never count as user-quote evidence). General child subagents receive a read-only `MemoryPort` when the parent has memory enabled: tool schemas block write operations, auto-delivery honors `read` policy, and new findings return to the parent model.
 
-Нативный `SandboxPolicy.checkMemory` проверяет фиксированный путь и пользовательские запреты, разрешая собственную запись metadata. Защита `.flecten` для обычных файловых инструментов остаётся. Автоматическая доставка и checkpoint проверяют политику без создания approval request; при ask/deny не выполняются.
+Native `SandboxPolicy.checkMemory` enforces fixed-path access and user deny rules while permitting internal metadata writes; `.flecten` remains protected against generic file tools. Auto-delivery and compaction checkpoints check policy silently and skip execution on `ask` or `deny`.
 
-На tool boundary `topics`, `list`, `read`, `sources` являются permission action `read`, а `save`, `forget`, `reconcile` действием `write` для фиксированного `.flecten/memory.json`; действуют текущие permissions и hooks. Нативный checkpoint и необязательный capture в `done` проверяют write policy без создания approval. Пользовательские файловые инструменты не должны становиться обходом memory API. Права политики могут отказать операции, поэтому наличие инструмента не обещает безусловную запись.
+At the tool boundary, `topics`, `list`, `read`, and `sources` map to permission action `read`, while `save`, `forget`, and `reconcile` map to `write` on `.flecten/memory.json`, honoring active permissions and hooks. Native compaction checkpoints and `done.memoryCandidates` check write policy without triggering interactive approvals.
 
-Отдельная форма настроек или JSON-редактор памяти не добавлены. Вызовы, сохранённые тела и ошибки видны в существующем transcript инструмента; чтение и изменение доступны через тот же `memory`. Счётчик в status является диагностикой, а не доказательством доставки или соблюдения пожелания моделью.
+Memory operations, saved payloads, and errors appear directly in the session transcript; the status-bar entry count is diagnostic only and does not prove model compliance.
 
-## Хранение, версии и отказоустойчивость
+## Storage, Revisions, and Fault Tolerance
 
-Формат файла `version: 2` содержит текущие `records` и снимки прежних ревизий `history`. Запись имеет постоянный id/key, revision, status, createdAt/updatedAt и evidence. Сохранение полностью одинакового payload по тому же активному key возвращает текущую запись без новой ревизии и без повторной публикации. Это точная идемпотентность, а не семантическое объединение похожих формулировок.
+Storage format `version: 2` holds active `records` alongside `history` revision snapshots. Each record carries a stable `id`/`key`, `revision`, `status`, `createdAt`/`updatedAt`, and `evidence`. Saving an identical payload to an active `key` returns the existing record idempotently without bumping `revision` or rewriting the file.
 
-Изменение и forget используют compare-and-swap: устаревшая expectedRevision получает conflict с просьбой перечитать запись. `reconcile` проверяет итоговую вместимость и публикует все изменения целиком. Checkpoint и `done` также сохраняют свои кандидаты одним commit. Операции по одному каноническому пути сериализуются общим внутрипроцессным mutex, публикация выполняется atomicWrite с режимом `0600`. Отдельный project lock обеспечивает один штатный sidecar на проект. Это не межпроцессная транзакционная база для произвольных внешних writers; ручные конкурентные изменения вне API не покрыты этим mutex.
+Updates and `forget` use compare-and-swap (`expectedRevision`), returning a conflict error on stale revisions so the model re-reads first. `reconcile`, checkpoints, and `done` validate capacity upfront and publish atomically. Operations targeting the same canonical path serialize through an in-process mutex and write via `atomicWrite` with mode `0600`, backed by `sidecar.lock` ensuring one sidecar per project (external out-of-band file edits are not covered by the in-process mutex).
 
-Неизменённый файл повторно не парсится: приватный validated cache проверяется через dev, inode, mtime, ctime и size. Изменившийся файл читается и проверяется по одному дескриптору. Повреждение после прогрева кэша вызывает отказ, не успешный ответ старым snapshot. После commit кэш сбрасывается, а другой store instance увидит новую metadata.
+Unchanged files skip reparsing via a validated metadata cache (`dev`, `inode`, `mtime`, `ctime`, `size`). Modified files read and validate from a single file descriptor; corruption detected after cache warmup fails explicitly rather than serving a stale snapshot. Commits invalidate the cache immediately.
 
-Отсутствующий файл означает пустую память. Битый JSON, неизвестная или некорректная схема, неверный тип файла и превышение storage boundary вызывают явную ошибку. Исходный файл не заменяется пустым банком. Runtime сообщает unavailable и не утверждает успешный recall или save. Повтор одного и того же unavailable сообщения подавляется внутри runtime до изменения ошибки/восстановления.
+A missing `.flecten/memory.json` represents an empty bank. Malformed JSON, unknown schema versions, non-regular files, or oversized files raise explicit errors without overwriting the damaged file with an empty bank; the runtime reports memory unavailable and deduplicates repeated unavailable notices until state changes.
 
-`forget` логический: tombstone и история сохраняют прежнее содержимое, как и raw transcript. Повтор forget уже forgotten записи не создаёт новую ревизию. Это очистка активного recall, а не физическое удаление личных данных со всех носителей. Автоматического удаления audit history нет.
+`forget` is logical: tombstones, `history`, and raw session transcripts retain prior text, and forgetting an already forgotten entry is a no-op. Audit history is never auto-purged.
 
-Старый строгий `version: 1` мигрирует при первом чтении. Старые id и timestamps сохраняются, kind становится `context`, ключ `legacy/<digest>`, evidence получает роль `legacy` и отметку unverified. Такие записи доступны для ручного ознакомления через list/read, но не подмешиваются автоматически. Для promotion модель должна собрать новое настоящее evidence и сохранить текущую ревизию. Миграция не выдумывает пользовательскую цитату и не переносит старый weight в доверие.
+Legacy `version: 1` files migrate on first read: IDs and timestamps carry over, `kind` becomes `"context"`, `key` becomes `"legacy/<digest>"`, and `evidence` is marked `role: "legacy"` (unverified). Migrated records remain readable via `list`/`read` but are excluded from auto-delivery until the model gathers fresh verified evidence and saves a new revision.
 
-## Стоимость и пределы
+## Cost and Limits
 
-| Граница | Текущий предел |
+| Boundary | Limit |
 |---|---|
-| Автодоставка | До 1200 оценочных токенов с учётом уже видимых автоматических memory messages; дополнительно ограничена свободным местом контекста |
-| Одна дельта | До 16 reference entries, с резервом под заголовок; invalidation использует доступный бюджет отдельно от discovery |
-| Массовый отзыв | Отдельное короткое уведомление, до 5000 typed record references вне model-facing текста; прежние тела снимаются до запроса |
-| Одна страница `list` | До 12 записей |
-| Checkpoint | До 3 кандидатов в существующем summary response |
-| Новый tool candidate | summary до 160 chars, content до 1600, reason до 500, до 8 cues по 80 |
-| Evidence кандидата | 1-4 цитаты, каждая 8-1200 chars |
-| Активные записи | До 500, без молчаливого вытеснения |
-| Текущие records и audit history | До 5000 элементов в каждом массиве |
-| Файл | До 32 MiB, проверка до чтения и публикации |
+| Auto-delivery budget | Up to 1,200 estimated tokens across visible automatic memory messages, further bounded by remaining context headroom |
+| Single delta | Up to 16 reference entries (header reserved); invalidations budget separately from discovery |
+| Bulk withdrawal | Short notice plus up to 5,000 typed record references outside model-facing prose; stale bodies removed before request |
+| `list` / `topics` page size | Up to 12 entries |
+| Compaction / `done` checkpoint | Up to 3 candidates piggybacked on the existing summary or completion |
+| Tool candidate sizes | `summary` <= 160 chars, `content` <= 1,600, `reason` <= 500, up to 8 `cues` of <= 80 chars |
+| Candidate evidence | 1-4 verbatim quotes, 8-1,200 chars each |
+| Active records | Up to 500, with no silent eviction |
+| `records` and `history` arrays | Up to 5,000 items each |
+| File size | Up to 32 MiB, checked before read and before write |
 
-Token budget автодоставки оценивается профилем `PROFILE_4`, поэтому 1200 не является точным provider billing count. Перед запросом резервируется место для ответа и ещё 160 оценочных токенов. Запрошенные моделью `list`/`read` имеют обычную стоимость tool output и не входят в отдельную квоту автоматического discovery. Небольшая error/checkpoint notice может сообщаться отдельно от discovery budget.
+Auto-delivery tokens are estimated with `PROFILE_4` (not exact provider billing counts), reserving output tokens plus a 160-token safety margin before each request. Explicit `list`/`read` calls consume standard tool-output budget rather than auto-discovery quota.
 
-Store принимает более широкие поля для migration/API: summary до 300, content до 8000, reason до 2000, до 16 cues и до 12 sources. Эти пределы не увеличивают лимиты инструмента. Истёкшая запись исключена из recall, но до forget остаётся status active и занимает активную ёмкость. При переполнении records/history/файла commit отклоняется; автоматической сборки audit history или eviction нет.
+The underlying store accepts wider fields for migrations and internal APIs (`summary` <= 300, `content` <= 8,000, `reason` <= 2,000, up to 16 `cues`, up to 12 `sources`) without relaxing tool input schemas. Expired entries stop appearing in recall but count toward the 500 active-record cap until forgotten. Exceeding record, history, or file-size caps rejects the commit.
 
-Дополнительных model requests и embeddings calls память не создаёт. Её цена состоит из постоянной инструкции, схемы инструмента, ограниченного discovery, выбранных моделью чтений/записей и дополнительных токенов candidates в compaction или `done`. Нулевое число отдельных вызовов не означает нулевую стоимость. Перед каждым provider request проверяется metadata файла; unchanged snapshot использует validated cache. Каждый refresh обходит и сортирует ограниченный банк, а также проверяет видимость в истории. Отдельное ускорение тёплого store read измерено во внутренних прогонах; оно не измеряет весь refresh или latency модели.
+Memory introduces zero extra model or embeddings requests; token cost comes from system instructions, the `memory` schema, bounded discovery deltas, explicit `memory` calls, and optional candidates in compaction/`done`.
 
-Checkpoint не выполняется в deterministic fallback, при невалидном summary или отсутствии model compaction. Если candidates невалидны или запись не удалась, корректный summary сохраняется, а runtime получает диагностическое notice. При idle/manual compaction notice сразу добавляется в контекст и durable `memory.context`; при работающем цикле оно доставляется перед очередным запросом, даже когда автоматическое чтение памяти запрещено. Все кандидаты checkpoint сохраняются атомарно: ошибка одного не публикует остальные. Нового запроса, ретрая ради памяти или принудительного продолжения перед final response нет.
+Compaction checkpoints are skipped on deterministic fallback, invalid summaries, or non-model compaction. If checkpoint candidates fail validation or persistence, the valid compaction summary still commits and the runtime records a diagnostic notice (written immediately to context and durable `memory.context` during idle/manual compaction, or delivered before the next turn during an active loop). Checkpoint candidate batches are all-or-nothing, with no extra retries or forced continuation turns.
 
-`ponytail:` curated store рассчитан на 500 активных записей. Темы и пакетное чтение уменьшают стоимость навигации, но при сотнях разных тем модель всё ещё может выбрать неверный маршрут. Нет автоматического semantic dedup, скрытого importance score, графа, background extractor, user-global scope и сервисного поиска. При подтверждённых пропусках можно добавить candidate retrieval, сохранив source authority, CAS, бюджеты и учёт реального контекста. Семантическое объединение сейчас выполняет основная модель через `reconcile`.
+`ponytail:` the curated store targets up to 500 active entries. Topic catalogs and batch reads lower navigation overhead, though hundreds of fine-grained topics can still misroute model selection. There is no automatic semantic deduplication, hidden importance scoring, knowledge graph, background extractor, user-global bank, or external search index; the primary model merges duplicates via `reconcile`. If measured recall misses justify it later, candidate retrieval can be layered on while preserving source authority, CAS revisions, token budgets, and exact context tracking.
 
-## Проверка и источники кода
+## Implementation and Tests
 
-- `src/core/memory/runtime.ts`, `delivery.ts`, `sources.ts`, `command.ts`, `schema.ts`, `context.ts`: инструменты, evidence, limits и visibility.
-- `src/store/memory.ts`, `src/app/memory.ts`: durable publication, CAS, migration и общий проектный port.
-- `src/core/loop/stream.ts`, `context.ts`, `tool-message.ts`, `src/core/session/session.ts`: доставка и привязка к рабочему циклу.
-- `src/core/pages/writer.ts`, `prompts/memory-checkpoint.md`: checkpoint в существующей compaction.
-- `src/store/events/replay.ts`: восстановление настоящих source/reference metadata.
-- `tests/unit/memory-store.test.ts`, `memory-runtime.test.ts`, `page-memory-checkpoint.test.ts`: store и настоящий session/run path со scripted provider.
-- `tests/unit/memory-navigation.test.ts`, `memory-completion.test.ts`, `memory-withdrawal.test.ts`: темы, пакетное чтение, capture в done и массовый отзыв до provider request и после replay.
+- `src/core/memory/runtime.ts`, `delivery.ts`, `sources.ts`, `command.ts`, `schema.ts`, `context.ts`: tool execution, evidence checks, limits, and visibility tracking.
+- `src/store/memory.ts`, `src/app/memory.ts`: durable storage, CAS, v1 migration, and shared project port.
+- `src/core/loop/stream.ts`, `context.ts`, `tool-message.ts`, `src/core/session/session.ts`: delta injection and loop integration.
+- `src/core/pages/writer.ts`, `prompts/memory-checkpoint.md`: piggybacked compaction checkpoint.
+- `src/store/events/replay.ts`: reconstruction of source and reference metadata on reopen.
+- `tests/unit/memory-store.test.ts`, `memory-runtime.test.ts`, `page-memory-checkpoint.test.ts`: store invariants and full session/run paths with scripted providers.
+- `tests/unit/memory-navigation.test.ts`, `memory-completion.test.ts`, `memory-withdrawal.test.ts`: topics, batch reads, `done` capture, and bulk invalidation before requests and across replay.
 
-Тесты доказывают программные границы и доставку для заданных ответов провайдера. Они не измеряют качество живой модели, уменьшение реальных ошибок пользователя, экономию денег или идеальное понимание невыраженных пожеланий.
-
-Отдельная проверка с живой моделью описывает конкретную запись коррекции и её применение в другом чате, расходы обычных ходов и найденный отказ схемы cues. Это один сетевой smoke, не сравнительный benchmark и не гарантия будущего качества.
+Automated suites prove deterministic boundaries and delivery mechanics against scripted responses rather than live-model recall quality or cost savings; live-model smoke results are tracked separately in internal engineering notes.

@@ -1,11 +1,10 @@
-# Бенч
+# Bench
 
-Реальный DeepSWE с приватными мутациями и production sidecar запускается через
-[адаптер Pier](deepswe/README.md). Описанный ниже mock runner проверяет механизмы харнесса.
+Real DeepSWE evaluations with private mutations and the production sidecar run through the [Pier adapter](deepswe/README.md). The local mock runner below verifies harness mechanics.
 
-20 задач лежат в `tasks/`, по одной на файл. Формат, проверки, метрики и baseline описаны во внутренних материалах.
+`tasks/` holds 20 tasks, one per file. Task schema, checks, metrics, and baseline methodology are documented in internal notes.
 
-## Прогон
+## Running
 
 ```bash
 bun scripts/bench.ts
@@ -13,21 +12,21 @@ bun scripts/bench.ts --filter read-config,edit-version
 bun test tests/unit/bench.test.ts
 ```
 
-По умолчанию mock-провайдер работает локально, сеть не нужна. Отчёт пишется в `results/<timestamp>/`: `report.json` и `summary.md`.
+By default, the mock provider runs locally without network access. Output is written to `results/<timestamp>/` as `report.json` and `summary.md`.
 
 ## Baseline
 
-Codex запускается только с явным флагом:
+Codex runs only when explicitly enabled:
 
 ```bash
 BENCH_CODEX_CLI=1 bun scripts/bench.ts
 ```
 
-Без флага или без бинарника baseline помечается `skipped` с причиной, цифры не подставляются.
+When the flag or binary is absent, the baseline is marked `skipped` with an explicit reason rather than fabricated numbers.
 
-## Правила
+## Rules
 
-- Одна задача проверяет один сценарий харнесса.
-- Фикстуры и ходы mock-провайдера лежат в JSON задачи.
-- Проверки детерминированные, без сети и без времени.
-- Падение baseline не маскируется: недоступные проверки помечаются `unscored`.
+- Each task exercises one harness scenario.
+- Fixtures and scripted mock-provider turns live inside the task JSON.
+- Checks are deterministic, offline, and time-independent.
+- Baseline failures are never masked: unavailable checks are marked `unscored`.

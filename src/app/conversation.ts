@@ -10,21 +10,13 @@ import { restoredQueue } from "../store/queue";
 import type { ToolContext } from "../tools/types";
 import { ConversationAcceptance } from "./conversation-acceptance";
 import { conversationBudget } from "./conversation-budget";
+import type { ConversationOptions } from "./conversation-options";
 import { restoreWorkerResult } from "./conversation-restore";
-import { ConversationTwin, type ConversationTwinPort } from "./conversation-twin";
+import { ConversationTwin } from "./conversation-twin";
+import { answerWorkerQuestion } from "./talker-question";
 import { WorkerRecovery } from "./worker-recovery";
 import { WorkerReferences } from "./worker-references";
 import type { WorkerRequest } from "./worker-tool";
-
-interface ConversationOptions {
-  events: readonly Event[];
-  twin?: ConversationTwinPort;
-  configure(
-    options: SessionOptions,
-    execute: (request: WorkerRequest, context: ToolContext) => Promise<unknown>,
-    answer: (question: string, signal: AbortSignal) => Promise<string | undefined>,
-  ): Promise<{ talker: SessionOptions; worker: SessionOptions }>;
-}
 
 /** Two independently cancellable loops behind the existing session interface. */
 export async function createConversation(
@@ -75,7 +67,7 @@ export async function createConversation(
     if (isPersistentEvent(event)) persistence.event(event);
     bus.emit(event);
     if (
-      accountingChanged(event) ||
+      (event.type !== "task.budget" && accountingChanged(event)) ||
       (event.type === "twin.activity" && event.activity.usage !== undefined)
     ) {
       const snapshot = { type: "task.budget" as const, sessionId: parentId, budget: ledger.view() };
@@ -230,8 +222,10 @@ export async function createConversation(
         }
         const unresolved = decision ? decision.verdict !== "pass" : await twin.enabled();
         if (unresolved && decision) twin.unresolved(decision);
+        const passed =
+          !unresolved && !acceptance.unmet() && ["done", "end"].includes(result.stopReason);
         publish(
-          unresolved ? { ...result, pass: false } : result,
+          { ...result, pass: passed },
           decision
             ? `Twin acceptance: ${unresolved ? "unresolved" : "accepted"}\n${decision.voice}\n${decision.instructions}`
             : `Twin acceptance: ${unresolved ? "unconfirmed" : "disabled"}.`,
@@ -263,6 +257,20 @@ export async function createConversation(
   }
   async function control(request: WorkerRequest, context: ToolContext): Promise<unknown> {
     if (disposed) throw new Error("Conversation is closed");
+    if (request.operation === "talker.question") {
+      if (context.sessionId !== workerId)
+        throw new Error("Only the execution Worker may ask Talker");
+      return answerWorkerQuestion({
+        sessionId: parentId,
+        workerId,
+        question: request.question,
+        history: talker.getHistory(),
+        options: questionOptions,
+        budget: ledger,
+        context,
+        emit,
+      });
+    }
     if (request.operation === "criterion.list" || request.operation === "criterion.report") {
       if (context.sessionId !== workerId)
         throw new Error("Only the execution Worker may report acceptance evidence");
@@ -279,7 +287,8 @@ export async function createConversation(
       return worker.send({ type: "stop", mode: "force" });
     }
     if (request.operation === "steer") {
-      if (!worker.isBusy()) throw new Error("Worker is idle; start a task explicitly");
+      if (!executing && !worker.isBusy())
+        throw new Error("Worker is idle; start a task explicitly");
       revokeWorkerIntent();
       acceptance.reopen(request.message);
       return worker.send({ type: "queue.add", text: request.message, mode: "steer" });
@@ -305,6 +314,7 @@ export async function createConversation(
     return { workerId, state: "running", acceptance: acceptance.state };
   }
   const initial = await setup.configure(options, control, answer);
+  let questionOptions = initial.talker;
   await options.modules?.shareSession?.(parentId, workerId);
   const childEvents = setup.events.flatMap((event, index) =>
     event.type === "worker.event" ? [{ seq: index + 1, event: event.event }] : [],
@@ -329,6 +339,7 @@ export async function createConversation(
         ? acceptance.markdown()
         : undefined,
     permissionIntent: workerIntent,
+    approvalSessionId: parentId,
     sessionId: workerId,
     ...(role.pages
       ? {
@@ -343,7 +354,6 @@ export async function createConversation(
     externalBudgetExhausted: () => ledger.stopReason(),
   });
   worker = createSession(executionOptions(initial.worker));
-  // After the first load, subsequent runs keep the Worker's own in-memory history.
   talker = createSession({
     ...initial.talker,
     taskBudget: ledger,
@@ -395,6 +405,7 @@ export async function createConversation(
       configuring = configuring
         .then(async () => {
           const roles = await setup.configure(options, control, answer);
+          questionOptions = roles.talker;
           talker.update({
             ...roles.talker,
             taskBudget: ledger,
@@ -438,8 +449,12 @@ export async function createConversation(
         const raw = references.raw(command.callId);
         if (raw) return worker.send({ ...command, callId: raw });
       }
-      if (command.type === "subagent.stop") return worker.send(command);
-      if (command.type === "jobs.stop") return worker.send(command);
+      if (["subagent.stop", "jobs.stop", "jobs.list"].includes(command.type))
+        return worker.send(command);
+      if (command.type === "run" && command.summaryWake) {
+        talkerRun = talker.send(command);
+        return talkerRun;
+      }
       await configuring;
       if (command.type === "run") {
         muted = false;
@@ -452,7 +467,11 @@ export async function createConversation(
             type: "queue.add",
             text: command.prompt,
             mode: "steer",
+            ...(command.clientId ? { id: command.clientId } : {}),
             ...(command.attachments ? { attachments: command.attachments } : {}),
+            ...(command.attachmentSnapshot
+              ? { attachmentSnapshot: command.attachmentSnapshot }
+              : {}),
             ...(command.contexts ? { contexts: command.contexts } : {}),
           });
         talkerRun = talker.send(command);

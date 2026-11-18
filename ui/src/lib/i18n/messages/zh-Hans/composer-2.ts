@@ -7,8 +7,8 @@ export default {
   "Waiting for the current step to finish. Click again to stop immediately":
     "正在等待当前步骤完成。再次点击可立即中断",
   "Stop after the current response or command": "在当前回答或命令完成后停止",
-  "Queue: send when the current run finishes": "加入队列：任务完成后发送",
-  "Guide now: send at the next safe point": "立即引导：在下一个安全时机传达",
+  "Queue: send when the current run finishes": "排队：当前运行结束后发送",
+  "Guide now: send at the next safe point": "即时引导：在当前工具调用结束后立即送达，不中断运行",
   "Stopping after the current step. Click again to stop it immediately.":
     "将在当前步骤完成后停止。再次点击将立即中断。",
 } as const;

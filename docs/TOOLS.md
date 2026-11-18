@@ -1,114 +1,92 @@
-# Тулы
+# Built-In Tools
 
-Источник встроенного каталога: `src/tools/builtin.ts`. Модель получает реальные имена, описания и JSON Schema текущего реестра. Список `task` дополняется доступными ролями, `skill` появляется при наличии skills, MCP-инструменты подключаются динамически после принятия trust.
+Canonical built-in definitions live in `src/tools/builtin.ts`. Models receive exact tool names, descriptions, and JSON Schemas from the active session registry: `task` dynamically lists available subagent roles, `skill` appears when skills are discovered, and external MCP tools register after workspace trust is granted.
 
-## Каталог
+## Catalog
 
-| Тул | Аргументы | Контракт и пределы |
+| Tool | Arguments | Contract and limits |
 |---|---|---|
-| `memory` | `operation`, поля выбранной операции | Проектная память: `list`, `read`, `sources`, `save`, `forget`. Канонический key и CAS revision, точное evidence, ограниченная доставка. Полный контракт ниже и в [MEMORY.md](MEMORY.md). |
-| `read` | `path`, `offset`, `characterOffset?`, `limit`, `focus?` | Текст или изображение PNG, JPEG, WebP, GIF, AVIF до 10 МиБ; строки с 1. По умолчанию до 2000 строк и 50 000 байт, `limit` до 10 000. Для продолжения возвращает следующий offset; длинная физическая строка имеет продвигающийся `nextCursor` с `characterOffset`, не разрывающий Unicode. Изображения возвращает напрямую зрячей модели или описывает через vision-модель. `focus` доступен только незрячей модели и задаёт вопрос к изображению. Остальные бинарные файлы и каталоги не читает. |
-| `write` | `path`, `content`, `why` | Создаёт файл и родительские каталоги или заменяет весь файл. Существующий файл требует актуального чтения. |
-| `edit` | `path`, `oldString`, `newString`, `replaceAll`, `edits`, `why` | Точная замена или пакет непересекающихся замен относительно исходного файла. Без `replaceAll` совпадение должно быть единственным. Сохраняет переводы строк. |
-| `apply_patch` | `patch`, `why` | Формат `*** Begin Patch` / `*** End Patch`, Add/Update/Delete/Move и hunks `@@`. Весь patch валидируется до записи. |
-| `delete` | `path`, `recursive`, `why` | Удаляет файл или пустой каталог. Непустой каталог требует явного `recursive: true`. |
-| `move` | `from`, `to`, `overwrite`, `why` | Перемещает обычный файл. Каталоги и symlink не поддерживаются; существующий destination по умолчанию вызывает отказ. |
-| `todo` | `op`, `id`, `content`, `status`, `priority` | `list`, `add`, `update`, `remove`, `clear`. Статусы `pending`, `in_progress`, `completed`, `cancelled`. Каждая операция возвращает полный список. |
-| `task` | `operation?: run / list / wait / stop`, `agent?`, `prompt?`, `context?`, `id?` | Для run нужны agent и prompt, для wait/stop нужен id. Дочерняя сессия имеет собственный журнал, имя и бюджет, общее рабочее дерево и предел 30 минут. Stop родителя прекращает ожидание, дочернее исполнение продолжается. List возвращает состояния, wait забирает отчёт, stop останавливает конкретного субагента. |
-| `grep` | `pattern`, `literal`, `path`, `glob`, `type`, `caseSensitive`, `context`, `hidden`, `count`, `filesWithMatches`, `maxResults` | Поиск содержимого через `rg` с ограниченным fallback. По умолчанию 200 результатов, максимум 500; контекст до 20 строк. Уважает `.gitignore`. |
-| `glob` | `pattern`, `path`, `mode`, `hidden`, `includeGenerated`, `offset`, `maxResults` | `mode=entries` перечисляет непосредственные файлы и каталоги без рекурсии. `mode=files` возвращает отсортированные пути, по умолчанию до 500, максимум 5000. Шаблон без `/` ищет на любой глубине. Уважает `.gitignore`; служебные и generated-каталоги исключены; `includeGenerated=true` явно включает производные данные. Пагинация возвращает `total`, `nextOffset` и признак полноты. |
-| `ask` | `question`, `options`, `allowCustom` | Показывает вопрос и сразу возвращает результат. Не ждёт ответа и не выдаёт approval. Пустой `options` означает свободный ответ. |
-| `web_fetch` | `url` | Публичный HTTP(S), до 10 секунд и 2 МиБ. HTML преобразуется в читаемый текст; JavaScript не исполняется. |
-| `web_search` | `query` | До 8 результатов DuckDuckGo: заголовок, URL и snippet. Для проверки содержания источник нужно открыть через `web_fetch`. |
-| `terminal` | `op`, `id`, `command`, `input`, `cwd`, `cols`, `rows`, `timeoutMs` | Постоянный PTY: `run`, `write`, `read`, `resize`, `kill`, `list`. Ожидание до 600 секунд; истечение ожидания оставляет процесс работать. Ненулевой exit при `run` означает ошибку. |
-| `bash` | `command`, `cwd`, `timeoutMs`, `background`, `expectedOutputs` | Новая shell для каждого вызова; `cd` и env между вызовами не сохраняются. По умолчанию 120 секунд, максимум 600. Foreground timeout убивает дерево процессов; background возвращает job id. Foreground `expectedOutputs` проверяет наличие обычного файла, минимальный размер и опциональный SHA-256; exit0 и проверенные outputs различаются. |
-| `jobs` | `op`, `id`, `lines`, `offset`, `timeoutMs` | `list`, `output`, `wait`, `stop` для фоновых `bash` jobs. Хвост по умолчанию 80 строк, максимум 2000; `offset` задаёт позицию в символах. `wait` до 30 минут; timeout оставляет job работать. |
-| `done` | `summary`, `evidence`, необязательные `memoryCandidates` | Завершает run через явный `terminate`. До трёх кандидатов памяти сохраняются в том же завершении; отказ памяти не отменяет задачу. `evidence` является непустым массивом; автоматической проверки истинности доказательств или отдельного Critic gate нет. |
-| `skill` | `name` | Загружает инструкции выбранного skill по требованию. Имя выбирается из обнаруженного каталога. Неподтверждённый skill получает отказ. |
-| `tool_catalog` | `operation`, `names`, `offset`, `limit` | Список внешних MCP capabilities без загрузки всех schemas. `list` показывает имена и описания, `activate` добавляет точные имена в текущую сессию. После успешного вызова их обычные schemas доступны на следующем ходе; разрешения исполнения не меняются. |
-| `module` | `operation`, поля операции | Постоянный gateway для session-scoped пакетов: `list`, `activate`, `deactivate`, `status`, `tools`, `call`, `read`. Подключает инструкции, MCP/SDK tools, хуки и HTML-поверхности без изменения provider tools. Контракт в [MODULES.md](MODULES.md). |
+| `memory` | `operation` plus operation-specific fields | Project memory (`topics`, `list`, `read`, `sources`, `save`, `forget`, `reconcile`): canonical `key`, CAS `expectedRevision`, verified quote evidence, and bounded auto-delivery. See below and [MEMORY.md](MEMORY.md). |
+| `read` | `path`, `offset`, `characterOffset?`, `limit`, `focus?` | Reads UTF-8 text or images (`PNG`, `JPEG`, `WebP`, `GIF`, `AVIF` <= 10 MiB); 1-based line numbers, default 2,000 lines / 50,000 bytes, `limit` <= 10,000. Returns continuation `offset` plus UTF-8-safe `nextCursor` (`characterOffset`) on long lines. Delivers raw images to vision models or describes them via `vision` (`focus` asks a targeted question on non-vision models). Rejects directories and other binaries. |
+| `write` | `path`, `content`, `why` | Creates a file (including parent directories) or overwrites an existing file; overwriting requires a current `read` in the session. |
+| `edit` | `path`, `oldString`, `newString`, `replaceAll`, `edits`, `why` | Exact replacement or non-overlapping batch replacements against the original file, preserving line endings; requires a unique match unless `replaceAll: true`. |
+| `apply_patch` | `patch`, `why` | `*** Begin Patch` / `*** End Patch` format supporting `Add`, `Update`, `Delete`, `Move`, and `@@` hunks; validated atomically before any disk write. |
+| `delete` | `path`, `recursive`, `why` | Deletes a file or empty directory; non-empty directories require `recursive: true`. |
+| `move` | `from`, `to`, `overwrite`, `why` | Moves/renames a regular file (directories and symlinks unsupported; existing destinations fail unless `overwrite: true`). |
+| `todo` | `op`, `items`, `id`, `content`, `status`, `priority` | Session checklist (`list`, `set`, `add`, `update`, `remove`, `clear`) with statuses `pending`, `in_progress`, `completed`, `cancelled`; `set` replaces the list in one batch call and every call returns the full list. |
+| `task` | `operation?: run / list / wait / stop`, `agent?`, `prompt?`, `context?`, `id?` | Spawns or manages isolated subagent sessions (`run` requires `agent` + `prompt`; `wait`/`stop` require `id`) sharing the worktree with a dedicated journal, budget, and 30-minute cap. Stopping the parent ends `wait` while child execution continues unless stopped via `stop`. |
+| `grep` | `pattern`, `literal`, `path`, `glob`, `type`, `caseSensitive`, `context`, `hidden`, `count`, `filesWithMatches`, `maxResults` | Content search backed by `rg` with a bounded worker fallback; default 200 matches, max 500, `context` <= 20 lines, respects `.gitignore`. |
+| `glob` | `pattern`, `path`, `mode`, `hidden`, `includeGenerated`, `offset`, `maxResults` | `mode="entries"` lists immediate children non-recursively; `mode="files"` returns sorted paths (default 500, max 5,000; slash-free patterns match at any depth). Respects `.gitignore` and skips generated/service dirs unless `includeGenerated: true`; returns `total`, `nextOffset`, and completeness flag. |
+| `ask` | `question`, `options`, `allowCustom` | Renders a structured question card and returns immediately without blocking or granting tool approvals; empty `options` requests free-form input. |
+| `web_fetch` | `url` | Fetches public `http`/`https` URLs (10s timeout, 2 MiB cap) and extracts readable text from HTML without executing JavaScript. |
+| `web_search` | `query` | Returns up to 8 DuckDuckGo results (`title`, `url`, `snippet`); verify claims by opening target pages with `web_fetch`. |
+| `terminal` | `op`, `id`, `command`, `input`, `cwd`, `cols`, `rows`, `timeoutMs` | Persistent interactive PTY (`run`, `write`, `read`, `resize`, `kill`, `list`); waits up to 600s (timeout leaves process alive; non-zero exit on `run` reports an error). |
+| `bash` | `command`, `cwd`, `timeoutMs`, `background`, `expectedOutputs` | Fresh shell per call (`cd` and env do not persist); default 120s timeout, max 600s. Foreground timeout kills the process tree; `background: true` returns a job ID. Foreground `expectedOutputs` verifies regular-file existence, min byte size, and optional SHA-256 separately from exit code `0`. |
+| `jobs` | `op`, `id`, `lines`, `offset`, `timeoutMs` | Manages background `bash` jobs (`list`, `output`, `wait`, `stop`); tails 80 lines by default (max 2,000, character `offset`), `wait` up to 30 minutes without killing on timeout. |
+| `done` | `summary`, `evidence`, optional `memoryCandidates` | Terminates the run explicitly with non-empty `evidence` and up to 3 piggybacked `memoryCandidates` (memory rejection is reported in tool output without aborting completion). |
+| `skill` | `name` | Loads a trusted skill's full `SKILL.md` body and resource list on demand by catalog name. |
+| `tool_catalog` | `operation`, `names`, `offset`, `limit` | Lazy discovery for external MCP tools: `list` browses names and descriptions, and `activate` enables exact tool schemas starting on the next turn without altering execution permissions. |
+| `module` | `operation` plus operation-specific fields | Session-scoped module gateway (`list`, `activate`, `deactivate`, `status`, `tools`, `call`, `read`) loading instructions, MCP/SDK tools, hooks, and surfaces without mutating provider tool definitions ([MODULES.md](MODULES.md)). |
 
-`grep` по умолчанию принимает regex, а `literal: true` включает точный поиск текста. `filesWithMatches` имеет приоритет над `count`; `count` считает совпавшие строки. Это режимы поиска данных, а не способ определять intent или состояние агента.
+`grep` defaults to regular-expression search unless `literal: true` is passed, and `filesWithMatches` takes precedence over line `count`. For `ask`, silence or elapsed time never implies user consent.
 
-Для `ask` отсутствие ответа или прошедшее время также не означают согласие.
+## Selection and Ordering
 
-## Выбор и порядок
+Use `glob` to locate paths, `grep` to search file contents, `read` to inspect files, and `edit` / `apply_patch` / `write` to modify them. Use `bash` for stateless commands, `terminal` for stateful interactive PTYs, and `jobs` to monitor background `bash` runs.
 
-Для поиска путей используется `glob`, содержимого `grep`, чтения `read`. Для правок применяются `edit`, `apply_patch` и `write`. `bash` предназначен для обычных команд, `terminal` для интерактивного процесса с сохранённым PTY, `jobs` для запущенной фоновой команды.
+Run independent reads in parallel, and chain dependent read -> edit -> verify steps sequentially. Obtaining a background job ID never proves command success: inspect terminal status and exit code first, and end runs explicitly via `done` rather than relying on prose cues.
 
-Независимые чтения можно выполнять параллельно. Зависимые чтение, правка и проверка идут по порядку. Запуск команды и получение job id не доказывают её успех: перед заявлением о результате нужны конечное состояние и exit code. Завершение определяется `done` и состоянием протокола, а не угадывается по фразе в ответе модели.
+## Agent Memory (`memory`)
 
-## Память агента
+`memory` runs inline during regular primary-model turns with no background observer, embeddings API, or extra save turn:
 
-`memory` доступен основной модели в обычном рабочем ходе. Она решает, нужен ли durable факт или чтение; no-op является нормальным результатом. Память общая только внутри проекта, историческая и подчиняется текущим инструкциям. Отдельного observer, embeddings API или запроса перед финальным ответом нет.
+- `topics`: up to 12 active topics per page with `cursor` (untagged records appear under `Uncategorized`).
+- `list`: up to 12 active non-expired records filtered by exact `topic`, `kind`, and NFKC case-folded substring `query` over `key`/`summary`/`cues`.
+- `read`: 1-6 IDs returning bodies, evidence, and revisions (6,000-token batch cap with deferred IDs returned explicitly; already visible revisions return a short confirmation).
+- `sources`: up to 12 eligible session user/tool sources (excluding summaries, notices, and `memory` outputs).
+- `save`: creates (`expectedRevision: 0`) or updates a `key` with 1-4 verbatim quotes (8-1,200 chars; `preference` and `lesson` require user quotes), optional `cues`, `expiresAt`, up to 3 `topics`, and `appliesWhen`.
+- `forget`: writes a logical tombstone at `expectedRevision`, removing active recall while keeping audit history.
+- `reconcile`: commits up to 8 `save` and 8 `forget` operations atomically.
+- `done.memoryCandidates`: commits up to 3 candidates alongside run completion.
 
-- `topics` возвращает до 12 тем с cursor. Темы задаёт основная модель, выбирает их по смыслу; старые записи без тем доступны в `Uncategorized`.
-- `list` возвращает до 12 активных записей, принимает необязательные точную `topic`, `kind`, `query`, `cursor`. Query буквальный по key/summary/cues после NFKC и приведения регистра, без semantic ranking кода.
-- `read` принимает `id` или `ids` до шести и возвращает тела с evidence и ревизией. Пакет ограничен 6000 оценочных токенов, отложенные IDs возвращаются явно. Уже полностью видимая ревизия повторно не копируется. Истёкшая и forgotten запись недоступна.
-- `sources` показывает до 12 последних допустимых user/tool источников. Summary, notices и результат самого memory не подтверждают новую запись.
-- `save` принимает `key`, `kind`, `summary`, `content`, `reason`, `priority`, `expectedRevision`, `evidence` и необязательные `cues` (по умолчанию `[]`), `expiresAt`, `topics` до трёх и `appliesWhen`. Для нового key ревизия 0, для изменения текущая. До четырёх точных цитат по 8-1200 символов; `preference` и `lesson` требуют user evidence. Основные и собственные kinds проверяются схемой.
-- `forget` требует `id` и текущую `expectedRevision`. Новая tombstone revision исключает активное чтение, сохраняя audit history и raw transcript. Это не физическое стирание всех копий данных.
-- `reconcile` атомарно применяет до восьми `save` и восьми `forget`: все схемы, источники и ревизии должны пройти до единой публикации. Это путь объединения дублей и замены противоречащих ключей.
-- `done.memoryCandidates` сохраняет до трёх кандидатов в обычном завершении без отдельного provider request. Отказ памяти не отменяет выполненную задачу, но явно отражается в результате. Completion bodies получают coverage только если не обрезаны output limit.
+Secrets are rejected before commit, corrupt memory files fail explicitly without wiping data, and permission checks map `topics`/`list`/`read`/`sources` to `read` and `save`/`forget`/`reconcile` to `write` on `.flecten/memory.json` ([MEMORY.md](MEMORY.md)).
 
-Saved означает, что atomic commit завершился. Идентичный payload того же key не создаёт ревизию; похожие формулировки объединяет модель. Runtime проверяет реальность цитаты и роль, но не доказывает истинность её интерпретации. Секреты отвергаются до сохранения. Corrupt/unknown memory file даёт явный отказ без замены пустым банком.
+## File Reading and Mutation
 
-Permission action для `topics`, `list`, `read`, `sources` равен `read`, для `save`, `forget`, `reconcile` равен `write` на фиксированный `.flecten/memory.json`. Действуют permissions, hooks и применимые границы доступа. Нативный capture в done и checkpoint использует write policy без скрытого approval. Вызовы видны в обычном transcript; отдельного JSON-экрана настроек нет. Полные размеры, budgets, migration и ограничения в [MEMORY.md](MEMORY.md).
+Overwriting with `write` and editing with `edit` fail if an existing file has not been read in the current session or if its content hash (tracked for files <= 20 MiB even on partial reads) changed on disk since the last read (`apply_patch`, `delete`, and `move` still expect prior inspection even without read-tracker enforcement).
 
-## Чтение и изменение файлов
+`edit` preserves per-line `LF`/`CRLF` endings across unchanged and replaced lines, applying the region's dominant newline to inserted lines within bounded line-diff limits; missing, ambiguous, or overlapping batch spans fail cleanly before touching disk so the model can re-read and fix arguments. File tools record undo/redo checkpoints and `bash` snapshots into shadow Git; `why` documents out-of-workspace intent without expanding permissions.
 
-`edit` и перезапись через `write` запрещены, если существующий файл не прочитан в сессии или его hash изменился после чтения. `apply_patch`, `delete` и `move` не используют эту проверку read tracker; агент должен сначала изучить затрагиваемые файлы. Частичное чтение не означает, что модель увидела весь файл; для файлов до 20 МиБ при этом сохраняется hash полного содержимого для обнаружения внешних изменений.
+## Argument Validation and Deterministic Repair
 
-В многострочном совпадении `edit` сохраняет LF/CRLF каждой неизменённой и позиционно заменяемой строки; вставленные строки используют окончание текущего региона. Выравнивание mixed-EOL ограничено бюджетом существующего line diff: слишком большой регион получает отказ до записи с предложением меньших точных замен. Точные замены дают отказ при отсутствии или неоднозначности совпадения. В пакетном `edit` все замены проверяются относительно исходного текста, а пересечения запрещены. При ошибке нужно перечитать актуальный участок и исправить аргументы, а не повторять тот же вызов.
+The registry resolves tool names (supporting explicit recovery aliases like `read_file` -> `read` while giving canonical names priority) and validates arguments against Zod schemas. On validation failure, up to three deterministic repair passes run before re-validating:
 
-Файловые изменения создают checkpoints; shell-изменения используют отдельный shadow checkpoint. Это средство восстановления, а не обещание автоматического rollback при любом отказе. Поле `why` объясняет выход за границу проекта, но не расширяет permissions и sandbox.
+- recovering truncated JSON or wrapping bare primary string arguments;
+- mapping known field aliases, stripping unknown keys, and unwrapping Markdown path backticks;
+- dropping `null` on optional fields and `{}` where an optional array is expected;
+- parsing stringified JSON arrays/objects or wrapping scalars into single-element arrays;
+- coercing numeric strings and `"true"`/`"false"` only where flagged by schema type errors (`timeoutMs` is always interpreted in milliseconds regardless of magnitude).
 
-## Валидация и ремонт аргументов
+Successful repairs attach `<repair_note>` and canonicalize the tool name; unrecoverable inputs return structured field errors without executing the tool.
 
-Реестр сначала разрешает имя инструмента и проверяет аргументы его схемой. Неизвестное имя возвращает список доступных имён. Явные aliases, например `read_file` в `read`, поддерживаются для восстановления вызова; существующее каноническое имя всегда имеет приоритет.
+## Permissions, Retries, and Cancellation
 
-Если проверка не прошла, ремонт ограничен явными aliases и ошибками схемы:
+Permissions, OS sandboxing, hooks, and active skill `allowedTools` enforce at the loop boundary (child subagents intersect permissions with the parent and fail immediately on `ask`).
 
-- Разбор JSON аргументов, включая восстановимый обрезанный JSON, и оборачивание основного строкового аргумента.
-- Алиасы полей, удаление неизвестных полей и Markdown-обёртки пути.
-- Удаление `null` в необязательном поле и пустого объекта вместо необязательного массива.
-- Разбор строки с JSON-массивом или объектом, оборачивание одиночного значения в массив.
-- Приведение числовых строк и `true` / `false` к типу, который требует схема.
+Automatic retries run only on structured transient failures (`ToolFailure`, transient network codes, or retryable HTTP status codes), never via error-message substring matching: read-only tools retry up to 3 attempts, mutating tools run once by default (up to 2 attempts with an explicit `idempotencyKey`), and permission, validation, timeout, or abort errors never auto-retry. Every call receives an `AbortSignal` and timeout; verify external state before re-running any timed-out mutating tool.
 
-Ремонт делает до трёх проходов исправлений с итоговой проверкой. Канонизация имён, полей и путей применяется перед проверкой типов; приведения типов ограничены ошибками схемы. `timeoutMs` и его aliases всегда задаются в миллисекундах: величина числа не меняет единицы. Успех возвращает `<repair_note>` и каноническое имя, если оно исправлено. Неудача сообщает полученные поля и читаемые ошибки; инструмент не исполняется.
+## Output Truncation, Provenance, and Logs
 
-## Разрешения, повтор и отмена
+Internal `ToolResult` objects (`ok`, `output`, `error`, `fullOutputPath`, `durationMs`, `provenance`, `data`, notices, trailers) format into readable model messages truncated first by line count and then by byte budget (preserving head + tail generally, or requested start + continuation cursor for `read`). Full redacted outputs stream to `.flecten/sessions/<id>/logs/` (`bash` caps inline collection at 2 MiB while streaming full output to disk).
 
-Permissions, sandbox и hooks проверяются на границе loop. Активный skill может дополнительно ограничить разрешённые инструменты. Дочерние агенты получают собственные правила и не могут запрашивать пользовательское подтверждение.
+Outputs from `read`, `grep`, web tools, MCP, and `bash` are wrapped inside fenced `Untrusted data` sections with `Source`, `Source reference`, and `Trust` headers while keeping exit codes, durations, and log paths outside the untrusted fence. Having a `fullOutputPath` never implies the model has read the truncated portion.
 
-Повтор разрешён только для структурно распознанной transient-ошибки: `ToolFailure`, известного сетевого кода или соответствующего HTTP-статуса. Обычный инструмент получает до трёх попыток. Mutating-инструмент по умолчанию исполняется один раз; с явным `idempotencyKey` допустимо до двух попыток. Ошибки permission, client, timeout и отмена не повторяются вслепую. Текст ошибки не используется для угадывания retry.
+## Skills and MCP
 
-Вызовы получают `AbortSignal` и таймаут. Инструмент, который игнорирует signal, может закончить изменение уже после возврата timeout; перед повтором такого действия нужно проверить состояние. `bash`, `terminal` и `jobs` имеют разные контракты ожидания, указанные в каталоге.
+`skill` caches loaded `SKILL.md` bodies per file revision and enforces `allowedTools` dynamically. External MCP schemas activate lazily via `tool_catalog` (persisted via typed calls and `contextSummary.activeMcpTools` per chat), using normalized names `mcp_<server>_<tool>` (<= 64 chars, description <= 2,000 chars, input JSON Schema <= 24,000 chars) plus optional `read_resource` and `use_prompt` (outputs capped at 2,000,000 chars). Upstream `outputSchema` mismatches on completed `stdio` calls do not mark an already executed action as failed, whereas `isError` and transport errors propagate as failures.
 
-## Вывод, происхождение и логи
+## Scratch Directory and Remote SSH
 
-Внутренний `ToolResult` содержит `ok`, `output` и при необходимости `error`, `fullOutputPath`, `durationMs`, `provenance`, `data`, служебные notices и trailers. Модель получает читаемое tool message, а не сырой JSON envelope.
+`TMPDIR` and `FLECTEN_SCRATCH` point to `.flecten-scratch/<sessionId>/`, shared across foreground `bash`, background `jobs`, and `terminal` PTYs across app restarts (use `FLECTEN_SCRATCH` rather than sandbox `/tmp` when reading scratch files via file tools; scratch moves to trash with its session and is excluded from `glob`, `grep`, and checkpoints).
 
-Generic-вывод ограничивается сначала по строкам, затем по байтам с сохранением начала и конца. Для `read` сохраняется начало запрошенного диапазона и offset продолжения. Ошибки и diff не имеют универсального исключения из обрезки. Полный доступный вывод сохраняется в `.flecten/sessions/<id>/logs/`; существующий полный shell log используется повторно. Shell collector ограничивает inline-буфер 2 МиБ, потоковый лог при этом пишется на диск.
-
-Данные `read`, `grep`, web, MCP и shell передаются в Markdown-секции `Untrusted data` с полями `Source`, `Source reference` и `Trust`, содержимое помещается в безопасный code fence. Метаданные выполнения, exit code, время и путь лога остаются вне этой области. Инструкции внутри данных не получают приоритет над системными правилами или запросом пользователя.
-
-Известные секреты вырезаются до записи логов и передачи событий. Путь полного лога не означает, что модель уже прочитала его содержимое; обрезанный фрагмент нельзя считать полным доказательством.
-
-## Skills и MCP
-
-`skill` возвращает `SKILL.md`, каталог ресурсов и путь skill. Полный текст загружается по требованию и кэшируется по ревизии в сессии. `allowedTools` активированного skill ограничивает дальнейшие вызовы и перепроверяется при смене доверия или исчезновении skill. Пустой список не добавляет ограничение.
-
-Внешние MCP schemas в продуктовом registry загружаются через `tool_catalog`. Выбор восстанавливается из успешных typed calls и `contextSummary.activeMcpTools`; при обновлении модели переносятся только ещё доступные имена. Разные чаты не делят выбор. Модульный gateway сохраняет собственный lifecycle `activate/tools/call`.
-
-MCP-имя имеет вид `mcp_<server>_<tool>` с нормализацией и hash при необходимости, максимум 64 символа. Description ограничен 2000 символами, JSON Schema 24 000; вход должен быть объектом и проверяется по реальной схеме сервера. Обычный remote call считается mutating независимо от `readOnlyHint`; режим readonly сервера блокирует такие вызовы.
-
-Stdio SDK проверяет общий MCP-конверт результата; advertised `outputSchema` не используется как признак ошибки исполнения уже завершённого действия. Неверные входные аргументы блокируются до вызова. Серверный `isError` и ошибки транспорта сохраняют отказ; содержимое ответа остаётся недоверенными данными. Это согласует stdio с существующим HTTP-путём.
-
-При объявленных capabilities MCP также предоставляет namespaced-инструменты `read_resource` и `use_prompt`. Результаты и structured data ограничены 2 000 000 символов; image/audio описываются метаданными. Инструкции сервера и полученные prompts остаются внешними данными и не могут расширить разрешения.
-
-## Scratch и удалённая авторизация
-
-`TMPDIR` и `FLECTEN_SCRATCH` указывают на scratch текущей сессии в `.flecten-scratch/<sessionId>/`. Foreground, background и PTY используют одну директорию; перезапуск приложения не удаляет её. Для последующего чтения файловыми инструментами используйте явный `FLECTEN_SCRATCH`, а не sandbox alias `/tmp`. При удалении чата scratch переносится в его корзину и затем истекает с ней. Обзор, grep и checkpoints не захватывают scratch автоматически.
-
-Remote jobs используют живой SSH agent приложения и публичные host keys только выбранного host/port. Preflight различает `auth_unavailable`, `host_key_unavailable` и `remote_environment_unavailable`. Приватные ключи и весь `~/.ssh` в sandbox не передаются. Host verification остаётся строгой, agent forwarding на удалённый хост отключён. Сохранённый grant не открывает сеть при новом запрете. Проверки живого SSH сервера и native macOS остаются отдельной платформенной приёмкой.
+Remote SSH jobs preflight live `SSH_AUTH_SOCK` and verified per-host `known_hosts` entries (distinguishing `auth_unavailable`, `host_key_unavailable`, and `remote_environment_unavailable`), keeping private keys and `~/.ssh` unmounted and disabling remote agent forwarding.

@@ -61,7 +61,7 @@ export class ShellSnapshots {
   configure(config: HarnessConfig): void {
     if (!this.project) {
       this.#service = undefined;
-      this.#state = { state: "off", reason: "Выберите проект для снимков рабочей папки" };
+      this.#state = { state: "off", reason: "Open a project folder to enable shell snapshots" };
       return;
     }
     const key = JSON.stringify(checkpointSettings(config));
@@ -70,10 +70,10 @@ export class ShellSnapshots {
     const current = shellCheckpointsFor(this.#cwd, config, this.#store);
     this.#service = current;
     if (!current) {
-      this.#state = { state: "off", reason: "выключены в настройках (checkpoints.shell)" };
+      this.#state = { state: "off", reason: "disabled in settings (checkpoints.shell)" };
       return;
     }
-    this.#state = { state: "indexing", reason: "первичная индексация рабочей папки ещё идёт" };
+    this.#state = { state: "indexing", reason: "indexing workspace files" };
     const warming = current.ready();
     this.#warming.add(warming);
     void warming

@@ -202,7 +202,7 @@ test("mandatory checkpoint and queued denial preserve human feedback", async () 
       .dispatchEvent("click");
     await dialog.getByText("Advanced access settings", { exact: true }).dispatchEvent("click");
     await dialog
-      .getByRole("group", { name: "Always ask a person", exact: true })
+      .getByRole("group", { name: "Require manual approval", exact: true })
       .getByRole("checkbox", { name: "Terminal", exact: true })
       .dispatchEvent("click");
     await dialog.getByRole("button", { name: "Save", exact: true }).dispatchEvent("click");
@@ -228,9 +228,9 @@ test("mandatory checkpoint and queued denial preserve human feedback", async () 
     ).toBeVisible();
     await card.getByText("Details", { exact: true }).dispatchEvent("click");
     await expect(card.getByRole("button", { name: "For this chat", exact: true })).toHaveCount(0);
-    await expect(
-      card.getByRole("button", { name: "Repeat this action in this chat", exact: true }),
-    ).toHaveCount(0);
+    await expect(card.getByRole("button", { name: "Allow in this chat", exact: true })).toHaveCount(
+      0,
+    );
     await expect(card.getByRole("button", { name: "Remember…", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Settings", exact: true }).dispatchEvent("click");
     await dialog

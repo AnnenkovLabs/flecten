@@ -56,14 +56,14 @@ export default {
   "Copying…": "Копіювання…",
   "Save or close modified files in the IDE before switching projects":
     "Збережіть або закрийте змінені файли в IDE перед зміною проєкту",
-  "Folder selection is available in the app": "Вибір папки доступний у застосунку",
+  "Folder selection is available in the app": "Вибір папки доступний лише в настільному застосунку",
   "## User": "## Користувач",
   "## Response": "## Відповідь",
   "## Work": "## Робота",
   "> Error: {0}": ["> Помилка: ", 0],
   "Conversation saved as Markdown": "Розмову збережено у форматі Markdown",
   "Enter text after /search": "Введіть текст після /search",
-  "Search is available in the app": "Пошук доступний у застосунку",
+  "Search is available in the app": "Пошук доступний лише в настільному застосунку",
   "“{0}” not found in the conversation": ["«", 0, "» у розмові не знайдено"],
   "Matches found: {0}. Press Esc to clear highlighting": [
     "Знайдено збігів: ",
@@ -75,7 +75,7 @@ export default {
   "Opening task…": "Відкриття завдання…",
   "Interface language": "Мова інтерфейсу",
   "The language of buttons, menus, and app messages. The language of agent replies is set separately.":
-    "Мова кнопок, меню та повідомлень застосунку. Мова відповідей агента налаштовується окремо.",
+    "Змінює мову меню й інтерфейсу; мова відповідей агента налаштовується окремо.",
   "Diagram source": "Вихідний код діаграми",
   "Couldn't save the language setting. Your choice applies until you close the app.":
     "Не вдалося зберегти мову. Вибір діятиме до закриття застосунку.",

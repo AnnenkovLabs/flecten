@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { t } from "../lib/i18n.svelte";
   import { modal } from "../lib/modal";
+  import { overlayPresence } from "../lib/overlay-presence";
   import { formatModelName } from "../lib/model-name";
   import { settings } from "../lib/settings.svelte";
   import { ALL_EFFORTS, clone, REASONING_LABELS } from "../lib/settings-utils";
@@ -77,6 +78,7 @@
   <dialog
     class="model-sheet st-dialog"
     use:modal
+    transition:overlayPresence|global
     aria-labelledby="model-sheet-title"
     oncancel={(event) => {
       event.preventDefault();
@@ -188,7 +190,6 @@
         <label class="st-switch">
           <span class="st-switch-copy">
             <strong>{t("Reasoning")}</strong>
-            <span>{t("The model supports reasoning.")}</span>
           </span>
           <input
             type="checkbox"

@@ -22,6 +22,7 @@
   let scheduled = false;
   let finished = false;
   const scriptTypes = new WeakMap();
+  const interactions = createSummaryInteractions(root);
 
   const post = (message) => {
     parent.postMessage(Object.assign({ type: TYPE, version: VERSION }, message), "*");
@@ -153,6 +154,7 @@
     contentSent = false;
     lastHeight = -1;
     finished = false;
+    interactions.reset();
     report();
   };
   const open = (token) => {
@@ -229,8 +231,9 @@
       script.replaceWith(copy);
     }
   };
-  const finish = () => {
+  const finish = (nextGeneration) => {
     if (finished) return;
+    interactions.start(nextGeneration);
     finished = true;
     stack = [{ el: root, name: "#root" }];
     svgDepth = 0;
@@ -241,10 +244,11 @@
   };
 
   addEventListener("message", (event) => {
-    if (event.source !== parent) return;
+    if (!event.isTrusted || event.source !== parent) return;
     const data = event.data;
     if (!data || data.type !== TYPE || data.version !== VERSION) return;
     if (data.kind === "config") {
+      interactions.attach(event.ports[0]);
       configure(data.css);
       return;
     }
@@ -262,7 +266,7 @@
       report();
       return;
     }
-    if (data.kind === "finish") finish();
+    if (data.kind === "finish") finish(data.generation);
   });
 
   root.addEventListener("click", onClick);

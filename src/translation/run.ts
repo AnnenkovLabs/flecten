@@ -64,7 +64,7 @@ export class LanguageRun {
       translated.push(
         part.workingLanguage === "en"
           ? part.text
-          : (await this.inputResult(part.text, "системные инструкции")).text,
+          : (await this.inputResult(part.text, "system instructions")).text,
       );
     return `${translated.join("\n\n")}\n\n${workerPrompt.trim()}`;
   }
@@ -73,7 +73,7 @@ export class LanguageRun {
     return (await this.inputResult(text)).text;
   }
 
-  async inputResult(text: string, subject = "запрос") {
+  async inputResult(text: string, subject = "request") {
     return this.options.client
       .translate(text, "en", this.signal, this.onUsage)
       .catch((error: unknown) => {
@@ -81,10 +81,10 @@ export class LanguageRun {
         const reason =
           error instanceof HarnessError
             ? error.message
-            : "Модель вернула неполный или некорректный перевод.";
+            : "Model returned an incomplete or invalid translation.";
         throw new HarnessError(
           "provider_failed",
-          `Не удалось перевести ${subject} (${this.options.providerId} / ${this.options.client.provider.model}). ${reason}`,
+          `Could not translate ${subject} (${this.options.providerId} / ${this.options.client.provider.model}). ${reason}`,
           { cause: error },
         );
       });

@@ -2,12 +2,12 @@
 export default {
   "This project is already open in another Flecten window. Close it and send the message again, or open a different project.":
     "El proyecto ya está abierto en otra ventana de Flecten. Ciérrala y vuelve a enviar el mensaje o abre otro proyecto.",
-  "The core returned an invalid response.": "El núcleo devolvió una respuesta no válida.",
+  "The core returned an invalid response.": "Respuesta no válida del proceso del agente.",
   "The provider is not configured. Open Settings and check the key.":
     "El proveedor no está configurado. Abre los ajustes y revisa la clave.",
   "Connection to the core was lost. Start the task again.":
-    "Se perdió la conexión con el núcleo. Vuelve a iniciar la tarea.",
-  "The core is only available in the app.": "El núcleo solo está disponible en la aplicación.",
+    "Se perdió la conexión con el proceso del agente. Haz clic en Continuar.",
+  "The core is only available in the app.": "Requiere la aplicación de escritorio de Flecten.",
   "The provider reached its limit.": "El proveedor alcanzó su límite.",
   "The provider rate-limited requests.": "El proveedor limitó la frecuencia de las solicitudes.",
   "The subscription's 5-hour limit has been reached.":
@@ -45,14 +45,14 @@ export default {
   "resuming automatically {0}": ["continuaré automáticamente ", 0],
   "The task is still running. Stop it first": "La tarea sigue en curso: detenla primero",
   "Task moved to trash": "Tarea movida a la papelera",
-  "The server did not return a new task": "El servidor no devolvió la nueva tarea",
+  "The server did not return a new task": "No se pudo crear una nueva tarea",
   "Task copied": "Tarea copiada",
   project: "proyecto",
   you: "tú",
   "Could not open task: {0}": ["No se pudo abrir la tarea: ", 0],
   "Message was not queued: {0}": ["No se añadió el mensaje a la cola: ", 0],
   "The core is only available in the app. Open the Electron window.":
-    "El núcleo solo está disponible en la aplicación. Abre la ventana de Electron.",
+    "Requiere la aplicación de escritorio de Flecten.",
   "Could not stop: {0}": ["No se pudo detener: ", 0],
   task: "tarea",
   "Could not open the task. Select it again. {0}": [
@@ -62,10 +62,10 @@ export default {
   "“{0}” is waiting for permission: {1}": ["«", 0, "» espera autorización: ", 1],
   "“{0}”: background command finished": ["«", 0, "»: el comando en segundo plano terminó"],
   "The core cannot start. Check Settings and restart the app.":
-    "El núcleo no se inicia. Revisa los ajustes y reinicia la aplicación.",
+    "El proceso del agente no puede iniciarse. Revisa Ajustes y reinicia Flecten.",
   "The core stopped during the run. Restarting":
-    "El núcleo se detuvo durante la ejecución. Reiniciando",
-  "Restarting core": "Reiniciando el núcleo",
+    "El proceso del agente se detuvo durante la ejecución. Reiniciando…",
+  "Restarting core": "Reiniciando agente…",
   ", waiting for you: {0}": [", esperando tu respuesta: ", 0],
   "Resuming interrupted tasks: {0}{1}": ["Reanudando las tareas interrumpidas: ", 0, 1],
   "Interrupted tasks: {0}. Open a task and click Continue": [
@@ -78,7 +78,7 @@ export default {
   "Hide details": "Ocultar detalles",
   "Show details": "Mostrar detalles",
   "Cancel call: the process will stop and the model will be notified of the cancellation":
-    "Cancelar llamada: el proceso se detendrá y se informará al modelo de la cancelación",
+    "Detener esta llamada y terminar sus procesos hijos",
   "Cancel: {0}": ["Cancelar: ", 0],
   action: "acción",
   actions: "acciones",

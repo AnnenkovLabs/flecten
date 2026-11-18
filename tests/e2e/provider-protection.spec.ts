@@ -53,7 +53,7 @@ test("gateway consent requires a decision, scopes protection and persists its ad
       .fill("fixture-secret-must-not-reach-public-probes");
     await add.getByRole("button", { name: "Добавить без проверки", exact: true }).click();
     const consent = page.getByRole("dialog", {
-      name: "Скрыть ключи и пароли от этого АПИ?",
+      name: "Скрыть ключи и пароли от этого API?",
       exact: true,
     });
     await expect(consent).toBeVisible();
@@ -127,7 +127,7 @@ test("gateway consent requires a decision, scopes protection and persists its ad
       .fill("Protected relay");
     await editor.getByRole("tab", { name: "Дополнительно", exact: true }).click();
     const toggle = editor.getByRole("switch", {
-      name: "Скрывать ключи и пароли от этого АПИ",
+      name: "Скрывать ключи и пароли от этого API",
       exact: true,
     });
     await expect(toggle).toBeChecked();

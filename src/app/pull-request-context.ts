@@ -32,12 +32,12 @@ export function pullRequestParts(raw: string): {
     !Number.isSafeInteger(number) ||
     number <= 0
   )
-    throw new Error("Укажите ссылку https://github.com/owner/repository/pull/123");
+    throw new Error("Enter a GitHub PR URL: https://github.com/owner/repo/pull/123");
   return { owner, repository, number };
 }
 
 async function boundedBody(response: Response, limit: number): Promise<string> {
-  if (!response.ok) throw new Error(`GitHub: ${response.status}. Проверьте доступ к PR.`);
+  if (!response.ok) throw new Error(`GitHub returned HTTP ${response.status}. Check PR access.`);
   const reader = response.body?.getReader();
   if (!reader) return "";
   const decoder = new TextDecoder();
@@ -48,7 +48,7 @@ async function boundedBody(response: Response, limit: number): Promise<string> {
       const next = await reader.read();
       if (next.done) return output + decoder.decode();
       bytes += next.value.byteLength;
-      if (bytes > limit) throw new Error("Контекст PR превышает допустимый размер");
+      if (bytes > limit) throw new Error("Pull request context exceeds the size limit.");
       output += decoder.decode(next.value, { stream: true });
     }
   } finally {

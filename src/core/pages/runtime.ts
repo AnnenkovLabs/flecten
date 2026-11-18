@@ -4,8 +4,8 @@ import {
   type ActivePage,
   ActivePageSchema,
   type PageCommand,
-  PageCommandSchema,
   type PageReport,
+  parsePageCommand,
 } from "./control";
 
 interface PageState {
@@ -36,7 +36,7 @@ export class PageRuntime {
       } else if (message.role === "assistant") {
         for (const call of message.toolCalls) {
           if (call.name !== "context") continue;
-          const command = PageCommandSchema.safeParse(call.args);
+          const command = parsePageCommand(call.args);
           if (command.success) calls.set(call.id, command.data);
         }
       } else if (message.role === "tool" && message.name === "context" && !message.isError) {
@@ -98,12 +98,12 @@ export class PageRuntime {
 
   guard(calls: ToolCall[]): string | undefined {
     for (const call of calls) {
-      if (call.name === "context" && !PageCommandSchema.safeParse(call.args).success)
+      if (call.name === "context" && !parsePageCommand(call.args).success)
         return "Invalid context operation. Supply the exact fields required for that operation.";
     }
     const lifecycle = calls.some((call) => {
       if (call.name !== "context") return false;
-      const command = PageCommandSchema.safeParse(call.args);
+      const command = parsePageCommand(call.args);
       return command.success && ["begin", "complete", "block"].includes(command.data.op);
     });
     if (lifecycle && calls.length !== 1) {
@@ -115,7 +115,7 @@ export class PageRuntime {
       !state.active &&
       calls.some(
         (call) =>
-          !["context", "criterion", "done"].includes(call.name) &&
+          !["context", "criterion", "ask_talker", "done"].includes(call.name) &&
           !(this.canInspect() && this.readOnlyTools.has(call.name)),
       )
     ) {
@@ -128,7 +128,7 @@ export class PageRuntime {
   }
 
   async execute(value: unknown, access?: PageAccess): Promise<ToolResult> {
-    const parsed = PageCommandSchema.safeParse(value);
+    const parsed = parsePageCommand(value);
     if (!parsed.success) return { ok: false, output: "", error: parsed.error.message };
     const command = parsed.data;
     if (command.op === "list" || command.op === "read" || command.op === "search") {

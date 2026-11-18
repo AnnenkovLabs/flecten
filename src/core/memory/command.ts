@@ -2,6 +2,15 @@ import { z } from "zod";
 import { DictionaryEntrySchema } from "../../../shared/dictionary";
 import { memoryKeySchema, memoryKindSchema } from "./schema";
 
+const isoTimestamp = z
+  .string()
+  .min(1)
+  .max(64)
+  .refine(
+    (value) => z.iso.datetime({ offset: true }).safeParse(value).success,
+    "Invalid ISO-8601 timestamp",
+  );
+
 export const MemoryCandidateSchema = z
   .object({
     key: memoryKeySchema,
@@ -14,7 +23,7 @@ export const MemoryCandidateSchema = z
     appliesWhen: z.string().trim().min(1).max(300).optional(),
     dictionary: DictionaryEntrySchema.optional(),
     priority: z.enum(["normal", "critical"]),
-    expiresAt: z.iso.datetime().optional(),
+    expiresAt: isoTimestamp.optional(),
     expectedRevision: z.number().int().nonnegative(),
     evidence: z
       .array(

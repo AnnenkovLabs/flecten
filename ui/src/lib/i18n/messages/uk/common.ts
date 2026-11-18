@@ -43,17 +43,18 @@ export default {
   "Allows all actions without asking. Use only in a trusted project.":
     "Дозволяє всі дії без запитів. Використовуйте лише в довіреному проєкті.",
   "These settings don't match any preset. Check each row before saving.":
-    "Набір не збігається з готовими варіантами. Перевірте кожен рядок перед збереженням.",
+    "Власна комбінація правил.",
   "just now": "щойно",
   "{0} sec": [0, " с"],
   "{0} min": [0, " хв"],
   "{0} hr": [0, " год"],
   "{0} d": [0, " дн"],
-  "Policies must be an object.": "Політики мають бути об’єктом.",
+  "Policies must be an object.": "Некоректний формат правил доступу.",
   "Unknown action: {0}.": ["Невідома дія: ", 0, "."],
   "Unknown policy for action {0}: {1}.": ["Невідома політика для дії ", 0, ": ", 1, "."],
-  "Opening a browser is available in the desktop app": "Відкриття браузера доступне в застосунку",
-  "the core returned no file": "ядро не повернуло файл",
+  "Opening a browser is available in the desktop app":
+    "Посилання відкриваються лише в настільному застосунку",
+  "the core returned no file": "вміст файлу недоступний",
   model: "модель",
   models: "моделі",
   "Catalog updated": "Каталог оновлено",
@@ -76,7 +77,8 @@ export default {
   "Українська · 73 MB": "Українська · 73 МБ",
   Copied: "Скопійовано",
   "Could not copy. Try again.": "Не вдалося скопіювати. Спробуйте ще раз.",
-  "Could not prepare the text. Try again.": "Не вдалося підготувати текст. Спробуйте ще раз.",
+  "Could not prepare the text. Try again.":
+    "Не вдалося підготувати текст для копіювання. Спробуйте ще раз.",
   Reasoning: "Міркування",
   Images: "Зображення",
   Audio: "Аудіо",
@@ -104,5 +106,5 @@ export default {
   "No pending approvals.": "Немає запитів, що очікують на підтвердження.",
   "Waiting {0}": ["Очікує ", 0],
   "This request has been waiting for over 2 minutes. Check whether the action is still needed.":
-    "Запит очікує понад 2 хвилини. Перевірте, чи дія ще актуальна.",
+    "Очікує понад 2 хвилини.",
 } as const;

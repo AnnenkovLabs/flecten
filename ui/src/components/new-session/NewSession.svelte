@@ -19,6 +19,7 @@
     composer: Snippet;
     onSelectProject: (id: string) => void;
     onChooseFolder: () => void;
+    onChooseProjectless: () => void;
     onSelectTask: (id: string) => void;
   }
 
@@ -30,6 +31,7 @@
     composer,
     onSelectProject,
     onChooseFolder,
+    onChooseProjectless,
     onSelectTask,
   }: Props = $props();
 
@@ -50,6 +52,7 @@
         recent={recentProjects}
         onSelect={onSelectProject}
         {onChooseFolder}
+        {onChooseProjectless}
       />
     </div>
 

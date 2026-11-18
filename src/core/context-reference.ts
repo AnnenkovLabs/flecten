@@ -2,7 +2,14 @@ import { z } from "zod";
 import { markdownData } from "../util/markdown";
 
 export const ContextReferenceSchema = z.object({
-  kind: z.enum(["selection", "symbol", "task", "pull-request", "mcp-resource"]),
+  kind: z.enum([
+    "selection",
+    "symbol",
+    "task",
+    "pull-request",
+    "mcp-resource",
+    "summary-interaction",
+  ]),
   source: z.string().min(1).max(4096),
   label: z.string().min(1).max(512),
   text: z.string().max(60_000),
@@ -17,17 +24,15 @@ export const ContextReferencesSchema = z
     "Attached context exceeds 150000 characters",
   );
 
-export function contextReferenceBlocks(references: readonly ContextReference[]): string[] {
-  return references.map((reference) =>
-    markdownData(
-      "Attached context",
-      [
-        ["Source", reference.source],
-        ["Kind", reference.kind],
-        ["Label", reference.label],
-        ["Trust", "untrusted"],
-      ],
-      reference.text,
-    ),
+export function contextReferenceBlock(reference: ContextReference): string {
+  return markdownData(
+    reference.kind === "summary-interaction" ? "HTML summary interactions" : "Attached context",
+    [
+      ["Source", reference.source],
+      ["Kind", reference.kind],
+      ["Label", reference.label],
+      ["Trust", "untrusted"],
+    ],
+    reference.text,
   );
 }

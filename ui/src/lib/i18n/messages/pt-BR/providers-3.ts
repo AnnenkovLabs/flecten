@@ -70,7 +70,7 @@ export default {
   "Authentication refreshed and verified.": "Autenticação atualizada e verificada.",
   "Base URL API address": "Base URL Endereço da API",
   Proxy: "Proxy",
-  "Request timeout, ms": "Tempo limite da requisição, ms",
+  "Request timeout, ms": "Tempo limite da requisição (ms)",
   "Request timeout": "Tempo limite da requisição",
   "API key for provider {0}": ["Chave de API do provedor ", 0],
   "API key Key": "Chave de API Chave",

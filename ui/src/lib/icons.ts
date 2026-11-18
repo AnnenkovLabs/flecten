@@ -15,12 +15,17 @@ import Edit01Icon from "@hugeicons/core-free-icons/Edit01Icon";
 import File01Icon from "@hugeicons/core-free-icons/File01Icon";
 import Folder01Icon from "@hugeicons/core-free-icons/Folder01Icon";
 import FolderAddIcon from "@hugeicons/core-free-icons/FolderAddIcon";
+import FolderOpenIcon from "@hugeicons/core-free-icons/FolderOpenIcon";
 import GitBranchIcon from "@hugeicons/core-free-icons/GitBranchIcon";
 import Image01Icon from "@hugeicons/core-free-icons/Image01Icon";
 import Key01Icon from "@hugeicons/core-free-icons/Key01Icon";
 import Layers01Icon from "@hugeicons/core-free-icons/Layers01Icon";
 import Mic01Icon from "@hugeicons/core-free-icons/Mic01Icon";
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
+import PanelLeftCloseIcon from "@hugeicons/core-free-icons/PanelLeftCloseIcon";
+import PanelLeftOpenIcon from "@hugeicons/core-free-icons/PanelLeftOpenIcon";
+import PanelRightCloseIcon from "@hugeicons/core-free-icons/PanelRightCloseIcon";
+import PanelRightOpenIcon from "@hugeicons/core-free-icons/PanelRightOpenIcon";
 import Refresh01Icon from "@hugeicons/core-free-icons/Refresh01Icon";
 import Search01Icon from "@hugeicons/core-free-icons/Search01Icon";
 import ServerStack01Icon from "@hugeicons/core-free-icons/ServerStack01Icon";
@@ -52,6 +57,10 @@ export const ICONS = {
   mark: Asterisk02Icon,
   "panel-left": SidebarLeft01Icon,
   "panel-right": SidebarRight01Icon,
+  "panel-left-close": PanelLeftCloseIcon,
+  "panel-left-open": PanelLeftOpenIcon,
+  "panel-right-close": PanelRightCloseIcon,
+  "panel-right-open": PanelRightOpenIcon,
   plus: Add01Icon,
   search: Search01Icon,
   tasks: Task01Icon,
@@ -59,6 +68,7 @@ export const ICONS = {
   image: Image01Icon,
   settings: Settings01Icon,
   folder: Folder01Icon,
+  "folder-open": FolderOpenIcon,
   "folder-plus": FolderAddIcon,
   "chevron-down": ArrowDown01Icon,
   "chevron-right": ArrowRight01Icon,

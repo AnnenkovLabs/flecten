@@ -266,6 +266,7 @@ export type AgentCommand =
   | ModuleCommand
   | ProviderCommand
   | import("../../../shared/twin-protocol").TwinCommand
+  | import("../../../shared/summary-interaction").SummaryInteractionCommand
   | { type: "dictionary.list" | "dictionary.sync"; requestId: string }
   | {
       type: "dictionary.save";

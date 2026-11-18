@@ -7,9 +7,10 @@ export default {
   "Waiting for the current step to finish. Click again to stop immediately":
     "Очікування завершення поточного кроку. Натисніть ще раз, щоб перервати негайно",
   "Stop after the current response or command": "Зупинити після поточної відповіді або команди",
-  "Queue: send when the current run finishes": "У чергу: надіслати після завершення завдання",
+  "Queue: send when the current run finishes":
+    "У чергу: надіслати після завершення поточного запуску",
   "Guide now: send at the next safe point":
-    "Спрямувати зараз: передати вказівки в найближчий безпечний момент",
+    "Скерувати: передати після поточного виклику без зупинки",
   "Stopping after the current step. Click again to stop it immediately.":
     "Зупинка після поточного кроку. Повторне натискання перерве його негайно.",
 } as const;

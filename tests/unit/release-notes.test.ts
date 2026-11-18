@@ -6,34 +6,34 @@ const { releaseNotes } = require("../../scripts/release-notes.mjs") as {
 
 test("release publication uses only its curated changelog section and preserves Markdown", () => {
   const markdown = [
-    "# Изменения",
+    "# Changelog",
     "",
-    "## Не выпущено",
+    "## Unreleased",
     "",
-    "Будущие изменения.",
+    "Upcoming changes.",
     "",
     "## 0.1.1",
     "",
-    "Новая альфа.",
+    "New alpha.",
     "",
-    "### Исправлено",
+    "### Fixed",
     "",
-    "- **История** сохраняется.",
+    "- **History** persists across restarts.",
     "",
     "```md",
-    "## Это пример, а не граница релиза",
+    "## Example heading, not a release boundary",
     "```",
     "",
     "## 0.1.0",
     "",
-    "Старый релиз.",
+    "Previous release.",
   ].join("\n");
   expect(releaseNotes(markdown, "0.1.1")).toBe(
-    "Новая альфа.\n\n### Исправлено\n\n- **История** сохраняется.\n\n```md\n## Это пример, а не граница релиза\n```\n",
+    "New alpha.\n\n### Fixed\n\n- **History** persists across restarts.\n\n```md\n## Example heading, not a release boundary\n```\n",
   );
   expect(() => releaseNotes(markdown, "0.2.0")).toThrow("exactly one heading");
-  expect(() => releaseNotes(`${markdown}\n## 0.1.1\nПовтор.`, "0.1.1")).toThrow(
+  expect(() => releaseNotes(`${markdown}\n## 0.1.1\nDuplicate.`, "0.1.1")).toThrow(
     "exactly one heading",
   );
-  expect(() => releaseNotes("## 0.1.1\n\n## 0.1.0\nСтарый.", "0.1.1")).toThrow("no release notes");
+  expect(() => releaseNotes("## 0.1.1\n\n## 0.1.0\nOlder.", "0.1.1")).toThrow("no release notes");
 });

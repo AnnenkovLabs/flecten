@@ -22,7 +22,7 @@
 <script lang="ts">
   import { t } from "../lib/i18n.svelte";
   import { onDestroy, onMount, tick } from "svelte";
-  import { enterPane } from "../lib/motion";
+  import { revealSurface } from "../lib/motion";
   import { readPreference } from "../lib/preference-storage";
   import type { WorkerView } from "../lib/run/worker.svelte";
   import type { SummaryDestination } from "../lib/markdown/summary-navigation";
@@ -74,6 +74,7 @@
   let dragging = $state(false);
   let drag: { startX: number; startWidth: number } | null = null;
   const panePositions: Record<TabId, number> = { changes: 0, history: 0, terminal: 0, worker: 0 };
+  const tabOrder: Record<TabId, number> = { changes: 0, history: 1, terminal: 2, worker: 3 };
 
   const maxWidth = $derived(panelMaxWidth(viewportWidth));
   const currentWidth = $derived(width ?? defaultPanelWidth(viewportWidth));
@@ -187,14 +188,30 @@
     window.removeEventListener("pointercancel", onResizePointerUp);
   });
 
+  let previousTab: TabId | null = null;
+  let previousSplit = false;
   $effect(() => {
-    const tab = activeTab;
-    const isHidden = hidden;
+    const tab = hidden ? null : activeTab;
+    const docked = split;
+    const wasDocked = previousSplit;
+    const previous = previousTab;
+    previousTab = tab;
+    previousSplit = docked;
+    if (!tab || (tab === previous && wasDocked === docked)) return;
+
+    const docking = docked && !wasDocked;
+    const edge = previous !== null && tabOrder[tab] < tabOrder[previous] ? "left" : "right";
+    let animation: Animation | undefined;
+    let stale = false;
     void tick().then(() => {
-      if (isHidden) return;
-      const node = paneFor(tab);
-      if (node) enterPane(node);
+      if (stale) return;
+      const node = docking ? panelEl : paneFor(tab);
+      if (node) animation = revealSurface(node, docking ? "right" : edge, docking);
     });
+    return () => {
+      stale = true;
+      animation?.cancel();
+    };
   });
 
 </script>

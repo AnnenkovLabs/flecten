@@ -1,13 +1,13 @@
 export default {
   "The core stopped. Retry to resume the migration.":
-    "Ядро зупинилося. Повторіть спробу, щоб продовжити перенесення.",
-  "Saved chats": "Збережені чати",
-  "Update your saved chats": "Оновіть збережені чати",
-  "Updating your saved chats": "Оновлюємо збережені чати",
-  "Migration needs another try": "Потрібно повторити перенесення",
-  "Your chats are ready": "Ваші чати готові",
+    "Процес агента зупинився. Повторіть спробу, щоб продовжити зі збереженого кроку.",
+  "Saved chats": "Локальне сховище",
+  "Update your saved chats": "Оновити сховище сесій",
+  "Updating your saved chats": "Оновлення сховища сесій",
+  "Migration needs another try": "Оновлення призупинено",
+  "Your chats are ready": "Сховище оновлено",
   "Flecten needs to update how your chats are stored. Your original data will be preserved.":
-    "Flecten потрібно оновити спосіб зберігання чатів. Початкові дані буде збережено.",
+    "Перед відкриттям проєктів потрібно оновити локальний формат сесій. Вихідні файли попередньо зберігаються в резервній копії.",
   "If the app closes or power is lost, migration resumes when you open it again.":
     "Якщо застосунок закриється або зникне живлення, перенесення продовжиться під час наступного запуску.",
   "Your original data has been preserved. Retry to continue from the saved progress.":
@@ -16,7 +16,7 @@ export default {
     "Чати знову доступні. Копії початкових даних збережено.",
   "Checking saved data": "Перевіряємо збережені дані",
   "Backing up saved data": "Створюємо резервні копії",
-  "Bringing chats together": "Об’єднуємо чати",
+  "Bringing chats together": "Об’єднання сесій",
   "Checking restored chats": "Перевіряємо відновлені чати",
   "Finishing migration": "Завершуємо перенесення",
   "Folders completed: {0} of {1}": ["Папок оброблено: ", 0, " з ", 1],

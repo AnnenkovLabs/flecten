@@ -59,7 +59,7 @@ export default {
   ],
   "This event observes an action that already happened. A deny decision has no effect.":
     "This event observes an action that already happened. A deny decision has no effect.",
-  "Timeout, seconds": "Timeout, seconds",
+  "Timeout, seconds": "Timeout (s)",
   "Tool name": "Tool name",
   "Tool result": "Tool result",
   "Untitled hook": "Untitled hook",
