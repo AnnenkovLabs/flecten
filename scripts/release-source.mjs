@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const REPOSITORY = "AnnenkovLabs/flecten";
 export const REQUIRED_JOBS = [
-  ...["ubuntu-latest", "macos-latest", "windows-latest"].map((os) => `verify (${os})`),
+  ...["ubuntu-latest", "windows-latest"].map((os) => `verify (${os})`),
   "quality / docs and coverage",
   ...[1, 2, 3].map((shard) => `quality / Electron and visual regression (${shard}/3)`),
   ...["linux", "macos-arm64", "macos-x64", "windows"].map(
@@ -94,7 +94,7 @@ export async function findCandidate(sha) {
     const jobs = z
       .object({ jobs: z.array(z.unknown()), total_count: z.number().int() })
       .parse(api(`actions/runs/${run.id}/jobs?filter=latest&per_page=100`));
-    // The workflow has twelve required gates. Refuse truncated API responses.
+    // Refuse truncated API responses before validating the required gates.
     if (jobs.jobs.length !== jobs.total_count)
       throw new Error("Candidate job response is incomplete.");
     validateGates(jobs.jobs);

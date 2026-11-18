@@ -66,9 +66,9 @@ bun run release:publish
 
 `.github/workflows/ci.yml` runs on PRs, `main` pushes, and manual dispatch across three parallel tracks:
 
-- **verify** (Linux, macOS, Windows): unit/integration tests, typecheck, lint, and UI/agent builds.
+- **verify** (Linux, Windows): unit/integration tests, typecheck, lint, and UI/agent builds.
 - **Quality** (reusable workflow): `docs:check`, >= 85% coverage gate, and three parallel headless Electron E2E shards (including visual golden checks at `1480x940` and `1180x640`, preflight, and Computer Use checks), uploading HTML reports, traces, and failure diffs.
-- **Build installers** (Linux x64, Windows x64, macOS arm64, macOS x64): full installers on trusted `main` (unpacked builds without signing secrets on PRs), running packaged smoke tests on every OS (including Chromium sandbox on Linux AppImage and standalone sidecar launch on Windows), plus a non-blocking dependency audit job.
+- **Build installers** (Linux x64, Windows x64, macOS arm64, macOS x64): full installers on trusted `main` (unpacked builds without signing secrets on PRs), running packaged smoke tests on every OS (including Chromium sandbox on Linux AppImage and standalone sidecar launch on Windows). The macOS arm64 job also runs unit/integration tests, typecheck, and lint before building the UI and agent for packaging, so macOS verification and packaging use one hosted ARM64 runner. The dependency audit runs in parallel and is non-blocking.
 
 **ready to release** gates on `verify`, `Quality`, and all four installer jobs: it merges universal macOS update metadata, signs manifests with Ed25519, generates `sbom.json`, `SHA256SUMS.txt`, changelog release notes, and `release-candidate.json` (binding repo, workflow, exact SHA, version, run ID/attempt, filenames, byte sizes, and SHA-256 digests across all six installers, three beta manifests, signatures, SBOM, and notes; missing OS code-signing certs emit explicit `UNSIGNED-macos.txt` / `UNSIGNED-windows.txt` markers).
 

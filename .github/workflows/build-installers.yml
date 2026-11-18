@@ -32,12 +32,6 @@ jobs:
     env:
       BUILD_INSTALLERS: ${{ inputs.candidate || github.event_name == 'workflow_dispatch' }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      CSC_LINK: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.CSC_LINK || '' }}
-      CSC_KEY_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && (matrix.artifact == 'windows' && (secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD) || secrets.CSC_KEY_PASSWORD) || '' }}
-      WIN_CSC_LINK: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && matrix.artifact == 'windows' && (secrets.WIN_CSC_LINK || secrets.CSC_LINK) || '' }}
-      APPLE_ID: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_ID || '' }}
-      APPLE_APP_SPECIFIC_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
-      APPLE_TEAM_ID: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_TEAM_ID || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -47,6 +41,12 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-bun-
       - run: bun install --frozen-lockfile
+      - name: Verify macOS before packaging
+        if: matrix.artifact == 'macos-arm64'
+        run: |
+          bun run test
+          bun run check
+          bun run lint
       - name: Pin update verification key in the application
         if: inputs.candidate || github.event_name == 'workflow_dispatch'
         env:
@@ -65,6 +65,13 @@ jobs:
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-electron-
       - name: Package
         shell: bash
+        env:
+          CSC_LINK: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && (matrix.artifact == 'windows' && (secrets.WIN_CSC_KEY_PASSWORD || secrets.CSC_KEY_PASSWORD) || secrets.CSC_KEY_PASSWORD) || '' }}
+          WIN_CSC_LINK: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && matrix.artifact == 'windows' && (secrets.WIN_CSC_LINK || secrets.CSC_LINK) || '' }}
+          APPLE_ID: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_TEAM_ID || '' }}
         run: |
           set -o pipefail
           mkdir -p diagnostics
