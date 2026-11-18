@@ -77,6 +77,19 @@ test("mandatory upgrade keeps focus, retries and resumes after restart before ac
     ).toBe("original data");
     expect(await BunFileExists(join(cwd, ".flecten-migration/v1/accepted.json"))).toBe(false);
     if (process.platform === "linux") {
+      // Observe the replacement core, without sending a command that could start it.
+      await page.evaluate(() => {
+        const bridge = window.desktop?.agent;
+        if (!bridge) throw new Error("Bridge unavailable");
+        let exited = false;
+        const off = bridge.onEvent((event) => {
+          if (event.type === "agent.exit") exited = true;
+          if (!exited || event.type !== "storage.migration") return;
+          if (event.migration.phase !== "complete") return;
+          document.documentElement.dataset.testMigrationResumed = "true";
+          off();
+        });
+      });
       const parent = await h.app.evaluate(() => process.pid);
       const children = await readFile(`/proc/${parent}/task/${parent}/children`, "utf8");
       let killed = 0;
@@ -89,24 +102,8 @@ test("mandatory upgrade keeps focus, retries and resumes after restart before ac
         break;
       }
       expect(killed).toBeGreaterThan(0);
+      await expect(page.locator("html")).toHaveAttribute("data-test-migration-resumed", "true");
       await expect(dialog.getByRole("heading")).toHaveText("Session storage upgraded");
-      await expect
-        .poll(async () =>
-          page.evaluate(
-            () =>
-              new Promise<string>((resolve) => {
-                const bridge = window.desktop?.agent;
-                if (!bridge) throw new Error("Bridge unavailable");
-                const off = bridge.onEvent((event) => {
-                  if (event.type !== "response" || event.requestId !== "resumed-storage") return;
-                  off();
-                  resolve(event.migration?.phase ?? "missing");
-                });
-                bridge.send({ type: "storage.status", requestId: "resumed-storage" });
-              }),
-          ),
-        )
-        .toBe("complete");
     }
     expect(h.consoleErrors).toEqual([]);
     await h.close();

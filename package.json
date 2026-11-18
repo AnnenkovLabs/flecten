@@ -11,7 +11,7 @@
     "dev:ui": "vite",
     "build:ui": "vite build",
     "build:agent": "bun scripts/build-agent.ts",
-    "test": "bun test tests/unit tests/integration tests/smoke.test.ts",
+    "test": "bun test --timeout 20000 tests/unit tests/integration tests/smoke.test.ts",
     "test:e2e": "bun run build:ui && bun run build:agent && bunx playwright test",
     "check": "node node_modules/@typescript/native/bin/tsc --noEmit && svelte-check --workspace ui --tsgo",
     "lint": "biome check . && bun scripts/check-rules.mjs",

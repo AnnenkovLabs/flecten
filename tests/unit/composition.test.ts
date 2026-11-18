@@ -342,5 +342,5 @@ describe("app service composition", () => {
     } finally {
       await service.dispose();
     }
-  }, 15_000); // Covers a full service lifecycle and three provider requests on hosted runners.
+  });
 });

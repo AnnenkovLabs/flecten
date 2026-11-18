@@ -3,7 +3,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
-const tests = ["tests/unit", "tests/integration", "tests/smoke.test.ts"];
 const reportDirectory = resolve(root, "coverage");
 const rawThreshold = process.argv[2] ?? process.env.COVERAGE_THRESHOLD ?? "85";
 const threshold = Number(rawThreshold);
@@ -33,8 +32,8 @@ function tail(output, limit = 40) {
 const proc = Bun.spawn({
   cmd: [
     "bun",
+    "run",
     "test",
-    ...tests,
     "--coverage",
     "--coverage-reporter=text",
     "--coverage-reporter=lcov",
