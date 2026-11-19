@@ -111,14 +111,14 @@ test("model defaults save independently, survive toggles and reopen, and discard
     );
     await expect(
       dialog.getByRole("combobox", { name: "Talker model: Model reasoning level", exact: true }),
-    ).toHaveAttribute("value", "");
+    ).toHaveAttribute("value", "high");
     await choose(page, "Talker model", "Switchable reasoning");
     const talkerReasoning = dialog.getByRole("combobox", {
       name: "Talker model: Model reasoning level",
       exact: true,
     });
     await expect(await selectOptions(talkerReasoning)).toHaveText([
-      "Default: no reasoning",
+      "Model default",
       "Off",
       "Enabled",
     ]);

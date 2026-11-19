@@ -171,7 +171,9 @@ test("conversation continues while real Worker command streams, steering reaches
   await h.session.flush();
   expect(h.stored).toEqual(h.events.filter(isPersistentEvent));
   expect(
-    h.stored.filter((event) => event.type === "session.started").map((event) => event.prompt),
+    h.stored.flatMap((event) =>
+      event.type === "session.started" && !event.internal ? [event.prompt] : [],
+    ),
   ).toEqual(["Проверь проект. Не меняй API.", "И проверь отмену, пожалуйста."]);
   expect(
     h.stored.some((event) => event.type === "worker.event" && event.event.type === "tool.output"),
