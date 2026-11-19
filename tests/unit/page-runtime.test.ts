@@ -47,6 +47,12 @@ test("logical pages require a begin and cannot continue until their completed hi
   expect(runtime.guard([work, { id: "complete", name: "context", args: complete }])).toContain(
     "alone",
   );
+  expect(
+    runtime.guard([
+      { id: "crit", name: "criterion", args: { operation: "list" } },
+      { id: "complete", name: "context", args: complete },
+    ]),
+  ).toBeUndefined();
   expect((await call(complete)).ok).toBe(true);
   const restored = new PageRuntime(structuredClone(messages));
   expect(restored.pending()).toBe(true);

@@ -31,8 +31,9 @@ function joined(parts: ReadonlyArray<string | undefined>): string {
 
 /** The exact text the model reads for a tool result; replay rebuilds history with it too. */
 export function toolContent(result: ToolResult): string {
+  const external = result.provenance?.source === "web" || result.provenance?.source === "mcp";
   const data =
-    result.provenance && result.output.length > 0
+    external && result.provenance && result.output.length > 0
       ? wrapUntrusted(result.output, result.provenance)
       : result.output;
   if (result.ok) {

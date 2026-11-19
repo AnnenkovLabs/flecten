@@ -109,6 +109,29 @@ describe("read files", () => {
     expect(result.output).not.toContain("2: two");
     expect(result.output).toContain("offset=5");
   });
+
+  test("aligns read window to avoid slicing a function and lists remaining symbols in trailer", async () => {
+    const cwd = await tempDir();
+    const source = [
+      "export function firstHelper(a: number): number {",
+      "  const doubled = a * 2;",
+      "  const tripled = a * 3;",
+      "  return doubled + tripled;",
+      "}",
+      "",
+      "export function secondTarget(input: string): string {",
+      "  const clean = input.trim();",
+      "  return clean.toUpperCase();",
+      "}",
+      "",
+    ].join("\n");
+    await writeFile(join(cwd, "mod.ts"), source);
+    const result = await runRead({ path: "mod.ts", offset: 1, limit: 3 }, context(cwd));
+    expect(result.ok).toBe(true);
+    expect(result.output).toContain("1: export function firstHelper");
+    expect(result.output).toContain("5: }");
+    expect(result.output).toContain("Remaining symbols in file: secondTarget (L7-10)");
+  });
 });
 
 describe("edit files", () => {
@@ -274,20 +297,22 @@ describe("edit files", () => {
     expect(await readFile(path, "utf8")).toBe("alpha beta\n");
   });
 
-  test("verifies surrounding context before writing", async () => {
+  test("verifies surrounding context before writing and includes a numbered 15-line snippet on mismatch", async () => {
     const cwd = await tempDir();
     const path = join(cwd, "a.txt");
-    await writeFile(path, "one\ntwo\n");
+    await writeFile(path, "one\n    const targetLine = 42;\nthree\n");
     const reads = new ReadTracker();
     await runRead({ path: "a.txt" }, context(cwd, reads));
 
     const result = await runEdit(
-      { path: "a.txt", oldString: "one\nmissing", newString: "x" },
+      { path: "a.txt", oldString: "  const targetLine = 42;\nmissing", newString: "x" },
       context(cwd, reads),
     );
     expect(result.ok).toBe(false);
     expect(result.error).toContain("Could not find oldString");
-    expect(await readFile(path, "utf8")).toBe("one\ntwo\n");
+    expect(result.error).toContain("around line 2");
+    expect(result.error).toContain("1: one\n2:     const targetLine = 42;\n3: three");
+    expect(await readFile(path, "utf8")).toBe("one\n    const targetLine = 42;\nthree\n");
   });
 
   test("rejects mixing the old and new arguments", async () => {

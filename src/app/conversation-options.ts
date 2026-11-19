@@ -127,9 +127,9 @@ export async function conversationOptions(
             ),
           }
         : {}),
-      reasoning: config.conversation?.talker?.reasoning ?? "none",
-      variant: config.conversation?.talker?.variant,
-      context: { ...modelContext(talkerConfig), workingSetTokens: 32_000 },
+      reasoning: config.conversation?.talker?.reasoning ?? talkerConfig.reasoning,
+      variant: config.conversation?.talker?.variant ?? talkerConfig.variant,
+      context: modelContext(talkerConfig),
       role: "talker" as const,
       responseFormat: "conversation" as const,
       language: undefined,
@@ -148,7 +148,7 @@ export async function conversationOptions(
             ),
           }
         : {}),
-      context: { ...modelContext(workerConfig), workingSetTokens: 96_000 },
+      context: modelContext(workerConfig),
       role: "worker" as const,
       language: undefined,
       tools: workerTools,

@@ -92,10 +92,9 @@ export async function streamAssistant(
     });
     emit({ type: "memory.context", ...delivery });
   }
-  const first = messages[0];
   const requestMessages =
-    dictionary && first
-      ? [first, dictionary, ...messages.slice(1)]
+    dictionary && messages.length > 0
+      ? [...messages, dictionary]
       : dictionary
         ? [dictionary]
         : messages;

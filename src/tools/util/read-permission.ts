@@ -2,7 +2,14 @@ import { realpath } from "node:fs/promises";
 import type { ToolContext } from "../types";
 
 export type SearchContext = Pick<ToolContext, "cwd" | "signal"> &
-  Partial<Pick<ToolContext, "permissions" | "sandbox" | "sessionId">>;
+  Partial<Pick<ToolContext, "permissions" | "sandbox" | "sessionId">> & {
+    reads?:
+      | {
+          record(path: string, content: string): void;
+          markSymbolShown?(path: string, startLine: number, endLine: number, body: string): boolean;
+        }
+      | undefined;
+  };
 
 /** Search consent covers traversal, but never overrides a denied descendant or a protected file. */
 export async function canReadSearchPath(

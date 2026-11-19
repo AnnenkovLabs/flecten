@@ -56,6 +56,8 @@ export interface CaptureRequest {
   deadline: number;
   /** Ignored files that must be captured too, as `rm -rf build` targets. */
   include?: readonly string[];
+  /** Reuse the cached snapshot from the previous capture when no external scan is needed. */
+  reusePrevious?: boolean;
 }
 
 /**
@@ -70,6 +72,21 @@ export class WorkspaceSnapshots {
   #ready: Promise<string | undefined> | undefined;
   #tree: string | undefined;
   #dirty = true;
+  #lastSnapshot: Snapshot | undefined;
+  #lastCaptureAt = 0;
+
+  markDirty(): void {
+    this.#dirty = true;
+    this.#lastSnapshot = undefined;
+  }
+
+  restoreCached(snapshot: Snapshot): void {
+    if (snapshot.forced.length === 0) {
+      this.#lastSnapshot = snapshot;
+      this.#lastCaptureAt = Date.now();
+      this.#dirty = false;
+    }
+  }
 
   constructor(workTree: string, stateDir: string, limits: Partial<SnapshotLimits> = {}) {
     this.#git = new ShadowGit(workTree, stateDir);
@@ -107,6 +124,19 @@ export class WorkspaceSnapshots {
     const signal = AbortSignal.timeout(Math.max(1, request.deadline - Date.now()));
     return this.#mutex
       .run(async () => {
+        if (
+          request.reusePrevious &&
+          !request.include?.length &&
+          !this.#dirty &&
+          this.#lastSnapshot &&
+          this.#lastSnapshot.forced.length === 0 &&
+          Date.now() - this.#lastCaptureAt <= 2500
+        ) {
+          return {
+            ok: true,
+            snapshot: { ...this.#lastSnapshot, tookMs: Date.now() - started },
+          } satisfies SnapshotResult;
+        }
         const forced = request.include?.length
           ? await this.#ignoredUnder(request.include, request.deadline)
           : [];
@@ -116,9 +146,14 @@ export class WorkspaceSnapshots {
         if (typeof stale === "string") return failure(stale);
         const tree = await this.#writeTree(request.deadline);
         if (tree === undefined) return failure("could not write snapshot");
+        const snapshot: Snapshot = { tree, stale, forced, tookMs: Date.now() - started };
+        if (forced.length === 0) {
+          this.#lastSnapshot = snapshot;
+          this.#lastCaptureAt = Date.now();
+        }
         return {
           ok: true,
-          snapshot: { tree, stale, forced, tookMs: Date.now() - started },
+          snapshot,
         } satisfies SnapshotResult;
       }, signal)
       .catch((error: unknown) => {
@@ -176,7 +211,10 @@ export class WorkspaceSnapshots {
     const updated = await this.#update(scan, deadline);
     if (typeof updated === "string") return updated;
     const tree = await this.#writeTree(deadline);
-    return tree === undefined ? "could not write snapshot" : undefined;
+    if (tree === undefined) return "could not write snapshot";
+    this.#lastSnapshot = { tree, stale: updated, forced: [], tookMs: 0 };
+    this.#lastCaptureAt = Date.now();
+    return undefined;
   }
 
   async #oversized(deadline: number): Promise<boolean> {

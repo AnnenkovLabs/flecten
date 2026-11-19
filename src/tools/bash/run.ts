@@ -12,6 +12,7 @@ import type { TerminalManager } from "../../terminal/manager";
 import { ProcessOutputLog } from "../../terminal/output-log";
 import { createProcessScope } from "../../terminal/process-scope";
 import { killProcessTree } from "../../terminal/process-tree";
+import { cleanTerminalStreamText } from "../../terminal/report";
 import { ResourceMonitor, withResourceLimits } from "../../terminal/resources";
 import {
   DEFAULT_TERMINAL_SETTINGS,
@@ -92,8 +93,8 @@ async function collect(
   await log?.write(decoder.decode(), channel);
 }
 
-function normalizeOutput(text: string): string {
-  return Bun.stripANSI(text).replaceAll("\r\n", "\n").trimEnd();
+function normalizeOutput(text: string, exitCode: number | null): string {
+  return cleanTerminalStreamText(text, exitCode);
 }
 
 function resultFor(data: BashData, timeoutMs: number): ToolResult {
@@ -219,11 +220,11 @@ async function runBashSandboxed(
 
   const truncated = result.output.endsWith(SANDBOX_TRUNCATION_MARKER);
   const raw = truncated ? result.output.slice(0, -SANDBOX_TRUNCATION_MARKER.length) : result.output;
-  data.output = normalizeOutput(raw);
   data.truncated = truncated;
   data.timedOut = timedOut;
   data.aborted = signal.aborted;
   data.exitCode = data.aborted ? 130 : timedOut ? 124 : result.exitCode;
+  data.output = normalizeOutput(raw, data.exitCode);
   data.sandboxed = true;
   data.durationMs = Math.round(performance.now() - started);
   if (result.resourceError) data.resourceError = result.resourceError;
@@ -370,11 +371,12 @@ export async function runBash(
   }
   const combined = new TextDecoder().decode(Buffer.concat(state.chunks));
 
+  const finalExitCode = aborted ? 130 : timedOut ? 124 : exitCode;
   const data: BashData = {
     kind: "terminal",
     command: args.command,
-    exitCode: aborted ? 130 : timedOut ? 124 : exitCode,
-    output: normalizeOutput(combined),
+    exitCode: finalExitCode,
+    output: normalizeOutput(combined, finalExitCode),
     truncated: state.truncated,
     timedOut,
     aborted,

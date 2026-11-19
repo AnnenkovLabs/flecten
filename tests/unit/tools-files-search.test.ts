@@ -158,6 +158,47 @@ describe("grep flags", () => {
     expect(result.ok).toBe(true);
     expect(result.output).toBe("a.ts:2");
   });
+
+  test("auto-expands top definition body when context is omitted and deduplicates on repeat search (KV-cache safe)", async () => {
+    const cwd = await tempDir();
+    const source = [
+      "export function verifyAuthToken(raw: string): boolean {",
+      "  const trimmed = raw.trim();",
+      "  return trimmed.startsWith('Bearer ');",
+      "}",
+      "",
+    ].join("\n");
+    await writeFile(join(cwd, "auth.ts"), source);
+    const ctx = context(cwd);
+
+    // First search without context: expands the compact definition body in standard ripgrep format
+    const first = await runGrep({ pattern: "verifyAuthToken" }, ctx);
+    expect(first.ok).toBe(true);
+    expect(first.output).toContain("auth.ts:1: export function verifyAuthToken");
+    expect(first.output).toContain("auth.ts-2-   const trimmed = raw.trim();");
+    expect(first.output).toContain("auth.ts-4- }");
+
+    // Second search in same session: deduplicates the already-shown body while keeping the match line
+    const second = await runGrep({ pattern: "verifyAuthToken" }, ctx);
+    expect(second.ok).toBe(true);
+    expect(second.output).toContain("auth.ts:1: export function verifyAuthToken");
+    expect(second.output).not.toContain("auth.ts-2-   const trimmed = raw.trim();");
+  });
+
+  test("rg-accelerated BM25 fallback finds multi-term camelCase hits when exact regex misses", async () => {
+    const cwd = await tempDir();
+    await writeFile(
+      join(cwd, "process-tree.ts"),
+      [
+        "export function killTerminalSubprocessTree(pid: number): void {",
+        "  process.kill(pid, 'SIGKILL');",
+        "}",
+      ].join("\n"),
+    );
+    const res = await runGrep({ pattern: "terminal kill tree" }, context(cwd));
+    expect(res.ok).toBe(true);
+    expect(res.output).toContain("process-tree.ts:1: export function killTerminalSubprocessTree");
+  });
 });
 
 describe("glob fallback", () => {

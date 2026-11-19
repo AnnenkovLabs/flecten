@@ -17,11 +17,11 @@ describe("tool output budget", () => {
     );
 
     expect(read.remainingTokens).toBe(60_000);
-    expect(read.tokens).toBe(15_000);
-    expect(log.tokens).toBe(6_000);
+    expect(read.tokens).toBe(30_000);
+    expect(log.tokens).toBe(15_000);
     expect(read.tokens).toBeGreaterThan(log.tokens);
-    expect(small.tokens).toBe(1_250);
-    expect(small.chars).toBe(5_000);
+    expect(small.tokens).toBe(2_500);
+    expect(small.chars).toBe(10_000);
   });
 
   test("never exceeds the remaining window and handles an exhausted window", () => {
@@ -58,9 +58,9 @@ describe("tool output budget", () => {
       "bash",
     );
 
-    expect(single.tokens).toBe(24_000);
-    expect(many.tokens).toBe(4_600);
-    expect(zeroCalls.tokens).toBe(8_000);
+    expect(single.tokens).toBe(92_000);
+    expect(many.tokens).toBe(9_200);
+    expect(zeroCalls.tokens).toBe(46_000);
   });
 
   test("profile changes the character allowance but not the token budget", () => {

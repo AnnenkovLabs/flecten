@@ -34,6 +34,7 @@ test("a Worker can clarify the chat while the Talker is responding and cancel it
   const questionRequests: ModelRequest[] = [];
   const ordinaryRequests: ModelRequest[] = [];
   const workerScript = scriptedProvider([
+    call("peek", "ask_talker", { peek: true }),
     call("first", "ask_talker", { question: "Which color did the user want to keep?" }),
     call("second", "ask_talker", { question: "Was there a preferred size?" }),
     call("verify", "criterion", {
@@ -116,7 +117,7 @@ test("a Worker can clarify the chat while the Talker is responding and cancel it
     events.push(event);
     if (event.type !== "worker.event") return;
     const child = event.event;
-    if (child.type === "tool.started" && child.call.name === "ask_talker" && ++questions === 2)
+    if (child.type === "tool.started" && child.call.name === "ask_talker" && ++questions === 3)
       pending.resolve(child.call.id);
     if (child.type === "session.finished") done.resolve();
   });
@@ -126,20 +127,21 @@ test("a Worker can clarify the chat while the Talker is responding and cancel it
     expect(session.peek().running).toBe(true);
     expect(questionRequests[0]?.tools).toEqual([]);
     expect(questionRequests[0]?.messages[0]).toMatchObject({ role: "user", content: human });
-    expect(await session.send({ type: "status" })).toMatchObject({
+    const peeked = await session.send({ type: "status" });
+    expect(peeked).toMatchObject({
       taskBudget: { spent: { tokens: 53 } },
     });
     expect(ordinaryRequests[0]?.tools.some(({ name }) => name === "ask_talker")).toBe(false);
     expect(workerScript.requests[1]?.messages.at(-1)).toMatchObject({
       role: "tool",
       name: "ask_talker",
+      content: expect.stringContaining(human),
+    });
+    expect(workerScript.requests[2]?.messages.at(-1)).toMatchObject({
+      role: "tool",
+      name: "ask_talker",
       content: expect.stringContaining(response),
     });
-    expect(
-      workerScript.requests[1]?.messages.some(
-        (message) => message.role === "user" && message.content.includes(human),
-      ),
-    ).toBe(false);
     expect(await session.send({ type: "tool.cancel", callId })).toEqual({ cancelled: true });
     await interrupted.promise;
     expect(signal.aborted).toBe(true);

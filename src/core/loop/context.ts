@@ -137,10 +137,7 @@ export async function applyToolOutputBudgets(
     const message = messages[index];
     if (message?.role !== "tool") continue;
     budgetedToolMessages.add(message);
-    const budget = toolOutputBudget(
-      { ...context, pendingCalls: indexes.length },
-      toolOutputClass(message.name),
-    );
+    const budget = toolOutputBudget(context, toolOutputClass(message.name));
     if (estimateTokens(message.content, PROFILE_4).tokens <= budget.tokens) continue;
 
     let suffix = "";
@@ -154,11 +151,7 @@ export async function applyToolOutputBudgets(
     const room = Math.max(0, budget.chars - suffix.length);
     const preview = markdownExcerpt(
       "Tool result excerpt",
-      [
-        ["Source tool", message.name],
-        ["Tool call identifier", message.toolCallId],
-        ["Trust", message.name === "skill" ? "project guidance" : "untrusted"],
-      ],
+      [["Tool", message.name]],
       message.content,
       room,
     );

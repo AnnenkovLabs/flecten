@@ -20,15 +20,15 @@ export interface ToolOutputBudget {
 interface ClassRule {
   readonly share: number;
   readonly min: number;
-  readonly max: number;
+  readonly max?: number;
 }
 
 const CLASS_RULES: Record<ToolOutputClass, ClassRule> = {
-  read: { share: 0.25, min: 512, max: 24_000 },
-  search: { share: 0.15, min: 256, max: 12_000 },
-  log: { share: 0.1, min: 192, max: 8_000 },
-  bash: { share: 0.1, min: 192, max: 8_000 },
-  default: { share: 0.08, min: 128, max: 4_000 },
+  read: { share: 0.5, min: 512 },
+  search: { share: 0.35, min: 256 },
+  log: { share: 0.25, min: 192 },
+  bash: { share: 0.25, min: 192 },
+  default: { share: 0.2, min: 128 },
 };
 
 const READ_TOOLS = new Set(["read"]);
@@ -66,7 +66,11 @@ export function toolOutputBudget(
   }
 
   const share = Math.floor((remaining * rule.share) / pending);
-  const tokens = Math.min(remaining, Math.min(rule.max, Math.max(rule.min, share)));
+  const capped =
+    rule.max !== undefined
+      ? Math.min(rule.max, Math.max(rule.min, share))
+      : Math.max(rule.min, share);
+  const tokens = Math.min(remaining, capped);
   return {
     class: toolClass,
     tokens,

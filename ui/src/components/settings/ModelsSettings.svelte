@@ -19,8 +19,13 @@
   const talkerFallback = $derived.by(() => {
     const choice = config?.conversation?.worker ?? main;
     if (!choice) return undefined;
-    const { provider, model, variant } = choice;
-    return { provider, model, ...(variant ? { variant } : {}) };
+    const { provider, model, reasoning, variant } = choice;
+    return {
+      provider,
+      model,
+      ...(reasoning ? { reasoning } : {}),
+      ...(variant ? { variant } : {}),
+    };
   });
 
   function setMain(choice: ModelChoice | undefined): void {
@@ -72,7 +77,7 @@
         <ModelDefaultRow title={t("Talker model")}
           description={t("Understands requests, asks questions, and explains progress and results.")}
           {providers} choice={config.conversation?.talker} fallback={talkerFallback}
-          reasoningDefault="none" inherit={t("Use chat model")} disabled={!enabled}
+          inherit={t("Use chat model")} disabled={!enabled}
           onChange={(choice) => setConversation("talker", choice)} />
         <ModelDefaultRow title={t("Worker model")}
           description={t("Executes tasks. A model selected in the message box overrides this default for that chat.")}

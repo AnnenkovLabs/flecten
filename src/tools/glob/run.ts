@@ -183,7 +183,7 @@ export async function runGlob(args: GlobArgs, context: SearchContext): Promise<T
   if (args.mode === "entries") return entries(args, context, searchPath);
 
   const rg = Bun.which("rg");
-  if (!rg || context.permissions || context.sandbox) return runGlobFallback(args, context);
+  if (!rg) return runGlobFallback(args, context);
 
   const limit = args.maxResults ?? 500;
   const prefix = displayPath(context.cwd, searchPath);
@@ -197,6 +197,9 @@ export async function runGlob(args: GlobArgs, context: SearchContext): Promise<T
   ];
   if (args.hidden) command.push("--hidden");
   for (const directory of IGNORED) command.push("--glob", `!**/${directory}/**`);
+  command.push("--glob", "!**/secrets.json");
+  command.push("--glob", "!**/.env");
+  command.push("--glob", "!**/.env.*");
   if (!args.includeGenerated)
     for (const directory of GENERATED) command.push("--glob", `!**/${directory}/**`);
   command.push(".");
@@ -230,10 +233,12 @@ export async function runGlob(args: GlobArgs, context: SearchContext): Promise<T
   const completeLines = stdout.capped
     ? stdout.text.slice(0, stdout.text.lastIndexOf("\n"))
     : stdout.text;
+  const verify = Boolean(context.permissions || context.sandbox);
   for (const line of completeLines.split("\n")) {
     if (!line) continue;
     const clean = withoutPrefix(line, "./");
     if (ignored(clean, args) || !filter.match(clean)) continue;
+    if (verify && !(await canReadSearchPath(context, join(searchPath, clean), "glob"))) continue;
     results.push(prefix === "." ? clean : `${prefix}/${clean}`);
   }
   return finish(args, results, limit, stdout.capped);

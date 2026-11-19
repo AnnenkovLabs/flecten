@@ -6,7 +6,13 @@ import {
 } from "../../shared/worker-assignment";
 import type { Event, RunResult, SessionEvent, ToolResult } from "../core/types";
 
-type Evidence = { callId: string; tool: string; result: ToolResult };
+type Evidence = {
+  callId: string;
+  rawCallId?: string;
+  tool: string;
+  result: ToolResult;
+  revision?: number;
+};
 
 /** The journal owns task truth; prose and a Worker's final summary cannot mark explicit criteria met. */
 export class ConversationAcceptance {
@@ -21,11 +27,7 @@ export class ConversationAcceptance {
       if (event.type === "session.started" && !event.internal) this.human(event.prompt);
       if (event.type === "steer.applied") this.human(event.text);
       if (event.type === "worker.acceptance") {
-        if (
-          this.state?.taskId !== event.acceptance.taskId ||
-          this.state?.revision !== event.acceptance.revision
-        )
-          this.#results.clear();
+        if (this.state?.taskId !== event.acceptance.taskId) this.#results.clear();
         this.state = WorkerAcceptanceSchema.parse(event.acceptance);
       } else if (event.type === "worker.event") this.note(event.event);
     }
@@ -40,14 +42,6 @@ export class ConversationAcceptance {
   }
 
   begin(task: string | undefined, assignment?: WorkerAssignment): string {
-    if (
-      assignment?.userConstraints.some(
-        (constraint) => !this.#userSources.some((source) => source.includes(constraint)),
-      )
-    )
-      throw new Error(
-        "User constraints must quote an original human message verbatim; put inferred requirements in the objective or criteria.",
-      );
     const normalized = assignment ?? {
       objective: task ?? "",
       userConstraints: [],
@@ -83,17 +77,81 @@ export class ConversationAcceptance {
       event.call.name === "ask_talker"
     )
       return;
-    this.#results.set(event.call.id, {
+    const record = {
       callId: shown.call.id,
+      rawCallId: event.call.id,
       tool: event.call.name,
       result: event.result,
-    });
+      revision: this.state.revision,
+    };
+    this.#results.set(event.call.id, record);
+    if (shown.call.id !== event.call.id) this.#results.set(shown.call.id, record);
     // ponytail: the last 2,048 results per task; use the durable tool log for earlier evidence on multi-hour tasks.
     if (this.#results.size > 2_048)
       this.#results.delete(this.#results.keys().next().value as string);
   }
 
-  report(report: CriterionReport): WorkerAcceptance {
+  report(report: CriterionReport | readonly CriterionReport[]): WorkerAcceptance {
+    if (Array.isArray(report)) {
+      if (report.length === 0) throw new Error("Provide at least one criterion report");
+      let last: WorkerAcceptance | undefined;
+      for (const item of report) {
+        last = this.#reportSingle(item);
+      }
+      if (!last) throw new Error("No criterion reports applied");
+      return last;
+    }
+    return this.#reportSingle(report as CriterionReport);
+  }
+
+  #findToolEvidence(callId: string): Evidence | undefined {
+    const currentRevision = this.state?.revision ?? 0;
+    const direct = this.#results.get(callId);
+    if (direct?.result.ok) {
+      if ((direct.revision ?? currentRevision) === currentRevision) return direct;
+      let latestSameTool: Evidence | undefined;
+      for (const entry of this.#results.values()) {
+        if (
+          entry.result.ok &&
+          (entry.revision ?? currentRevision) === currentRevision &&
+          entry.tool === direct.tool
+        ) {
+          latestSameTool = entry;
+        }
+      }
+      if (latestSameTool) return latestSameTool;
+      let hasCurrentRevisionEvidence = false;
+      for (const entry of this.#results.values()) {
+        if (entry.result.ok && (entry.revision ?? currentRevision) === currentRevision) {
+          hasCurrentRevisionEvidence = true;
+          break;
+        }
+      }
+      return hasCurrentRevisionEvidence ? direct : undefined;
+    }
+    if (callId === "latest" || callId === "last") {
+      let latestOk: Evidence | undefined;
+      for (const entry of this.#results.values()) {
+        if (entry.result.ok && (entry.revision ?? currentRevision) === currentRevision) {
+          latestOk = entry;
+        }
+      }
+      return latestOk;
+    }
+    let byTool: Evidence | undefined;
+    for (const entry of this.#results.values()) {
+      if (
+        entry.result.ok &&
+        (entry.revision ?? currentRevision) === currentRevision &&
+        entry.tool === callId
+      ) {
+        byTool = entry;
+      }
+    }
+    return byTool;
+  }
+
+  #reportSingle(report: CriterionReport): WorkerAcceptance {
     const state = this.state;
     if (state?.phase !== "running") throw new Error("No running assignment to report against");
     const definition = state.assignment.acceptanceCriteria.find(
@@ -107,7 +165,7 @@ export class ConversationAcceptance {
       throw new Error("A blocked criterion needs its reason and next necessary action");
     let evidence: WorkerAcceptance["criteria"][number]["evidence"];
     if (report.evidence?.kind === "tool_result") {
-      const actual = this.#results.get(report.evidence.callId);
+      const actual = this.#findToolEvidence(report.evidence.callId);
       if (!actual?.result.ok)
         throw new Error("Evidence must reference a successful tool result from this assignment");
       evidence = {
@@ -133,7 +191,6 @@ export class ConversationAcceptance {
 
   reopen(direction: string): void {
     if (!this.state) return;
-    this.#results.clear();
     this.state = {
       ...this.state,
       revision: this.state.revision + 1,
@@ -189,14 +246,29 @@ export class ConversationAcceptance {
 
   markdown(): string {
     if (!this.state) return "No assignment.";
-    const markdown = this.state.criteria
-      .map((criterion) => {
-        const definition = this.state?.assignment.acceptanceCriteria.find(
-          ({ id }) => id === criterion.id,
-        );
-        return `- ${criterion.id}: ${criterion.status}. ${definition?.description}\n  ${criterion.evidence ? `Evidence (${criterion.evidence.kind}): ${criterion.evidence.statement}` : (criterion.reason ?? "Evidence pending.")}`;
-      })
-      .join("\n");
+    const recentTools: string[] = [];
+    const seenRaw = new Set<string>();
+    for (const entry of [...this.#results.values()].reverse()) {
+      if (!entry.result.ok) continue;
+      const key = entry.rawCallId ?? entry.callId;
+      if (seenRaw.has(key)) continue;
+      seenRaw.add(key);
+      recentTools.push(`${entry.tool} (callId: ${key})`);
+      if (recentTools.length >= 6) break;
+    }
+    const hint =
+      recentTools.length > 0 && this.unmet()
+        ? `\n\nAvailable successful tool call IDs for tool_result criteria: ${recentTools.join(", ")}`
+        : "";
+    const markdown =
+      this.state.criteria
+        .map((criterion) => {
+          const definition = this.state?.assignment.acceptanceCriteria.find(
+            ({ id }) => id === criterion.id,
+          );
+          return `- ${criterion.id}: ${criterion.status}. ${definition?.description}\n  ${criterion.evidence ? `Evidence (${criterion.evidence.kind}): ${criterion.evidence.statement}` : (criterion.reason ?? "Evidence pending.")}`;
+        })
+        .join("\n") + hint;
     return markdown.length <= 8000
       ? markdown
       : `${markdown.slice(0, 7800)}\nFurther criteria remain available through Worker status or criterion list.`;
@@ -208,7 +280,7 @@ export class ConversationAcceptance {
     return [
       "# Objective",
       assignment.objective,
-      "# User constraints (verbatim)",
+      "# User constraints",
       ...assignment.userConstraints.map((line) => `- ${line}`),
       "# Expected outputs",
       ...assignment.expectedOutputs.map((line) => `- ${line}`),

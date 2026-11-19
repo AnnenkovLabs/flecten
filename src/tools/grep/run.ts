@@ -3,10 +3,13 @@ import { stat } from "node:fs/promises";
 import { dirname, join, sep } from "node:path";
 import type { ToolResult } from "../../core/types";
 import { readGitignore } from "../glob/gitignore";
+import { tokenizeIdentifierTerms } from "../util/code-symbols";
 import { displayPath, resolveToolPath } from "../util/paths";
 import { canReadSearchPath, type SearchContext } from "../util/read-permission";
+import { enrichTopRankedBlocks, expandFileMatchIndices, findBm25LinesInFile } from "./bm25";
 import { createLineMatcher } from "./line-matcher";
-import { runRipgrep } from "./ripgrep";
+import { type GrepBlock, rankGrepBlocks, renderGrepBlocks } from "./ranking";
+import { runRipgrep, runRipgrepBm25Fallback } from "./ripgrep";
 import type { GrepArgs } from "./schema";
 
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -66,6 +69,9 @@ async function runGrepFallbackFile(
   context: number,
   limit: number,
   output: string[],
+  blocks: GrepBlock[],
+  bm25State?: { readonly queryTerms: readonly string[]; readonly blocks: GrepBlock[] },
+  reads?: { record(path: string, content: string): void },
 ): Promise<FileOutcome> {
   let info: Stats;
   try {
@@ -93,8 +99,32 @@ async function runGrepFallbackFile(
 
   const lines = text.split("\n").map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
   const indices = await matches(lines);
-  if (indices.length === 0) return { truncated: false };
-  const matchingLines = new Set(indices);
+  if (indices.length === 0) {
+    if (
+      bm25State &&
+      !args.filesWithMatches &&
+      !args.count &&
+      blocks.length === 0 &&
+      bm25State.queryTerms.length >= 2
+    ) {
+      const hits = findBm25LinesInFile(lines, bm25State.queryTerms, display);
+      if (hits.length > 0) {
+        reads?.record(fullPath, text);
+        const expanded = expandFileMatchIndices(
+          lines,
+          hits.map((hit) => hit.index),
+          context,
+          limit,
+          display,
+          lineText,
+        );
+        bm25State.blocks.push(...expanded.blocks);
+      }
+    }
+    return { truncated: false };
+  }
+
+  reads?.record(fullPath, text);
 
   if (args.filesWithMatches) {
     if (state.files >= limit) return { truncated: true };
@@ -109,20 +139,17 @@ async function runGrepFallbackFile(
     return { truncated: false };
   }
 
-  let lastPrinted = -1;
-  for (const index of indices) {
-    if (state.matches >= limit) return { truncated: true };
-    state.matches += 1;
-    const from = Math.max(0, index - context);
-    if (context > 0 && lastPrinted >= 0 && from > lastPrinted + 1) output.push("--");
-    const to = Math.min(lines.length - 1, index + context);
-    for (let line = Math.max(from, lastPrinted + 1); line <= to; line += 1) {
-      const separator = matchingLines.has(line) ? ":" : "-";
-      output.push(`${display}${separator}${line + 1}${separator} ${lineText(lines[line] ?? "")}`);
-      lastPrinted = line;
-    }
-  }
-  return { truncated: false };
+  const expanded = expandFileMatchIndices(
+    lines,
+    indices,
+    context,
+    Math.max(1, limit * 4 - state.matches),
+    display,
+    lineText,
+  );
+  blocks.push(...expanded.blocks);
+  state.matches += expanded.matchesUsed;
+  return { truncated: expanded.truncated };
 }
 
 async function searchFallback(
@@ -164,6 +191,9 @@ async function searchFallback(
   const matcher = isFile ? undefined : await readGitignore(context.cwd);
   const state = { matches: 0, files: 0, skipped: 0 };
   const output: string[] = [];
+  const blocks: GrepBlock[] = [];
+  const queryTerms = tokenizeIdentifierTerms(args.pattern);
+  const bm25State = queryTerms.length >= 2 ? { queryTerms, blocks: [] as GrepBlock[] } : undefined;
   let truncated = false;
 
   const accept = async (relative: string): Promise<boolean> => {
@@ -191,6 +221,9 @@ async function searchFallback(
       contextLines,
       limit,
       output,
+      blocks,
+      bm25State,
+      context.reads,
     );
     truncated = outcome.truncated;
   } else {
@@ -219,12 +252,48 @@ async function searchFallback(
         contextLines,
         limit,
         output,
+        blocks,
+        bm25State,
+        context.reads,
       );
       if (outcome.truncated) {
         truncated = true;
         break;
       }
     }
+  }
+
+  const candidateBlocks = blocks.length > 0 ? blocks : (bm25State?.blocks ?? []);
+
+  if (!filesWithMatches && !count && candidateBlocks.length > 0) {
+    const ranked = rankGrepBlocks(candidateBlocks, args.pattern);
+    const fileLinesCache = new Map<string, { fullPath: string; lines: string[] } | null>();
+    for (let i = 0; i < Math.min(5, ranked.length); i += 1) {
+      const b = ranked[i];
+      if (!b || fileLinesCache.has(b.path)) continue;
+      try {
+        const fullPath = join(context.cwd, b.path);
+        const text = await Bun.file(fullPath).text();
+        const lines = text
+          .split("\n")
+          .map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
+        fileLinesCache.set(b.path, { fullPath, lines });
+      } catch {
+        fileLinesCache.set(b.path, null);
+      }
+    }
+    const enriched = enrichTopRankedBlocks(
+      ranked,
+      contextLines,
+      args.pattern,
+      (relPath) => fileLinesCache.get(relPath) ?? undefined,
+      lineText,
+      context.reads,
+    );
+    const rendered = renderGrepBlocks(enriched, contextLines > 0, limit);
+    output.push(...rendered.lines);
+    state.matches = rendered.count;
+    if (rendered.truncated) truncated = true;
   }
 
   const parts: string[] = [];
@@ -280,8 +349,6 @@ export async function runGrepFallback(args: GrepArgs, context: SearchContext): P
 }
 
 export async function runGrep(args: GrepArgs, context: SearchContext): Promise<ToolResult> {
-  // ponytail: per-file guards use native traversal; a curated rg file plan can restore acceleration.
-  if (context.permissions || context.sandbox) return runGrepFallback(args, context);
   const searchPath = resolveToolPath(context.cwd, args.path ?? ".");
   let isFile = false;
   try {
@@ -298,9 +365,48 @@ export async function runGrep(args: GrepArgs, context: SearchContext): Promise<T
     return { ok: false, output: "", error: `Path not found: ${args.path ?? "."}` };
   }
 
+  if (isFile && (context.permissions || context.sandbox)) {
+    if (!(await canReadSearchPath(context, searchPath, "grep"))) {
+      return { ok: false, output: "", error: "Search path is denied by the active permissions" };
+    }
+  }
+
   const rg = Bun.which("rg");
   if (rg) {
-    return runRipgrep(rg, args.pattern, searchPath, isFile, args, context.cwd, context.signal);
+    const verifyPath =
+      context.permissions || context.sandbox
+        ? (fullPath: string) => canReadSearchPath(context, fullPath, "grep")
+        : undefined;
+    const res = await runRipgrep(
+      rg,
+      args.pattern,
+      searchPath,
+      isFile,
+      args,
+      context.cwd,
+      context.signal,
+      context.reads,
+      verifyPath,
+    );
+    if (res.ok && res.output === "No matches found") {
+      const queryTerms = tokenizeIdentifierTerms(args.pattern);
+      if (queryTerms.length >= 2) {
+        const fastBm25 = await runRipgrepBm25Fallback(
+          rg,
+          queryTerms,
+          searchPath,
+          isFile,
+          args,
+          context.cwd,
+          context.signal,
+          context.reads,
+          verifyPath,
+        );
+        if (fastBm25) return fastBm25;
+        return runGrepFallback(args, context);
+      }
+    }
+    return res;
   }
   return runGrepFallback(args, context);
 }

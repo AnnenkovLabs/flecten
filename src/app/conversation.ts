@@ -43,7 +43,6 @@ export async function createConversation(
   let configuring = Promise.resolve();
   let workerRun: Promise<unknown> | undefined;
   let talkerRun: Promise<unknown> | undefined;
-  let lastWake = Date.now();
   let lastResult: RunResult | undefined;
   let executing = false;
   let executionEpoch = 0;
@@ -90,23 +89,19 @@ export async function createConversation(
       !["done", "end"].includes(lastResult.stopReason)
     )
       return;
-    timer = setTimeout(
-      () => {
-        timer = undefined;
-        if (talker.isBusy() || disposed || muted || !notices.size) return;
-        const notice = takeNotices()[0];
-        if (!notice) return;
-        lastWake = Date.now();
-        talkerRun = talker.send({
-          type: "run",
-          sessionId: parentId,
-          prompt: notice.text,
-          internal: true,
-        });
-        void talkerRun.catch(report).finally(schedule);
-      },
-      Math.max(20, 15_000 - (Date.now() - lastWake)),
-    );
+    timer = setTimeout(() => {
+      timer = undefined;
+      if (talker.isBusy() || disposed || muted || !notices.size) return;
+      const notice = takeNotices()[0];
+      if (!notice) return;
+      talkerRun = talker.send({
+        type: "run",
+        sessionId: parentId,
+        prompt: notice.text,
+        internal: true,
+      });
+      void talkerRun.catch(report).finally(schedule);
+    }, 0);
     timer.unref?.();
   }
   function report(error: unknown): void {
@@ -145,7 +140,6 @@ export async function createConversation(
     lastResult = result;
     clearTimeout(timer);
     timer = undefined;
-    lastWake = 0;
     notices.delete("progress");
     notices.set(
       "result",
@@ -263,7 +257,9 @@ export async function createConversation(
       return answerWorkerQuestion({
         sessionId: parentId,
         workerId,
-        question: request.question,
+        ...(request.question ? { question: request.question } : {}),
+        ...(request.peek !== undefined ? { peek: request.peek } : {}),
+        ...(request.limit !== undefined ? { limit: request.limit } : {}),
         history: talker.getHistory(),
         options: questionOptions,
         budget: ledger,

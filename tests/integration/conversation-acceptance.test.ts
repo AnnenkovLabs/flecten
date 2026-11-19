@@ -99,21 +99,18 @@ async function fixture(worker: ModelProvider, talkerScripts: ModelEvent[][]) {
 }
 const latest = (events: Event[]) => events.findLast((event) => event.type === "worker.acceptance");
 
-test("a structured assignment cannot present a paraphrase as a verbatim user constraint", async () => {
-  const worker = scriptedProvider([text("<summary>Should not run.</summary>")]);
+test("a structured assignment accepts translated or summarized user constraints without failing start", async () => {
+  const worker = scriptedProvider([text("<summary>Completed.</summary>")]);
   const h = await fixture(worker, [
     call("worker", { operation: "start", assignment }),
-    text("Потрібно зберегти точні слова користувача."),
+    text("Роботу розпочато."),
   ]);
   await h.session.send({ type: "run", prompt: "Напиши українською без вигадок." });
-  expect(worker.requests).toHaveLength(0);
+  await until(() => worker.requests.length > 0);
+  expect(worker.requests.length).toBeGreaterThan(0);
   expect(
     h.events.some(
-      (event) =>
-        event.type === "tool.finished" &&
-        event.call.name === "worker" &&
-        !event.result.ok &&
-        event.result.error?.includes("verbatim"),
+      (event) => event.type === "tool.finished" && event.call.name === "worker" && event.result.ok,
     ),
   ).toBe(true);
 });

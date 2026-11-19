@@ -73,6 +73,7 @@ export class CheckpointStore {
   readonly #manifestsDir: string;
   // ponytail: capture and prune share an in-process mutex only; add a lockfile for multi-process stores.
   readonly #mutex = new Mutex();
+  onMutate?: () => void;
 
   constructor(options: CheckpointStoreOptions = {}) {
     this.cwd = resolve(options.cwd ?? process.cwd());
@@ -143,6 +144,7 @@ export class CheckpointStore {
       };
       options.signal?.throwIfAborted();
       await this.#writeManifest(manifest, options.signal);
+      this.onMutate?.();
       return manifest;
     }, options.signal);
   }
@@ -187,6 +189,7 @@ export class CheckpointStore {
         ...(options.gap === undefined ? {} : { gap: options.gap }),
       };
       await this.#writeManifest(updated);
+      this.onMutate?.();
       return updated;
     });
   }
@@ -206,7 +209,9 @@ export class CheckpointStore {
       });
     }
 
-    return restoreCheckpoint(manifest, target, this.cwd, this.#objects, options);
+    const res = await restoreCheckpoint(manifest, target, this.cwd, this.#objects, options);
+    this.onMutate?.();
+    return res;
   }
 
   async diff(id: string, options: DiffOptions = {}): Promise<CheckpointDiff> {

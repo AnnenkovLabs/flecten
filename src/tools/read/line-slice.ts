@@ -27,7 +27,6 @@ export async function readLineSlice(
   let complete = false;
   let more = false;
   let found = false;
-  let sawTrailingLines = false;
   for await (const chunk of createReadStream(path, { start: bomBytes, highWaterMark: 64 * 1024 })) {
     if (signal?.aborted) return { ok: false, output: "", error: "Read aborted" };
     const decoded = decoder.decode(chunk, { stream: true });
@@ -56,7 +55,6 @@ export async function readLineSlice(
         if (more) break;
         if (newline >= 0) {
           complete = true;
-          sawTrailingLines = end + 1 < decoded.length;
           break;
         }
       }
@@ -68,9 +66,16 @@ export async function readLineSlice(
   }
   if (!found || line < offset || skipped < characterOffset)
     return { ok: false, output: "", error: "Read cursor is beyond the requested line." };
-  if (offset === 1 && characterOffset === 0 && !more && !sawTrailingLines && reads) {
-    const prefix = bomBytes === 3 ? "\uFEFF" : "";
-    reads.record(path, `${prefix}${text}${complete ? "\n" : ""}`);
+  if (reads) {
+    try {
+      const file = Bun.file(path);
+      if (file.size <= 20 * 1024 * 1024) {
+        const raw = Buffer.from(await file.arrayBuffer()).toString("utf8");
+        reads.record(path, raw);
+      }
+    } catch {
+      // Ignore read tracker recording failure on unstatable files.
+    }
   }
   const nextCharacterOffset = skipped + text.length;
   const cursor = more ? { offset, characterOffset: nextCharacterOffset } : { offset: offset + 1 };

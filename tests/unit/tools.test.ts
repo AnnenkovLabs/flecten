@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runBash } from "../../src/tools/bash/run";
@@ -151,6 +151,84 @@ describe("search", () => {
     const result = await runGrep({ pattern: "needle", path: "a.ts" }, context(cwd));
     expect(result.ok).toBe(true);
     expect(result.output).toContain("a.ts:1:");
+  });
+
+  test("grep ranks symbol definitions in src/ above usages in tests/ while preserving standard ripgrep format", async () => {
+    const cwd = await tempDir();
+    await mkdir(join(cwd, "tests"), { recursive: true });
+    await mkdir(join(cwd, "src"), { recursive: true });
+    await writeFile(join(cwd, "tests", "auth.test.ts"), "const x = verifyToken(token);\n");
+    await writeFile(
+      join(cwd, "src", "auth.ts"),
+      "export async function verifyToken(token: string): Promise<boolean> {\n  return Boolean(token);\n}\n",
+    );
+    const result = await runGrep({ pattern: "verifyToken", maxResults: 10 }, context(cwd));
+    expect(result.ok).toBe(true);
+    const lines = result.output.trim().split("\n");
+    const srcIndex = lines.findIndex((line) => line.includes("src/auth.ts:1:"));
+    const testIndex = lines.findIndex((line) => line.includes("tests/auth.test.ts:1:"));
+    expect(srcIndex).toBe(0);
+    expect(testIndex).toBeGreaterThan(srcIndex);
+    expect(result.output).toContain("src/auth.ts-2-");
+    expect(result.output).toContain("return Boolean(token);");
+  });
+
+  test("grep falls back to BM25 multi-term subtoken matching when exact phrase has no hits", async () => {
+    const cwd = await tempDir();
+    await mkdir(join(cwd, "src"), { recursive: true });
+    await writeFile(
+      join(cwd, "src", "process.ts"),
+      [
+        "export function killTerminalProcessTree(pid: number, signalName: string): void {",
+        "  process.kill(pid, signalName);",
+        "}",
+      ].join("\n"),
+    );
+    const result = await runGrep(
+      { pattern: "terminal abort process tree", maxResults: 10 },
+      context(cwd),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.output).toContain("src/process.ts:1:");
+    expect(result.output).toContain("killTerminalProcessTree");
+  });
+
+  test("grep with context includes enclosing function signature header even on the fast ripgrep path", async () => {
+    const cwd = await tempDir();
+    await mkdir(join(cwd, "src"), { recursive: true });
+    await writeFile(
+      join(cwd, "src", "service.ts"),
+      [
+        "export async function handleSessionReconnect(id: string): Promise<void> {",
+        "  const a = 1;",
+        "  const b = 2;",
+        "  const c = 3;",
+        "  const targetMarker = id.trim();",
+        "  return void (a + b + c + targetMarker.length);",
+        "}",
+      ].join("\n"),
+    );
+    const result = await runGrep(
+      { pattern: "targetMarker", context: 1, maxResults: 10 },
+      context(cwd),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.output).toContain(
+      "src/service.ts-1- export async function handleSessionReconnect(id: string): Promise<void> {",
+    );
+    expect(result.output).toContain("src/service.ts:5:   const targetMarker = id.trim();");
+  });
+
+  test("grep records matched files in ReadTracker so edit works immediately without a redundant read", async () => {
+    const cwd = await tempDir();
+    await mkdir(join(cwd, "src"), { recursive: true });
+    await writeFile(join(cwd, "src", "quick.ts"), "export const flag = false;\n");
+    const ctx = context(cwd);
+    const grepRes = await runGrep({ pattern: "flag", maxResults: 10 }, ctx);
+    expect(grepRes.ok).toBe(true);
+    expect(ctx.reads.verify(join(cwd, "src", "quick.ts"), "export const flag = false;\n")).toBe(
+      "ok",
+    );
   });
 
   test("glob finds files", async () => {

@@ -76,7 +76,13 @@ function mismatchHint(body: string, oldString: string): string {
   const bodyLines = normalizeEndings(body).split("\n");
   for (let index = 0; index < bodyLines.length; index += 1) {
     if ((bodyLines[index] ?? "").trim() === firstTrimmed) {
-      return ` Hint: nearest matching line is around line ${index + 1}; check exact indentation and surrounding lines.`;
+      const from = Math.max(0, index - 5);
+      const to = Math.min(bodyLines.length, index + 10);
+      const snippet = bodyLines
+        .slice(from, to)
+        .map((line, offset) => `${from + offset + 1}: ${line}`)
+        .join("\n");
+      return ` Hint: nearest matching line is around line ${index + 1}; check exact indentation and surrounding lines:\n\n${snippet}`;
     }
   }
   return "";

@@ -387,7 +387,7 @@ describe.skipIf(process.platform === "win32")("TerminalManager", () => {
 });
 
 describe("formatCommandReport", () => {
-  test("renders every field and empty streams", () => {
+  test("renders clean standard output without boilerplate headers on success", () => {
     const report = formatCommandReport({
       command: "bun test",
       cwd: "/home/user/repo",
@@ -401,21 +401,13 @@ describe("formatCommandReport", () => {
       timedOut: false,
     });
 
-    expect(report).toContain("bun test");
-    expect(report).toContain("cwd: /home/user/repo");
-    expect(report).toContain("startedAt: 2026-10-25T15:19:26.000Z");
-    expect(report).toContain("durationMs: 123");
-    expect(report).toContain("exitCode: 0");
-    expect(report).toContain("signal: none");
-    expect(report).toContain("timedOut: false");
-    expect(report).toContain("truncated: false");
-    expect(report).toContain("stdout:");
-    expect(report).toContain("ok");
-    expect(report).toContain("(empty)");
+    expect(report).toBe("ok\n");
+    expect(report).not.toContain("startedAt:");
+    expect(report).not.toContain("(empty)");
     expect(report).not.toContain("output truncated");
   });
 
-  test("strips ANSI and marks truncation, timeout and signals", () => {
+  test("strips ANSI and preserves stderr, truncation, timeout and signals", () => {
     const report = formatCommandReport({
       command: "sleep 30",
       cwd: "/repo",
@@ -431,11 +423,38 @@ describe("formatCommandReport", () => {
 
     expect(report).toContain("red");
     expect(report).not.toContain("\u001b[");
-    expect(report).toContain("exitCode: none");
-    expect(report).toContain("signal: SIGKILL");
-    expect(report).toContain("timedOut: true");
-    expect(report).toContain("truncated: true");
-    expect(report).toContain("warn");
+    expect(report).toContain("stderr:\nwarn");
+    expect(report).toContain("[signal SIGKILL, timed out]");
     expect(report).toContain("[... output truncated ...]");
+  });
+
+  test("resolves carriage-return progress overwrites and collapses passing suites on failure while preserving errors verbatim", () => {
+    const passing = Array.from({ length: 10 }, (_, i) => `(pass) suite ${i} > works`).join("\n");
+    const failure = [
+      "(fail) auth > token refresh [12ms]",
+      "Error: expected 200 to be 401",
+      "    at verifyToken (src/auth.ts:42:11)",
+    ].join("\n");
+
+    const report = formatCommandReport({
+      command: "bun test",
+      cwd: "/repo",
+      startedAt: Date.UTC(2026, 0, 1),
+      durationMs: 250,
+      exitCode: 1,
+      signal: null,
+      stdout: `Downloading 10%\rDownloading 50%\rDownloading 100%\n${passing}\n${failure}\n`,
+      stderr: "",
+      truncated: false,
+      timedOut: false,
+    });
+
+    expect(report).toContain("Downloading 100%");
+    expect(report).not.toContain("Downloading 10%");
+    expect(report).toContain("... [10 passing test lines omitted] ...");
+    expect(report).toContain("(fail) auth > token refresh [12ms]");
+    expect(report).toContain("Error: expected 200 to be 401");
+    expect(report).toContain("at verifyToken (src/auth.ts:42:11)");
+    expect(report).toContain("[exit code 1]");
   });
 });

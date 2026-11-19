@@ -84,6 +84,11 @@ export class ShellCheckpointService implements ShellCheckpoints {
     this.#store = store;
     this.#workTree = snapshots.git.workTree;
     this.limits = { ...DEFAULT_SHELL_LIMITS, ...limits };
+    const prevMutate = store.onMutate;
+    store.onMutate = () => {
+      prevMutate?.();
+      snapshots.markDirty();
+    };
   }
 
   /** Waits for the first full capture: undefined when snapshots work, otherwise why not. */
@@ -118,6 +123,7 @@ export class ShellCheckpointService implements ShellCheckpoints {
     const started = Date.now();
     const before = await this.#snapshots.capture({
       deadline: started + SHELL_CHECKPOINT_BUDGET.beforeMs,
+      reusePrevious: true,
       ...(request.include ? { include: request.include } : {}),
     });
     return {
@@ -145,6 +151,7 @@ export class ShellCheckpointService implements ShellCheckpoints {
           return { files: 0, bytes: 0, unavailable: after.reason, tookMs: spent + after.tookMs };
         }
         const summary = await this.#record(before.snapshot, after.snapshot, request, deadline);
+        this.#snapshots.restoreCached(after.snapshot);
         return { ...summary, tookMs: spent + (Date.now() - finishStarted) };
       },
     };

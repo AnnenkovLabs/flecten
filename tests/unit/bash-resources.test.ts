@@ -23,6 +23,27 @@ describe("foreground bash resources", () => {
     expect(result.output).toBe("/bin/sh");
   });
 
+  test.skipIf(process.platform === "win32")(
+    "applies zero-loss carriage-return resolution and collapses passing suites on failure",
+    async () => {
+      const cwd = await mkdtemp(join(tmpdir(), "flecten-bash-zeroloss-"));
+      dirs.push(cwd);
+      const result = await runBash(
+        {
+          command:
+            "printf 'Step 10%%\\rStep 100%%\\n(pass) t1\\n(pass) t2\\n(pass) t3\\n(pass) t4\\n(pass) t5\\n(pass) t6\\n(fail) t7\\nError: boom\\n'; exit 1",
+        },
+        { cwd, signal: new AbortController().signal, limits: { bashTimeoutMs: 5000 } },
+      );
+      expect(result.ok).toBe(false);
+      expect(result.output).toContain("Step 100%");
+      expect(result.output).not.toContain("Step 10%");
+      expect(result.output).toContain("... [6 passing test lines omitted] ...");
+      expect(result.output).toContain("(fail) t7");
+      expect(result.output).toContain("Error: boom");
+    },
+  );
+
   test.skipIf(process.platform !== "linux")("enforces the configured UDP port range", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "flecten-bash-ports-"));
     dirs.push(cwd);

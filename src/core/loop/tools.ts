@@ -88,9 +88,6 @@ export async function executeCalls(
     return;
   }
   const mutex = new Mutex();
-  const hasMutatingInBatch = calls.some((call) =>
-    options.tools.isMutating(options.tools.canonicalName(call.name)),
-  );
   const stopped = (): ToolResult => ({
     ok: false,
     output: "",
@@ -268,7 +265,10 @@ export async function executeCalls(
     if (options.stopSignal?.aborted || prepared.context.signal.aborted) return stopped();
     if (prepared.denied) return prepared.denied;
     if (options.tools.canonicalName(prepared.call.name) === "done") {
-      if (calls.length > 1) {
+      const onlyCompletionCalls = calls.every((c) =>
+        ["done", "criterion", "context"].includes(options.tools.canonicalName(c.name)),
+      );
+      if (!onlyCompletionCalls) {
         return {
           ok: false,
           output: "",
@@ -349,9 +349,7 @@ export async function executeCalls(
       return blocked ?? run(prepared.call, latest);
     };
     const canonical = options.tools.canonicalName(prepared.call.name);
-    const needsLock =
-      options.tools.isMutating(canonical) ||
-      (hasMutatingInBatch && ["read", "grep", "glob"].includes(canonical));
+    const needsLock = options.tools.isMutating(canonical);
     let result = needsLock ? await mutex.run(task) : await task();
     if (isSubagent) {
       const after = await options.hooks?.run(
@@ -415,9 +413,13 @@ export async function executeCalls(
   if (
     !options.parallelTools ||
     calls.length <= 1 ||
-    calls.some((call) =>
-      ["skill", "module"].includes(options.tools.source(options.tools.canonicalName(call.name))),
-    )
+    calls.some((call) => {
+      const canonical = options.tools.canonicalName(call.name);
+      return (
+        ["skill", "module"].includes(options.tools.source(canonical)) ||
+        ["context", "criterion", "done"].includes(canonical)
+      );
+    })
   ) {
     for (let index = 0; index < calls.length; index += 1) {
       const call = calls[index];

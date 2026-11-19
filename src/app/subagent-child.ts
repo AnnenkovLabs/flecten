@@ -166,9 +166,7 @@ export function subagentChildRunner(runtime: ChildRuntime) {
       approvalTimeoutMs: 0,
       ...(request.parentApprovals ? { inheritedApprovals: request.parentApprovals } : {}),
       ...(request.approvalSessionId ? { approvalSessionId: request.approvalSessionId } : {}),
-      ...(request.parentReads && childTools.list().some((tool) => tool.mutating)
-        ? { reads: request.parentReads }
-        : {}),
+      ...(request.parentReads ? { reads: request.parentReads } : {}),
       permissionActor: request.spec.id,
       ...(request.permissionIntent ? { permissionIntent: request.permissionIntent } : {}),
       terminal: terminalSettings(config),

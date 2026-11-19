@@ -31,7 +31,13 @@ export async function writeToolLog(input: ToolLogInput): Promise<ToolLog> {
     await mkdir(input.logDir, { recursive: true });
     await Bun.write(path, redactKnown(input.text, input.secrets ?? []));
   }
-  const byLines = truncateLines(input.text, input.limits.maxOutputLines);
-  const byBytes = truncateMiddle(byLines.text, input.limits.maxOutputBytes);
+  const byLines =
+    input.toolName === "read"
+      ? { text: input.text, truncated: false }
+      : truncateLines(input.text, input.limits.maxOutputLines);
+  const byBytes =
+    input.toolName === "read"
+      ? { text: byLines.text, truncated: false }
+      : truncateMiddle(byLines.text, input.limits.maxOutputBytes);
   return { excerpt: byBytes.text, path, truncated: byLines.truncated || byBytes.truncated };
 }

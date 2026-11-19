@@ -5,6 +5,7 @@ import { imageMediaType } from "../../core/image";
 import type { ToolResult } from "../../core/types";
 import { truncateHead } from "../../util/truncate";
 import type { ToolContext } from "../types";
+import { type CodeSymbol, enclosingSymbolForLine, extractCodeSymbols } from "../util/code-symbols";
 import { detectEncoding, type Encoding, SAMPLE_BYTES, sampleFile } from "../util/encoding";
 import { displayPath, resolveToolPath } from "../util/paths";
 import { runReadImage } from "./image";
@@ -13,6 +14,56 @@ import type { ReadArgs } from "./schema";
 
 const MAX_FULL_READ_BYTES = 20 * 1024 * 1024;
 const CHUNK_BYTES = 64 * 1024;
+const MAX_BOUNDARY_SLACK_LINES = 15;
+
+function alignReadBounds(
+  fullText: string | undefined,
+  offset: number,
+  limit: number,
+): { offset: number; limit: number; symbols: CodeSymbol[] } {
+  if (!fullText || fullText.length > 512_000) return { offset, limit, symbols: [] };
+  const allLines = fullText
+    .split("\n")
+    .map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
+  const symbols = extractCodeSymbols(allLines);
+  if (symbols.length === 0) return { offset, limit, symbols };
+
+  let nextOffset = offset;
+  let endLine = offset + limit - 1;
+
+  const startSym = enclosingSymbolForLine(symbols, nextOffset);
+  if (
+    startSym &&
+    nextOffset > startSym.startLine &&
+    nextOffset - startSym.startLine <= MAX_BOUNDARY_SLACK_LINES
+  ) {
+    const delta = nextOffset - startSym.startLine;
+    nextOffset = startSym.startLine;
+    endLine += delta;
+  }
+
+  const endSym = enclosingSymbolForLine(symbols, endLine);
+  if (endSym && endLine < endSym.endLine && endSym.endLine - endLine <= MAX_BOUNDARY_SLACK_LINES) {
+    endLine = endSym.endLine;
+  }
+
+  return {
+    offset: nextOffset,
+    limit: Math.max(limit, endLine - nextOffset + 1),
+    symbols,
+  };
+}
+
+function formatRemainingSymbols(symbols: readonly CodeSymbol[], shownEnd: number): string {
+  const remaining = symbols.filter((sym) => sym.startLine > shownEnd);
+  if (remaining.length === 0) return "";
+  const listed = remaining
+    .slice(0, 12)
+    .map((sym) => `${sym.name} (L${sym.startLine}-${sym.endLine})`)
+    .join(", ");
+  const more = remaining.length > 12 ? `, +${remaining.length - 12} more` : "";
+  return ` Remaining symbols in file: ${listed}${more}.`;
+}
 
 interface Streamed {
   lines: string[];
@@ -223,7 +274,19 @@ export async function runRead(
     };
   }
 
-  const numbered = streamed.lines.map((line, index) => `${offset + index}: ${line}`).join("\n");
+  const aligned = alignReadBounds(streamed.fullText, offset, limit);
+  let selectedLines = streamed.lines.slice(0, limit);
+  if (streamed.fullText !== undefined && (aligned.offset !== offset || aligned.limit !== limit)) {
+    const allLines = streamed.fullText
+      .split("\n")
+      .map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
+    if (allLines.at(-1) === "" && allLines.length > total) allLines.pop();
+    offset = aligned.offset;
+    limit = aligned.limit;
+    selectedLines = allLines.slice(offset - 1, offset - 1 + limit);
+  }
+
+  const numbered = selectedLines.map((line, index) => `${offset + index}: ${line}`).join("\n");
   const truncation = truncateHead(numbered, limit, headBudget);
   if (truncation.outputLines === 0 || streamed.clipped)
     return readLineSlice(
@@ -237,6 +300,8 @@ export async function runRead(
       context.reads,
     );
   const shownEnd = offset + truncation.outputLines - 1;
+  const remainingSymbolsHint =
+    shownEnd < total ? formatRemainingSymbols(aligned.symbols, shownEnd) : "";
   const parts = [truncation.text];
   if (streamed.clipped) {
     parts.push("[Long lines clipped to the output budget. Narrow the search with grep.]");
@@ -244,12 +309,16 @@ export async function runRead(
 
   if (truncation.truncated) {
     parts.push(
-      `[Showing lines ${offset}-${shownEnd} of ${total}. Use offset=${shownEnd + 1} to continue.]`,
+      `[Showing lines ${offset}-${shownEnd} of ${total}. Use offset=${shownEnd + 1} to continue.${remainingSymbolsHint}]`,
     );
   } else if (streamed.complete && shownEnd < total) {
-    parts.push(`[${total - shownEnd} more lines. Use offset=${shownEnd + 1} to continue.]`);
+    parts.push(
+      `[${total - shownEnd} more lines. Use offset=${shownEnd + 1} to continue.${remainingSymbolsHint}]`,
+    );
   } else if (streamed.hasMore) {
-    parts.push(`[File continues after line ${shownEnd}. Use offset=${shownEnd + 1} to continue.]`);
+    parts.push(
+      `[File continues after line ${shownEnd}. Use offset=${shownEnd + 1} to continue.${remainingSymbolsHint}]`,
+    );
   }
   if (notes.length > 0) parts.push(notes.join(" "));
 
