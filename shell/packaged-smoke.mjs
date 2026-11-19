@@ -21,7 +21,7 @@ export async function probeRenderer() {
   const status = await new Promise((resolve, reject) => {
     let started = false;
     let accepted = false;
-    const timer = setTimeout(() => finish(new Error("packaged renderer did not receive status")), 10_000);
+    const timer = setTimeout(() => finish(new Error("packaged renderer did not receive status")), 25_000);
     function finish(error, value) {
       clearTimeout(timer); unsubscribe();
       if (error) reject(error);

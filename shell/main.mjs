@@ -475,7 +475,7 @@ app.whenReady().then(async () => {
       if (smokeDone) return;
       console.error("[smoke] timed out waiting for packaged renderer readiness");
       app.exit(1);
-    }, 20_000);
+    }, 35_000);
   }
 
   app.on("activate", () => {

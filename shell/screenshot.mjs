@@ -53,7 +53,7 @@ export function captureWhenLoaded(win, path, quit) {
           writeFileSync(path.replace(".png", "-bottom.png"), bottom.toPNG());
         }
       } finally {
-        app.quit();
+        quit();
       }
     }, 1200);
   });

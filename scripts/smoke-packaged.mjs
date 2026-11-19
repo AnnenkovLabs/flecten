@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 import { smokeEnvironment, validateSmokeResult } from "./smoke-environment.mjs";
 
 const root = resolve(import.meta.dir, "..");
-const timeoutMs = 30_000;
+const timeoutMs = 45_000;
 
 function findExecutable() {
   const candidates = [

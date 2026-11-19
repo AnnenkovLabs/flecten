@@ -20,7 +20,9 @@ afterEach(async () => {
     await child.exited;
   }
   await Promise.all(
-    directories.splice(0).map((path) => rm(path, { recursive: true, force: true })),
+    directories
+      .splice(0)
+      .map((path) => rm(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })),
   );
 });
 
