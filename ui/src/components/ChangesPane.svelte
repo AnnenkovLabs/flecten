@@ -44,6 +44,7 @@
     padding: 0 16px;
     color: var(--muted);
     font-size: 12px;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 

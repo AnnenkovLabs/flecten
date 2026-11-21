@@ -267,7 +267,7 @@ export async function takeSteering(messages: Message[], options: LoopOptions): P
     messages.push({
       role: "user",
       content: input,
-      ...(steer.kind !== "notice" && options.allowUserMemory
+      ...(steer.kind !== "notice" && steer.actor !== "twin" && options.allowUserMemory
         ? { memorySource: steer.display ?? steer.text }
         : {}),
       ...(options.language
@@ -290,13 +290,16 @@ export async function takeSteering(messages: Message[], options: LoopOptions): P
       continue;
     }
     // A changed human instruction invalidates the reviewer's original intent context.
-    options.dictionary?.observe(steer.display ?? steer.text);
-    delete options.userSource;
+    if (steer.actor !== "twin") {
+      options.dictionary?.observe(steer.display ?? steer.text);
+      delete options.userSource;
+    }
     options.emit({
       type: "steer.applied",
       text: steer.display ?? steer.text,
       ...(input !== (steer.display ?? steer.text) ? { input } : {}),
       ...(steer.queueId ? { queueId: steer.queueId } : {}),
+      ...(steer.actor ? { actor: steer.actor } : {}),
       ...(steer.attachmentRefs?.length ? { attachments: steer.attachmentRefs } : {}),
       ...(steer.attachmentSnapshot ? { attachmentSnapshot: steer.attachmentSnapshot } : {}),
       ...(steer.contexts?.length ? { contexts: steer.contexts } : {}),

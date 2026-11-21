@@ -1,5 +1,5 @@
 export default {
-  "Memory and dictionary": "Память и словарь",
+  "Memory and dictionary": "Словарь",
   "Definitions are supplied automatically when a term appears in your prompt. Local meanings take priority.":
     "Определения подставляются автоматически, когда термин встречается в запросе. Локальные значения важнее публичных.",
   "Reload dictionary": "Перезагрузить словарь",

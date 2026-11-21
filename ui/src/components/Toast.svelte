@@ -94,23 +94,31 @@
   .toast-text {
     min-width: 0;
     overflow-wrap: anywhere;
+    text-wrap: pretty;
   }
 
   .toast-dismiss {
+    position: relative;
     display: grid;
     flex: none;
     place-items: center;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: 0;
-    border-radius: 7px;
+    border-radius: 6px;
     background: transparent;
     color: var(--muted);
     cursor: pointer;
     transition:
       background-color var(--t-touch) var(--ease),
       color var(--t-touch) var(--ease);
+  }
+
+  .toast-dismiss::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
   }
 
   .toast-dismiss:hover {

@@ -4,7 +4,7 @@ import { TranslationStream } from "../../translation/stream";
 import { serviceModelStream } from "../services/model";
 import type { AssistantMessage, Message, ToolCall, Usage } from "../types";
 import { addUsage } from "../types/message";
-import { contextEstimate, recordProviderContextTokens } from "./context";
+import { contextEstimate, recordProviderContextTokens, resetStablePrefix } from "./context";
 import type { LoopEvent, LoopOptions } from "./types";
 
 import { visionMessages } from "./vision";
@@ -83,13 +83,19 @@ export async function streamAssistant(
       )
     : 0;
   const delivery = await options.memory?.refresh(memoryRoom);
-  if (delivery) {
-    messages.push({
-      role: "user",
-      content: delivery.text,
-      synthetic: true,
-      memoryReferences: delivery.references,
-    });
+  const pushedDelivery = delivery
+    ? ({
+        role: "user",
+        content: delivery.text,
+        synthetic: true,
+        memoryReferences: delivery.references,
+      } satisfies Message)
+    : undefined;
+  if (delivery && pushedDelivery) {
+    if (delivery.references.some((reference) => reference.level === "invalidated")) {
+      resetStablePrefix(messages);
+    }
+    messages.push(pushedDelivery);
     emit({ type: "memory.context", ...delivery });
   }
   const requestMessages =
@@ -259,6 +265,9 @@ export async function streamAssistant(
       display = { text, reasoning };
     }
   } catch (error) {
+    if (pushedDelivery && messages.at(-1) === pushedDelivery) {
+      messages.pop();
+    }
     const response = responseOfError(error);
     if (response && !responseReported) recordResponse(response);
     throw error;

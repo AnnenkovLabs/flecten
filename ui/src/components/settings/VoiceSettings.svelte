@@ -27,8 +27,8 @@
   <div class="st-group">
     <h3 class="st-group-title">{t("Voice input")}</h3>
     <div class="st-card">
-      <SettingsRow title={t("Speech recognition")} stacked>
-        <Select class="st-input" style="width: min(100%, 400px)" aria-label={t("Recognition engine")} value={engine}
+      <SettingsRow title={t("Speech recognition")}>
+        <Select class="st-input" aria-label={t("Recognition engine")} value={engine}
           options={[{ value: "api", label: t("Via provider") }, { value: "faster-whisper", label: t("On this computer · Whisper") }, { value: "vosk", label: t("On this computer · Vosk") }]}
           onchange={(value) => update("engine", value)} />
       </SettingsRow>

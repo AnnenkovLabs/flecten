@@ -38,6 +38,11 @@ export class WorkerRecovery {
     if (event.type === "worker.acceptance") {
       const revision = `${event.acceptance.taskId}:${event.acceptance.revision}`;
       if (this.#assignment !== revision) {
+        if (this.#assignment && !this.#assignment.startsWith(`${event.acceptance.taskId}:`)) {
+          this.#active.clear();
+          this.#uncertain.clear();
+          this.#jobs.clear();
+        }
         this.#partial = undefined;
         this.#confirmed = undefined;
         this.#page = undefined;
@@ -78,7 +83,7 @@ export class WorkerRecovery {
         const command = PageCommandSchema.safeParse(event.call.args);
         if (command.success && command.data.op === "begin")
           this.#page = { objective: command.data.objective };
-        if (command.success && command.data.op === "complete") {
+        if (command.success && (command.data.op === "compact" || command.data.op === "complete")) {
           const report = command.data;
           if (report.finalResult || report.result)
             this.#partial = report.finalResult || report.result;

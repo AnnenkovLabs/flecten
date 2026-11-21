@@ -1,25 +1,24 @@
 /* Shared controls for work surfaces, confirmations and settings. */
-.st-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: var(--control-h);
-  min-width: var(--control-h);
-  flex: none;
-  padding: 0 10px;
-  border-radius: 7px;
-  background: var(--raised);
-  color: var(--text-2);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  transition:
-    background var(--t-touch) var(--ease),
-    color var(--t-touch) var(--ease),
-    border-radius 460ms var(--ease-jelly);
-}
+  .st-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: var(--control-h);
+    min-width: var(--control-h);
+    flex: none;
+    padding: 0 10px;
+    border-radius: 7px;
+    background: var(--raised);
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      background var(--t-touch) var(--ease),
+      color var(--t-touch) var(--ease);
+  }
 
 .st-btn:disabled {
   opacity: 0.45;
@@ -82,8 +81,7 @@
     color: var(--muted);
     transition:
       background var(--t-touch) var(--ease),
-      color var(--t-touch) var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      color var(--t-touch) var(--ease);
   }
 
 .st-icon-btn::before {
@@ -303,7 +301,6 @@
     transition:
       background var(--t-touch) var(--ease),
       color var(--t-touch) var(--ease),
-      border-radius 460ms var(--ease-jelly),
       box-shadow var(--t-touch) var(--ease);
   }
 
@@ -325,13 +322,11 @@
 
 @media (hover: hover) and (pointer: fine) {
   .st-btn:hover:not(:disabled) {
-    border-radius: 12px;
     background: var(--raised-hover);
     color: var(--text);
   }
 
   .st-btn--primary:hover:not(:disabled) {
-    border-radius: 11px;
     background: linear-gradient(180deg, var(--primary-hover), var(--primary));
     color: var(--on-primary);
   }
@@ -351,13 +346,11 @@
   }
 
   .st-icon-btn:hover:not(:disabled) {
-    border-radius: 12px;
     background: rgba(240, 239, 237, 0.06);
     color: var(--text);
   }
 
   .st-chip:hover {
-    border-radius: 10px;
     background: rgba(240, 239, 237, 0.05);
     color: var(--text-2);
   }

@@ -36,12 +36,15 @@ function cleanOutput(output: string, marker: string): string {
 function waitForMarker(
   session: TerminalSession,
   marker: string,
+  outputCursor: number,
   timeoutMs: number,
   signal: AbortSignal,
 ): Promise<void> {
   if (signal.aborted) return Promise.resolve();
   if (!session.snapshot().running) return Promise.resolve();
-  if (commandCompletion(session.snapshot().plainText, marker)) return Promise.resolve();
+  const currentPlain = () =>
+    Bun.stripANSI(session.outputSince(outputCursor)).replaceAll("\r\n", "\n").replaceAll("\r", "");
+  if (commandCompletion(currentPlain(), marker)) return Promise.resolve();
   return new Promise((resolve) => {
     let settled = false;
     const finish = (): void => {
@@ -54,8 +57,7 @@ function waitForMarker(
     };
     const timer = setTimeout(finish, timeoutMs);
     const unsubscribe = session.onEvent((event) => {
-      if (event.type === "data" && commandCompletion(session.snapshot().plainText, marker))
-        finish();
+      if (event.type === "data" && commandCompletion(currentPlain(), marker)) finish();
       else if (event.type === "exit" || event.type === "error") finish();
     });
     signal.addEventListener("abort", finish, { once: true });
@@ -206,7 +208,7 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
   const finishStream = streamTerminal(session, context);
   try {
     session.write(commandWithCompletion(args.command, session.shellPath, marker));
-    await waitForMarker(session, marker, timeoutMs, context.signal);
+    await waitForMarker(session, marker, outputCursor, timeoutMs, context.signal);
   } finally {
     finishStream();
   }
@@ -214,8 +216,13 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
   if (aborted) await manager.close(id);
   const durationMs = Math.round(performance.now() - started);
   const snapshot = session.snapshot();
-  const text = cleanOutput(session.outputSince(outputCursor), marker);
-  const markerCode = commandCompletion(snapshot.plainText, marker)?.exitCode ?? null;
+  const rawSince = session.outputSince(outputCursor);
+  const plainSince = Bun.stripANSI(rawSince).replaceAll("\r\n", "\n").replaceAll("\r", "");
+  const text = cleanOutput(rawSince, marker);
+  const markerCode =
+    commandCompletion(plainSince, marker)?.exitCode ??
+    commandCompletion(snapshot.plainText, marker)?.exitCode ??
+    null;
   const exitCode = markerCode ?? (snapshot.running ? null : snapshot.exitCode);
   const timedOut = !aborted && markerCode === null && snapshot.running;
   const lost = !snapshot.running && markerCode === null && exitCode === null;

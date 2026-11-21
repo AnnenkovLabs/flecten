@@ -1,7 +1,7 @@
 import type { DictionaryEntry, DictionarySnapshot } from "../../../shared/dictionary";
 import type { SessionState } from "../../../shared/session-state";
 import type { SubagentEnvelope } from "../../../shared/subagents";
-import type { TwinAnswer, TwinSnapshot } from "../../../shared/twin";
+import type { TwinSnapshot } from "../../../shared/twin";
 import type { AccountingEvent } from "./accounting-protocol";
 import type { AgentMemoryContext, AgentNotice } from "./agent-types";
 import type { ContextReference } from "./composer/context-types";
@@ -85,6 +85,7 @@ type AgentLeafEvent =
       queueId?: string;
       resumed?: boolean;
       internal?: boolean;
+      actor?: "user" | "twin";
       budget?: AgentBudget;
     }
   | AgentMemoryContext
@@ -145,13 +146,14 @@ type AgentLeafEvent =
     }
   | { type: "tool.output"; sessionId: string; callId: string; text: string }
   | { type: "tool.started"; sessionId: string; call: AgentToolCall }
+  | { type: "tool.finished"; sessionId: string; call: AgentToolCall; result: AgentToolResult }
   | {
-      type: "tool.finished";
+      type: "steer.applied";
       sessionId: string;
-      call: AgentToolCall;
-      result: AgentToolResult;
+      text: string;
+      actor?: "user" | "twin";
+      queueId?: string;
     }
-  | { type: "steer.applied"; sessionId: string; text: string; queueId?: string }
   | {
       type: "context.compacted";
       sessionId: string;
@@ -175,11 +177,7 @@ type AgentLeafEvent =
       purpose?: "translation" | "vision" | "compaction";
     }
   | ({ type: "context.usage"; sessionId: string } & ContextUsage)
-  | {
-      type: "hook.finished";
-      sessionId: string;
-      hook: import("../../../shared/hooks").HookRun;
-    }
+  | { type: "hook.finished"; sessionId: string; hook: import("../../../shared/hooks").HookRun }
   | { type: "turn.finished"; sessionId: string; turn: number; reason: string }
   | { type: "session.finished"; sessionId: string; result: AgentRunResult }
   | {
@@ -196,7 +194,6 @@ type AgentLeafEvent =
       limited?: boolean;
       dictionary?: DictionarySnapshot;
       twin?: TwinSnapshot;
-      answer?: TwinAnswer;
       search?: unknown;
       replacement?: unknown;
       git?: unknown;

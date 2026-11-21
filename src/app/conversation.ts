@@ -4,7 +4,7 @@ import { createEventBus } from "../core/session/event-bus";
 import { isPersistentEvent, SessionPersistence } from "../core/session/persistence";
 import { accountingChanged } from "../core/session/run-accounting";
 import { createSession, type SessionHandle, type SessionOptions } from "../core/session/session";
-import type { Command, Event, RunResult, SessionEvent } from "../core/types";
+import type { Command, Event, ReasoningEffort, RunResult, SessionEvent } from "../core/types";
 import { replayMessages } from "../store/events/replay";
 import { restoredQueue } from "../store/queue";
 import type { ToolContext } from "../tools/types";
@@ -12,7 +12,8 @@ import { ConversationAcceptance } from "./conversation-acceptance";
 import { conversationBudget } from "./conversation-budget";
 import type { ConversationOptions } from "./conversation-options";
 import { restoreWorkerResult } from "./conversation-restore";
-import { ConversationTwin } from "./conversation-twin";
+import { RESUME_PROMPT } from "./service-commands";
+import { SessionTwinDriver } from "./session-twin";
 import { answerWorkerQuestion } from "./talker-question";
 import { WorkerRecovery } from "./worker-recovery";
 import { WorkerReferences } from "./worker-references";
@@ -46,17 +47,14 @@ export async function createConversation(
   let lastResult: RunResult | undefined;
   let executing = false;
   let executionEpoch = 0;
+  let pendingReasoning: ReasoningEffort | undefined;
   let workerIntent: () => string | undefined = () => undefined;
   let revokeWorkerIntent = () => {};
   let talker: SessionHandle;
   let worker: SessionHandle;
-  const persistence = new SessionPersistence(
-    { onEvent: (event) => options.onEvent?.(event) },
-    report,
-  );
+  let twinDriver: SessionTwinDriver | undefined;
+  const persistence = new SessionPersistence({ onEvent: (e) => options.onEvent?.(e) }, report);
   const persisted = () => persistence.flush();
-  const twin = new ConversationTwin(setup.twin, options, emit);
-  twin.restore(setup.events);
   const acceptance = new ConversationAcceptance((state) =>
     emit({ type: "worker.acceptance", sessionId: parentId, acceptance: state }),
   );
@@ -65,10 +63,17 @@ export async function createConversation(
     if (event.type === "worker.acceptance") recovery.note(event);
     if (isPersistentEvent(event)) persistence.event(event);
     bus.emit(event);
-    if (
-      (event.type !== "task.budget" && accountingChanged(event)) ||
-      (event.type === "twin.activity" && event.activity.usage !== undefined)
-    ) {
+    twinDriver?.note(event);
+    const inner =
+      event.type === "worker.event"
+        ? event.event.type === "subagent.event"
+          ? event.event.event
+          : event.event
+        : event.type === "subagent.event"
+          ? event.event
+          : undefined;
+    const budgetChanged = accountingChanged(event) || inner?.type === "task.budget";
+    if (event.type !== "task.budget" && budgetChanged) {
       const snapshot = { type: "task.budget" as const, sessionId: parentId, budget: ledger.view() };
       persistence.event(snapshot);
       bus.emit(snapshot);
@@ -92,6 +97,7 @@ export async function createConversation(
     timer = setTimeout(() => {
       timer = undefined;
       if (talker.isBusy() || disposed || muted || !notices.size) return;
+      const storedResult = notices.get("result");
       const notice = takeNotices()[0];
       if (!notice) return;
       talkerRun = talker.send({
@@ -100,7 +106,12 @@ export async function createConversation(
         prompt: notice.text,
         internal: true,
       });
-      void talkerRun.catch(report).finally(schedule);
+      void talkerRun
+        .catch((error: unknown) => {
+          if (storedResult && !notices.has("result")) notices.set("result", storedResult);
+          report(error);
+        })
+        .finally(schedule);
     }, 0);
     timer.unref?.();
   }
@@ -113,126 +124,85 @@ export async function createConversation(
     });
   }
   function note(event: SessionEvent): void {
-    twin.note(event);
     if (muted || disposed) {
       if (event.type === "session.finished") lastResult = event.result;
       return;
     }
-    // Tool cards already project these events. Narrating them would start another paid request.
-    if (event.type === "error") {
+    if (event.type === "context.compacted" && event.page !== undefined)
+      notices.set(
+        "progress",
+        `Worker checkpointed page ${event.page}:\n${wrapUntrusted(event.summary.slice(0, 2_000), { source: "mcp", ref: workerId })}`,
+      );
+    if (event.type === "error")
       notices.set(
         "error",
         `Worker error:\n${wrapUntrusted(event.message.slice(0, 2_000), { source: "mcp", ref: workerId })}`,
       );
-    }
   }
-  function publish(result: RunResult, review = ""): void {
-    if (acceptance.unmet()) result = { ...result, pass: false };
-    acceptance.phase(
-      result.pass && ["done", "end"].includes(result.stopReason)
+  function publish(result: RunResult): void {
+    if (acceptance.hasOpenCriteria()) result = { ...result, pass: false };
+    const isDone = ["done", "end"].includes(result.stopReason);
+    const nextPhase =
+      result.pass && isDone
         ? "accepted"
         : result.stopReason === "stopped"
           ? "stopped"
-          : result.stopReason === "error"
-            ? "error"
-            : "unconfirmed",
-    );
+          : "unconfirmed";
+    acceptance.phase(result.stopReason === "error" ? "error" : nextPhase);
     lastResult = result;
     clearTimeout(timer);
     timer = undefined;
     notices.delete("progress");
-    notices.set(
-      "result",
-      `Worker status: ${result.stopReason}\n${review}\n\n${acceptance.markdown()}\n\n${wrapUntrusted([recovery.partial, result.summary.slice(0, 8_000)].filter(Boolean).join("\n\n"), { source: "mcp", ref: workerId })}`,
-    );
-    if (result.stopReason === "done" || result.stopReason === "end") schedule();
+    const resultNotice = `Worker status: ${result.stopReason}\n\n${acceptance.markdown()}\n\n${wrapUntrusted([recovery.partial, result.summary.slice(0, 8_000)].filter(Boolean).join("\n\n"), { source: "mcp", ref: workerId })}`;
+    notices.set("result", resultNotice);
+    if (isDone) schedule();
     else {
       // Failure is already known locally, including quota failure. Do not call the same provider to explain it.
+      const text = recovery.partial
+        ? `${recovery.partial}\n\nPartial result. Execution stopped: ${result.stopReason}.\n${result.summary}`
+        : result.summary;
+      notices.delete("result");
+      talker.appendHistory?.(
+        { role: "user", content: `${workerNotice.trim()}\n\n${resultNotice}`, synthetic: true },
+        { role: "assistant", content: text, reasoning: "", toolCalls: [] },
+      );
       emit({ type: "message.started", sessionId: parentId });
       emit({
         type: "message.finished",
         sessionId: parentId,
-        text: recovery.partial
-          ? `${recovery.partial}\n\nPartial result. Execution stopped: ${result.stopReason}.\n${result.summary}`
-          : result.summary,
+        text,
         reasoning: "",
         toolCalls: [],
         complete: false,
       });
     }
   }
-  async function answer(question: string, signal: AbortSignal): Promise<string | undefined> {
-    if (signal.aborted) return;
-    const decision = await twin.decide("question", { question }, signal);
-    if (!decision || decision.verdict === "ask_user" || signal.aborted) return;
-    return twin.directions(decision);
-  }
-  async function executeTask(task: string, epoch: number): Promise<void> {
+  async function executeTask(
+    task: string,
+    epoch: number,
+    reasoning?: ReasoningEffort,
+    resumed?: boolean,
+  ): Promise<void> {
     try {
-      let revision = twin.revision;
-      let prepared = await twin.decide("prepare");
-      for (let retry = 0; revision !== twin.revision && retry < 3; retry++) {
-        if (disposed || muted || epoch !== executionEpoch) return;
-        revision = twin.revision;
-        prepared = await twin.decide("prepare");
-      }
-      if (revision !== twin.revision)
-        throw new Error("User direction changed during preparation; Worker has not started");
       if (disposed || muted || epoch !== executionEpoch) return;
-      let prompt = prepared ? `${task}\n\n${twin.directions(prepared)}` : task;
-      for (;;) {
-        if (twin.exhausted()) throw new Error("Twin task budget exhausted before execution");
-        const result = (await worker.send({
-          type: "run",
-          sessionId: workerId,
-          prompt,
-        })) as RunResult;
-        twin.commitWorker();
-        if (disposed || muted || epoch !== executionEpoch) return;
-        acceptance.reviewing(result);
-        if (result.stopReason !== "done" && result.stopReason !== "end") {
-          publish(result, "Twin acceptance: unconfirmed because execution stopped.");
-          return;
-        }
-        let revision = twin.revision;
-        let decision = await twin.decide("final", {
-          result: `${result.summary}\n\n${acceptance.markdown()}`,
-        });
-        for (let retry = 0; revision !== twin.revision && retry < 3; retry++) {
-          if (disposed || muted || epoch !== executionEpoch) return;
-          revision = twin.revision;
-          decision = await twin.decide("final", {
-            result: `${result.summary}\n\n${acceptance.markdown()}`,
-          });
-        }
-        if (revision !== twin.revision)
-          throw new Error("User directions changed during Twin acceptance; review is pending");
-        if (disposed || muted || epoch !== executionEpoch) return;
-        if (decision?.verdict === "revise" && twin.corrections < 4 && !twin.exhausted()) {
-          twin.corrections++;
-          prompt = twin.directions(decision);
-          acceptance.reopen(prompt);
-          continue;
-        }
-        const unresolved = decision ? decision.verdict !== "pass" : await twin.enabled();
-        if (unresolved && decision) twin.unresolved(decision);
-        const passed =
-          !unresolved && !acceptance.unmet() && ["done", "end"].includes(result.stopReason);
-        publish(
-          { ...result, pass: passed },
-          decision
-            ? `Twin acceptance: ${unresolved ? "unresolved" : "accepted"}\n${decision.voice}\n${decision.instructions}`
-            : `Twin acceptance: ${unresolved ? "unconfirmed" : "disabled"}.`,
-        );
+      const result = (await worker.send({
+        type: "run",
+        sessionId: workerId,
+        prompt: task,
+        ...(reasoning ? { reasoning } : {}),
+        ...(resumed ? { resumed: true } : {}),
+      })) as RunResult;
+      if (disposed || muted || epoch !== executionEpoch) return;
+      acceptance.reviewing(result);
+      if (result.stopReason !== "done" && result.stopReason !== "end") {
+        publish(result);
         return;
       }
+      const passed = !acceptance.hasOpenCriteria() && ["done", "end"].includes(result.stopReason);
+      publish({ ...result, pass: passed });
     } catch (error) {
       if (!disposed && !muted && epoch === executionEpoch) {
         acceptance.phase("error");
-        notices.set(
-          "twin-error",
-          `Twin could not confirm completion: ${String(error).slice(0, 2000)}. Inspect current work before presenting it as finished.`,
-        );
         report(error);
       }
     } finally {
@@ -255,11 +225,9 @@ export async function createConversation(
       if (context.sessionId !== workerId)
         throw new Error("Only the execution Worker may ask Talker");
       return answerWorkerQuestion({
+        ...request,
         sessionId: parentId,
         workerId,
-        ...(request.question ? { question: request.question } : {}),
-        ...(request.peek !== undefined ? { peek: request.peek } : {}),
-        ...(request.limit !== undefined ? { limit: request.limit } : {}),
         history: talker.getHistory(),
         options: questionOptions,
         budget: ledger,
@@ -276,9 +244,7 @@ export async function createConversation(
     }
     if (request.operation === "status") return workerStatus();
     if (request.operation === "stop") {
-      executionEpoch++;
       executing = false;
-      twin.cancel();
       acceptance.phase("stopped");
       return worker.send({ type: "stop", mode: "force" });
     }
@@ -304,23 +270,20 @@ export async function createConversation(
       request.operation === "resume"
         ? `${acceptance.resume()}\n\n${recovery.markdown()}`
         : acceptance.begin(request.task, request.assignment);
-    twin.begin(task);
+    const reasoning = pendingReasoning;
+    pendingReasoning = undefined;
     executing = true;
-    workerRun = executeTask(task, ++executionEpoch);
+    workerRun = executeTask(task, ++executionEpoch, reasoning, request.operation === "resume");
     return { workerId, state: "running", acceptance: acceptance.state };
   }
-  const initial = await setup.configure(options, control, answer);
+  const initial = await setup.configure(options, control);
   let questionOptions = initial.talker;
   await options.modules?.shareSession?.(parentId, workerId);
   const childEvents = setup.events.flatMap((event, index) =>
     event.type === "worker.event" ? [{ seq: index + 1, event: event.event }] : [],
   );
-  lastResult = restoreWorkerResult(
-    setup.events,
-    childEvents,
-    notices,
-    !acceptance.state || acceptance.state.phase === "accepted",
-  );
+  const isAccepted = !acceptance.state || acceptance.state.phase === "accepted";
+  lastResult = restoreWorkerResult(setup.events, childEvents, notices, isAccepted);
   const mapped = (event: Event): Event => ({
     type: "worker.event",
     sessionId: parentId,
@@ -346,7 +309,6 @@ export async function createConversation(
     ...(queue ? { queue } : {}),
     loadHistory: async () => replayMessages(childEvents).messages,
     onEvent: persisted,
-    takeNotices: () => twin.checkpoint(),
     externalBudgetExhausted: () => ledger.stopReason(),
   });
   worker = createSession(executionOptions(initial.worker));
@@ -368,24 +330,38 @@ export async function createConversation(
     if (forwarded.type === "worker.event") note(forwarded.event);
   });
   talker.subscribe((event) => {
-    if (event.type === "session.started" && !event.internal) {
-      twin.applied(event.prompt);
+    if (event.type === "session.started" && !event.internal && event.actor !== "twin")
       acceptance.human(event.prompt);
-    }
-    if (event.type === "steer.applied") {
-      twin.applied(event.text);
-      acceptance.human(event.text);
-    }
+    if (event.type === "steer.applied" && event.actor !== "twin") acceptance.human(event.text);
     emit(event);
     if (event.type === "session.finished") schedule();
   });
-  return {
+  let handle: SessionHandle;
+  if (setup.twin)
+    twinDriver = new SessionTwinDriver(
+      {
+        ...setup,
+        sessionId: () => parentId,
+        ledger,
+        emit,
+        sendToChat: (c) => handle.send(c),
+        sendToWorker: (c) => worker.send(c),
+      },
+      setup.events,
+    );
+  handle = {
     getSessionId: () => parentId,
     getHistory: () => talker.getHistory(),
-    // Pool limits/retention must count execution even when the Talker is idle.
-    isBusy: () => executing || talker.isBusy() || worker.isBusy() || timer !== undefined,
+    appendHistory: (...messages) => talker.appendHistory?.(...messages),
+    isBusy: () =>
+      executing ||
+      talker.isBusy() ||
+      worker.isBusy() ||
+      timer !== undefined ||
+      talker.peek().jobs + worker.peek().jobs > 0,
     peek: () => ({
       ...talker.peek(),
+      queue: talker.peek().queue + worker.peek().queue,
       jobs: talker.peek().jobs + worker.peek().jobs + Number(worker.isBusy()),
       approvals: talker.peek().approvals + worker.peek().approvals,
     }),
@@ -400,7 +376,7 @@ export async function createConversation(
         });
       configuring = configuring
         .then(async () => {
-          const roles = await setup.configure(options, control, answer);
+          const roles = await setup.configure(options, control);
           questionOptions = roles.talker;
           talker.update({
             ...roles.talker,
@@ -421,12 +397,11 @@ export async function createConversation(
           taskBudget: ledger.view(),
         };
       if (command.type === "stop") {
-        executionEpoch++;
         executing = false;
-        twin.cancel();
         acceptance.phase("stopped");
         if (command.target === "worker")
           return worker.send({ type: "stop", ...(command.mode ? { mode: command.mode } : {}) });
+        executionEpoch++;
         muted = true;
         clearTimeout(timer);
         timer = undefined;
@@ -435,18 +410,26 @@ export async function createConversation(
       }
       if (command.type === "approval.respond" && worker.waitsFor(command.id))
         return worker.send(command);
-      if (command.type === "approval.allowAll" || command.type === "approval.denyAll") {
+      if (command.type === "approval.allowAll" || command.type === "approval.denyAll")
         return Promise.all([
           talker.send({ ...command, ids: command.ids.filter((id) => !worker.waitsFor(id)) }),
           worker.send({ ...command, ids: command.ids.filter((id) => worker.waitsFor(id)) }),
         ]);
-      }
       if (command.type === "tool.cancel") {
         const raw = references.raw(command.callId);
         if (raw) return worker.send({ ...command, callId: raw });
+        if (command.callId.startsWith("w_")) return { cancelled: false };
       }
-      if (["subagent.stop", "jobs.stop", "jobs.list"].includes(command.type))
-        return worker.send(command);
+      if (command.type === "subagent.stop" || command.type === "jobs.list") {
+        const [w, t] = await Promise.all([worker.send(command), talker.send(command)]);
+        return command.type === "subagent.stop"
+          ? { stopped: (w as { stopped: boolean }).stopped || (t as { stopped: boolean }).stopped }
+          : { jobs: [...(w as { jobs: unknown[] }).jobs, ...(t as { jobs: unknown[] }).jobs] };
+      }
+      if (command.type === "jobs.stop") {
+        const w = (await worker.send(command)) as { job: unknown };
+        return w.job ? w : talker.send(command);
+      }
       if (command.type === "run" && command.summaryWake) {
         talkerRun = talker.send(command);
         return talkerRun;
@@ -454,29 +437,45 @@ export async function createConversation(
       await configuring;
       if (command.type === "run") {
         muted = false;
-        if (!command.internal) {
-          twin.submitted(command.prompt);
-          acceptance.human(command.prompt);
+        if (command.reasoning) pendingReasoning = command.reasoning;
+        if (
+          !command.internal &&
+          (command.resumed || command.prompt.trim() === RESUME_PROMPT) &&
+          !executing &&
+          !worker.isBusy() &&
+          acceptance.state &&
+          acceptance.state.phase !== "accepted"
+        ) {
+          lastResult = undefined;
+          notices.clear();
+          const reasoning = pendingReasoning;
+          pendingReasoning = undefined;
+          executing = true;
+          workerRun = executeTask(
+            `${acceptance.resume()}\n\n${recovery.markdown()}`,
+            ++executionEpoch,
+            reasoning,
+            true,
+          );
+          await workerRun;
+          return lastResult;
         }
-        if (talker.isBusy())
-          return talker.send({
-            type: "queue.add",
-            text: command.prompt,
-            mode: "steer",
-            ...(command.clientId ? { id: command.clientId } : {}),
-            ...(command.attachments ? { attachments: command.attachments } : {}),
-            ...(command.attachmentSnapshot
-              ? { attachmentSnapshot: command.attachmentSnapshot }
-              : {}),
-            ...(command.contexts ? { contexts: command.contexts } : {}),
-          });
-        talkerRun = talker.send(command);
-        return talkerRun;
+        if (!command.internal && command.actor !== "twin") acceptance.human(command.prompt);
+        const { reasoning: _r, ...talkerCmd } = command;
+        if (!talker.isBusy()) {
+          talkerRun = talker.send(talkerCmd);
+          return talkerRun;
+        }
+        command = {
+          ...talkerCmd,
+          type: "queue.add",
+          text: command.prompt,
+          mode: "steer",
+          ...(command.clientId ? { id: command.clientId } : {}),
+        };
       }
-      if (command.type === "queue.add" && command.mode === "steer") {
-        twin.submitted(command.text);
+      if (command.type === "queue.add" && command.mode === "steer" && command.actor !== "twin")
         acceptance.human(command.text);
-      }
       return talker.send(command);
     },
     async flush() {
@@ -485,12 +484,13 @@ export async function createConversation(
     },
     async dispose() {
       disposed = true;
+      twinDriver?.dispose();
       executionEpoch++;
-      twin.cancel();
       clearTimeout(timer);
       await Promise.all([talker.send({ type: "stop" }), worker.send({ type: "stop" })]);
       await Promise.allSettled([talkerRun, workerRun, configuring]);
       await Promise.all([talker.dispose(), worker.dispose()]);
     },
   };
+  return handle;
 }

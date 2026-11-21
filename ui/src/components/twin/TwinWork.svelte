@@ -48,7 +48,7 @@
   .work-label > span { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; font-size: 13px; }
   .work-label strong { font-weight: 600; }
   .work-status, .work-round { font-size: 12px; color: var(--text-2); }
-  .work-round { flex: none; }
+  .work-round { flex: none; font-variant-numeric: tabular-nums; }
   .work-label p { margin: 4px 0 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .work-dialogue { max-height: 40vh; overflow: auto; padding: 0 28px 12px 80px; }
   article { padding: 16px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
@@ -58,7 +58,7 @@
   article details { font-size: 12px; color: var(--text-2); }
   article summary { cursor: pointer; min-height: 32px; }
   article details p { white-space: pre-wrap; line-height: 1.6; margin: 8px 0; }
-  .work-meta { margin: 12px 0 0; font-size: 11px; color: var(--muted); }
+  .work-meta { margin: 12px 0 0; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted); }
   summary:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
   @media (max-width: 700px) { .work-round { display: none; } .twin-work > summary { padding-inline: 8px 16px; gap: 8px; } .work-dialogue { padding-inline: 16px; } article header { flex-wrap: wrap; } }
 </style>

@@ -5,6 +5,9 @@ import { join } from "node:path";
 import { TwinSnapshotSchema } from "../../shared/twin";
 import { createHandlers } from "../../src/app/server-handlers";
 import { createAppService } from "../../src/app/service";
+import { SessionTwinDriver } from "../../src/app/session-twin";
+import { RunBudget } from "../../src/core/session/budget";
+import type { Command, Event } from "../../src/core/types";
 
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -26,7 +29,6 @@ async function fixture() {
       const index = sources.indexOf("source-flecten-");
       const sourceMessageId = index >= 0 ? sources.slice(index, index + 39) : "missing";
       const learning = sources.includes("Twin: learn from user evidence");
-      const consultation = sources.includes("Twin: consult the confirmed profile");
       const result = learning
         ? {
             candidates: [
@@ -44,15 +46,13 @@ async function fixture() {
               },
             ],
           }
-        : consultation
-          ? { answer: "Один экран. Без регистрации.", abstained: false, entryIds: [traitId] }
-          : {
-              verdict: "revise",
-              voice: "Блядь, опять пять шагов? Я просил один экран.",
-              instructions: "Collapse checkout into one screen and remove registration.",
-              entryIds: traitId ? [traitId] : [],
-              emotion: "furious",
-            };
+        : {
+            verdict: "revise",
+            voice: "Блядь, опять пять шагов? Я просил один экран.",
+            instructions: "Collapse checkout into one screen and remove registration.",
+            entryIds: traitId ? [traitId] : [],
+            emotion: "furious",
+          };
       return new Response(
         `data: ${JSON.stringify({ choices: [{ delta: { content: `\u0060\u0060\u0060json\n${JSON.stringify(result)}\n\u0060\u0060\u0060` }, finish_reason: "stop" }], usage: { prompt_tokens: 120, completion_tokens: 50 } })}\n\ndata: [DONE]\n\n`,
         { headers: { "content-type": "text/event-stream" } },
@@ -145,7 +145,7 @@ const snapshot = (value: unknown) => TwinSnapshotSchema.parse(value);
 
 test("Twin automatically learns emotional voice from exact reactions plus preceding work, remains separate from memory and represents the user to Worker", async () => {
   const f = await fixture();
-  expect((await f.app.twin.get()).sources).toHaveLength(9);
+  expect((await f.app.twin.get()).sources).toHaveLength(10);
   expect(f.requests).toHaveLength(0);
   const scan = snapshot((await f.handlers["twin.scan"]({ type: "twin.scan" }))?.twin);
   expect(scan.sources.find((source) => source.id === "flecten")).toMatchObject({
@@ -193,12 +193,6 @@ test("Twin automatically learns emotional voice from exact reactions plus preced
   });
   expect(decision.voice).toContain("Блядь");
   expect(JSON.stringify(f.requests.at(-1))).toContain(entry.voice);
-  const consulted = await f.handlers["twin.consult"]({
-    type: "twin.consult",
-    question: "Каким должен быть чекаут?",
-  });
-  expect(consulted?.answer).toMatchObject({ abstained: false, entryIds: [entry.id] });
-  expect(consulted?.twin).toBeDefined();
   await expect(
     f.app.twin.update({
       id: entry.id,
@@ -292,4 +286,107 @@ test("Twin rejects fabricated evidence atomically, accepts explicit teaching wit
       new AbortController().signal,
     ),
   ).rejects.toThrow("disabled");
+});
+
+test("Twin learns live on the fly like Taste and barges into the chat thread when reviewing agent work", async () => {
+  const f = await fixture();
+  await f.app.twin.configure({ enabled: true });
+
+  // Live observation (Taste-style): user expresses anger during work and Twin learns it automatically.
+  const observed = await f.app.twin.observe({
+    sessionId: "live-session",
+    text: "Блядь, опять пять шагов? Чекаут в один экран, без регистрации.",
+    precedingAssistant: "I built a five-step checkout with mandatory registration.",
+  });
+  expect(observed?.added).toHaveLength(1);
+  const current = await f.app.twin.get();
+  expect(current.entries).toHaveLength(1);
+  expect(current.entries[0]?.voice).toContain("Блядь");
+  f.setTrait(current.entries[0]?.id ?? "");
+
+  // SessionTwinDriver mid-work checkpoint barge-in and final summary review
+  const emitted: Event[] = [];
+  const chatCommands: Command[] = [];
+  const workerCommands: Command[] = [];
+  const driver = new SessionTwinDriver({
+    twin: f.app.twin,
+    sessionId: () => "s_live",
+    ledger: new RunBudget({}),
+    emit: (e) => emitted.push(e),
+    sendToChat: async (cmd) => {
+      chatCommands.push(cmd);
+    },
+    sendToWorker: async (cmd) => {
+      workerCommands.push(cmd);
+    },
+  });
+
+  driver.note({
+    type: "session.started",
+    sessionId: "s_live",
+    provider: "test",
+    model: "test",
+    prompt: "Сделай чекаут",
+  });
+  driver.note({
+    type: "worker.event",
+    sessionId: "s_live",
+    event: {
+      type: "tool.finished",
+      sessionId: "s_live_worker",
+      call: { id: "c1", name: "write", args: { path: "step1.ts" } },
+      result: { ok: true, output: "wrote step 1" },
+    },
+  });
+  driver.note({
+    type: "worker.event",
+    sessionId: "s_live",
+    event: {
+      type: "tool.finished",
+      sessionId: "s_live_worker",
+      call: { id: "c2", name: "write", args: { path: "step2.ts" } },
+      result: { ok: true, output: "wrote step 2" },
+    },
+  });
+
+  for (let i = 0; i < 100 && chatCommands.length === 0; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  expect(chatCommands[0]).toMatchObject({
+    type: "queue.add",
+    mode: "steer",
+    actor: "twin",
+  });
+  expect(workerCommands[0]).toMatchObject({
+    type: "queue.add",
+    mode: "steer",
+    actor: "twin",
+  });
+
+  // Final summary review barge-in
+  driver.note({
+    type: "session.finished",
+    sessionId: "s_live",
+    result: {
+      sessionId: "s_live",
+      pass: true,
+      stopReason: "done",
+      summary: "Сделал чекаут в пять шагов с обязательной регистрацией.",
+      turns: 2,
+      usage: { input: 100, output: 50, cached: 0 },
+    },
+  });
+
+  for (let i = 0; i < 100 && chatCommands.length < 2; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+
+  expect(chatCommands[1]).toMatchObject({
+    type: "run",
+    actor: "twin",
+  });
+  expect((chatCommands[1] as Extract<Command, { type: "run" }>).prompt).toContain("Блядь");
+  expect(emitted.some((e) => e.type === "twin.activity")).toBe(true);
+  driver.dispose();
 });

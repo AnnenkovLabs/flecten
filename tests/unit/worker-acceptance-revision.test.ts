@@ -85,7 +85,7 @@ test("supports batch criterion reports, shown call IDs, and prior tool evidence 
     {
       criterionId: "impl",
       status: "met",
-      evidence: { kind: "tool_result", callId: "call_edit_1", statement: "Edited a.ts" },
+      evidence: { kind: "tool_result", callId: "edit", statement: "Edited a.ts" },
     },
     {
       criterionId: "test",

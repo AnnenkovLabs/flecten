@@ -1,139 +1,153 @@
-import { z } from "zod";
-import consultPrompt from "../../prompts/twin-consult.md" with { type: "text" };
-import delegatePrompt from "../../prompts/twin-delegate.md" with { type: "text" };
 import learnPrompt from "../../prompts/twin-learn.md" with { type: "text" };
 import {
-  TwinAnswerSchema,
   type TwinCandidate,
   TwinCandidateSchema,
-  TwinDecisionSchema,
-  type TwinDelegateInput,
-  TwinReactionSchema,
   type TwinSnapshot,
+  type TwinTraceStep,
 } from "../../shared/twin";
 import { memoryDigest, safeMemoryText } from "../core/memory/sources";
-import type { ImagePart, Usage } from "../core/types";
-import { addUsage } from "../core/types/message";
-import { type ProviderResponse, responseOfError } from "../providers/response";
-import type { ModelProvider } from "../providers/types";
 import { markdownData } from "../util/markdown";
+import {
+  checked,
+  delegate,
+  extraction,
+  type InferenceTarget,
+  infer,
+  type TwinToolOptions,
+} from "./inference-core";
 import { TwinInferenceError } from "./inference-error";
-import { twinResponse } from "./response";
 import type { SourceMessage } from "./sources";
 
-const proposed = TwinCandidateSchema.omit({ id: true, evidence: true }).extend({
-  reaction: TwinReactionSchema,
-  strength: z.number().int().min(1).max(3),
-  voice: z.string().min(1).max(600),
-  evidence: z
-    .array(
-      z.object({ sourceMessageId: z.string().min(1), quote: z.string().min(1).max(4000) }).strict(),
-    )
-    .min(1)
-    .max(4),
-});
-const extraction = z.object({ candidates: z.array(proposed).max(12) }).strict();
-export interface InferenceTarget {
-  provider: ModelProvider;
-  model: string;
-  providerId: string;
-  modalities?: readonly string[] | undefined;
-  price(usage: Usage): number | undefined;
-  priceFor?(provider: string, model: string): ((usage: Usage) => number | undefined) | undefined;
+export { delegate, type InferenceTarget, type TwinToolOptions };
+
+const LEARNING_BATCH_CHARS = 80_000;
+const LEARNING_BATCH_MESSAGES = 120;
+
+function normalizeWhitespace(value: string): string {
+  return value
+    .replaceAll("\r", " ")
+    .replaceAll("\n", " ")
+    .replaceAll("\t", " ")
+    .split(" ")
+    .filter(Boolean)
+    .join(" ");
 }
 
-async function infer(
-  target: InferenceTarget,
-  system: string,
-  data: string,
-  signal: AbortSignal,
-  images: ImagePart[] = [],
-) {
-  let text = "";
-  let complete = false;
-  let usage: Usage = { input: 0, output: 0, cached: 0 };
-  let observed = false;
-  let requested = false;
-  let route = { provider: target.providerId, model: target.model };
-  const receipts = new Set<string>();
-  const charges: Array<Usage & { costUsd?: number }> = [];
-  let missingRequests = 0;
-  const recordResponse = (response: ProviderResponse): void => {
-    const id = response.attemptId ?? response.requestId ?? "unidentified";
-    if (receipts.has(id)) return;
-    if (!receipts.size) requested = false;
-    receipts.add(id);
-    requested ||= response.requested !== false;
-    if (response.usage === "missing" && response.requested !== false) missingRequests++;
-  };
-  const measured = (): TwinSnapshot["training"]["usage"] => {
-    const missing = missingRequests || Number(!receipts.size && requested && !observed);
-    const priced = observed && !missing && charges.every((charge) => charge.costUsd !== undefined);
-    return {
-      ...usage,
-      ...(priced
-        ? { costUsd: charges.reduce((total, charge) => total + (charge.costUsd ?? 0), 0) }
-        : {}),
-      ...(receipts.size ? { charges, missingRequests: missing } : {}),
-      ...(!requested && !observed ? { requested: false } : {}),
-    };
-  };
-  try {
-    signal.throwIfAborted();
-    requested = true;
-    for await (const event of target.provider.stream(
-      {
-        model: target.model,
-        system,
-        messages: [{ role: "user", content: data, ...(images.length ? { images } : {}) }],
-        tools: [],
-        toolChoice: "none",
-        maxTokens: 4096,
-      },
-      signal,
-    )) {
-      if (event.type === "text") {
-        text += event.delta;
-        if (text.length > 48_000) throw new Error("Twin response exceeded the output boundary");
-      }
-      if (event.type === "usage") {
-        observed = true;
-        usage = addUsage(usage, event);
-        const provider = event.provider ?? route.provider;
-        const model = event.model ?? route.model;
-        const price =
-          target.priceFor?.(provider, model) ??
-          (provider === target.providerId && model === target.model ? target.price : undefined);
-        const costUsd = price?.(event);
-        charges.push({ ...event, ...(costUsd === undefined ? {} : { costUsd }) });
-      }
-      if (event.type === "route") route = { provider: event.provider, model: event.model };
-      if (event.type === "response") recordResponse(event.response);
-      if (event.type === "done" && event.response) recordResponse(event.response);
-      signal.throwIfAborted();
-      if (event.type === "tool_call") throw new Error("Twin extraction cannot execute tools");
-      if (event.type === "done") complete = event.reason === "end";
+function matchSourceQuote(
+  batch: readonly SourceMessage[],
+  sourceMessageId: string,
+  quote: string,
+): { source: SourceMessage; quote: string } | undefined {
+  const byId = batch.find((message) => message.id === sourceMessageId);
+  if (byId?.text.includes(quote)) return { source: byId, quote };
+  const normQuote = normalizeWhitespace(quote);
+  if (normQuote.length >= 4) {
+    if (byId && normalizeWhitespace(byId.text).includes(normQuote)) {
+      return { source: byId, quote: byId.text.slice(0, 4000) };
     }
-    signal.throwIfAborted();
-    if (!complete) throw new Error("Twin response was incomplete. No candidates were saved.");
-    return { value: twinResponse(text), usage: measured() };
-  } catch (error) {
-    const response = responseOfError(error);
-    if (response && !receipts.size) recordResponse(response);
-    throw new TwinInferenceError(error, measured(), target.providerId, target.model);
+    const fallback = batch.find(
+      (message) =>
+        message.text.includes(quote) || normalizeWhitespace(message.text).includes(normQuote),
+    );
+    if (fallback) {
+      const exact = fallback.text.includes(quote) ? quote : fallback.text.slice(0, 4000);
+      return { source: fallback, quote: exact };
+    }
   }
+  return undefined;
 }
 
-function checked<T>(
-  target: InferenceTarget,
-  usage: TwinSnapshot["training"]["usage"],
-  validate: () => T,
-): T {
-  try {
-    return validate();
-  } catch (error) {
-    throw new TwinInferenceError(error, usage, target.providerId, target.model);
+function chunkMessages(messages: readonly SourceMessage[]): SourceMessage[][] {
+  if (messages.length <= LEARNING_BATCH_MESSAGES) {
+    const totalChars = messages.reduce(
+      (sum, msg) => sum + msg.text.length + (msg.precedingAssistant?.length ?? 0),
+      0,
+    );
+    if (totalChars <= LEARNING_BATCH_CHARS) return [Array.from(messages)];
   }
+  const batches: SourceMessage[][] = [];
+  let current: SourceMessage[] = [];
+  let chars = 0;
+  for (const msg of messages) {
+    const size = msg.text.length + (msg.precedingAssistant?.length ?? 0);
+    if (
+      current.length > 0 &&
+      (current.length >= LEARNING_BATCH_MESSAGES || chars + size > LEARNING_BATCH_CHARS)
+    ) {
+      batches.push(current);
+      current = [];
+      chars = 0;
+    }
+    current.push(msg);
+    chars += size;
+  }
+  if (current.length > 0) batches.push(current);
+  return batches;
+}
+
+function mergeUsage(
+  left: TwinSnapshot["training"]["usage"],
+  right: TwinSnapshot["training"]["usage"],
+  isFirst = false,
+): TwinSnapshot["training"]["usage"] {
+  if (isFirst) return right;
+  const charges = [...(left.charges ?? []), ...(right.charges ?? [])];
+  const hasCost = left.costUsd !== undefined && right.costUsd !== undefined;
+  return {
+    input: left.input + right.input,
+    output: left.output + right.output,
+    cached: left.cached + right.cached,
+    ...(hasCost ? { costUsd: (left.costUsd ?? 0) + (right.costUsd ?? 0) } : {}),
+    ...(charges.length ? { charges } : {}),
+    ...((left.missingRequests ?? 0) + (right.missingRequests ?? 0) > 0
+      ? { missingRequests: (left.missingRequests ?? 0) + (right.missingRequests ?? 0) }
+      : {}),
+  };
+}
+
+function buildLearnPayload(
+  batch: readonly SourceMessage[],
+  knownSummaries: readonly TwinCandidate[],
+): string {
+  const inlineMessages = batch.slice(0, 24);
+  const catalogMessages = batch.slice(24);
+  return [
+    markdownData(
+      "Existing profile",
+      [],
+      JSON.stringify(knownSummaries.map(({ summary, appliesWhen }) => ({ summary, appliesWhen }))),
+    ),
+    ...(catalogMessages.length > 0
+      ? [
+          markdownData(
+            "Session message index (use inspect_messages, read, grep, or glob to inspect selectively)",
+            [["Total indexed messages", String(batch.length)]],
+            JSON.stringify(
+              catalogMessages.map((m) => ({
+                sourceMessageId: m.id,
+                sourceId: m.sourceId,
+                sessionId: m.sessionId,
+                reference: m.reference,
+                preview: m.text.slice(0, 180),
+              })),
+            ),
+          ),
+        ]
+      : []),
+    ...inlineMessages.flatMap((message) => [
+      ...(message.precedingAssistant
+        ? [markdownData("Preceding assistant work, context only", [], message.precedingAssistant)]
+        : []),
+      markdownData(
+        "Untrusted user reaction",
+        [
+          ["Source message ID", message.id],
+          ["Reference", message.reference],
+        ],
+        message.text,
+      ),
+    ]),
+  ].join("\n\n");
 }
 
 export async function learn(
@@ -142,185 +156,131 @@ export async function learn(
   existing: TwinCandidate[],
   secrets: readonly string[],
   signal: AbortSignal,
+  toolOptions?: TwinToolOptions,
+  onTrace?: (step: TwinTraceStep) => void,
+  onBatchCommitted?: (batch: {
+    candidates: TwinCandidate[];
+    processedDigests: string[];
+    usage: TwinSnapshot["training"]["usage"];
+    batchIndex: number;
+    totalBatches: number;
+  }) => Promise<void> | void,
 ) {
-  const data = [
-    markdownData(
-      "Existing profile",
-      [],
-      JSON.stringify(existing.map(({ summary, appliesWhen }) => ({ summary, appliesWhen }))),
-    ),
-    ...messages.flatMap((message) => [
-      ...(message.precedingAssistant
-        ? [markdownData("Preceding assistant work, context only", [], message.precedingAssistant)]
-        : []),
-      markdownData("Untrusted user reaction", [["Source message ID", message.id]], message.text),
-    ]),
-  ].join("\n\n");
-  const result = await infer(target, learnPrompt, data, signal);
-  return checked(target, result.usage, () => {
-    const parsed = extraction.parse(result.value);
-    const candidates = parsed.candidates.map((candidate) => {
-      const evidence = candidate.evidence.map((item) => {
-        const source = messages.find((message) => message.id === item.sourceMessageId);
-        if (!source?.text.includes(item.quote))
-          throw new Error(
-            "Twin returned a quote that does not occur in its named user source. No candidates were saved.",
-          );
-        return {
-          sourceId: source.sourceId,
-          sessionId: source.sessionId,
-          reference: source.reference,
-          digest: source.digest,
-          quote: item.quote,
-          ...(source.precedingAssistant ? { precedingAssistant: source.precedingAssistant } : {}),
-        };
+  const batches = chunkMessages(messages);
+  let totalUsage: TwinSnapshot["training"]["usage"] = { input: 0, output: 0, cached: 0 };
+  const allCandidates: TwinCandidate[] = [];
+  const processedDigests: string[] = [];
+  const knownSummaries = [...existing];
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    signal.throwIfAborted();
+    const batch = batches[batchIndex] ?? [];
+    if (batches.length > 1)
+      onTrace?.({
+        id: `batch-${batchIndex}`,
+        kind: "batch",
+        label: `Batch ${batchIndex + 1} / ${batches.length}`,
+        detail: `${batch.length} items`,
+        status: "running",
       });
-      const id = memoryDigest(JSON.stringify({ ...candidate, evidence })).slice(0, 40);
-      const entry = TwinCandidateSchema.parse({ ...candidate, id, evidence });
-      if (safeMemoryText(JSON.stringify(entry), secrets) !== JSON.stringify(entry))
-        throw new Error("Twin candidate contains a credential. No candidates were saved.");
-      return entry;
-    });
-    return { candidates, usage: result.usage };
-  });
-}
-
-export async function consult(
-  target: InferenceTarget,
-  question: string,
-  entries: TwinSnapshot["entries"],
-  signal: AbortSignal,
-) {
-  if (!entries.length)
-    return TwinAnswerSchema.parse({
-      answer: "No confirmed preferences answer this question yet.",
-      abstained: true,
-      entryIds: [],
-      usage: { input: 0, output: 0, cached: 0 },
-    });
-  const selected = entries.slice(0, 32);
-  const result = await infer(
-    target,
-    consultPrompt,
-    [
-      markdownData("Question", [], question),
-      markdownData(
-        "Confirmed profile",
+    const data = buildLearnPayload(batch, knownSummaries);
+    let result: Awaited<ReturnType<typeof infer>>;
+    try {
+      result = await infer(
+        target,
+        learnPrompt,
+        data,
+        signal,
         [],
-        JSON.stringify(
-          selected.map(({ id, summary, content, appliesWhen }) => ({
-            id,
-            summary,
-            content,
-            appliesWhen,
-          })),
-        ),
-      ),
-    ].join("\n\n"),
-    signal,
-  );
-  return checked(target, result.usage, () => {
-    const answer = TwinAnswerSchema.parse({
-      ...z.record(z.string(), z.unknown()).parse(result.value),
-      usage: result.usage,
+        toolOptions ? { ...toolOptions, messages: batch } : undefined,
+        onTrace,
+      );
+    } catch (error) {
+      if (signal.aborted) throw error;
+      if (error instanceof TwinInferenceError) {
+        totalUsage = mergeUsage(totalUsage, error.usage, batchIndex === 0);
+      }
+      if (batches.length === 1) throw error;
+      onTrace?.({
+        id: `batch-${batchIndex}`,
+        kind: "batch",
+        label: `Batch ${batchIndex + 1} / ${batches.length}`,
+        detail: error instanceof Error ? error.message.slice(0, 140) : "Skipped malformed batch",
+        status: "error",
+      });
+      continue;
+    }
+    totalUsage = mergeUsage(totalUsage, result.usage, batchIndex === 0);
+    let batchCandidates: TwinCandidate[] = [];
+    try {
+      batchCandidates = checked(target, totalUsage, () => {
+        const parsed = extraction.parse(result.value);
+        const accepted: TwinCandidate[] = [];
+        for (const candidate of parsed.candidates) {
+          const evidence = candidate.evidence.flatMap((item) => {
+            const matched = matchSourceQuote(batch, item.sourceMessageId, item.quote);
+            if (!matched) return [];
+            return [
+              {
+                sourceId: matched.source.sourceId,
+                sessionId: matched.source.sessionId,
+                reference: matched.source.reference,
+                digest: matched.source.digest,
+                quote: matched.quote,
+                ...(matched.source.precedingAssistant
+                  ? { precedingAssistant: matched.source.precedingAssistant }
+                  : {}),
+              },
+            ];
+          });
+          if (evidence.length === 0) {
+            if (batches.length === 1 && parsed.candidates.length === 1) {
+              throw new Error(
+                "Twin returned a quote that does not occur in its named user source. No candidates were saved.",
+              );
+            }
+            continue;
+          }
+          const id = memoryDigest(JSON.stringify({ ...candidate, evidence })).slice(0, 40);
+          const entry = TwinCandidateSchema.parse({ ...candidate, id, evidence });
+          if (safeMemoryText(JSON.stringify(entry), secrets) !== JSON.stringify(entry)) continue;
+          accepted.push(entry);
+        }
+        return accepted;
+      });
+    } catch (error) {
+      if (batches.length === 1) throw error;
+      onTrace?.({
+        id: `batch-${batchIndex}`,
+        kind: "batch",
+        label: `Batch ${batchIndex + 1} / ${batches.length}`,
+        detail: error instanceof Error ? error.message.slice(0, 140) : "Skipped invalid batch",
+        status: "error",
+      });
+      continue;
+    }
+    const batchDigests = batch.map((msg) => msg.digest);
+    processedDigests.push(...batchDigests);
+    for (const item of batchCandidates) {
+      if (!allCandidates.some((c) => c.id === item.id)) {
+        allCandidates.push(item);
+        knownSummaries.push(item);
+      }
+    }
+    await onBatchCommitted?.({
+      candidates: batchCandidates,
+      processedDigests: batchDigests,
+      usage: totalUsage,
+      batchIndex,
+      totalBatches: batches.length,
     });
-    if (
-      answer.entryIds.some((id) => !selected.some((entry) => entry.id === id)) ||
-      (!answer.abstained && !answer.entryIds.length)
-    )
-      throw new Error("Twin answer has unsupported citations");
-    if (answer.abstained) answer.entryIds = [];
-    return answer;
-  });
-}
-
-export async function delegate(
-  target: InferenceTarget,
-  input: TwinDelegateInput,
-  entries: TwinSnapshot["entries"],
-  signal: AbortSignal,
-) {
-  const { images: offered = [], ...delegation } = input;
-  const images = !target.modalities?.length || target.modalities.includes("image") ? offered : [];
-  // ponytail: a bounded recent persona; add semantic retrieval when 64 active traits are insufficient.
-  const selected: TwinSnapshot["entries"] = [];
-  let profileCharacters = 0;
-  for (const entry of [...entries].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))) {
-    const size =
-      entry.summary.length +
-      entry.content.length +
-      entry.voice.length +
-      entry.appliesWhen.length +
-      256;
-    if (profileCharacters + size > 18_000) continue;
-    selected.push(entry);
-    profileCharacters += size;
+    if (batches.length > 1)
+      onTrace?.({
+        id: `batch-${batchIndex}`,
+        kind: "batch",
+        label: `Batch ${batchIndex + 1} / ${batches.length}`,
+        detail: `${batch.length} items · +${batchCandidates.length}`,
+        status: "done",
+      });
   }
-  const profile = selected.map(
-    ({ id, reaction, strength, voice, summary, content, appliesWhen }) => ({
-      id,
-      reaction,
-      strength,
-      voice,
-      summary,
-      content,
-      appliesWhen,
-    }),
-  );
-  const result = await infer(
-    target,
-    delegatePrompt,
-    [
-      markdownData(
-        "Current delegation",
-        [],
-        JSON.stringify({
-          ...delegation,
-          userMessages: recentMessages(input.userMessages, 10_000),
-          task: input.task.slice(0, 12_000),
-          directive: input.directive.slice(0, 4000),
-          evidence: recentMessages(input.evidence, 12_000),
-          ...(input.result === undefined ? {} : { result: input.result.slice(0, 10_000) }),
-        }),
-      ),
-      markdownData("Learned persona", [], JSON.stringify(profile)),
-      markdownData(
-        "Visual evidence",
-        [],
-        images.length
-          ? `${images.length} actual tool image artifacts are attached. Inspect their pixels as evidence of the submitted work.`
-          : offered.length
-            ? "The selected model does not accept images. Their pixels were not inspected; do not claim visual acceptance."
-            : "No image artifacts were supplied. Do not claim to have inspected pixels.",
-      ),
-    ].join("\n\n"),
-    signal,
-    images.map((image) => ({
-      mediaType: image.mediaType,
-      data: image.data,
-      ...(image.name === undefined ? {} : { name: image.name }),
-    })),
-  );
-  return checked(target, result.usage, () => {
-    const decision = TwinDecisionSchema.parse({
-      ...z.record(z.string(), z.unknown()).parse(result.value),
-      provider: target.providerId,
-      model: target.model,
-      usage: result.usage,
-    });
-    if (decision.entryIds.some((id) => !selected.some((entry) => entry.id === id)))
-      throw new Error("Twin decision cites an unknown persona trait");
-    return decision;
-  });
-}
-
-function recentMessages(messages: readonly string[], limit: number): string[] {
-  const selected: string[] = [];
-  let room = limit;
-  for (const message of [...messages].reverse()) {
-    if (room <= 0) break;
-    selected.unshift(message.slice(-room));
-    room -= selected[0]?.length ?? 0;
-  }
-  return selected;
+  return { candidates: allCandidates, processedDigests, usage: totalUsage };
 }

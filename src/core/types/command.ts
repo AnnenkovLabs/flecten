@@ -19,6 +19,7 @@ export type Command =
       /** The run continues an interrupted one. */
       resumed?: boolean;
       internal?: boolean;
+      actor?: "user" | "twin";
       /** A summary event may wake the model to converse, without any tools. */
       summaryWake?: true;
     }
@@ -29,6 +30,7 @@ export type Command =
       type: "queue.add";
       text: string;
       mode?: QueueItemMode;
+      actor?: "user" | "twin";
       attachments?: string[];
       attachmentSnapshot?: AttachmentSnapshot;
       contexts?: ContextReference[];

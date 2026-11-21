@@ -110,19 +110,16 @@ test("A missing model never leaves an import locked and the next attempt can lea
   expect(f.requests).toBe(1);
 });
 
-test("Repeated imports advance past 100 processed files without rerequesting their messages", async () => {
+test("Repeated imports batch all unread messages without skipping and avoid rerequesting processed messages", async () => {
   const f = await fixture();
-  for (let index = 0; index < 101; index++) await f.source(`source-${index}`, `Decision ${index}`);
+  for (let index = 0; index < 125; index++) await f.source(`source-${index}`, `Decision ${index}`);
   await f.twin.train({ sourceIds: ["flecten"] });
   const first = await f.settled();
-  expect(first.training.messages).toBe(100);
-  await f.twin.train({ sourceIds: ["flecten"] });
-  const second = await f.settled();
-  expect(second.training.messages).toBe(1);
+  expect(first.training.messages).toBe(125);
   expect(f.requests).toBe(2);
   await f.twin.train({ sourceIds: ["flecten"] });
-  const third = await f.settled();
-  expect(third.training.messages).toBe(0);
+  const second = await f.settled();
+  expect(second.training.messages).toBe(0);
   expect(f.requests).toBe(2);
 });
 

@@ -163,7 +163,7 @@ export function createSession(options: SessionOptions): SessionHandle {
     if (requestedSessionId && !/^[\w-]+$/.test(requestedSessionId)) {
       throw new HarnessError("invalid_input", "sessionId is invalid");
     }
-    const authority = permissionIntent.forRun(options, prompt, extras.internal);
+    const authority = permissionIntent.forRun(options, prompt, extras.internal, extras.actor);
     preparing = new AbortController();
     const controller = preparing;
     starting = true;
@@ -232,6 +232,7 @@ export function createSession(options: SessionOptions): SessionHandle {
       ...(extras.queueId ? { queueId: extras.queueId } : {}),
       ...(extras.resumed ? { resumed: true } : {}),
       ...(extras.internal ? { internal: true } : {}),
+      ...(extras.actor ? { actor: extras.actor } : {}),
       ...(budget.hasLimits() ? { budget: budget.view() } : {}),
     });
     const budgetStop = (): string | undefined => {
@@ -404,6 +405,7 @@ export function createSession(options: SessionOptions): SessionHandle {
     calls,
     subagents,
     terminals,
+    reads: () => readsFor(currentSessionId ?? "", options.reads),
     active: () => active,
     busy: () => active !== undefined || starting,
     state: () => statePublisher.snapshot(runtime),
@@ -415,12 +417,8 @@ export function createSession(options: SessionOptions): SessionHandle {
     saveQueue,
   };
   return {
-    isBusy(): boolean {
-      return active !== undefined || starting;
-    },
-    getSessionId(): SessionId | undefined {
-      return currentSessionId;
-    },
+    isBusy: (): boolean => active !== undefined || starting,
+    getSessionId: (): SessionId | undefined => currentSessionId,
     peek(): SessionPeek {
       return {
         state: statePublisher.snapshot(runtime),
@@ -433,11 +431,10 @@ export function createSession(options: SessionOptions): SessionHandle {
           subagents.running,
       };
     },
-    waitsFor(approvalId: string): boolean {
-      return approvals.pendingIds().includes(approvalId);
-    },
-    getHistory(): readonly Message[] {
-      return [...history];
+    waitsFor: (approvalId: string): boolean => approvals.pendingIds().includes(approvalId),
+    getHistory: (): readonly Message[] => [...history],
+    appendHistory: (...messages: Message[]): void => {
+      history.push(...messages);
     },
     flush: () => compaction.settled().then(() => persistence.flush()),
     async dispose(): Promise<void> {
@@ -469,13 +466,15 @@ export function createSession(options: SessionOptions): SessionHandle {
       }
       if (command.type !== "run") {
         const result = await dispatch(runtime, command);
+        if (command.type === "stop" && (result as { stopped?: boolean })?.stopped === false)
+          return result;
         if (
           command.type === "queue.add" &&
-          command.mode === "steer" &&
+          (command.mode === "steer" || !runtime.busy()) &&
           options.role === "talker" &&
           currentSessionId
         )
-          startQueuedRun(currentSessionId, "steer");
+          startQueuedRun(currentSessionId, command.mode === "steer" ? "steer" : "any");
         statePublisher.publish(runtime);
         return result;
       }
@@ -490,6 +489,7 @@ export function createSession(options: SessionOptions): SessionHandle {
         ...(command.contexts ? { contexts: command.contexts } : {}),
         ...(command.resumed ? { resumed: true } : {}),
         ...(command.internal ? { internal: true } : {}),
+        ...(command.actor ? { actor: command.actor } : {}),
         ...(command.summaryWake ? { summaryWake: true } : {}),
       });
     },

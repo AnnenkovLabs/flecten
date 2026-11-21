@@ -38,9 +38,12 @@ export function phaseFromEvent(event: Event, previous: SessionPhase): SessionPha
   }
 }
 
+let nextEpochSeq = 0;
+
 /** Phase belongs to the core; mutable collections are read from their existing owners. */
 export class SessionStatePublisher {
-  readonly #epoch = crypto.randomUUID();
+  readonly #epoch =
+    `${String(Date.now()).padStart(15, "0")}-${String(++nextEpochSeq).padStart(8, "0")}-${crypto.randomUUID()}`;
   #revision = 0;
   #phase: SessionPhase;
   #last = "";

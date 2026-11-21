@@ -6,11 +6,13 @@ export const AttachmentsSchema = z.array(z.string().min(1)).min(1);
 
 export const QueueItemModeSchema = z.enum(["queue", "steer"]);
 export const QueueItemStateSchema = z.enum(["pending", "sending", "sent", "cancelled"]);
+export const QueueItemActorSchema = z.enum(["user", "twin"]);
 
 export const QueueItemSchema = z.object({
   id: z.string().min(1),
   text: z.string().min(1),
   mode: QueueItemModeSchema,
+  actor: QueueItemActorSchema.optional(),
   createdAt: z.number().int().nonnegative(),
   attachments: AttachmentsSchema.optional(),
   attachmentSnapshot: AttachmentSnapshotSchema.optional(),
@@ -20,6 +22,7 @@ export const QueueItemSchema = z.object({
 
 export type QueueItemMode = z.infer<typeof QueueItemModeSchema>;
 export type QueueItemState = z.infer<typeof QueueItemStateSchema>;
+export type QueueItemActor = z.infer<typeof QueueItemActorSchema>;
 export type QueueItem = z.infer<typeof QueueItemSchema>;
 
 export const SerializedQueueSchema = z

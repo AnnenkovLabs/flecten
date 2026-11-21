@@ -131,15 +131,27 @@ function latestRequest(messages: readonly ContextMessage[]): string | undefined 
 /** Only a schema-valid command with its matching successful result is an authoritative checkpoint. */
 export function completedPageReport(messages: readonly ContextMessage[]) {
   const calls = new Map<string, unknown>();
-  let report: Extract<z.infer<typeof PageCommandSchema>, { op: "complete" }> | undefined;
+  let report:
+    | Extract<z.infer<typeof PageCommandSchema>, { op: "compact" | "complete" | "block" }>
+    | undefined;
   for (const message of messages) {
     if (message.role === "assistant") {
       for (const call of message.toolCalls ?? [])
-        if (call.id && call.name === "context") calls.set(call.id, call.args);
-    } else if (message.role === "tool" && message.name === "context") {
+        if (call.id && (call.name === "context" || call.name === "compact"))
+          calls.set(call.id, call.args);
+    } else if (
+      message.role === "tool" &&
+      (message.name === "context" || message.name === "compact")
+    ) {
       const command = PageCommandSchema.safeParse(calls.get(message.toolCallId));
       calls.delete(message.toolCallId);
-      if (!message.isError && command.success && command.data.op === "complete")
+      if (
+        !message.isError &&
+        command.success &&
+        (command.data.op === "compact" ||
+          command.data.op === "complete" ||
+          command.data.op === "block")
+      )
         report = command.data;
     }
   }
@@ -157,7 +169,9 @@ export function deterministicPage(messages: readonly ContextMessage[]): PageSumm
   const pending = new Map<string, ContextToolCall>();
   const unpaired: ContextToolCall[] = [];
   let nextPage: string | undefined;
-  let report: Extract<z.infer<typeof PageCommandSchema>, { op: "complete" }> | undefined;
+  let report:
+    | Extract<z.infer<typeof PageCommandSchema>, { op: "compact" | "complete" }>
+    | undefined;
 
   const describeCall = (call: ContextToolCall): string => {
     const command = argCommand(call.args);
@@ -188,9 +202,9 @@ export function deterministicPage(messages: readonly ContextMessage[]): PageSumm
       continue;
     }
     pending.delete(message.toolCallId);
-    if (call.name === "context" && !message.isError) {
+    if ((call.name === "context" || call.name === "compact") && !message.isError) {
       const command = PageCommandSchema.safeParse(call.args);
-      if (command.success && command.data.op === "complete") {
+      if (command.success && (command.data.op === "compact" || command.data.op === "complete")) {
         report = command.data;
         changed.push(command.data.summary, ...command.data.evidence);
         nextPage = command.data.next;
@@ -266,9 +280,10 @@ export function continuationPage(
   const request = originalRequest(messages);
   const latest = latestRequest(messages);
   const complete = completedPageReport(messages);
-  const checkpoint = complete
-    ? (({ op: _op, ...report }) => report)(complete)
-    : previousSummary(messages)?.checkpoint;
+  const checkpoint =
+    complete && (complete.op === "compact" || complete.op === "complete")
+      ? (({ op: _op, title: _title, ...report }) => report)(complete)
+      : previousSummary(messages)?.checkpoint;
   const activeMcpTools = context.activeMcpTools ?? previousSummary(messages)?.activeMcpTools;
   const result: ContextSummary = {
     page,

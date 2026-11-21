@@ -38,14 +38,13 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
     color: var(--text-2);
     font-size: 13px;
+    font-variant-numeric: tabular-nums;
     transition:
       background var(--t-touch) var(--ease),
-      box-shadow var(--t-touch) var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      box-shadow var(--t-touch) var(--ease);
   }
 
   .file-change:hover {
-    border-radius: 12px;
     background: rgba(240, 239, 237, 0.04);
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.12),

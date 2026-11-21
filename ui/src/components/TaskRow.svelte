@@ -218,12 +218,10 @@
     text-align: left;
     transition:
       background 220ms var(--ease),
-      color var(--t-touch) var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      color var(--t-touch) var(--ease);
   }
 
   .task-row:hover {
-    border-radius: 11px;
     background: rgba(240, 239, 237, 0.035);
     color: var(--text);
   }
@@ -287,8 +285,7 @@
     transition:
       background 220ms var(--ease),
       color 220ms var(--ease),
-      opacity 220ms var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      opacity 220ms var(--ease);
   }
 
   .task:hover .task-more,
@@ -298,7 +295,6 @@
   }
 
   .task-more:hover {
-    border-radius: 10px;
     background: rgba(240, 239, 237, 0.05);
     color: var(--text-2);
   }
@@ -361,7 +357,7 @@
     grid-column: 1 / -1;
     gap: 2px;
     padding: 4px;
-    border-radius: 10px;
+    border-radius: 11px;
     background: var(--surface);
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.07),

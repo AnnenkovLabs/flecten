@@ -9,9 +9,7 @@ import type { ActiveRun } from "./runtime";
 
 /** Budget events follow the ledger mutation; usage events precede it. */
 export function accountingChanged(event: Event): boolean {
-  if (event.type === "worker.event" || event.type === "subagent.event")
-    return accountingChanged(event.event);
-  return event.type === "budget" || event.type === "task.budget";
+  return event.type === "budget";
 }
 
 export function taskBudgetEvent(sessionId: string, budget: RunBudget): Event {

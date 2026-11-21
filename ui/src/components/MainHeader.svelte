@@ -117,11 +117,14 @@
     justify-content: center;
     gap: 7px;
     min-height: var(--control-h);
-    padding: 0 8px;
+    padding: 0 10px;
     flex: none;
-    border-radius: 8px;
+    border-radius: 7px;
     color: var(--muted);
     font-size: 12px;
+    transition:
+      background var(--t-touch) var(--ease),
+      color var(--t-touch) var(--ease);
   }
   .split-button:hover, .split-button.is-active { background: var(--raised); color: var(--text); }
   @media (max-width: 1220px) {

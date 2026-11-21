@@ -38,6 +38,7 @@ export const themeCss = `
   text-decoration: underline;
   text-decoration-color: var(--line-strong);
   text-decoration-thickness: 1px;
+  text-decoration-skip-ink: auto;
   text-underline-offset: 2px;
 }
 .markdown a:hover { text-decoration-color: currentColor; }
@@ -338,6 +339,7 @@ export const themeCss = `
   color: var(--text);
   font-size: 20px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   line-height: 1.15;
   letter-spacing: -0.02em;
 }

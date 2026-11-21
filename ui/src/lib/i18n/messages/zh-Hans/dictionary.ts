@@ -1,5 +1,5 @@
 export default {
-  "Memory and dictionary": "记忆与词典",
+  "Memory and dictionary": "词典",
   "Definitions are supplied automatically when a term appears in your prompt. Local meanings take priority.":
     "提示词中出现相关术语时，会自动补充定义。本地释义优先。",
   "Reload dictionary": "重新加载词典",

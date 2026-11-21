@@ -219,17 +219,15 @@
     width: 40px;
     height: 40px;
     flex: none;
-    border-radius: 6px;
+    border-radius: 7px;
     color: var(--muted);
     transition:
-      background 240ms var(--ease),
-      color 240ms var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      background 180ms var(--ease),
+      color 180ms var(--ease);
   }
 
   .head-btn:hover,
   .file-toggle:hover {
-    border-radius: 9px;
     background: rgba(240, 239, 237, 0.06);
     color: var(--text-2);
   }
@@ -313,6 +311,7 @@
   .ln {
     padding-right: 9px;
     color: #6f6c68;
+    font-variant-numeric: tabular-nums;
     text-align: right;
     user-select: none;
   }

@@ -39,13 +39,17 @@
   width: 100%;
   min-height: 36px;
   padding: 5px 8px;
-  border-radius: 8px;
+  border-radius: 7px;
   color: var(--text-2);
   text-align: left;
-  transition: background 180ms var(--ease);
+  transition:
+    background 180ms var(--ease),
+    color 180ms var(--ease);
 }
+.lh-menu-row:hover,
 .lh-menu-row.is-active {
   background: rgba(240, 239, 237, 0.07);
+  color: var(--text);
 }
 .lh-menu-empty {
   padding: 18px 12px;
@@ -254,11 +258,16 @@
   padding: 8px 10px;
   resize: vertical;
   border: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--bg);
   color: var(--text);
   font-size: 13px;
   line-height: 1.5;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.lh-queue-input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -1px;
 }
 .lh-queue-editor-actions {
   display: flex;
@@ -266,7 +275,8 @@
   gap: 8px;
 }
 .lh-queue-editor-actions button {
-  min-height: 28px;
+  min-height: 32px;
+  border-radius: 6px;
 }
 .lh-text-button,
 .lh-primary-button {
@@ -323,16 +333,17 @@
   gap: 8px;
   max-width: 260px;
   min-height: 44px;
-  padding: 2px 0 2px 6px;
+  padding: 4px 2px 4px 6px;
   border-radius: 10px;
   background: rgba(240, 239, 237, 0.04);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 .lh-att-thumb {
   display: grid;
   place-items: center;
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   overflow: hidden;
   border-radius: 6px;
   background: var(--raised);
@@ -341,7 +352,10 @@
 .lh-att-thumb img {
   width: 100%;
   height: 100%;
+  border-radius: 6px;
   object-fit: cover;
+  outline: 1px solid oklch(1 0 0 / 0.1);
+  outline-offset: -1px;
 }
 .lh-att-body {
   display: grid;
@@ -359,6 +373,7 @@
 .lh-att-meta {
   color: var(--muted);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
   line-height: 1.35;
   white-space: nowrap;
 }
@@ -379,6 +394,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .lh-menu, .lh-queue, .lh-attachment { animation: none !important; }
+  .lh-menu-row,
+  .lh-icon-button,
+  .lh-text-button,
+  .lh-primary-button {
+    transition: none;
+  }
 }
 @media (max-width: 900px) {
   .lh-attachment {
@@ -390,16 +411,4 @@
   .lh-menu-row { min-height: 40px; }
   .lh-queue-actions .lh-icon-button { width: 44px; height: 44px; }
   .lh-queue-editor-actions button { min-height: 44px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lh-menu {
-    animation: none;
-  }
-  .lh-menu-row,
-  .lh-icon-button,
-  .lh-text-button,
-  .lh-primary-button {
-    transition: none;
-  }
 }

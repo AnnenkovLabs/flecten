@@ -404,6 +404,8 @@ export function createOpenAiResponses(
 
           if (type === "response.failed") {
             const failure = isObject(event.response) ? event.response : event;
+            const nextUsage = readUsage(failure.usage);
+            if (nextUsage) usage = nextUsage;
             const error = isObject(failure.error) ? failure.error : {};
             events.fail(
               "server",
@@ -412,11 +414,15 @@ export function createOpenAiResponses(
           }
         }
       } catch (error) {
+        if (usage) yield events.emit(usage);
         if (signal.aborted) throw error;
         events.interrupted(error, "response.completed");
       }
 
-      if (!sawTerminal) events.requireDone("response.completed or response.incomplete");
+      if (!sawTerminal) {
+        if (usage) yield events.emit(usage);
+        events.requireDone("response.completed or response.incomplete");
+      }
 
       const provisionalReason = readReason(terminal, calls.size > 0);
       for (const call of calls.values()) {

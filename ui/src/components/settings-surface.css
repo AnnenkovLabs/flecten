@@ -87,6 +87,7 @@
   color: var(--muted);
   font-size: 12px;
   font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 .st-sub {
@@ -100,7 +101,7 @@
 }
 
 .st-details {
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(240, 239, 237, 0.025);
 }
 
@@ -111,7 +112,7 @@
   gap: 16px;
   min-height: 56px;
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 12px;
   list-style: none;
   cursor: pointer;
   user-select: none;
@@ -205,6 +206,7 @@
   flex: none;
   color: var(--muted);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 

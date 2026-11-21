@@ -44,3 +44,50 @@ export async function sampleFile(
     await handle.close();
   }
 }
+
+export function decodeFileBytes(bytes: Uint8Array): {
+  text: string;
+  encoding: Encoding;
+  bomBytes: number;
+} {
+  const detected = detectEncoding(bytes.subarray(0, SAMPLE_BYTES));
+  const decoder = new TextDecoder(detected.encoding);
+  const body = decoder.decode(bytes.subarray(detected.bomBytes));
+  return {
+    text: detected.bomBytes === 3 ? `\uFEFF${body}` : body,
+    encoding: detected.encoding,
+    bomBytes: detected.bomBytes,
+  };
+}
+
+export function encodeFileText(
+  text: string,
+  encoding: Encoding,
+  bomBytes: number,
+): string | Uint8Array {
+  if (encoding === "utf-8") return text;
+  const body = text.startsWith("\uFEFF") ? text.slice(1) : text;
+  const le = Buffer.from(body, "utf16le");
+  if (encoding === "utf-16le") {
+    if (bomBytes === 2) {
+      const out = new Uint8Array(2 + le.length);
+      out[0] = 0xff;
+      out[1] = 0xfe;
+      out.set(le, 2);
+      return out;
+    }
+    return new Uint8Array(le);
+  }
+  const be = new Uint8Array((bomBytes === 2 ? 2 : 0) + le.length);
+  let offset = 0;
+  if (bomBytes === 2) {
+    be[0] = 0xfe;
+    be[1] = 0xff;
+    offset = 2;
+  }
+  for (let index = 0; index + 1 < le.length; index += 2) {
+    be[offset + index] = le[index + 1] ?? 0;
+    be[offset + index + 1] = le[index] ?? 0;
+  }
+  return be;
+}

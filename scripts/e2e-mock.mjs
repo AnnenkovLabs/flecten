@@ -111,10 +111,13 @@ const server = Bun.serve({
         `${event({ content: "A screenshot with a small test image." }, "stop")}data: [DONE]\n\n`,
       );
     if (delayMs > 0) await Bun.sleep(delayMs);
-    if (twinLearning && (!body.tools || body.tools.length === 0)) {
-      twinRequests += 1;
-      await summaryReleased;
-      const system = body.messages?.find((message) => message.role === "system")?.content ?? "";
+    const system = body.messages?.find((message) => message?.role === "system")?.content ?? "";
+    const isTwinPrompt = typeof system === "string" && system.startsWith("# Twin:");
+    if ((twinLearning && (!body.tools || body.tools.length === 0)) || isTwinPrompt) {
+      if (twinLearning) {
+        twinRequests += 1;
+        await summaryReleased;
+      }
       if (system.startsWith("# Twin: consult")) {
         const data = body.messages.at(-1)?.content ?? "";
         const profile = JSON.parse(
@@ -124,8 +127,16 @@ const server = Bun.serve({
           `${event({ content: `\`\`\`json\n${JSON.stringify({ answer: profile[0]?.content ?? "Unknown preference", abstained: !profile.length, entryIds: profile.slice(0, 1).map((entry) => entry.id) })}\n\`\`\`` }, "stop")}data: [DONE]\n\n`,
         );
       }
+      if (system.startsWith("# Twin: represent")) {
+        return sse(
+          `${event({ content: twinResponseOverride?.includes('"verdict"') ? twinResponseOverride : JSON.stringify({ verdict: "pass", voice: "Ок.", instructions: "", entryIds: [], emotion: "calm" }) }, "stop")}data: [DONE]\n\n`,
+        );
+      }
+      if (twinResponseOverride === "invalid JSON") {
+        return sse(`${event({ content: "invalid JSON" }, "stop")}data: [DONE]\n\n`);
+      }
       return sse(
-        `${event({ content: twinResponseOverride ?? JSON.stringify({ candidates: [] }) }, "stop")}data: [DONE]\n\n`,
+        `${event({ content: twinResponseOverride?.includes('"candidates"') ? twinResponseOverride : JSON.stringify({ candidates: [] }) }, "stop")}data: [DONE]\n\n`,
       );
     }
     if (replyOverride !== undefined && firstCalls.length === 0)

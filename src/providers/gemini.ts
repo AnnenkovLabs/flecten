@@ -282,23 +282,56 @@ export function createGemini(runtime: ProviderRuntime): ModelProvider {
                 };
                 calls.push(call);
                 yield events.emit({ type: "tool_call_progress", index: callIndex - 1, name });
-                yield events.emit({
-                  type: "tool_call",
-                  id,
-                  name,
-                  args,
-                  ...(call.extraContent === undefined ? {} : { extraContent: call.extraContent }),
-                });
               }
             }
           }
         }
       } catch (error) {
+        const input = usage.promptTokenCount ?? 0;
+        const output = (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0);
+        const cached = usage.cachedContentTokenCount ?? 0;
+        if (input > 0 || output > 0) {
+          yield events.emit({
+            type: "usage",
+            input,
+            output,
+            cached,
+            ...(usage.thoughtsTokenCount === undefined
+              ? {}
+              : { reasoning: usage.thoughtsTokenCount }),
+          });
+        }
         if (signal.aborted) throw error;
         events.interrupted(error, "finishReason");
       }
 
-      if (finish === undefined) events.requireDone("finishReason");
+      if (finish === undefined) {
+        const input = usage.promptTokenCount ?? 0;
+        const output = (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0);
+        const cached = usage.cachedContentTokenCount ?? 0;
+        if (input > 0 || output > 0) {
+          yield events.emit({
+            type: "usage",
+            input,
+            output,
+            cached,
+            ...(usage.thoughtsTokenCount === undefined
+              ? {}
+              : { reasoning: usage.thoughtsTokenCount }),
+          });
+        }
+        events.requireDone("finishReason");
+      }
+
+      for (const call of calls) {
+        yield events.emit({
+          type: "tool_call",
+          id: call.id,
+          name: call.name,
+          args: call.args,
+          ...(call.extraContent === undefined ? {} : { extraContent: call.extraContent }),
+        });
+      }
 
       if (parts.length > 0) {
         yield events.emit({ type: "provider_data", data: { kind: "gemini", parts } });

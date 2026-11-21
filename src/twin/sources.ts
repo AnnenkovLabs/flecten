@@ -1,10 +1,22 @@
 import { constants } from "node:fs";
-import { lstat, open, readdir } from "node:fs/promises";
+import { lstat, open } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, extname, join, relative } from "node:path";
+import { extname, join } from "node:path";
+import { promisify } from "node:util";
+import { zstdDecompress } from "node:zlib";
 import type { TwinSource, TwinSourceId } from "../../shared/twin";
+
+const decompressZstd = promisify(zstdDecompress);
+
 import { memoryDigest, safeMemoryText } from "../core/memory/sources";
-import { assistantWords, jsonDocuments, userWords } from "./source-formats";
+import { collectCommandCodeTaste, collectHarnessMemories } from "./memory-sources";
+import { kiloCandidateRoots, visitSourceDirectory } from "./source-discovery";
+import {
+  assistantWords,
+  isAuxiliarySessionRecord,
+  jsonDocuments,
+  userWords,
+} from "./source-formats";
 import { readDatabase, scanDatabase } from "./sqlite-sources";
 
 export interface SourceFile {
@@ -24,17 +36,16 @@ export interface SourceMessage {
 export interface SourceDiscovery {
   source: TwinSource;
   files: SourceFile[];
-  database?: string;
+  databases?: string[];
+  cwd?: string;
+  home?: string;
 }
 export const TWIN_LIMITS = {
-  maxSessions: 100,
-  maxMessages: 160,
-  maxInputCharacters: 64_000,
   maxCandidates: 12,
-  maxProfileEntries: 64,
+  maxProfileEntries: 200,
 };
-const FILE_LIMIT = 4 * 1024 * 1024;
-const ENTRY_LIMIT = 20_000;
+export const FILE_LIMIT = 16 * 1024 * 1024;
+export const ENTRY_LIMIT = 20_000;
 
 export function sourceDefinitions(cwd: string, home = homedir()): TwinSource[] {
   const values: [TwinSourceId, string, string][] = [
@@ -42,10 +53,11 @@ export function sourceDefinitions(cwd: string, home = homedir()): TwinSource[] {
     ["codex", "Codex", join(home, ".codex/sessions")],
     ["cursor", "Cursor", join(home, ".cursor/chats")],
     ["omp", "Oh My Pi", join(home, ".omp/agent/sessions")],
-    ["kilo", "Kilo Code", join(home, ".kilocode/tasks")],
+    ["kilo", "Kilo Code", join(home, ".local/share/kilo")],
     ["deepseek", "DeepSeek Harness", join(home, ".dsh/sessions")],
     ["opencode", "OpenCode", join(home, ".local/share/opencode")],
     ["hermes", "Hermes Agent", join(home, ".hermes/sessions")],
+    ["commandcode", "Command Code", join(home, ".commandcode/projects")],
     ["flecten", "Flecten", join(cwd, ".flecten/sessions")],
   ];
   return values.map(([id, name, path]) => ({
@@ -60,50 +72,39 @@ export function sourceDefinitions(cwd: string, home = homedir()): TwinSource[] {
   }));
 }
 
-function sessionFile(id: TwinSourceId, file: string): boolean {
-  const name = basename(file);
-  if (id === "flecten") return name === "events.jsonl";
-  if (id === "kilo") return name === "api_conversation_history.json";
-  if (id === "opencode") return false;
-  if (id === "cursor") return name === "messages.json" || name === "conversation.json";
-  if (id === "hermes") return extname(file) === ".jsonl" || name === "messages.json";
-  if (id === "deepseek") return [".jsonl", ".json"].includes(extname(file));
-  return extname(file) === ".jsonl";
+function isZstdFile(path: string): boolean {
+  return path.endsWith(".zst") || path.endsWith(".zstd");
+}
+
+function uniqueDatabases(paths: readonly string[]): string[] {
+  return [...new Set(paths)];
+}
+
+async function existingDirectories(candidates: readonly string[]): Promise<string[]> {
+  const dirs: string[] = [];
+  for (const dir of candidates) {
+    try {
+      const metadata = await lstat(dir);
+      if (metadata.isDirectory() && !metadata.isSymbolicLink()) dirs.push(dir);
+    } catch {}
+  }
+  return dirs;
 }
 
 /** Discovery visits metadata only. Bodies are opened only by an explicit training action. */
 export async function discoverSource(
   source: TwinSource,
   signal: AbortSignal,
+  context?: { cwd?: string; home?: string },
 ): Promise<SourceDiscovery> {
   const files: SourceFile[] = [];
   const warnings: string[] = [];
+  const databases: string[] = [];
   let entries = 0;
   let unknown = false;
-  const visit = async (directory: string, depth: number): Promise<void> => {
-    signal.throwIfAborted();
-    if (depth > 7 || entries >= ENTRY_LIMIT) return;
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-      signal.throwIfAborted();
-      entries += 1;
-      if (entries > ENTRY_LIMIT) break;
-      const path = join(directory, entry.name);
-      if (entry.isSymbolicLink()) continue;
-      if (entry.isDirectory()) {
-        if (source.id === "claude" && entry.name === "subagents") continue;
-        await visit(path, depth + 1);
-      } else if (entry.isFile() && sessionFile(source.id, path)) {
-        const metadata = await lstat(path);
-        if (metadata.isFile() && metadata.size <= FILE_LIMIT)
-          files.push({
-            path,
-            modified: metadata.mtimeMs,
-            sessionId: memoryDigest(relative(source.path, path)).slice(0, 32),
-          });
-        else warnings.push(`Skipped oversized session: ${relative(source.path, path)}`);
-      } else if (entry.isFile() && [".db", ".sqlite"].includes(extname(path))) unknown = true;
-    }
-  };
+  const cwd = context?.cwd ?? process.cwd();
+  const home = context?.home ?? homedir();
+
   try {
     if (source.id === "hermes") {
       const database = join(source.path, "..", "state.db");
@@ -119,8 +120,58 @@ export async function discoverSource(
             warnings: [],
           },
           files,
-          database,
+          databases: [database],
+          cwd,
+          home,
         };
+    }
+    if (source.id === "kilo") {
+      const roots = await existingDirectories(kiloCandidateRoots(home));
+      if (roots.length === 0)
+        return {
+          source: { ...source, available: false, status: "missing", warnings: [] },
+          files: [],
+          cwd,
+          home,
+        };
+      let dbSessions = 0;
+      const seenInodes = new Set<string>();
+      for (const root of roots) {
+        const dbPath = join(root, "kilo.db");
+        try {
+          const st = await lstat(dbPath);
+          const key = `${st.dev}:${st.ino}`;
+          if (!seenInodes.has(key)) {
+            seenInodes.add(key);
+            const count = await scanDatabase("kilo", dbPath);
+            if (count !== undefined) {
+              databases.push(dbPath);
+              dbSessions += count;
+            }
+          }
+        } catch {}
+        const visited = await visitSourceDirectory(source.id, root, root, entries, signal);
+        entries = visited.entries;
+        unknown ||= visited.unknown;
+        files.push(...visited.files);
+        warnings.push(...visited.warnings);
+      }
+      files.sort((a, b) => b.modified - a.modified || a.path.localeCompare(b.path));
+      const total = dbSessions + files.length;
+      return {
+        source: {
+          ...source,
+          path: databases[0] ?? roots[0] ?? source.path,
+          available: true,
+          sessions: total,
+          status: total > 0 ? "ready" : "unsupported",
+          warnings,
+        },
+        files,
+        databases: uniqueDatabases(databases),
+        cwd,
+        home,
+      };
     }
     const metadata = await lstat(source.path);
     if (!metadata.isDirectory() || metadata.isSymbolicLink())
@@ -128,23 +179,33 @@ export async function discoverSource(
     if (source.id === "opencode") {
       const database = join(source.path, "opencode.db");
       const count = await scanDatabase(source.id, database);
-      if (count !== undefined)
-        return {
-          source: { ...source, available: true, sessions: count, status: "ready", warnings: [] },
-          files,
-          database,
-        };
       return {
-        source: {
-          ...source,
-          available: true,
-          status: "unsupported",
-          warnings: ["This OpenCode store is not a supported message/part SQLite schema."],
-        },
+        source:
+          count !== undefined
+            ? { ...source, available: true, sessions: count, status: "ready", warnings: [] }
+            : {
+                ...source,
+                available: true,
+                status: "unsupported",
+                warnings: ["This OpenCode store is not a supported message/part SQLite schema."],
+              },
         files,
+        ...(count !== undefined ? { databases: [database] } : {}),
+        cwd,
+        home,
       };
     }
-    await visit(source.path, 0);
+    const visited = await visitSourceDirectory(
+      source.id,
+      source.path,
+      source.path,
+      entries,
+      signal,
+    );
+    entries = visited.entries;
+    unknown = visited.unknown;
+    files.push(...visited.files);
+    warnings.push(...visited.warnings);
     if (entries >= ENTRY_LIMIT) warnings.push("Discovery stopped at 20,000 filesystem entries.");
     if (unknown)
       warnings.push(
@@ -154,6 +215,17 @@ export async function discoverSource(
       warnings.push(
         "Only messages.json and conversation.json exports with explicit user roles are supported. Cursor native blob databases are not decoded.",
       );
+    if (source.id === "commandcode") {
+      const taste = await collectCommandCodeTaste(cwd, home, [], signal).catch(() => ({
+        messages: [],
+        fileCount: 0,
+      }));
+      if (taste.fileCount > 0) {
+        warnings.push(
+          `Found ${taste.fileCount} Taste file(s) with ${taste.messages.length} entries across global and project categories.`,
+        );
+      }
+    }
     files.sort((a, b) => b.modified - a.modified || a.path.localeCompare(b.path));
     return {
       source: {
@@ -164,8 +236,32 @@ export async function discoverSource(
         warnings,
       },
       files,
+      cwd,
+      home,
     };
   } catch (error) {
+    if (source.id === "commandcode") {
+      const taste = await collectCommandCodeTaste(cwd, home, [], signal).catch(() => ({
+        messages: [],
+        fileCount: 0,
+      }));
+      if (taste.fileCount > 0) {
+        return {
+          source: {
+            ...source,
+            available: true,
+            sessions: taste.fileCount,
+            status: "ready",
+            warnings: [
+              `Found ${taste.fileCount} Taste file(s) with ${taste.messages.length} entries.`,
+            ],
+          },
+          files: [],
+          cwd,
+          home,
+        };
+      }
+    }
     const missing = (error as NodeJS.ErrnoException).code === "ENOENT";
     return {
       source: {
@@ -175,6 +271,8 @@ export async function discoverSource(
         warnings: missing ? [] : [error instanceof Error ? error.message : String(error)],
       },
       files: [],
+      cwd,
+      home,
     };
   }
 }
@@ -192,12 +290,18 @@ export async function readSession(
     const metadata = await handle.stat();
     if (!metadata.isFile() || metadata.size > FILE_LIMIT)
       throw new Error("Source file is oversized or not regular");
-    raw = await handle.readFile({ encoding: "utf8", signal });
+    if (isZstdFile(file.path)) {
+      const bytes = await handle.readFile({ signal });
+      raw = Buffer.from(await decompressZstd(bytes)).toString("utf8");
+    } else {
+      raw = await handle.readFile({ encoding: "utf8", signal });
+    }
   } finally {
     await handle.close();
   }
   const result: SourceMessage[] = [];
-  const documents = extname(file.path) === ".jsonl" ? raw.split("\n") : [raw];
+  const documents =
+    extname(file.path) === ".jsonl" || file.path.includes(".jsonl.") ? raw.split("\n") : [raw];
   let line = 0;
   let precedingAssistant = "";
   for (const document of documents) {
@@ -211,6 +315,7 @@ export async function readSession(
       continue;
     }
     for (const record of jsonDocuments(value)) {
+      if (isAuxiliarySessionRecord(source.source.id, record)) return [];
       const assistant = assistantWords(source.source.id, record).join("\n");
       if (assistant) precedingAssistant = safeMemoryText(assistant.slice(-4000), secrets);
       for (const text of userWords(source.source.id, record)) {
@@ -237,5 +342,98 @@ export async function sourceMessages(
   secrets: readonly string[],
   signal: AbortSignal,
 ): Promise<SourceMessage[]> {
-  return source.database ? readDatabase(source.source.id, source.database, secrets, signal) : [];
+  const out: SourceMessage[] = [];
+  for (const dbPath of source.databases ?? []) {
+    out.push(...(await readDatabase(source.source.id, dbPath, secrets, signal)));
+  }
+  return out;
+}
+
+export async function collectTrainingMessages(
+  selected: readonly SourceDiscovery[],
+  processed: readonly string[],
+  secrets: readonly string[],
+  signal: AbortSignal,
+  onProgress?: (progress: {
+    sessions: number;
+    messages: number;
+    samples: Array<{ sourceId: TwinSourceId; sessionId: string; quote: string }>;
+    sourceName: string;
+  }) => void,
+): Promise<{ messages: SourceMessage[]; sessions: Set<string> }> {
+  const messages: SourceMessage[] = [];
+  const seen = new Set(processed);
+  const sessions = new Set<string>();
+  const samples: Array<{ sourceId: TwinSourceId; sessionId: string; quote: string }> = [];
+  let lastReport = 0;
+  const report = (sourceName: string, force = false) => {
+    const now = performance.now();
+    if (!force && now - lastReport < 250) return;
+    lastReport = now;
+    onProgress?.({
+      sessions: sessions.size,
+      messages: messages.length,
+      samples: [...samples],
+      sourceName,
+    });
+  };
+  const add = (items: SourceMessage[]) => {
+    for (const message of items) {
+      if (seen.has(message.digest)) continue;
+      const sessionKey = `${message.sourceId}:${message.sessionId}`;
+      messages.push(message);
+      seen.add(message.digest);
+      sessions.add(sessionKey);
+      if (samples.length < 16) {
+        samples.push({
+          sourceId: message.sourceId,
+          sessionId: message.sessionId,
+          quote: safeMemoryText(message.text, secrets).slice(0, 4000),
+        });
+      }
+    }
+  };
+  for (const source of selected) {
+    signal.throwIfAborted();
+    const cwd = source.cwd ?? process.cwd();
+    const home = source.home ?? homedir();
+    try {
+      add(await collectHarnessMemories(source.source.id, cwd, home, secrets, signal));
+      report(source.source.name, true);
+    } catch (error) {
+      signal.throwIfAborted();
+      const warning = safeMemoryText(
+        `Memory store could not be read: ${error instanceof Error ? error.message : String(error)}`,
+        secrets,
+      ).slice(0, 1000);
+      if (!source.source.warnings.includes(warning)) source.source.warnings.push(warning);
+    }
+    if (source.databases?.length) {
+      add(await sourceMessages(source, secrets, signal));
+      report(source.source.name, true);
+    }
+    const CONCURRENCY = 8;
+    for (let index = 0; index < source.files.length; index += CONCURRENCY) {
+      signal.throwIfAborted();
+      const chunk = source.files.slice(index, index + CONCURRENCY);
+      const batch = await Promise.all(
+        chunk.map(async (file) => {
+          try {
+            return await readSession(source, file, secrets, signal);
+          } catch (error) {
+            signal.throwIfAborted();
+            const warning = safeMemoryText(
+              `Session could not be read: ${error instanceof Error ? error.message : String(error)}`,
+              secrets,
+            ).slice(0, 1000);
+            if (!source.source.warnings.includes(warning)) source.source.warnings.push(warning);
+            return [];
+          }
+        }),
+      );
+      for (const items of batch) add(items);
+      report(source.source.name);
+    }
+  }
+  return { messages, sessions };
 }

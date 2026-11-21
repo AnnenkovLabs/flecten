@@ -46,3 +46,41 @@ test("Twin dialogue replays through the real task view, settles running states a
   view.reset();
   expect(view.twin.items).toHaveLength(0);
 });
+
+test("Twin chat messages carry actor='twin' across session.started and steer.applied without overwriting task title", () => {
+  const view = new TaskView({ checkpointSaved() {} });
+  view.apply({
+    type: "session.started",
+    sessionId: "task",
+    provider: "test",
+    model: "model",
+    prompt: "Build the checkout flow",
+  });
+  expect(view.title).toBe("Build the checkout flow");
+  view.apply({
+    type: "steer.applied",
+    sessionId: "task",
+    text: "Блядь, опять модалка? Убирай нахрен, делай инлайн прямо в форме.",
+    actor: "twin",
+  });
+  view.apply({
+    type: "session.started",
+    sessionId: "task",
+    provider: "test",
+    model: "model",
+    prompt: "В саммари написали что готово, а валидацию забыли. Доделывай.",
+    actor: "twin",
+  });
+  const messages = view.thread.items.filter((item) => item.kind === "message");
+  expect(messages).toHaveLength(3);
+  expect(messages[0]?.actor).toBeUndefined();
+  expect(messages[1]).toMatchObject({
+    actor: "twin",
+    text: "Блядь, опять модалка? Убирай нахрен, делай инлайн прямо в форме.",
+  });
+  expect(messages[2]).toMatchObject({
+    actor: "twin",
+    text: "В саммари написали что готово, а валидацию забыли. Доделывай.",
+  });
+  expect(view.title).toBe("Build the checkout flow");
+});

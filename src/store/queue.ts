@@ -44,11 +44,26 @@ export async function saveQueue(
 
 /** Queue ids whose message reached the model, read from the session log. */
 export async function deliveredQueueIds(cwd: string, sessionId: string): Promise<Set<string>> {
-  const { envelopes } = await readTolerant(sessionPaths(cwd, sessionId).events);
+  const parentId = sessionId.endsWith("_worker") ? sessionId.slice(0, -7) : undefined;
+  const [{ envelopes }, parentRead] = await Promise.all([
+    readTolerant(sessionPaths(cwd, sessionId).events),
+    parentId
+      ? readTolerant(sessionPaths(cwd, parentId).events)
+      : Promise.resolve({ envelopes: [] }),
+  ]);
   const ids = new Set<string>();
   for (const { event } of envelopes) {
     if ((event.type === "session.started" || event.type === "steer.applied") && event.queueId) {
       ids.add(event.queueId);
+    }
+  }
+  for (const { event } of parentRead.envelopes) {
+    if (
+      event.type === "worker.event" &&
+      (event.event.type === "session.started" || event.event.type === "steer.applied") &&
+      event.event.queueId
+    ) {
+      ids.add(event.event.queueId);
     }
   }
   return ids;

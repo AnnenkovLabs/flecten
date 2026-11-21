@@ -95,9 +95,6 @@ test("Twin can be rescued during goodbye, falls grey, and stays off after an app
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
     expect(bounds?.width).toBeGreaterThanOrEqual(100);
 
-    await portrait.getByRole("button", { name: "Pause motion", exact: true }).click();
-    await stopped(canvas);
-    await portrait.getByRole("button", { name: "Resume motion", exact: true }).click();
     await resize(first, sizes[1]);
     await input.focus();
     await input.press("ArrowRight");
@@ -169,8 +166,6 @@ test("Twin can be rescued during goodbye, falls grey, and stays off after an app
       await expect(power).toBeVisible();
     }
     await panel.getByRole("button", { name: "Your character", exact: false }).click();
-    await expect(panel.getByTestId("twin-character")).toHaveAttribute("data-power", "disabled");
-    await panel.getByRole("button", { name: "Ask Twin", exact: true }).click();
     await expect(panel.getByTestId("twin-character")).toHaveAttribute("data-power", "disabled");
     await page.reload();
     await expect(icon).toHaveAttribute("data-power", "disabled");

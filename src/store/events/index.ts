@@ -9,6 +9,7 @@ import { redact } from "../../util/redact";
 import { copyPageArchive } from "../pages";
 import { sessionPaths } from "../paths";
 import { archiveSessionScratch } from "../session-scratch";
+import { projectBranches } from "./branches";
 import { readTolerant } from "./envelope";
 import { assertForkOptions, type ForkSessionOptions, forkCutoff, forkLines } from "./fork";
 
@@ -147,14 +148,15 @@ async function scanSession(cwd: string, id: string): Promise<SessionSummary | un
   try {
     const paths = sessionPaths(cwd, id);
     const [read, meta] = await Promise.all([readTolerant(paths.events), stat(paths.events)]);
-    const started = read.envelopes.find((envelope) => envelope.event.type === "session.started");
+    const activeEnvelopes = projectBranches(read.envelopes).envelopes;
+    const started = activeEnvelopes.find((envelope) => envelope.event.type === "session.started");
     if (started?.event.type !== "session.started") return undefined;
 
     let lastPrompt = redact(started.event.prompt);
     let messageCount = 0;
     let tokens = 0;
     const lifecycle: Pick<SessionSummary, "running" | "interrupted" | "stopReason"> = {};
-    for (const envelope of read.envelopes) {
+    for (const envelope of activeEnvelopes) {
       applyLifecycle(lifecycle, envelope.event);
       switch (envelope.event.type) {
         case "session.started":
@@ -256,6 +258,17 @@ export async function listSessions(
 export async function recordSessionEvent(cwd: string, event: Event): Promise<void> {
   const id = event.sessionId;
   if (!id || !isValidSessionId(id)) return;
+  if (event.type === "history.selected" || event.type === "history.edited") {
+    await serialized(cwd, async () => {
+      const [sessions, rescanned] = await Promise.all([loadForWrite(cwd), scanSession(cwd, id)]);
+      if (!rescanned) return;
+      const index = sessions.findIndex((session) => session.id === id);
+      if (index >= 0) sessions[index] = rescanned;
+      else sessions.push(rescanned);
+      await writeIndexFile(cwd, sessions);
+    });
+    return;
+  }
   if (
     event.type !== "session.started" &&
     event.type !== "message.finished" &&
@@ -369,7 +382,8 @@ export async function forkSession(
   const source = await serialized(cwd, () => sessionRecord(cwd, sourceId));
   if (!source) throw new Error(`unknown session: ${sourceId}`);
 
-  const { envelopes } = await readTolerant(sessionPaths(cwd, sourceId).events);
+  const { envelopes: rawEnvelopes } = await readTolerant(sessionPaths(cwd, sourceId).events);
+  const envelopes = projectBranches(rawEnvelopes).envelopes;
   if (envelopes.length === 0) throw new Error(`session ${sourceId} has no events`);
 
   const cutoff = forkCutoff(envelopes, options, sourceId);

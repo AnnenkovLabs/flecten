@@ -2,13 +2,23 @@ import type { Tool, ToolContext } from "../tools/types";
 import type { SkillDiscovery } from "./discover";
 import type { SkillActivations } from "./tool";
 
+const HARNESS_CONTROL_TOOLS = new Set([
+  "skill",
+  "tool_catalog",
+  "worker",
+  "context",
+  "criterion",
+  "ask_talker",
+  "done",
+]);
+
 /** Activated skill allowlists narrow the session's normal permissions; they never grant access. */
 export function skillToolPolicy(
   activations: SkillActivations | undefined,
   skills?: () => SkillDiscovery,
 ) {
   return (tool: Tool, context: ToolContext): string | undefined => {
-    if (tool.name === "skill" || tool.name === "tool_catalog") return undefined;
+    if (HARNESS_CONTROL_TOOLS.has(tool.name)) return undefined;
     for (const { data } of activations?.get(context.sessionId)?.values() ?? []) {
       const current = skills?.().skills.find((skill) => skill.name === data.name);
       if (skills && (!current || current.trust === "untrusted"))

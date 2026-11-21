@@ -102,14 +102,16 @@ export function killProcessTree(rootPid: number, signal: NodeJS.Signals, isolate
     return;
   }
   const ids = collectProcessIds(rootPid, isolated);
-  try {
-    process.kill(-rootPid, signal);
-  } catch {}
-  for (const pid of ids) {
+  for (let index = ids.length - 1; index >= 0; index -= 1) {
+    const pid = ids[index];
+    if (pid === undefined) continue;
     try {
       process.kill(pid, signal);
     } catch {}
   }
+  try {
+    process.kill(-rootPid, signal);
+  } catch {}
   if (signal === "SIGKILL") releaseProcessScope(rootPid);
 }
 

@@ -53,16 +53,20 @@ export class MemoryRuntime {
       const withdrawn = staleMemoryReferences(records, options.messages());
       if (withdrawn.length) {
         withdrawMemoryMessages(options.messages(), withdrawn);
-        const current =
-          budgetTokens > 160
-            ? memoryDelivery(
-                records,
-                options.messages(),
-                options.sessionId,
-                options.system,
-                budgetTokens - 100,
-              )
-            : undefined;
+        let current: MemoryDelivery | undefined;
+        if (budgetTokens > 160) {
+          try {
+            current = memoryDelivery(
+              records,
+              options.messages(),
+              options.sessionId,
+              options.system,
+              budgetTokens - 100,
+            );
+          } catch {
+            current = undefined;
+          }
+        }
         return {
           text: `# Project memory update\n\nEarlier saved-memory deliveries were superseded, expired or forgotten and have been withdrawn from this context. Disregard their old versions and any conclusions relying on them. Use memory for current records.${current ? `\n\n${current.text}` : ""}`,
           references: [...withdrawn, ...(current?.references ?? [])],

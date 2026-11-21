@@ -1,5 +1,5 @@
 export default {
-  "Memory and dictionary": "メモリと辞書",
+  "Memory and dictionary": "辞書",
   "Definitions are supplied automatically when a term appears in your prompt. Local meanings take priority.":
     "プロンプトに用語が含まれていると、その定義が自動で補足されます。ローカルの意味が優先されます。",
   "Reload dictionary": "辞書を再読み込み",

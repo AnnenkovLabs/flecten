@@ -64,7 +64,7 @@ test("completed report needs no summarizer request and its exact revision surviv
   expect(writer.last?.contextSummary.fields.risks).not.toContain("failed");
 });
 
-test("restored checkpoints permit evidence inspection without opening a fake objective", () => {
+test("restored checkpoints permit direct inspection and further work without opening a fake objective", () => {
   const messages: Message[] = [
     {
       role: "user",
@@ -85,10 +85,8 @@ test("restored checkpoints permit evidence inspection without opening a fake obj
   expect(
     pages.guard([{ id: "read", name: "read", args: { path: "evidence.txt" } }]),
   ).toBeUndefined();
-  expect(pages.guard([{ id: "write", name: "write", args: { path: "new.txt" } }])).toContain(
-    "context begin",
-  );
-  expect(pages.canFinish()).toBe(false);
+  expect(pages.guard([{ id: "write", name: "write", args: { path: "new.txt" } }])).toBeUndefined();
+  expect(pages.canFinish()).toBe(true);
 });
 
 test("summarizer transcript preserves a long single record when input budget allows it", () => {

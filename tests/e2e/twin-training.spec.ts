@@ -18,7 +18,7 @@ test("Twin trains selected sources through the Electron bridge without a clone e
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Twin", exact: true }).click();
     const panel = page.getByTestId("twin-page");
-    await expect(panel.locator(".twin-source")).toHaveCount(9);
+    await expect(panel.locator(".twin-source")).toHaveCount(10);
     await panel.getByRole("button", { name: "Scan sources", exact: true }).click();
     const source = panel.getByRole("checkbox", { name: "Learn from Flecten", exact: true });
     await expect(source).toBeEnabled();
@@ -182,23 +182,6 @@ test("Twin recovers from cancellation and malformed training, learns fenced JSON
     await expect(panel.getByRole("button", { name: "Save character", exact: true })).toHaveCount(0);
     expect((await saved()).entries[0]).toMatchObject({ revision: 2, voice: "" });
 
-    await panel.getByRole("button", { name: "Ask Twin", exact: true }).click();
-    await panel
-      .getByLabel("Question for Twin", { exact: true })
-      .fill("How should we design checkout?");
-    await panel.getByRole("button", { name: "Ask Twin", exact: true }).last().click();
-    await expect(panel.locator(".twin-answer > p").first()).toHaveText(
-      candidates[0]?.content ?? "",
-    );
-    await expect(panel.locator(".twin-answer details summary")).toHaveText(
-      candidates[0]?.summary ?? "",
-    );
-    const enabled = panel.getByRole("switch", { name: "Use Twin in this project", exact: true });
-    await enabled.click();
-    await expect(
-      panel.getByRole("button", { name: "Ask Twin", exact: true }).last(),
-    ).toBeDisabled();
-    await enabled.click();
     await panel.getByRole("button", { name: "Sources", exact: true }).click();
     const beforeRepeat = await requests();
     await train.click();
@@ -219,11 +202,6 @@ test("Twin recovers from cancellation and malformed training, learns fenced JSON
     await expect(
       panel.getByRole("heading", { name: "Guest checkout without registration", exact: true }),
     ).toHaveCount(0);
-    await panel.getByRole("button", { name: "Ask Twin", exact: true }).click();
-    await panel.getByRole("button", { name: "Ask Twin", exact: true }).last().click();
-    await expect(
-      panel.getByRole("heading", { name: "Twin needs your answer", exact: true }),
-    ).toBeVisible();
     expect(await requests()).toBe(beforeRepeat);
     const otherProject = join(h.cwd, "other-project");
     await mkdir(otherProject);
@@ -232,7 +210,7 @@ test("Twin recovers from cancellation and malformed training, learns fenced JSON
       if (!window.desktop?.selectProject) throw new Error("Missing project bridge");
       await window.desktop.selectProject(path);
     }, otherProject);
-    await expect(panel.locator(".twin-source")).toHaveCount(9);
+    await expect(panel.locator(".twin-source")).toHaveCount(10);
     await expect(panel.getByRole("button", { name: "Sources", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",

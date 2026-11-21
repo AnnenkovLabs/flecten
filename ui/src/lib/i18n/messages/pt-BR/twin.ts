@@ -22,13 +22,22 @@ export default {
   Like: "Gosto",
   Delight: "Encantamento",
   "{0} sessions found": ["Sessões encontradas: ", 0, ""],
-  "Choose which agent histories Twin can learn from.":
-    "Escolha os históricos de agentes com os quais o Twin pode aprender.",
+  "Choose which agent histories and saved memories Twin can learn from.":
+    "Escolha os históricos de agentes e memórias salvas com os quais o Twin pode aprender.",
   "Scan first": "Busque as fontes primeiro",
   "Not found": "Não encontrado",
   "Export needed": "É necessário exportar",
   "Learn from {0}": ["Aprender com o histórico de ", 0, ""],
   "Source details": "Detalhes da fonte",
+  "Training model": "Modelo de treinamento",
+  "Reasoning level": "Nível de raciocínio",
+  "Training reasoning level": "Nível de raciocínio do treinamento",
+  "Model variant": "Variante do modelo",
+  "Training model variant": "Variante do modelo de treinamento",
+  "Model default": "Padrão do modelo",
+  "Default variant": "Variante padrão",
+  "Reasoning is not supported": "Raciocínio não suportado",
+  "Select a model first": "Selecione um modelo primeiro",
   "Reading selected sessions…": "Lendo as sessões selecionadas…",
   "Read {0} sessions and {1} messages": ["Foram lidas ", 0, " sessões e ", 1, " mensagens"],
   "Training Twin": "Treinamento do Twin",
@@ -36,38 +45,18 @@ export default {
   "Train Twin": "Treinar o Twin",
   "Scanning…": "Buscando fontes…",
   "Scan sources": "Buscar fontes",
+  "Training reads all unread sessions and saved harness memories in batches and may consume significant API tokens and funds.":
+    "O treinamento lê em lotes todas as sessões não lidas e memórias salvas, podendo consumir muitos tokens e créditos da API.",
   "Twin is ready. Learned traits apply immediately and you can edit them.":
     "O Twin está pronto. As características aprendidas são aplicadas imediatamente e você pode editá-las.",
   "View your character": "Ver sua personalidade",
   "Training cancelled. Your existing character is unchanged.":
     "Treinamento cancelado. A personalidade atual foi mantida.",
   "What is sent to the model?": "O que é enviado ao modelo?",
-  "Scanning is local. Learning sends your messages and preceding agent replies to your configured provider, within the limits below.":
-    "A busca é local. Para aprender, suas mensagens e as respostas anteriores do agente são enviadas ao provedor configurado, dentro dos limites abaixo.",
+  "Scanning is local. Learning sends your messages, saved harness memories, and preceding agent replies to the selected provider.":
+    "A busca é local. Para aprender, suas mensagens, memórias salvas e respostas anteriores do agente são enviadas ao provedor selecionado.",
   "Training model: {0} / {1}": ["Modelo de treinamento: ", 0, " / ", 1, ""],
-  "Per training: up to {0} sessions, {1} messages and {2} characters": [
-    "Por treinamento: até ",
-    0,
-    " sessões, ",
-    1,
-    " mensagens e ",
-    2,
-    " caracteres",
-  ],
-  "Would Twin choose what you would?": "O Twin escolheria o mesmo que você?",
-  "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "Faça uma pergunta real de design ou código para ver como o Twin responde ao Worker com base nos seus traços.",
-  "Question for Twin": "Pergunta para o Twin",
-  "How should we design checkout for this project?":
-    "Como devemos projetar o checkout deste projeto?",
-  "Asking Twin…": "Consultando o Twin…",
-  "Ask Twin": "Perguntar ao Twin",
-  "Uses your configured model. Each answer shows its sources.":
-    "Usa o modelo configurado. Cada resposta mostra suas fontes.",
-  "Twin needs your answer": "O Twin precisa da sua resposta",
-  "No supported answer. Ask the user directly.":
-    "Não há evidência suficiente nos traços salvos; o Twin perguntará diretamente a você.",
-  "Based on your character": "Com base na sua personalidade",
+  "Twin agent activity": "Atividade do agente Twin",
   "Input: {0} tokens · Output: {1} tokens": ["Entrada: ", 0, " tokens · Saída: ", 1, " tokens"],
   "Learning…": "Aprendendo…",
   "Ready to represent you": "Pronto para representar você",
@@ -130,8 +119,6 @@ export default {
   "Representing your intent to the Worker": "Representando sua intenção para o Worker",
   "Corrections: {0} / 4": ["Revisões: ", 0, " / 4"],
   "Interact with Twin": "Interagir com Twin",
-  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
-    "Arraste para girar. Mova para olhar. Clique para cumprimentar. As setas giram; Home redefine.",
   "Resume motion": "Retomar movimento",
   "Pause motion": "Pausar movimento",
 } as const;

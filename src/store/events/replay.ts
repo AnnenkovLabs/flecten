@@ -105,7 +105,7 @@ export function replayMessages(envelopes: readonly ReplayEvent[]): ReplayResult 
     switch (event.type) {
       case "session.started":
         workingLanguage = undefined;
-        eligibleUserSource = event.role !== "worker" && !event.internal;
+        eligibleUserSource = event.role !== "worker" && !event.internal && event.actor !== "twin";
         flushTools();
         messages.push({
           role: "user",
@@ -153,7 +153,7 @@ export function replayMessages(envelopes: readonly ReplayEvent[]): ReplayResult 
             ? { workingLanguage, ...(sourceLanguage ? { sourceLanguage } : {}) }
             : {}),
           content: event.input ?? event.text,
-          ...(eligibleUserSource ? { memorySource: event.text } : {}),
+          ...(eligibleUserSource && event.actor !== "twin" ? { memorySource: event.text } : {}),
           ...(event.attachments?.length ? { attachmentRefs: event.attachments } : {}),
         });
         break;

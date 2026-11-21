@@ -163,6 +163,7 @@
   .approval-title {
     flex: 1;
     min-width: 0;
+    text-wrap: balance;
   }
 
   .approval.is-denied .approval-title {

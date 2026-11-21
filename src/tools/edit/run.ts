@@ -1,9 +1,12 @@
 import { stat } from "node:fs/promises";
 import type { ToolResult } from "../../core/types";
+import type { SandboxPolicy } from "../../security/sandbox";
 import type { CheckpointStore } from "../../store/checkpoints";
 import { atomicWrite } from "../../util/atomic";
 import { diffText } from "../util/diff";
-import { displayPath, ensureInside, resolveToolPath } from "../util/paths";
+import { decodeFileBytes, type Encoding, encodeFileText } from "../util/encoding";
+import { mutationPath } from "../util/mutation-path";
+import { displayPath } from "../util/paths";
 import type { ReadTracker } from "../util/read-tracker";
 import type { EditArgs } from "./schema";
 
@@ -208,6 +211,7 @@ export async function runEdit(
     authorizedExternalPaths?: string[];
     signal?: AbortSignal;
     sessionId?: string;
+    sandbox?: SandboxPolicy | undefined;
     reads: ReadTracker;
     checkpoints?: CheckpointStore;
   },
@@ -220,20 +224,29 @@ export async function runEdit(
     return { ok: false, output: "", error: "edits must contain at least one hunk" };
   }
 
-  const path = resolveToolPath(context.cwd, args.path);
+  let path: string;
   try {
-    ensureInside(context.cwd, path, args.why, context.authorizedExternalPaths);
+    path = await mutationPath(context.cwd, args.path, args.why, context.authorizedExternalPaths);
+    if (context.sandbox) {
+      const decision = await context.sandbox.checkWrite(path);
+      if (!decision.allowed) return { ok: false, output: "", error: decision.reason };
+    }
   } catch (error) {
     return { ok: false, output: "", error: error instanceof Error ? error.message : String(error) };
   }
 
   let raw: string;
+  let encoding: Encoding = "utf-8";
+  let bomBytes = 0;
   try {
     const info = await stat(path);
     if (!info.isFile()) {
       return { ok: false, output: "", error: `${args.path} is not a regular file` };
     }
-    raw = Buffer.from(await Bun.file(path).arrayBuffer()).toString("utf8");
+    const decoded = decodeFileBytes(new Uint8Array(await Bun.file(path).arrayBuffer()));
+    raw = decoded.text;
+    encoding = decoded.encoding;
+    bomBytes = decoded.bomBytes;
   } catch (error) {
     const missing = (error as NodeJS.ErrnoException).code === "ENOENT";
     return {
@@ -357,7 +370,7 @@ export async function runEdit(
   }
 
   try {
-    await atomicWrite(path, final, undefined, context.signal);
+    await atomicWrite(path, encodeFileText(final, encoding, bomBytes), undefined, context.signal);
   } catch (error) {
     return {
       ok: false,

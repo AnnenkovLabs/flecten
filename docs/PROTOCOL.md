@@ -87,14 +87,13 @@ When translation is enabled, `session.started.prompt` keeps the user's original 
 | `storage.accept` | no | none | ACK after verification and durable acceptance, then core startup |
 | `twin.get` | no | none | `twin`: persona profile, sources, and training state |
 | `twin.scan` | no | none | `twin`: discovered source paths and session counts |
-| `twin.train` | no | `sourceIds` | `twin`: immediate snapshot while training runs in background |
+| `twin.train` | no | `sourceIds`, `trainingModel?` | `twin`: immediate snapshot while training runs in background |
 | `twin.cancel` | no | none | `twin`: cancels active training |
-| `twin.configure` | no | `enabled?`, `sourceIds?` | `twin`: updates Twin configuration |
+| `twin.configure` | no | `enabled?`, `sourceIds?`, `trainingModel?` | `twin`: updates Twin configuration |
 | `twin.review` | no | `candidateId`, `action`, `edits?` | `twin`: applies or dismisses a legacy candidate trait |
 | `twin.update` | no | `id`, `expectedRevision`, `edits` | `twin`: CAS update of an existing trait |
 | `twin.forget` | no | `id`, `expectedRevision` | `twin`: removes a trait |
 | `twin.teach` | no | `summary`, `content`, `appliesWhen`, `path?`, `before?`, `after?`, `reaction?`, `strength?`, `voice?` | `twin`: records an explicit user lesson without calling a model |
-| `twin.consult` | no | `question` | `twin`, `answer`: sample Twin reply with trait citations and usage |
 | `dictionary.list` | no | none | `dictionary`: public and local entries with provenance and revision |
 | `dictionary.sync` | no | none | `dictionary`: verified GitHub snapshot, or prior dataset with sync error |
 | `dictionary.save` | no | `entry`, `expectedRevision?` | `dictionary`: saves a local definition in project memory |

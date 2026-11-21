@@ -61,7 +61,7 @@ import { subagentChildRunner } from "./subagent-child";
 import { subagentModelFactory } from "./subagent-models";
 import { appSubagents, subagentToolCatalog } from "./subagents";
 import { translationOptions } from "./translation";
-import { createTwin } from "./twin";
+import { createTwin } from "./twin-factory";
 import { voiceService } from "./voice";
 
 export type * from "./service-types";
@@ -285,19 +285,18 @@ export async function createAppService(
         return createConversation(options, {
           events,
           twin,
-          configure: (current, execute, answer) =>
+          configure: (current, execute) =>
             conversationOptions(
               current,
               config,
               extensions.sections,
               execute,
-              answer,
               projectRoot,
               models.choice(current.sessionId ?? sessionId),
             ),
         });
       }
-      return createSingleSession(options, events);
+      return createSingleSession({ ...options, twin }, events);
     },
   });
 

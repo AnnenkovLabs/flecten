@@ -33,7 +33,12 @@ export class PageRuntime {
     for (const message of this.messages) {
       if (message.role === "user" && message.contextSummary) {
         const active = ActivePageSchema.safeParse(message.contextSummary.activePage);
-        state = { pending: false, ...(active.success ? { active: active.data } : {}) };
+        const finalResult = message.contextSummary.checkpoint?.finalResult;
+        state = {
+          pending: false,
+          ...(active.success ? { active: active.data } : {}),
+          ...(typeof finalResult === "string" && finalResult.length > 0 ? { finalResult } : {}),
+        };
         calls.clear();
         otherCalls.clear();
       } else if (message.role === "assistant") {
@@ -73,12 +78,12 @@ export class PageRuntime {
             active: { title: command.title, objective: command.objective },
             pending: false,
           };
-        } else if (command?.op === "complete" && (state.active || state.dirty) && !state.pending) {
+        } else if ((command?.op === "compact" || command?.op === "complete") && !state.pending) {
           state = {
             pending: true,
             ...(command.finalResult ? { finalResult: command.finalResult } : {}),
           };
-        } else if (command?.op === "block" && (state.active || state.dirty) && !state.pending) {
+        } else if (command?.op === "block" && !state.pending) {
           const { op: _op, ...blocked } = command;
           const active = state.active ?? {
             title: "Current logical block",
@@ -123,7 +128,7 @@ export class PageRuntime {
 
   canFinish(): boolean {
     const state = this.#state();
-    return this.#checkpointed && !state.active && !state.pending && !state.dirty;
+    return !state.pending && !state.blocked;
   }
 
   guard(calls: ToolCall[]): string | undefined {
@@ -136,38 +141,29 @@ export class PageRuntime {
       const command = parsePageCommand(call.args);
       return command.success && command.data.op === "begin";
     });
-    const hasCompleteOrBlock = calls.some((call) => {
+    const hasCompactOrBlock = calls.some((call) => {
       if (call.name !== "context") return false;
       const command = parsePageCommand(call.args);
-      return command.success && (command.data.op === "complete" || command.data.op === "block");
+      return (
+        command.success &&
+        (command.data.op === "compact" ||
+          command.data.op === "complete" ||
+          command.data.op === "block")
+      );
     });
-    if (hasBegin && hasCompleteOrBlock) {
-      return "Do not combine context begin with context complete or block in the same turn.";
+    if (hasBegin && hasCompactOrBlock) {
+      return "Do not combine context begin with context compact or block in the same turn.";
     }
-    if (hasCompleteOrBlock) {
-      const allowedWithComplete = calls.every((call) =>
+    if (hasCompactOrBlock) {
+      const allowedWithCompact = calls.every((call) =>
         ["context", "criterion", "done"].includes(call.name),
       );
-      if (!allowedWithComplete) {
-        return "Call context complete or block alone (or with criterion report), after inspecting all previous tool results.";
+      if (!allowedWithCompact) {
+        return "Call context compact alone (or with criterion report), after inspecting all previous tool results.";
       }
     }
     const state = this.#state();
     if (state.pending) return "The completed page must be compacted before any further tool call.";
-    if (
-      !state.active &&
-      !hasBegin &&
-      calls.some(
-        (call) =>
-          !["context", "criterion", "ask_talker", "done", "todo"].includes(call.name) &&
-          !(this.canInspect() && this.readOnlyTools.has(call.name)),
-      )
-    ) {
-      return "Start one small logical page with context begin before using work tools.";
-    }
-    if (!this.canFinish() && !hasCompleteOrBlock && calls.some((call) => call.name === "done")) {
-      return "Complete and checkpoint the logical page in this run before finishing the task.";
-    }
     return undefined;
   }
 
@@ -203,18 +199,18 @@ export class PageRuntime {
         data: { kind: "context_page", ...command },
       };
     }
-    if (!state.active) {
-      return { ok: false, output: "", error: "No logical page is active." };
-    }
-    const title = state.active.title;
+    const title =
+      (command.op === "compact" || command.op === "complete" ? command.title : undefined) ??
+      state.active?.title ??
+      "Completed logical block";
     return {
       ok: true,
       output: [
-        command.op === "block" ? "# Logical page blocked" : "# Logical page completed",
+        command.op === "block" ? "# Logical page blocked" : "# Logical page compacted",
         command.summary,
         ...(command.findings?.length ? ["## Findings", ...command.findings] : []),
         ...(command.result ? ["## Result", command.result] : []),
-        ...(command.op === "complete" && command.finalResult
+        ...(command.op !== "block" && command.finalResult
           ? ["## Final result", command.finalResult]
           : []),
         "## Evidence",

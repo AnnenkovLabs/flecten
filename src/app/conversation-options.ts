@@ -6,25 +6,23 @@ import type { Event } from "../core/types";
 import { contextTool } from "../tools/context/run";
 import { ToolRegistry } from "../tools/registry";
 import type { ToolContext } from "../tools/types";
-import type { ConversationTwinPort } from "./conversation-twin";
+import { ReadTracker } from "../tools/util/read-tracker";
 import { moduleInspection } from "./module-inspection";
 import { modelContext } from "./provider-state";
 import { systemPrompt } from "./session-config";
 import { sessionModelOptions, sessionModelTools } from "./session-model-options";
 import { withModelChoice } from "./session-models";
 import { subagentModelFactory } from "./subagent-models";
-import { twinQuestion } from "./twin-question";
 import { askTalkerTool, criterionTool, type WorkerRequest, workerTool } from "./worker-tool";
 
 const INSPECTION_TOOLS = new Set(["read", "grep", "glob", "memory", "skill", "module"]);
 
 export interface ConversationOptions {
   events: readonly Event[];
-  twin?: ConversationTwinPort;
+  twin?: import("./session-twin").TwinRuntime;
   configure(
     options: SessionOptions,
     execute: (request: WorkerRequest, context: ToolContext) => Promise<unknown>,
-    answer: (question: string, signal: AbortSignal) => Promise<string | undefined>,
   ): Promise<{ talker: SessionOptions; worker: SessionOptions }>;
 }
 
@@ -34,10 +32,11 @@ export async function conversationOptions(
   config: HarnessConfig,
   sections: readonly PromptSection[],
   execute: (request: WorkerRequest, context: ToolContext) => Promise<unknown>,
-  answer?: (question: string, signal: AbortSignal) => Promise<string | undefined>,
   projectRoot?: string | null,
   choice?: ModelChoice,
 ) {
+  const reads = options.reads ?? new ReadTracker();
+  options.reads = reads;
   const workerChoice = choice ?? config.conversation?.worker;
   const workerConfig = workerChoice ? withModelChoice(config, workerChoice) : config;
   const talkerConfig = config.conversation?.talker
@@ -85,8 +84,7 @@ export async function conversationOptions(
             tool.name !== "done" &&
             tool.name !== "context" &&
             (options.memory || tool.name !== "memory"),
-        )
-        .map((tool) => (tool.name === "ask" && answer ? twinQuestion(tool, answer) : tool)),
+        ),
       ...(options.pages ? [contextTool] : []),
       criteria,
       question,
@@ -115,9 +113,12 @@ export async function conversationOptions(
       projectRoot,
     ),
   ]);
+  const { reasoning: _talkerDefaultReasoning, ...talkerBase } = options;
+  const talkerReasoning = config.conversation?.talker?.reasoning;
   return {
     talker: {
-      ...options,
+      ...talkerBase,
+      reads,
       ...modelOptions(talkerConfig, Boolean(config.conversation?.talker || workerChoice)),
       ...(options.subagentRunnerFactory
         ? {
@@ -127,7 +128,7 @@ export async function conversationOptions(
             ),
           }
         : {}),
-      reasoning: config.conversation?.talker?.reasoning ?? talkerConfig.reasoning,
+      ...(talkerReasoning ? { reasoning: talkerReasoning } : {}),
       variant: config.conversation?.talker?.variant ?? talkerConfig.variant,
       context: modelContext(talkerConfig),
       role: "talker" as const,
@@ -139,6 +140,7 @@ export async function conversationOptions(
     },
     worker: {
       ...options,
+      reads,
       ...modelOptions(workerConfig, Boolean(workerChoice)),
       ...(options.subagentRunnerFactory
         ? {

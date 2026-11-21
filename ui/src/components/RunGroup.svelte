@@ -157,6 +157,7 @@
     color: var(--muted);
     min-height: 36px;
     font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
     line-height: 1.4;
     text-align: left;
     transition:
@@ -260,7 +261,7 @@
   }
 
   .run-preview { margin-left: 22px; }
-  .run-files { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding-inline: 7px; border-radius: 6px; color: var(--text-2); font-size: 12px; }
+  .run-files { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding-inline: 7px; border-radius: 6px; color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
   .run-files:hover { background: var(--raised); }
   .run-text {
     max-width: 68ch;

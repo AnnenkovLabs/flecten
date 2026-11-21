@@ -22,6 +22,11 @@ export class ReadTracker {
     this.#clearSymbolsForPath(path);
   }
 
+  clear(): void {
+    this.#hashes.clear();
+    this.#shownSymbols.clear();
+  }
+
   verify(path: string, content: string): "ok" | "unread" | "changed" {
     const stored = this.#hashes.get(path);
     if (!stored) return "unread";

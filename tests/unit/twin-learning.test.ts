@@ -163,3 +163,89 @@ test("the production rig keeps its spring state, absorbs stream events and compl
   rig.set("idle", "calm");
   expect(rig.frame(0, true, frame).uT).toBe(0);
 });
+
+test("skips bad quotes in multi-candidate/multi-batch training instead of aborting the whole run", async () => {
+  const { learn } = await import("../../src/twin/inference");
+  const messages = Array.from({ length: 130 }, (_, index) => ({
+    id: `source-claude-${index}`,
+    sourceId: "claude" as const,
+    sessionId: "s-1",
+    reference: `ref:${index}`,
+    text: `Keep code concise ${index}`,
+    digest: `d-${index}`,
+  }));
+  let calls = 0;
+  const result = await learn(
+    {
+      providerId: "test",
+      model: "m",
+      price: () => undefined,
+      provider: {
+        id: "test",
+        model: "m",
+        stream: async function* () {
+          calls += 1;
+          yield {
+            type: "text",
+            delta: JSON.stringify(
+              calls === 1
+                ? {
+                    candidates: [
+                      {
+                        kind: "preference",
+                        reaction: "like",
+                        strength: 2,
+                        voice: "Hallucinated quote",
+                        summary: "Bad",
+                        content: "Bad",
+                        appliesWhen: "Always",
+                        evidence: [{ sourceMessageId: "source-claude-0", quote: "Does not exist" }],
+                      },
+                      {
+                        kind: "preference",
+                        reaction: "like",
+                        strength: 2,
+                        voice: "Keep code concise 1",
+                        summary: "Good",
+                        content: "Keep code concise",
+                        appliesWhen: "Always",
+                        evidence: [
+                          { sourceMessageId: "source-claude-1", quote: "Keep code concise 1" },
+                        ],
+                      },
+                    ],
+                  }
+                : {
+                    candidates: [
+                      {
+                        kind: "preference",
+                        reaction: "like",
+                        strength: 2,
+                        voice: "Keep code concise 120",
+                        summary: "Normalized",
+                        content: "Keep code concise",
+                        appliesWhen: "Always",
+                        evidence: [
+                          {
+                            sourceMessageId: "source-claude-120",
+                            quote: "Keep   code\nconcise 120",
+                          },
+                        ],
+                      },
+                    ],
+                  },
+            ),
+          };
+          yield { type: "usage", input: 10, output: 5, cached: 0 };
+          yield { type: "done", reason: "end" };
+        },
+      },
+    },
+    messages,
+    [],
+    [],
+    AbortSignal.timeout(5000),
+  );
+  expect(result.candidates).toHaveLength(2);
+  expect(result.candidates.map((c) => c.summary)).toEqual(["Good", "Normalized"]);
+});

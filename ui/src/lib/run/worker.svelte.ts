@@ -1,3 +1,8 @@
+import {
+  newerSessionState,
+  type SessionState,
+  SessionStateSchema,
+} from "../../../../shared/session-state";
 import type { WorkerAcceptance } from "../../../../shared/worker-assignment";
 import type { AgentEvent } from "../agent-protocol";
 import { compactionMeta } from "../context-meter.svelte";
@@ -17,6 +22,8 @@ export class WorkerView {
   #continuationSettled = $state(false);
   #liveLabel = $state<MessageKey>("Thinking");
   #retryKind = $state<string | null>(null);
+  #state: SessionState | null = null;
+  #retiredEpochs = new Set<string>();
   readonly transcript = new ThreadView();
   retryUntil = $state(0);
   usage = $state(emptyTokenUsage());
@@ -61,11 +68,26 @@ export class WorkerView {
     this.#current = undefined;
     this.#acceptance = undefined;
     this.#continuationSettled = false;
+    this.#state = null;
+    this.#retiredEpochs.clear();
     this.stopping = false;
     this.usage = emptyTokenUsage();
     this.jobs = [];
     this.transcript.clear();
     this.#status("Thinking");
+  }
+
+  attachState(input: SessionState | undefined, sessionId?: string): void {
+    if (!input) return;
+    const state = SessionStateSchema.parse(input);
+    const parentId =
+      sessionId ??
+      (state.sessionId.endsWith("_worker") ? state.sessionId.slice(0, -7) : state.sessionId);
+    this.apply({
+      type: "worker.event",
+      sessionId: parentId,
+      event: { type: "session.state", sessionId: state.sessionId, state },
+    });
   }
 
   disconnected(): void {
@@ -92,6 +114,10 @@ export class WorkerView {
     // Stopping a conversation also publishes an idle snapshot for a Worker that never ran.
     if (!this.#current && event.type === "session.state" && !event.state.running) return;
     if (event.type === "session.started" || !this.#current) {
+      if (event.type === "session.started") {
+        this.#state = null;
+        this.#retiredEpochs.clear();
+      }
       this.stopping = false;
       this.#continuationSettled = false;
       this.#status("Thinking");
@@ -122,13 +148,18 @@ export class WorkerView {
       case "session.started":
         return;
       case "session.state": {
-        this.stopping = event.state.running && (event.state.stopRequested ?? false);
-        this.jobs = event.state.jobs;
-        if (event.state.approvals.length > 0) this.#status("Awaiting approval");
-        else if (event.state.phase === "writing") this.#status("Writing");
+        const state = SessionStateSchema.parse(event.state);
+        if (!newerSessionState(this.#state, state, this.#retiredEpochs)) return;
+        if (this.#state && this.#state.epoch !== state.epoch)
+          this.#retiredEpochs.add(this.#state.epoch);
+        this.#state = state;
+        this.stopping = state.running && (state.stopRequested ?? false);
+        this.jobs = state.jobs;
+        if (state.approvals.length > 0) this.#status("Awaiting approval");
+        else if (state.phase === "writing") this.#status("Writing");
         else if (this.#liveLabel === "Awaiting approval") this.#status("Working");
-        const pending = new Set(event.state.approvals.map((approval) => approval.id));
-        for (const approval of event.state.approvals) {
+        const pending = new Set(state.approvals.map((approval) => approval.id));
+        for (const approval of state.approvals) {
           if (
             !this.transcript.items.some(
               (entry) => entry.kind === "approval" && entry.approval.id === approval.id,
@@ -147,16 +178,16 @@ export class WorkerView {
             entry.by = "aborted";
           }
         }
-        for (const resolution of event.state.approvalResolutions ?? []) {
+        for (const resolution of state.approvalResolutions ?? []) {
           this.thread.resolveApproval(resolution.id, resolution.choice, resolution.by);
           this.transcript.resolveApproval(resolution.id, resolution.choice, resolution.by);
         }
-        if (!event.state.running && item.status === "running") {
-          const status = event.state.interrupted
+        if (!state.running && item.status === "running") {
+          const status = state.interrupted
             ? "interrupted"
-            : event.state.phase === "failed"
+            : state.phase === "failed"
               ? "error"
-              : event.state.phase === "stopped"
+              : state.phase === "stopped"
                 ? "stopped"
                 : "done";
           this.transcript.finishRun(

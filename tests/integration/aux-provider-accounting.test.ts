@@ -1,19 +1,15 @@
 import { expect, test } from "bun:test";
 import { conversationBudget } from "../../src/app/conversation-budget";
-import { ConversationTwin } from "../../src/app/conversation-twin";
 import { accountTwinUsage } from "../../src/app/twin-accounting";
 import { visionOptions } from "../../src/app/vision";
 import { HarnessConfigSchema } from "../../src/config/schema";
 import { RunBudget } from "../../src/core/session/budget";
 import type { SessionOptions } from "../../src/core/session/options";
-import type { Event } from "../../src/core/types";
 import { resetRateLimits } from "../../src/providers/rate-limit";
 import { createProvider } from "../../src/providers/registry";
 import { ToolRegistry } from "../../src/tools/registry";
 import { TranslationClient } from "../../src/translation/client";
 import { delegate } from "../../src/twin/inference";
-import { TWIN_LIMITS } from "../../src/twin/sources";
-import { idleTraining } from "../../src/twin/state";
 
 test("auxiliary clients charge a real failed request once and ignore locally cached quota rejection", async () => {
   const calls: string[] = [];
@@ -106,35 +102,21 @@ test("auxiliary clients charge a real failed request once and ignore locally cac
       loop: { maxTurns: 2, continuations: 0, parallelTools: false },
       taskBudget: new RunBudget({}),
     };
-    const events: Event[] = [];
-    const twin = new ConversationTwin(
-      {
-        async get() {
-          return {
-            enabled: true,
-            sources: [],
-            candidates: [],
-            entries: [],
-            training: idleTraining(),
-            limits: TWIN_LIMITS,
-          };
+    const callTwin = () =>
+      delegate(
+        { provider, providerId: config.provider, model: config.model, price: () => 0 },
+        {
+          phase: "prepare",
+          userMessages: [],
+          task: "Inspect the artifact",
+          directive: "",
+          evidence: [],
         },
-        delegate: (input, abort) =>
-          delegate(
-            { provider, providerId: config.provider, model: config.model, price: () => 0 },
-            input,
-            [],
-            abort,
-          ),
-      },
-      options,
-      (event) => events.push(event),
-    );
-    twin.begin("Inspect the artifact");
-    await expect(twin.decide("prepare")).rejects.toThrow();
-    await expect(twin.decide("prepare")).rejects.toThrow();
-    expect(options.taskBudget?.view().accounting?.missingRequests).toBe(1);
-    expect(conversationBudget(options, events).view().accounting?.missingRequests).toBe(1);
+        [],
+        signal,
+      );
+    await expect(callTwin()).rejects.toThrow();
+    await expect(callTwin()).rejects.toThrow();
     expect(calls).toEqual(["translation", "vision", "twin"]);
     const definition = config.providers[config.provider];
     if (!definition) throw new Error("Missing test provider");

@@ -42,9 +42,10 @@ export class ConversationAcceptance {
   }
 
   begin(task: string | undefined, assignment?: WorkerAssignment): string {
+    const latestQuote = this.#userSources.at(-1);
     const normalized = assignment ?? {
       objective: task ?? "",
-      userConstraints: [],
+      userConstraints: latestQuote ? [latestQuote] : [],
       expectedOutputs: ["The requested result, preserving the original task."],
       acceptanceCriteria: [
         {
@@ -136,6 +137,19 @@ export class ConversationAcceptance {
           latestOk = entry;
         }
       }
+      if (latestOk) return latestOk;
+      let hasCurrentRevisionEvidence = false;
+      for (const entry of this.#results.values()) {
+        if (entry.result.ok && (entry.revision ?? currentRevision) === currentRevision) {
+          hasCurrentRevisionEvidence = true;
+          break;
+        }
+      }
+      if (hasCurrentRevisionEvidence) {
+        for (const entry of this.#results.values()) {
+          if (entry.result.ok) latestOk = entry;
+        }
+      }
       return latestOk;
     }
     let byTool: Evidence | undefined;
@@ -146,6 +160,19 @@ export class ConversationAcceptance {
         entry.tool === callId
       ) {
         byTool = entry;
+      }
+    }
+    if (byTool) return byTool;
+    let hasCurrentRevisionEvidence = false;
+    for (const entry of this.#results.values()) {
+      if (entry.result.ok && (entry.revision ?? currentRevision) === currentRevision) {
+        hasCurrentRevisionEvidence = true;
+        break;
+      }
+    }
+    if (hasCurrentRevisionEvidence) {
+      for (const entry of this.#results.values()) {
+        if (entry.result.ok && entry.tool === callId) byTool = entry;
       }
     }
     return byTool;
@@ -214,15 +241,33 @@ export class ConversationAcceptance {
 
   reviewing(result: RunResult): void {
     if (!this.state) return;
-    if (this.state.legacy && ["done", "end"].includes(result.stopReason) && result.summary.trim()) {
-      // Compatibility for old string-only starts: explicitly label the final self-report as a model assertion.
-      this.state.criteria = [
-        {
-          id: "result",
-          status: "met",
-          evidence: { kind: "model_assertion", statement: result.summary.slice(0, 8000) },
-        },
-      ];
+    if (["done", "end"].includes(result.stopReason) && result.summary.trim()) {
+      const statement = result.summary.slice(0, 8000);
+      const latestTool = this.#findToolEvidence("latest");
+      for (const criterion of this.state.criteria) {
+        if (criterion.status !== "open") continue;
+        const definition = this.state.assignment.acceptanceCriteria.find(
+          ({ id }) => id === criterion.id,
+        );
+        if (!definition) continue;
+        if (definition.evidenceRequirement === "model_assertion") {
+          Object.assign(criterion, {
+            status: "met",
+            evidence: { kind: "model_assertion", statement },
+          });
+        } else if (definition.evidenceRequirement === "tool_result" && latestTool?.result.ok) {
+          Object.assign(criterion, {
+            status: "met",
+            evidence: {
+              kind: "tool_result",
+              statement,
+              callId: latestTool.callId,
+              tool: latestTool.tool,
+              output: latestTool.result.output.slice(0, 2000),
+            },
+          });
+        }
+      }
     }
     this.phase("reviewing");
   }
@@ -234,6 +279,20 @@ export class ConversationAcceptance {
   }
 
   unmet(): boolean {
+    if (!this.state) return false;
+    const latestTool = this.#findToolEvidence("latest");
+    return this.state.criteria.some((criterion) => {
+      if (criterion.status === "met") return false;
+      if (criterion.status === "blocked") return true;
+      const definition = this.state?.assignment.acceptanceCriteria.find(
+        ({ id }) => id === criterion.id,
+      );
+      if (definition?.evidenceRequirement === "tool_result") return !latestTool?.result.ok;
+      return false;
+    });
+  }
+
+  hasOpenCriteria(): boolean {
     return this.state?.criteria.some(({ status }) => status !== "met") ?? false;
   }
 
@@ -293,7 +352,7 @@ export class ConversationAcceptance {
         (criterion) =>
           `- ${criterion.id}: ${criterion.description}\n  Required evidence: ${criterion.evidenceRequirement}`,
       ),
-      "Report every criterion with the criterion tool before completion. Tool evidence must reference an actual successful call ID; model assertions are explicitly labeled and cannot replace required tool results.",
+      "Satisfy every acceptance criterion with actual tool execution or verification before completion; use the criterion tool if you need to report explicit evidence or a blocker.",
     ].join("\n\n");
   }
 

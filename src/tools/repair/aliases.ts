@@ -28,6 +28,8 @@ export const NAME_ALIASES: Record<string, string> = {
   finish: "done",
   complete: "done",
   task_done: "done",
+  compact: "context",
+  compact_page: "context",
 };
 
 export const PRIMARY_FIELD: Record<string, string> = {

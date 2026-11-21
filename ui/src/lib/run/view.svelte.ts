@@ -65,11 +65,7 @@ export class TaskView {
   /** The run on screen was sent from this window: its message is already in the thread. */
   #localStart = false;
   #retiredEpochs = new Set<string>();
-  #generation = 0;
-
-  get generation(): number {
-    return this.#generation;
-  }
+  generation = 0;
   constructor(hooks: ViewHooks) {
     this.#hooks = hooks;
   }
@@ -82,7 +78,6 @@ export class TaskView {
       (this.twin.busy || this.worker.running || this.pendingSend || (this.state?.running ?? false))
     );
   }
-
   get stopping(): boolean {
     return this.busy && (this.worker.stopping || (this.state?.stopRequested ?? false));
   }
@@ -107,7 +102,7 @@ export class TaskView {
     this.#liveLabel = label;
   }
   reset(title = ""): void {
-    this.#generation += 1;
+    this.generation += 1;
     this.thread.clear();
     this.hookRuns = [];
     this.worker.reset();
@@ -141,6 +136,7 @@ export class TaskView {
   }
   /** A run that never reached the core, or a core that refused to start it. */
   failed(text: string, code: string): void {
+    if (this.#localStart && this.thread.items.at(-1)?.kind === "message") this.thread.items.pop();
     this.#localStart = false;
     this.pendingSend = false;
     this.live = false;
@@ -158,9 +154,8 @@ export class TaskView {
     try {
       for (const event of events) {
         if (event.type === "error") this.error(event);
-        else if ("sessionId" in event && typeof event.sessionId === "string") {
+        else if ("sessionId" in event && typeof event.sessionId === "string")
           this.apply(event as SessionEvent);
-        }
       }
     } finally {
       this.thread.restoring = false;
@@ -174,6 +169,9 @@ export class TaskView {
     if (info?.taskBudget) this.taskBudget = info.taskBudget;
     if (info?.context) this.context.apply(info.context);
     if (info?.sessionState) this.applyState(info.sessionState);
+    const worker = (info as { worker?: { state?: SessionState; acceptance?: never } })?.worker;
+    if (worker?.acceptance) this.worker.acceptance(worker.acceptance);
+    if (worker?.state) this.worker.attachState(worker.state, info?.sessionId);
   }
 
   applyState(input: SessionState): void {
@@ -200,17 +198,11 @@ export class TaskView {
     );
     for (const item of this.thread.items) {
       if (item.kind !== "approval" || item.owner === "worker") continue;
-      if (waiting.has(item.approval.id)) waiting.delete(item.approval.id);
-      else if (resolutions.has(item.approval.id)) {
-        const resolved = resolutions.get(item.approval.id);
-        if (resolved) {
-          item.state = resolved.choice;
-          item.by = resolved.by;
-        }
-      } else if (item.state === "pending") {
-        item.state = "deny";
-        item.by = "aborted";
-      }
+      if (waiting.delete(item.approval.id)) continue;
+      const resolved = resolutions.get(item.approval.id);
+      item.state = resolved ? resolved.choice : item.state === "pending" ? "deny" : item.state;
+      if (resolved) item.by = resolved.by;
+      else if (item.state === "deny" && !item.by) item.by = "aborted";
     }
     for (const approval of waiting.values())
       this.thread.push({
@@ -239,6 +231,12 @@ export class TaskView {
 
   error(event: ErrorEvent): void {
     if (event.sessionId) {
+      if (
+        this.#localStart &&
+        event.code === "run_failed" &&
+        this.thread.items.at(-1)?.kind === "message"
+      )
+        this.thread.items.pop();
       this.#localStart = false;
       this.live = false;
       this.liveLabel = "Error";
@@ -288,7 +286,11 @@ export class TaskView {
         }
         this.worker.apply(event);
         this.#syncSubagents();
-        if (
+        if (event.event.type === "context.usage") {
+          const threshold = this.context.apply(event.event);
+          if (threshold !== undefined && !restoring) toast.show(contextWarning(threshold));
+        } else if (event.event.type === "context.compacted") this.context.compacted();
+        else if (
           event.event.type === "tool.finished" &&
           hasWorkerCheckpoint(event.event.result) &&
           !restoring
@@ -305,7 +307,13 @@ export class TaskView {
         this.#started(event);
         return;
       case "steer.applied":
-        this.thread.push({ kind: "message", id: nextId("msg"), text: event.text, at: nowIso() });
+        this.thread.push({
+          kind: "message",
+          id: nextId("msg"),
+          text: event.text,
+          ...(event.actor ? { actor: event.actor } : {}),
+          at: nowIso(),
+        });
         return;
       case "notice.applied":
         this.thread.note(
@@ -317,12 +325,12 @@ export class TaskView {
         return;
       case "turn.started":
         this.thread.turnStarted(event.turn, event.timestamp);
-        this.#status("Thinking");
+        this.liveLabel = "Thinking";
         return;
       case "reasoning.delta":
         this.thread.reasoningDelta(event.text, event.timestamp);
         this.live = true;
-        this.#status("Thinking");
+        this.liveLabel = "Thinking";
         return;
       case "tool_call.progress":
         this.thread.progressToolCall(event.index, event.name, event.delta);
@@ -333,7 +341,7 @@ export class TaskView {
       case "message.delta":
         this.thread.appendText(event.type === "message.delta" ? event.text : "");
         this.live = true;
-        this.#status("Writing");
+        this.liveLabel = "Writing";
         return;
       case "message.finished":
         this.thread.finishMessage(
@@ -344,7 +352,7 @@ export class TaskView {
           event.timestamp,
           event.reasoningStartedAt,
         );
-        if (event.toolCalls.length > 0) this.#status("Working");
+        if (event.toolCalls.length > 0) this.liveLabel = "Working";
         return;
       case "message.reset":
         this.thread.messageReset();
@@ -364,16 +372,17 @@ export class TaskView {
       case "model.fallback": {
         const name = formatModelName(event.model);
         const why = fallbackReason(event.reason);
+        const details = t("{0}{1}: request sent to {2}, model {3}.", [
+          why.charAt(0).toLocaleUpperCase(i18n.locale),
+          why.slice(1),
+          event.provider,
+          event.model,
+        ]);
         this.thread.note(
           "refresh",
           t("Fallback model {0} responded", [name]),
           event.provider,
-          t("{0}{1}: request sent to {2}, model {3}.", [
-            why.charAt(0).toLocaleUpperCase(i18n.locale),
-            why.slice(1),
-            event.provider,
-            event.model,
-          ]),
+          details,
         );
         if (!restoring) toast.show(t("Fallback model {0} is responding: {1}", [name, why]));
         return;
@@ -411,7 +420,7 @@ export class TaskView {
         );
         return;
       case "turn.finished":
-        this.#status("Thinking");
+        this.liveLabel = "Thinking";
         return;
       case "approval.requested":
         this.thread.push({
@@ -425,7 +434,7 @@ export class TaskView {
         return;
       case "approval.resolved":
         this.thread.resolveApproval(event.id, event.choice, event.by);
-        if (this.busy) this.#status("Working");
+        if (this.busy) this.liveLabel = "Working";
         return;
       case "job.started":
         this.upsertJob(event.job);
@@ -445,7 +454,7 @@ export class TaskView {
         this.thread.finishRun(interruptedResult(event.sessionId), event.timestamp ?? event.at);
         this.thread.push(interruptedNotice(event.reason, event.at));
         this.live = false;
-        this.#status("Interrupted");
+        this.liveLabel = "Interrupted";
         return;
       case "session.finished":
         this.#finished(event.result, event.timestamp);
@@ -464,31 +473,23 @@ export class TaskView {
       this.thread.beginRun(null, undefined, event.timestamp);
       if (event.resumed) this.thread.push(resumedNotice());
     } else {
-      this.thread.beginRun(
-        prompt,
-        new Date(event.timestamp ?? Date.now()).toISOString(),
-        event.timestamp,
-      );
+      const at = new Date(event.timestamp ?? Date.now()).toISOString();
+      this.thread.beginRun(prompt, at, event.timestamp, event.actor);
       this.lastPrompt = prompt;
-      this.title ||= prompt.split("\n")[0]?.slice(0, 72) ?? "";
+      if (event.actor !== "twin") this.title ||= prompt.split("\n")[0]?.slice(0, 72) ?? "";
     }
     if (event.budget) this.budget = event.budget;
     this.pendingSend = false;
     this.live = true;
-    this.#status("Thinking");
+    this.liveLabel = "Thinking";
   }
-
   #finished(result: AgentRunResult, timestamp?: number): void {
     this.thread.finishRun(result, timestamp);
     this.#syncSubagents();
     if (result.budget) this.budget = result.budget;
     if (result.stopReason === "budget") this.thread.push(budgetNotice(result));
     this.live = false;
-    this.#status("Done");
-  }
-
-  #status(label: MessageKey): void {
-    this.liveLabel = label;
+    this.liveLabel = "Done";
   }
   #syncSubagents(): void {
     if (this.thread.restoring) return;

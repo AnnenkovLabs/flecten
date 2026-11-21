@@ -46,5 +46,5 @@
   <button type="button" onclick={() => { menu.hidePopover(); ide.closeMany(ide.tabs.map((tab) => tab.path)); }}>{t("Close all")}</button>
 </div>
 <style>
-  small { max-width: 140px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 11px; } .tab-menu { position: fixed; margin: 0; width: 230px; padding: 4px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--raised); box-shadow: 0 8px 24px #0005; color: var(--text-2); } .tab-menu button { display: block; width: 100%; min-height: 30px; padding-inline: 10px; text-align: start; border-radius: 4px; font-size: 12px; } .tab-menu button:hover { background: var(--raised-hover); }
+  small { max-width: 140px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 11px; } .tab-menu { position: fixed; margin: 0; width: 230px; padding: 4px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--raised); box-shadow: 0 8px 24px #0005; color: var(--text-2); } .tab-menu button { display: block; width: 100%; min-height: 30px; padding-inline: 10px; text-align: start; border-radius: 4px; font-size: 12px; } .tab-menu button:hover { background: var(--raised-hover); }
 </style>

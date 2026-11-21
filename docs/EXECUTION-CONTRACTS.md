@@ -18,9 +18,9 @@ The provider context window remains a hard ceiling, while active working sets ta
 
 Routine tool events stream directly to the UI. Worker errors do not spin up a Talker turn merely to narrate the failure. Successful Worker runs pass through acceptance and produce a single substantive Talker response.
 
-`context complete` records structured `findings`, `risks`, `result`, and `finalResult`. Full reports and transcripts are archived before active history is replaced. A populated `finalResult` completes atomically once acceptance criteria pass. Structured page checkpoints require no extra model summarizer call, and recovery can read evidence and archived pages without opening a synthetic working page.
+`context` (`op: "compact"` or `"complete"`) records structured `findings`, `risks`, `result`, and `finalResult`. Full reports and transcripts are archived before active history is replaced. A populated `finalResult` completes atomically once acceptance criteria pass. Structured page checkpoints require no extra model summarizer call, and recovery can read evidence and archived pages without opening a synthetic working page.
 
-Worker assignments carry the current step, open questions, source boundaries, `expectedOutputs`, and sufficiency criteria, while raw user speech is stored verbatim alongside. Criteria requiring `tool_result` evidence can only be satisfied by an observed successful tool call in that assignment.
+Worker tasks carry either a dense compiled brief (`task`) or structured `assignment` (current step, open questions, source boundaries, `expectedOutputs`, and sufficiency criteria), while raw user speech is stored verbatim alongside. Criteria requiring `tool_result` evidence can only be satisfied by an observed successful tool call in that assignment (automatically bound by the runtime on completion or reported explicitly via `criterion`).
 
 ## Chat Accounting
 

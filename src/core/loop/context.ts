@@ -85,16 +85,16 @@ function estimateContext(
     toolTokens
   );
 }
-
 function prefixInput(messages: readonly Message[]): { pageStart: number; prefix: string } {
   const pageStart = pageStartIndex(messages);
   return { pageStart, prefix: JSON.stringify(messages.slice(0, pageStart)) };
 }
-
+export function resetStablePrefix(messages: readonly Message[]): void {
+  prefixStates.delete(messages as Message[]);
+}
 export function stablePrefixHash(system: string, messages: readonly Message[]): string {
   return prefixHash(system, prefixInput(messages).prefix);
 }
-
 function checkStablePrefix(messages: Message[], system: string): void {
   const { pageStart, prefix } = prefixInput(messages);
   const current = stablePrefixHash(system, messages);
@@ -110,11 +110,9 @@ function checkStablePrefix(messages: Message[], system: string): void {
       );
     }
   }
-  if (state === undefined || state.pageStart !== pageStart || state.hash !== current) {
+  if (state === undefined || state.pageStart !== pageStart || state.hash !== current)
     prefixStates.set(messages, { pageStart, hash: current });
-  }
 }
-
 function sanitizeId(id: string): string {
   return id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120) || "call";
 }
@@ -365,17 +363,22 @@ async function defaultCompaction(
       ? await options.language.input(request.focus)
       : request?.focus;
   let contextSummary: ContextSummary | undefined;
-  const activePage = new PageRuntime(messages).active();
-  const summaryContext = (context: SummarizeContext): SummarizeContext => ({
-    ...context,
-    activeMcpTools: options.tools.activeMcpTools(),
-    ...(activePage ? { activePage } : {}),
-  });
+  const summaryContext = (
+    old: readonly ContextMessage[],
+    context: SummarizeContext,
+  ): SummarizeContext => {
+    const activePage = new PageRuntime(messages.slice(0, old.length)).active();
+    return {
+      ...context,
+      activeMcpTools: options.tools.activeMcpTools(),
+      ...(activePage ? { activePage } : {}),
+    };
+  };
   const summarize = writer
     ? (old: readonly ContextMessage[], context: SummarizeContext) =>
-        writer.write(old, summaryContext(context), focus)
+        writer.write(old, summaryContext(old, context), focus)
     : (old: readonly ContextMessage[], context: SummarizeContext) => {
-        contextSummary = continuationPage(old, summaryContext(context));
+        contextSummary = continuationPage(old, summaryContext(old, context));
         return renderContinuation(contextSummary);
       };
   const input = {

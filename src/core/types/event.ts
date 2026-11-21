@@ -80,6 +80,7 @@ export type LeafSessionEvent =
       /** The run continues a task that a crash or restart interrupted. */
       resumed?: boolean;
       internal?: boolean;
+      actor?: "user" | "twin";
       budget?: BudgetView;
     }
   | { type: "turn.started"; sessionId: SessionId; turn: number }
@@ -138,6 +139,7 @@ export type LeafSessionEvent =
       sessionId: SessionId;
       text: string;
       input?: string;
+      actor?: "user" | "twin";
       attachments?: AttachmentReference[];
       attachmentSnapshot?: AttachmentSnapshot;
       contexts?: ContextReference[];

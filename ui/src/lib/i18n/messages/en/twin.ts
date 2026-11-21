@@ -22,13 +22,22 @@ export default {
   Like: "Like",
   Delight: "Delight",
   "{0} sessions found": ["", 0, " sessions found"],
-  "Choose which agent histories Twin can learn from.":
-    "Choose which agent histories Twin can learn from.",
+  "Choose which agent histories and saved memories Twin can learn from.":
+    "Choose which agent histories and saved memories Twin can learn from.",
   "Scan first": "Scan first",
   "Not found": "Not found",
   "Export needed": "Export needed",
   "Learn from {0}": ["Learn from ", 0, ""],
   "Source details": "Source details",
+  "Training model": "Training model",
+  "Reasoning level": "Reasoning level",
+  "Training reasoning level": "Training reasoning level",
+  "Model variant": "Model variant",
+  "Training model variant": "Training model variant",
+  "Model default": "Model default",
+  "Default variant": "Default variant",
+  "Reasoning is not supported": "Reasoning is not supported",
+  "Select a model first": "Select a model first",
   "Reading selected sessions…": "Reading selected sessions…",
   "Read {0} sessions and {1} messages": ["Read ", 0, " sessions and ", 1, " messages"],
   "Training Twin": "Training Twin",
@@ -36,38 +45,18 @@ export default {
   "Train Twin": "Train Twin",
   "Scanning…": "Scanning…",
   "Scan sources": "Scan sources",
+  "Training reads all unread sessions and saved harness memories in batches and may consume significant API tokens and funds.":
+    "Training reads all unread sessions and saved harness memories in batches and may consume significant API tokens and funds.",
   "Twin is ready. Learned traits apply immediately and you can edit them.":
     "Twin is ready. Learned traits apply immediately and you can edit them.",
   "View your character": "View your character",
   "Training cancelled. Your existing character is unchanged.":
     "Training cancelled. Your existing character is unchanged.",
   "What is sent to the model?": "What is sent to the model?",
-  "Scanning is local. Learning sends your messages and preceding agent replies to your configured provider, within the limits below.":
-    "Scanning is local. Learning sends your messages and preceding agent replies to your configured provider, within the limits below.",
+  "Scanning is local. Learning sends your messages, saved harness memories, and preceding agent replies to the selected provider.":
+    "Scanning is local. Learning sends your messages, saved harness memories, and preceding agent replies to the selected provider.",
   "Training model: {0} / {1}": ["Training model: ", 0, " / ", 1, ""],
-  "Per training: up to {0} sessions, {1} messages and {2} characters": [
-    "Per training: up to ",
-    0,
-    " sessions, ",
-    1,
-    " messages and ",
-    2,
-    " characters",
-  ],
-  "Would Twin choose what you would?": "Would Twin choose what you would?",
-  "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "Ask a real design or code tradeoff to see how Twin answers the Worker from your saved traits.",
-  "Question for Twin": "Question for Twin",
-  "How should we design checkout for this project?":
-    "How should we design checkout for this project?",
-  "Asking Twin…": "Asking Twin…",
-  "Ask Twin": "Ask Twin",
-  "Uses your configured model. Each answer shows its sources.":
-    "Uses your configured model. Each answer shows its sources.",
-  "Twin needs your answer": "Twin needs your answer",
-  "No supported answer. Ask the user directly.":
-    "Not enough evidence in saved traits; Twin will ask you directly.",
-  "Based on your character": "Based on your character",
+  "Twin agent activity": "Twin agent activity",
   "Input: {0} tokens · Output: {1} tokens": ["Input: ", 0, " tokens · Output: ", 1, " tokens"],
   "Learning…": "Learning…",
   "Ready to represent you": "Ready to represent you",
@@ -129,8 +118,6 @@ export default {
   "Representing your intent to the Worker": "Representing your intent to the Worker",
   "Corrections: {0} / 4": ["Corrections: ", 0, " / 4"],
   "Interact with Twin": "Interact with Twin",
-  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
-    "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.",
   "Resume motion": "Resume motion",
   "Pause motion": "Pause motion",
 } as const;

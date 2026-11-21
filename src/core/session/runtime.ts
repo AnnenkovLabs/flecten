@@ -17,6 +17,7 @@ export interface RunExtras {
   queueId?: string;
   resumed?: boolean;
   internal?: boolean;
+  actor?: "user" | "twin";
   summaryWake?: true;
   contexts?: ContextReference[];
   attachmentSnapshot?: AttachmentSnapshot;
@@ -42,6 +43,7 @@ export interface SessionRuntime {
   readonly calls: ToolCalls;
   readonly subagents: SubagentTasks;
   readonly terminals: TerminalManager;
+  reads(): import("../../tools/util/read-tracker").ReadTracker;
   active(): ActiveRun | undefined;
   busy(): boolean;
   state(): SessionState | undefined;

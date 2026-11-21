@@ -100,7 +100,7 @@
   </div>
 
   <nav class="side-services" aria-label={t("Project tools")}>
-    {#if onOpenTwin}<button class="side-action" class:is-current={twinActive} aria-pressed={twinActive} type="button" onclick={onOpenTwin}><TwinCharacter compact /><span>Twin</span></button>{/if}
+    {#if onOpenTwin}<button class="side-action side-action--twin" class:is-current={twinActive} aria-pressed={twinActive} type="button" onclick={onOpenTwin}><span class="side-twin-icon" aria-hidden="true"><TwinCharacter compact /></span><span>Twin</span></button>{/if}
     {#if onOpenDictionary}<button class="side-action" type="button" onclick={onOpenDictionary}><Icon name="brain" size={18} /><span>{t("Memory and dictionary")}</span></button>{/if}
     {#if onOpenModules}<button class="side-action" type="button" onclick={onOpenModules}><Icon name="layers" size={18} /><span>{t("Modules")}</span></button>{/if}
   </nav>
@@ -144,26 +144,36 @@
     text-align: left;
     transition:
       background var(--t-touch) var(--ease),
-      color var(--t-touch) var(--ease),
-      border-radius 460ms var(--ease-jelly);
-  }
-
-  .side-action :global(.icon) {
-    color: var(--muted);
-    transition:
-      transform 460ms var(--ease-jelly),
       color var(--t-touch) var(--ease);
   }
 
+  .side-action :global(.icon) {
+    flex: none;
+    color: var(--muted);
+    transition: color var(--t-touch) var(--ease);
+  }
+
+  .side-twin-icon {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    overflow: visible;
+  }
+
+  .side-twin-icon :global(.twin-character.compact) {
+    width: 22px;
+    height: 22px;
+  }
+
   .side-action:hover {
-    border-radius: 12px;
     background: rgba(240, 239, 237, 0.04);
     color: var(--text);
   }
 
   .side-action:hover :global(.icon) {
     color: var(--text-2);
-    transform: scale(1.16);
   }
 
   .side-search {
@@ -172,7 +182,7 @@
     gap: 6px;
     height: var(--control-h);
     padding: 0 0 0 8px;
-    border-radius: 8px;
+    border-radius: 7px;
     background: rgba(240, 239, 237, 0.035);
     transition:
       background 220ms var(--ease),

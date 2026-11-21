@@ -1,6 +1,5 @@
+import type { ModelChoice } from "../../../shared/model-choice";
 import {
-  type TwinAnswer,
-  TwinAnswerSchema,
   type TwinCandidate,
   type TwinSnapshot,
   TwinSnapshotSchema,
@@ -21,13 +20,12 @@ export class TwinStore {
   snapshot = $state<TwinSnapshot | null>(null);
   busy = $state(false);
   error = $state("");
-  answer = $state<TwinAnswer | null>(null);
-  question = $state("");
   selected = $state<TwinSourceId[]>([]);
-  tab = $state<"sources" | "profile" | "ask">("sources");
+  tab = $state<"sources" | "profile">("sources");
   editing = $state<TwinCandidate | null>(null);
   power = $state<TwinPowerVisual>({ phase: "disabled", since: 0 });
   configuring = $state(false);
+  dismissedError = $state("");
   #desiredEnabled = $state<boolean>();
   #generation = 0;
   #pollFailed = false;
@@ -55,11 +53,17 @@ export class TwinStore {
     this.snapshot = null;
     this.busy = false;
     this.error = "";
-    this.answer = null;
-    this.question = "";
+    this.dismissedError = "";
     this.selected = [];
     this.editing = null;
     this.tab = "sources";
+  }
+
+  dismissTransientErrors(): void {
+    this.error = "";
+    if (this.snapshot?.training.state === "error") {
+      this.dismissedError = this.snapshot.training.message;
+    }
   }
 
   dispose(): void {
@@ -87,9 +91,19 @@ export class TwinStore {
       : this.selected.filter((value) => value !== id);
   }
 
+  async setTrainingModel(choice: ModelChoice | null): Promise<void> {
+    if (this.busy || this.training) return;
+    await this.#request({ type: "twin.configure", trainingModel: choice });
+  }
+
   async train(): Promise<void> {
     if (this.busy || this.training || !this.selected.length) return;
-    await this.#request({ type: "twin.train", sourceIds: this.selected });
+    this.dismissedError = "";
+    await this.#request({
+      type: "twin.train",
+      sourceIds: this.selected,
+      ...(this.snapshot?.trainingModel ? { trainingModel: this.snapshot.trainingModel } : {}),
+    });
   }
 
   async cancel(): Promise<void> {
@@ -171,12 +185,6 @@ export class TwinStore {
       this.editing = null;
   }
 
-  async consult(): Promise<void> {
-    if (this.busy || !this.question.trim()) return;
-    this.answer = null;
-    await this.#request({ type: "twin.consult", question: this.question });
-  }
-
   async #request(command: Parameters<typeof requestAgent>[0], poll = false): Promise<boolean> {
     if (!poll) {
       // A foreground action supersedes every older background snapshot, including errors.
@@ -190,8 +198,6 @@ export class TwinStore {
     try {
       const response = await requestAgent(command, 120_000);
       const snapshot = TwinSnapshotSchema.parse(response.twin);
-      const answer =
-        response.answer === undefined ? undefined : TwinAnswerSchema.parse(response.answer);
       if (generation !== this.#generation) return false;
       if (this.#pollFailed) this.error = "";
       this.#pollFailed = false;
@@ -202,7 +208,6 @@ export class TwinStore {
       )
         this.#setPower(snapshot.enabled ? "enabled" : "disabled");
       this.snapshot = snapshot;
-      if (answer) this.answer = answer;
       return true;
     } catch (cause) {
       if (generation === this.#generation) {

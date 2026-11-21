@@ -86,8 +86,10 @@
       </div>
     </div>
     <div class="st-group">
-      <h3 class="st-group-title">{t("Subagent models")}</h3>
-      <p class="st-section-description">{t("Choose a default for each role. Unset roles inherit the model of the agent that starts them.")}</p>
+      <div class="st-group-head">
+        <h3 class="st-group-title">{t("Subagent models")}</h3>
+        <p class="st-group-note">{t("Choose a default for each role. Unset roles inherit the model of the agent that starts them.")}</p>
+      </div>
       <div class="st-card">
         {#each roles as role (role.id)}
           <ModelDefaultRow title={role.name} description={role.description} {providers}
@@ -100,3 +102,16 @@
     {#if !enabled}<TranslationSettings {config} />{/if}
   </section>
 {/if}
+
+<style>
+  .models-settings > .st-section-description {
+    margin-top: -12px;
+  }
+  .st-group-head {
+    display: grid;
+    gap: 4px;
+  }
+  .st-group-head .st-group-note {
+    margin: 0;
+  }
+</style>

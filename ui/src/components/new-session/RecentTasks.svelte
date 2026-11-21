@@ -70,7 +70,7 @@
   .ns-task-meta { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
   .ns-task-project { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ns-task-sep { flex: none; }
-  .ns-task-age { white-space: nowrap; }
+  .ns-task-age { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .ns-task-icon { display: grid; place-items: center; color: var(--muted); }
   .ns-task-icon.is-working { color: var(--primary); }
   .ns-task-status.is-waiting, .ns-task-icon.is-waiting { color: var(--warning); }

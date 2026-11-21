@@ -41,7 +41,7 @@
     max-height: calc(100dvh - 32px);
     overflow-y: auto;
     padding: 24px;
-    border-radius: 12px;
+    border-radius: 14px;
     box-shadow:
       inset 0 0 0 1px var(--line-strong),
       0 24px 64px rgba(0, 0, 0, 0.4);
@@ -61,6 +61,7 @@
     color: var(--text-body);
     font-size: 14px;
     line-height: 1.5;
+    text-wrap: pretty;
   }
 
   .content {

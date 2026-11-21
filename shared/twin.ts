@@ -1,8 +1,20 @@
 import { z } from "zod";
+import { ModelChoiceSchema } from "./model-choice";
 
 export const TwinSourceIdSchema = z.preprocess(
   (value) => (value === "liquid" ? "flecten" : value),
-  z.enum(["claude", "codex", "cursor", "omp", "kilo", "deepseek", "opencode", "hermes", "flecten"]),
+  z.enum([
+    "claude",
+    "codex",
+    "cursor",
+    "omp",
+    "kilo",
+    "deepseek",
+    "opencode",
+    "hermes",
+    "commandcode",
+    "flecten",
+  ]),
 );
 export type TwinSourceId = z.infer<typeof TwinSourceIdSchema>;
 const text = (max: number) => z.string().min(1).max(max);
@@ -65,8 +77,19 @@ export const TwinUsageSchema = z.object({
     .optional(),
   missingRequests: z.number().int().nonnegative().optional(),
 });
+export const TwinTraceStepSchema = z
+  .object({
+    id: text(100),
+    kind: z.enum(["batch", "tool", "reasoning"]),
+    label: text(300),
+    detail: z.string().max(500).optional(),
+    status: z.enum(["running", "done", "error"]).default("done"),
+  })
+  .strict();
+export type TwinTraceStep = z.infer<typeof TwinTraceStepSchema>;
 export const TwinSnapshotSchema = z.object({
   enabled: z.boolean(),
+  trainingModel: ModelChoiceSchema.optional(),
   sources: z.array(TwinSourceSchema),
   candidates: z.array(TwinCandidateSchema),
   entries: z.array(TwinEntrySchema),
@@ -90,20 +113,22 @@ export const TwinSnapshotSchema = z.object({
       )
       .max(16)
       .optional(),
+    trace: z.array(TwinTraceStepSchema).max(40).optional(),
   }),
   limits: z.object({
-    maxSessions: z.number().int(),
-    maxMessages: z.number().int(),
-    maxInputCharacters: z.number().int(),
     maxCandidates: z.number().int(),
     maxProfileEntries: z.number().int(),
   }),
 });
 export type TwinSnapshot = z.infer<typeof TwinSnapshotSchema>;
-export const TwinTrainSchema = z.object({ sourceIds: z.array(TwinSourceIdSchema).min(1).max(9) });
+export const TwinTrainSchema = z.object({
+  sourceIds: z.array(TwinSourceIdSchema).min(1).max(12),
+  trainingModel: ModelChoiceSchema.optional(),
+});
 export const TwinConfigureSchema = z.object({
   enabled: z.boolean().optional(),
-  sourceIds: z.array(TwinSourceIdSchema).max(9).optional(),
+  sourceIds: z.array(TwinSourceIdSchema).max(12).optional(),
+  trainingModel: ModelChoiceSchema.nullable().optional(),
 });
 export const TwinReviewSchema = z.object({
   candidateId: text(100),
@@ -123,16 +148,6 @@ export const TwinForgetSchema = z.object({
   id: text(256),
   expectedRevision: z.number().int().min(1),
 });
-export const TwinConsultSchema = z.object({ question: text(2000) });
-export const TwinAnswerSchema = z
-  .object({
-    answer: z.string().max(3000),
-    abstained: z.boolean(),
-    entryIds: z.array(text(256)).max(8),
-    usage: TwinUsageSchema,
-  })
-  .strict();
-export type TwinAnswer = z.infer<typeof TwinAnswerSchema>;
 export const TwinTeachSchema = z.object({
   summary: text(300),
   content: text(2000),

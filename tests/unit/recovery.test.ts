@@ -6,7 +6,7 @@ import { EventJournal } from "../../src/app/event-journal";
 import { autoResumable, markInterrupted } from "../../src/app/recovery";
 import type { HarnessConfig } from "../../src/config/schema";
 import type { QueueItem } from "../../src/core/queue/types";
-import type { Event } from "../../src/core/types";
+import type { Event, SessionEvent } from "../../src/core/types";
 import { listSessions, recordSessionEvent } from "../../src/store/events";
 import { sessionPaths } from "../../src/store/paths";
 import { loadQueue, restoredQueue, saveQueue } from "../../src/store/queue";
@@ -24,7 +24,10 @@ async function workspace(): Promise<string> {
   return cwd;
 }
 
-function started(sessionId: string, extra: { resumed?: boolean; queueId?: string } = {}): Event {
+function started(
+  sessionId: string,
+  extra: { resumed?: boolean; queueId?: string } = {},
+): SessionEvent {
   return { type: "session.started", sessionId, provider: "p", model: "m", prompt: "go", ...extra };
 }
 
@@ -77,6 +80,38 @@ describe("crash recovery", () => {
     expect(autoResumable({} as HarnessConfig, runs).map((run) => run.sessionId)).toEqual(["a"]);
     const off = { sessions: { autoResume: false } } as HarnessConfig;
     expect(autoResumable(off, runs)).toEqual([]);
+  });
+
+  test("an interrupted Worker run is auto-resumable on first crash and blocked if the resumed Worker crashes again", async () => {
+    const cwd = await workspace();
+    await log(cwd, started("s_worker_first"));
+    await log(cwd, finished("s_worker_first"));
+    await log(cwd, {
+      type: "worker.event",
+      sessionId: "s_worker_first",
+      event: started("s_worker_first_worker"),
+    });
+
+    await log(cwd, started("s_worker_resumed"));
+    await log(cwd, finished("s_worker_resumed"));
+    await log(cwd, {
+      type: "worker.event",
+      sessionId: "s_worker_resumed",
+      event: started("s_worker_resumed_worker", { resumed: true }),
+    });
+
+    const persist = async (event: Event) => {
+      await log(cwd, event);
+    };
+    const runs = await markInterrupted(cwd, persist);
+    const byId = Object.fromEntries(runs.map((run) => [run.sessionId, run.wasResumed]));
+    expect(byId).toEqual({
+      s_worker_first: false,
+      s_worker_resumed: true,
+    });
+    expect(autoResumable({} as HarnessConfig, runs).map((run) => run.sessionId)).toEqual([
+      "s_worker_first",
+    ]);
   });
 });
 

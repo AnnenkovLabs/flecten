@@ -83,13 +83,10 @@
     background: var(--raised);
     color: var(--text);
     font-size: 12.5px;
-    transition:
-      background 220ms var(--ease),
-      border-radius 460ms var(--ease-jelly);
+    transition: background 220ms var(--ease);
   }
 
   .notice-btn:hover {
-    border-radius: 10px;
     background: var(--raised-hover);
   }
 </style>

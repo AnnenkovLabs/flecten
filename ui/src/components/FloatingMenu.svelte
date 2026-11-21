@@ -52,7 +52,30 @@
       position();
       queueMicrotask(position);
     }
+    function onWindowPointerDown(event: PointerEvent): void {
+      if (!(anchor instanceof HTMLButtonElement)) return;
+      if (!(event.target instanceof Node) || !anchor.contains(event.target)) return;
+      if (!menu.matches(":popover-open")) return;
+      const target = anchor;
+      const suppressClick = (clickEvent: MouseEvent): void => {
+        clickEvent.preventDefault();
+        clickEvent.stopPropagation();
+        clickEvent.stopImmediatePropagation();
+      };
+      target.addEventListener("click", suppressClick, { capture: true, once: true });
+      const cleanup = (): void => {
+        setTimeout(() => target.removeEventListener("click", suppressClick, true), 0);
+      };
+      window.addEventListener("pointerup", cleanup, { capture: true, once: true });
+      window.addEventListener("pointercancel", cleanup, { capture: true, once: true });
+      event.preventDefault();
+      event.stopPropagation();
+      menu.hidePopover();
+      onClose();
+      target.focus({ preventScroll: true });
+    }
     menu.addEventListener("beforetoggle", onToggle);
+    window.addEventListener("pointerdown", onWindowPointerDown, true);
     if (!menu.matches(":popover-open")) menu.showPopover();
     position();
     const observer = new ResizeObserver(position);
@@ -65,6 +88,7 @@
     return () => {
       observer.disconnect();
       menu.removeEventListener("beforetoggle", onToggle);
+      window.removeEventListener("pointerdown", onWindowPointerDown, true);
       window.removeEventListener("resize", position);
       window.removeEventListener("scroll", position, true);
       window.visualViewport?.removeEventListener("resize", position);

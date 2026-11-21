@@ -76,6 +76,8 @@ export const SessionStateSchema = z.object({
 });
 export type SessionState = z.infer<typeof SessionStateSchema>;
 
+const EPOCH_ORDER_PREFIX = /^\d{15}-\d{8}-/;
+
 /** A response captured before a newer event cannot roll state backwards. */
 export function newerSessionState(
   current: SessionState | null,
@@ -83,10 +85,12 @@ export function newerSessionState(
   retiredEpochs: ReadonlySet<string> = new Set(),
 ): boolean {
   if (retiredEpochs.has(next.epoch)) return false;
-  return (
-    !current ||
-    current.sessionId !== next.sessionId ||
-    current.epoch !== next.epoch ||
-    next.revision > current.revision
-  );
+  if (!current || current.sessionId !== next.sessionId) return true;
+  if (current.epoch !== next.epoch) {
+    if (EPOCH_ORDER_PREFIX.test(current.epoch) && EPOCH_ORDER_PREFIX.test(next.epoch)) {
+      return next.epoch > current.epoch;
+    }
+    return true;
+  }
+  return next.revision > current.revision;
 }

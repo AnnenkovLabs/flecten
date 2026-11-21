@@ -139,7 +139,7 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
       }
       pages.checkpointed();
       const completed = pageResult(pendingResult, messages, options);
-      if (completed)
+      if (completed) {
         return {
           stopReason: "done",
           summary: completed.summary,
@@ -149,12 +149,12 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
           lastText: completed.summary,
           messages,
         };
+      }
     }
     await deliverModules(messages, options);
     if (options.stopSignal?.aborted) {
       return { stopReason: "stopped", summary: lastText, turns, usage, lastText, messages };
     }
-    // Steering and compaction may spend a shared budget before the next Worker request.
     const updatedLimit = options.budgetExhausted?.();
     if (updatedLimit !== undefined) {
       return { stopReason: "budget", summary: updatedLimit, turns, usage, lastText, messages };
@@ -183,7 +183,9 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
         ? completion.text || completion.summary
         : message.content;
     if (completionIssue) {
-      message.content = completionIssue;
+      if (options.role === "talker") {
+        message.content = completionIssue;
+      }
       options.emit({ type: "message.reset", reason: "completion_deferred" });
     }
     if (acceptedCompletion && completion) {
@@ -247,8 +249,8 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
 
       await deliverToolMedia(messages, message.toolCalls, results, options);
       const blocked = pages?.blocked();
-      const finalResult = pages?.finalResult();
-      if (pages?.pending()) {
+      const pendingBeforeCheckpoint = pages?.pending();
+      if (pendingBeforeCheckpoint && pages) {
         const compacted = await compactContextIfNeeded(messages, {
           ...options,
           takeCompactionRequest: () => ({ reason: "page_checkpoint" }),
@@ -258,7 +260,14 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
         }
         pages.checkpointed();
       }
-      const completed = pageResult(finalResult, messages, options);
+      const finalResult =
+        pendingBeforeCheckpoint || sawTodoChange || results.some((r) => r.ok)
+          ? pages?.finalResult()
+          : undefined;
+      const completed =
+        finalResult && (!pages || pages.canFinish())
+          ? pageResult(finalResult, messages, options)
+          : undefined;
       if (completed) {
         done = completed;
         lastText = completed.summary;
@@ -310,21 +319,60 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
     }
 
     if (message.toolCalls.length > 0 && streamed.stopReason === "max_tokens") {
+      const completeCalls = message.toolCalls.slice(0, -1).filter((call) => {
+        const prepared = options.tools.prepare(call);
+        return !prepared.error && typeof call.args === "object" && call.args !== null;
+      });
+      if (completeCalls.length === message.toolCalls.length - 1 && completeCalls.length > 0) {
+        const results: ToolResult[] = [];
+        await executeCalls(completeCalls, execution, options.emit, results);
+        completeCalls.forEach((call, i) => {
+          if (results[i]) messages.push(toolMessage(call, results[i]));
+        });
+        const tail = message.toolCalls.at(-1);
+        if (tail) {
+          const result: ToolResult = { ok: false, output: "", error: TRUNCATED_CALL };
+          options.emit({ type: "tool.started", call: tail });
+          options.emit({ type: "tool.finished", call: tail, result });
+          messages.push(toolMessage(tail, result));
+        }
+        continuations.resetForToolUse();
+        if (options.stopSignal?.aborted) {
+          options.emit({ type: "turn.finished", turn: turns, reason: "stopped" });
+          return { stopReason: "stopped", summary: lastText, turns, usage, lastText, messages };
+        }
+        options.emit({ type: "turn.finished", turn: turns, reason: "tool_use" });
+        continue;
+      }
       for (const call of message.toolCalls) {
+        const result: ToolResult = { ok: false, output: "", error: TRUNCATED_CALL };
         options.emit({ type: "tool.started", call });
-        const result: ToolResult = {
-          ok: false,
-          output: "",
-          error: TRUNCATED_CALL,
-        };
         options.emit({ type: "tool.finished", call, result });
         messages.push(toolMessage(call, result));
       }
+      if (options.stopSignal?.aborted) {
+        options.emit({ type: "turn.finished", turn: turns, reason: "stopped" });
+        return { stopReason: "stopped", summary: lastText, turns, usage, lastText, messages };
+      }
+      const retryLen = continuations.takeLength(streamed.stopReason, options.continuations);
+      options.emit({
+        type: "turn.finished",
+        turn: turns,
+        reason: retryLen ? "continue_length" : "end",
+      });
+      if (retryLen) continue;
+      return { stopReason: "end", summary: lastText, turns, usage, lastText, messages };
     }
 
     const visible = display.trim().length > 0;
+    const hasOutput = visible || message.reasoning.trim().length > 0;
     if (visible) lastText = display;
     if (completionIssue) {
+      if (options.role === "worker" && continuations.takePageIncomplete()) {
+        pushSyntheticNotice(messages, completionIssue, options);
+        options.emit({ type: "turn.finished", turn: turns, reason: "completion_deferred" });
+        continue;
+      }
       options.emit({ type: "turn.finished", turn: turns, reason: "completion_deferred" });
       return { stopReason: "end", summary: "", turns, usage, lastText, messages };
     }
@@ -340,7 +388,10 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
       continue;
     }
 
-    if (continuations.takeEmpty(visible, options.continuations)) {
+    if (
+      streamed.stopReason !== "max_tokens" &&
+      continuations.takeEmpty(hasOutput, options.continuations)
+    ) {
       pushSyntheticNotice(messages, CONTINUE_EMPTY, options);
       options.emit({ type: "turn.finished", turn: turns, reason: "continue_empty" });
       continue;

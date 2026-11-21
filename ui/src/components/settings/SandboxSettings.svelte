@@ -51,6 +51,7 @@
             <textarea
               class="st-input st-textarea"
               rows="2"
+              aria-label={t("Read")}
               value={(config.sandbox.readDenyPrefixes ?? []).join("\n")}
               data-settings-field={t("Blocked read paths readDenyPrefixes")}
               oninput={(event) =>
@@ -62,6 +63,7 @@
             <textarea
               class="st-input st-textarea"
               rows="2"
+              aria-label={t("Write")}
               value={(config.sandbox.writeDenyPrefixes ?? []).join("\n")}
               data-settings-field={t("Blocked write paths writeDenyPrefixes")}
               oninput={(event) =>
@@ -79,6 +81,7 @@
             <textarea
               class="st-input st-textarea"
               rows="3"
+              aria-label={t("Environment variables")}
               value={(config.sandbox.envAllowlist ?? []).join("\n")}
               data-settings-field={t("Environment variables envAllowlist")}
               oninput={(event) =>

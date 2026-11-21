@@ -88,6 +88,7 @@
   .answer-time {
     color: var(--muted);
     font-size: 12px;
+    font-variant-numeric: tabular-nums;
     line-height: 1.3;
   }
 

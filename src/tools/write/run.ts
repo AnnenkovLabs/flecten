@@ -1,9 +1,12 @@
 import { stat } from "node:fs/promises";
 import type { ToolResult } from "../../core/types";
+import type { SandboxPolicy } from "../../security/sandbox";
 import type { CheckpointStore } from "../../store/checkpoints";
 import { atomicWrite } from "../../util/atomic";
 import { diffText } from "../util/diff";
-import { displayPath, ensureInside, resolveToolPath } from "../util/paths";
+import { decodeFileBytes, type Encoding, encodeFileText } from "../util/encoding";
+import { mutationPath } from "../util/mutation-path";
+import { displayPath } from "../util/paths";
 import type { WriteArgs } from "./schema";
 
 export async function runWrite(
@@ -13,6 +16,7 @@ export async function runWrite(
     authorizedExternalPaths?: string[];
     signal?: AbortSignal;
     sessionId?: string;
+    sandbox?: SandboxPolicy | undefined;
     reads: {
       record(path: string, content: string): void;
       verify?(path: string, content: string): "ok" | "unread" | "changed";
@@ -20,15 +24,21 @@ export async function runWrite(
     checkpoints?: CheckpointStore;
   },
 ): Promise<ToolResult> {
-  const path = resolveToolPath(context.cwd, args.path);
+  let path: string;
   try {
-    ensureInside(context.cwd, path, args.why, context.authorizedExternalPaths);
+    path = await mutationPath(context.cwd, args.path, args.why, context.authorizedExternalPaths);
+    if (context.sandbox) {
+      const decision = await context.sandbox.checkWrite(path);
+      if (!decision.allowed) return { ok: false, output: "", error: decision.reason };
+    }
   } catch (error) {
     return { ok: false, output: "", error: error instanceof Error ? error.message : String(error) };
   }
 
   let previous = "";
   let existed = false;
+  let encoding: Encoding = "utf-8";
+  let bomBytes = 0;
   try {
     const info = await stat(path);
     if (info.isDirectory()) {
@@ -37,7 +47,10 @@ export async function runWrite(
     if (!info.isFile()) {
       return { ok: false, output: "", error: `${args.path} is not a regular file` };
     }
-    previous = await Bun.file(path).text();
+    const decoded = decodeFileBytes(new Uint8Array(await Bun.file(path).arrayBuffer()));
+    previous = decoded.text;
+    encoding = decoded.encoding;
+    bomBytes = decoded.bomBytes;
     existed = true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -87,7 +100,8 @@ export async function runWrite(
   }
 
   try {
-    await atomicWrite(path, args.content, undefined, context.signal);
+    const payload = existed ? encodeFileText(args.content, encoding, bomBytes) : args.content;
+    await atomicWrite(path, payload, undefined, context.signal);
   } catch (error) {
     return {
       ok: false,

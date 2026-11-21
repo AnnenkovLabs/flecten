@@ -108,12 +108,23 @@ export class ThreadView {
   }
 
   /** A new run with the user's message; `null` for a run without one, as a resume. */
-  beginRun(prompt: string | null, at?: string, timestamp = Date.now()): void {
+  beginRun(
+    prompt: string | null,
+    at?: string,
+    timestamp = Date.now(),
+    actor?: "user" | "twin",
+  ): void {
     this.resetRun();
     this.#runStarted = timestamp;
     this.#currentPrompt = prompt ?? "";
     if (prompt !== null) {
-      this.push({ kind: "message", id: nextId("msg"), text: prompt, ...(at ? { at } : {}) });
+      this.push({
+        kind: "message",
+        id: nextId("msg"),
+        text: prompt,
+        ...(actor ? { actor } : {}),
+        ...(at ? { at } : {}),
+      });
     }
   }
 

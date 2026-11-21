@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import type { ModelProvider } from "../../src/providers/types";
-import { delegate, type InferenceTarget } from "../../src/twin/inference";
+import { delegate, type InferenceTarget, learn } from "../../src/twin/inference";
 import { TwinInferenceError } from "../../src/twin/inference-error";
+import type { SourceMessage } from "../../src/twin/sources";
 
 const decision = {
   verdict: "pass",
@@ -86,4 +87,70 @@ test("An already cancelled Twin request never opens a provider stream", async ()
   const signal = AbortSignal.abort(new Error("Cancelled"));
   await expect(delegate(f.target, input, [], signal)).rejects.toThrow("Cancelled");
   expect(f.requests()).toBe(0);
+});
+
+test("Twin agent selectively inspects indexed messages with base tools during training", async () => {
+  const toolOutputs: string[] = [];
+  let turn = 0;
+  const provider: ModelProvider = {
+    id: "test",
+    model: "test",
+    async *stream(req) {
+      turn += 1;
+      if (turn === 1) {
+        const names = req.tools.map((t) => t.name);
+        expect(names).toEqual(["read", "grep", "glob", "inspect_messages"]);
+        yield {
+          type: "tool_call",
+          id: "tc-1",
+          name: "inspect_messages",
+          args: { ids: ["msg-30"] },
+        };
+        yield { type: "usage", input: 40, output: 12, cached: 0 };
+        yield { type: "done", reason: "tool_use" };
+        return;
+      }
+      const toolMsg = req.messages.find((m) => m.role === "tool");
+      if (toolMsg && "content" in toolMsg) toolOutputs.push(String(toolMsg.content));
+      yield {
+        type: "text",
+        delta: JSON.stringify({
+          candidates: [
+            {
+              kind: "preference",
+              reaction: "anger",
+              strength: 3,
+              voice: "Никаких модалок, только инлайн!",
+              summary: "Inline UI over modals",
+              content: "Always use inline editing instead of modals.",
+              appliesWhen: "Building forms",
+              evidence: [{ sourceMessageId: "msg-30", quote: "Никаких модалок, только инлайн!" }],
+            },
+          ],
+        }),
+      };
+      yield { type: "usage", input: 55, output: 28, cached: 0 };
+      yield { type: "done", reason: "end" };
+    },
+  };
+  const messages: SourceMessage[] = Array.from({ length: 30 }, (_, idx) => ({
+    id: `msg-${idx + 1}`,
+    sourceId: "flecten",
+    sessionId: "ses-1",
+    reference: `events.jsonl:${idx + 1}`,
+    text: idx + 1 === 30 ? "Никаких модалок, только инлайн!" : `Prompt ${idx + 1}`,
+    digest: `dig-${idx + 1}`,
+  }));
+  const result = await learn(
+    { provider, providerId: "test", model: "test", price: () => 0.002 },
+    messages,
+    [],
+    [],
+    new AbortController().signal,
+    { cwd: process.cwd(), messages },
+  );
+  expect(toolOutputs[0]).toContain("Никаких модалок, только инлайн!");
+  expect(result.candidates).toHaveLength(1);
+  expect(result.candidates[0]?.voice).toBe("Никаких модалок, только инлайн!");
+  expect(result.usage.input).toBe(95);
 });

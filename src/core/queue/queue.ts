@@ -4,6 +4,7 @@ import type { AttachmentSnapshot } from "../attachment-reference";
 import type { ContextReference } from "../context-reference";
 import {
   type QueueItem,
+  type QueueItemActor,
   type QueueItemMode,
   QueueItemSchema,
   type SerializedQueue,
@@ -36,6 +37,7 @@ export class RunQueue {
     id?: string,
     contexts?: ContextReference[],
     attachmentSnapshot?: AttachmentSnapshot,
+    actor?: QueueItemActor,
   ): QueueItem {
     const existing = id === undefined ? undefined : this.items.find((entry) => entry.id === id);
     if (existing) return copy(existing);
@@ -43,6 +45,7 @@ export class RunQueue {
       id: id ?? newId("q"),
       text,
       mode,
+      ...(actor ? { actor } : {}),
       createdAt: Date.now(),
       state: "pending",
       ...(attachments ? { attachments: [...attachments] } : {}),

@@ -247,7 +247,7 @@
     width: fit-content;
     margin: 0 24px 4px;
     padding: 3px;
-    border-radius: 9px;
+    border-radius: 10px;
     background: rgba(240, 239, 237, 0.04);
   }
 

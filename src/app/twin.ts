@@ -1,8 +1,7 @@
+import type { ModelChoice } from "../../shared/model-choice";
 import {
-  type TwinCandidate,
   TwinCandidateSchema,
   TwinConfigureSchema,
-  TwinConsultSchema,
   type TwinDelegateInput,
   TwinDelegateInputSchema,
   TwinForgetSchema,
@@ -10,35 +9,43 @@ import {
   type TwinSnapshot,
   TwinSnapshotSchema,
   TwinTeachSchema,
+  type TwinTraceStep,
   TwinTrainSchema,
   TwinUpdateSchema,
 } from "../../shared/twin";
-import type { HarnessConfig } from "../config/schema";
-import { memoryDigest, safeMemoryText } from "../core/memory/sources";
-import type { ModelProvider } from "../providers/types";
-import { consult, delegate, type InferenceTarget, learn } from "../twin/inference";
+import { safeMemoryText } from "../core/memory/sources";
+import { delegate, type InferenceTarget, learn } from "../twin/inference";
 import { TwinInferenceError } from "../twin/inference-error";
 import {
+  collectTrainingMessages,
   discoverSource,
-  readSession,
   type SourceDiscovery,
-  type SourceMessage,
   sourceDefinitions,
-  sourceMessages,
   TWIN_LIMITS,
 } from "../twin/sources";
-import { emptyTwinState, idleTraining, type TwinState, TwinStateStore } from "../twin/state";
+import {
+  buildTaughtTwinCandidate,
+  emptyTwinState,
+  idleTraining,
+  mergeTwinAdditions,
+  type TwinState,
+  TwinStateStore,
+} from "../twin/state";
 import { Mutex } from "../util/mutex";
 import { redactKnown } from "../util/redact";
-import { configSecrets } from "./provider-secrets";
-import { inputModalities } from "./service-policy";
-import { usagePrice } from "./session-config";
-import { sessionModelOptions } from "./session-model-options";
+import {
+  appendTwinEntry,
+  buildObserveMessage,
+  mergeTwinBatchState,
+  persistTwinFailure,
+  toolAllowedRoots,
+} from "./twin-factory";
 
 interface TwinOptions {
   cwd: string;
   secrets(): readonly string[];
-  target(): InferenceTarget;
+  target(choice?: ModelChoice): InferenceTarget;
+  validateChoice?(choice: ModelChoice): void;
   home?: string;
 }
 /** The learned persona owns taste and voice. It is never injected as project memory. */
@@ -57,12 +64,25 @@ export async function projectTwin(options: TwinOptions) {
     };
   }
   const definitions = sourceDefinitions(options.cwd, options.home);
-  let discoveries: SourceDiscovery[] = definitions.map((source) => ({ source, files: [] }));
+  let discoveries: SourceDiscovery[] = definitions.map((source) => ({
+    source,
+    files: [],
+    cwd: options.cwd,
+    ...(options.home ? { home: options.home } : {}),
+  }));
   const lifetime = new AbortController();
   const mutex = new Mutex();
   let operation: AbortController | undefined;
   let pending: Promise<void> | undefined;
   let samples: NonNullable<TwinSnapshot["training"]["samples"]> = [];
+  let trace: TwinTraceStep[] = [];
+  const pushTrace = (step: TwinTraceStep) => {
+    const idx = trace.findIndex((item) => item.id === step.id);
+    trace =
+      idx >= 0
+        ? [...trace.slice(0, idx), step, ...trace.slice(idx + 1)]
+        : [...trace, step].slice(-40);
+  };
   const writable = () => {
     if (loadError) throw new Error(loadError);
   };
@@ -71,10 +91,37 @@ export async function projectTwin(options: TwinOptions) {
     await store.save(next, signal);
     state = next;
   };
-
+  const mergeTrained = (
+    candidates: TwinState["candidates"],
+    digests: readonly string[],
+    usage: TwinSnapshot["training"]["usage"],
+    signal: AbortSignal,
+    markReady: boolean,
+  ) =>
+    mutex.run(async () => {
+      signal.throwIfAborted();
+      const next = mergeTwinBatchState(
+        state,
+        candidates,
+        digests,
+        usage,
+        TWIN_LIMITS.maxProfileEntries,
+        markReady,
+      );
+      await save(next, signal);
+    });
+  const activeTarget = () => {
+    try {
+      return options.target(state.trainingModel);
+    } catch {
+      return undefined;
+    }
+  };
   async function get(): Promise<TwinSnapshot> {
+    const current = activeTarget();
     return TwinSnapshotSchema.parse({
       enabled: state.enabled,
+      ...(state.trainingModel ? { trainingModel: state.trainingModel } : {}),
       sources: discoveries.map(({ source }) => ({
         ...source,
         selected: state.sourceIds.includes(source.id),
@@ -83,38 +130,46 @@ export async function projectTwin(options: TwinOptions) {
       entries: state.entries,
       training: {
         ...state.training,
+        ...(state.training.state === "idle" && current
+          ? { provider: current.providerId, model: current.model }
+          : {}),
         ...(operation && !["reading", "learning"].includes(state.training.state)
           ? { state: "learning" }
           : {}),
         ...(operation && samples.length ? { samples } : {}),
+        ...(operation && trace.length ? { trace } : {}),
       },
       limits: TWIN_LIMITS,
     });
   }
-
   async function scan() {
     writable();
     if (operation)
       throw new Error("Wait for Twin learning to finish or cancel it before scanning.");
     const signal = AbortSignal.any([lifetime.signal, AbortSignal.timeout(15_000)]);
-    discoveries = await Promise.all(definitions.map((source) => discoverSource(source, signal)));
+    const context = { cwd: options.cwd, ...(options.home ? { home: options.home } : {}) };
+    discoveries = await Promise.all(
+      definitions.map((source) => discoverSource(source, signal, context)),
+    );
     return get();
   }
-
   async function train(input: unknown) {
-    const { sourceIds } = TwinTrainSchema.parse(input);
+    const { sourceIds, trainingModel } = TwinTrainSchema.parse(input);
     writable();
     if (operation) throw new Error("Twin is already learning. Cancel the current import first.");
     if (state.candidates.length > 88)
       throw new Error("Review pending candidates before importing more history.");
-    const target = options.target();
+    const effectiveModel = trainingModel ?? state.trainingModel;
+    if (effectiveModel) options.validateChoice?.(effectiveModel);
+    const target = options.target(effectiveModel);
     const controller = new AbortController();
     samples = [];
+    trace = [];
     operation = controller;
     const signal = AbortSignal.any([
       controller.signal,
       lifetime.signal,
-      AbortSignal.timeout(120_000),
+      AbortSignal.timeout(600_000),
     ]);
     const execute = async () => {
       let usage = idleTraining().usage;
@@ -123,6 +178,7 @@ export async function projectTwin(options: TwinOptions) {
           save(
             {
               ...state,
+              ...(effectiveModel ? { trainingModel: effectiveModel } : {}),
               sourceIds: [...new Set(sourceIds)],
               training: {
                 ...idleTraining(),
@@ -134,59 +190,55 @@ export async function projectTwin(options: TwinOptions) {
             signal,
           ),
         );
+        const context = { cwd: options.cwd, ...(options.home ? { home: options.home } : {}) };
         const selected = await Promise.all(
           definitions
-            .filter((source) => sourceIds.includes(source.id))
-            .map((source) => discoverSource(source, signal)),
+            .filter((s) => sourceIds.includes(s.id))
+            .map((s) => {
+              const cached = discoveries.find((item) => item.source.id === s.id);
+              if (
+                cached &&
+                cached.source.status !== "not-scanned" &&
+                (cached.files.length > 0 || (cached.databases?.length ?? 0) > 0)
+              )
+                return cached;
+              return discoverSource(s, signal, context);
+            }),
         );
         discoveries = discoveries.map(
           (prior) => selected.find((item) => item.source.id === prior.source.id) ?? prior,
         );
-        const messages: SourceMessage[] = [];
-        const seen = new Set(state.processed);
-        const sessions = new Set<string>();
-        let characters = 0;
-        const add = (items: SourceMessage[]) => {
-          for (const message of items) {
-            if (seen.has(message.digest)) continue;
-            const sessionKey = `${message.sourceId}:${message.sessionId}`;
-            if (!sessions.has(sessionKey) && sessions.size >= TWIN_LIMITS.maxSessions) continue;
-            const size = message.text.length + (message.precedingAssistant?.length ?? 0);
-            if (
-              messages.length >= TWIN_LIMITS.maxMessages ||
-              characters + size > TWIN_LIMITS.maxInputCharacters
-            )
-              break;
-            messages.push(message);
-            seen.add(message.digest);
-            characters += size;
-            sessions.add(sessionKey);
-          }
-        };
-        for (const source of selected) {
-          signal.throwIfAborted();
-          if (source.database) add(await sourceMessages(source, options.secrets(), signal));
-          for (const file of source.files) {
-            if (
-              sessions.size >= TWIN_LIMITS.maxSessions ||
-              messages.length >= TWIN_LIMITS.maxMessages ||
-              characters >= TWIN_LIMITS.maxInputCharacters
-            )
-              break;
-            signal.throwIfAborted();
-            try {
-              add(await readSession(source, file, options.secrets(), signal));
-            } catch (error) {
-              signal.throwIfAborted();
-              source.source.warnings.push(
-                safeMemoryText(
-                  `Session could not be read: ${error instanceof Error ? error.message : String(error)}`,
-                  options.secrets(),
-                ).slice(0, 1000),
-              );
-            }
-          }
-        }
+        const { messages, sessions } = await collectTrainingMessages(
+          selected,
+          state.processed,
+          options.secrets(),
+          signal,
+          (progress) => {
+            if (progress.samples.length > 0 && samples.length === 0) samples = progress.samples;
+            state = {
+              ...state,
+              training: {
+                ...state.training,
+                sessions: progress.sessions,
+                messages: progress.messages,
+              },
+            };
+            pushTrace({
+              id: "reading-progress",
+              kind: "tool",
+              label: `Reading ${progress.sourceName}`,
+              detail: `${progress.sessions} sessions · ${progress.messages} messages`,
+              status: "running",
+            });
+          },
+        );
+        pushTrace({
+          id: "reading-progress",
+          kind: "tool",
+          label: "Sources loaded",
+          detail: `${sessions.size} sessions · ${messages.length} messages`,
+          status: "done",
+        });
         signal.throwIfAborted();
         if (!messages.length) {
           await mutex.run(() =>
@@ -206,10 +258,10 @@ export async function projectTwin(options: TwinOptions) {
           );
           return;
         }
-        samples = messages.slice(0, 16).map((message) => ({
-          sourceId: message.sourceId,
-          sessionId: message.sessionId,
-          quote: safeMemoryText(message.text, options.secrets()).slice(0, 4000),
+        samples = messages.slice(0, 16).map((m) => ({
+          sourceId: m.sourceId,
+          sessionId: m.sessionId,
+          quote: safeMemoryText(m.text, options.secrets()).slice(0, 4000),
         }));
         await mutex.run(() =>
           save(
@@ -232,77 +284,50 @@ export async function projectTwin(options: TwinOptions) {
           [...snapshot.entries, ...state.candidates],
           options.secrets(),
           signal,
+          {
+            cwd: options.cwd,
+            allowedRoots: toolAllowedRoots(selected),
+            messages,
+            secrets: options.secrets(),
+          },
+          pushTrace,
+          async (partial) => {
+            usage = partial.usage;
+            if (
+              partial.totalBatches > 1 &&
+              (partial.candidates.length || partial.processedDigests.length)
+            ) {
+              await mergeTrained(
+                partial.candidates,
+                partial.processedDigests,
+                partial.usage,
+                signal,
+                false,
+              );
+            }
+          },
         );
         usage = result.usage;
         signal.throwIfAborted();
-        await mutex.run(async () => {
-          signal.throwIfAborted();
-          const known = new Set(state.entries.map((entry) => entry.id));
-          const additions = result.candidates.filter((candidate) => {
-            if (known.has(candidate.id)) return false;
-            known.add(candidate.id);
-            return true;
-          });
-          if (state.entries.length + additions.length > TWIN_LIMITS.maxProfileEntries)
-            throw new Error("Twin profile is full. Remove obsolete traits before learning more.");
-          await save(
-            {
-              ...state,
-              enabled: state.enabled || result.candidates.length > 0,
-              entries: [
-                ...state.entries,
-                ...additions.map((candidate) => ({
-                  ...candidate,
-                  revision: 1,
-                  updatedAt: new Date().toISOString(),
-                })),
-              ],
-              // ponytail: retain 5000 message hashes; add a source cursor if long-running imports exceed this bound.
-              processed: [
-                ...new Set([...state.processed, ...messages.map((message) => message.digest)]),
-              ].slice(-5000),
-              training: {
-                ...state.training,
-                state: "ready",
-                message:
-                  "Twin learned these reactions and can now represent your taste to the Worker. You can edit any trait.",
-                usage,
-              },
-            },
-            signal,
-          );
-        });
+        await mergeTrained(result.candidates, result.processedDigests, usage, signal, true);
       } catch (error) {
-        await mutex.run(async () => {
-          const failed: TwinState = {
-            ...state,
-            training: {
-              ...state.training,
-              usage: error instanceof TwinInferenceError ? error.usage : usage,
-              state: controller.signal.aborted || lifetime.signal.aborted ? "cancelled" : "error",
-              message: safeMemoryText(
-                error instanceof Error ? error.message : String(error),
-                options.secrets(),
-              ).slice(0, 2000),
+        await mutex.run(() =>
+          persistTwinFailure(
+            error,
+            usage,
+            controller.signal.aborted || lifetime.signal.aborted,
+            options.secrets(),
+            state,
+            TwinInferenceError,
+            (next) => save(next),
+            (next) => {
+              state = next;
             },
-          };
-          try {
-            await save(failed);
-          } catch (saveError) {
-            state = {
-              ...state,
-              training: {
-                ...failed.training,
-                message: safeMemoryText(
-                  `${failed.training.message}\nTraining status could not be saved: ${saveError instanceof Error ? saveError.message : String(saveError)}`,
-                  options.secrets(),
-                ).slice(0, 2000),
-              },
-            };
-          }
-        });
+          ),
+        );
       } finally {
         samples = [];
+        trace = [];
         operation = undefined;
       }
     };
@@ -340,17 +365,21 @@ export async function projectTwin(options: TwinOptions) {
     },
     async configure(input: unknown) {
       const parsed = TwinConfigureSchema.parse(input);
+      if (parsed.trainingModel) options.validateChoice?.(parsed.trainingModel);
       if (parsed.enabled === false) {
         operation?.abort(new Error("Twin disabled by the user."));
         await pending;
       }
       return mutex.run(async () => {
         writable();
-        await save({
+        const next: TwinState = {
           ...state,
           ...(parsed.enabled === undefined ? {} : { enabled: parsed.enabled }),
           ...(parsed.sourceIds === undefined ? {} : { sourceIds: [...new Set(parsed.sourceIds)] }),
-        });
+        };
+        if (parsed.trainingModel === null) delete next.trainingModel;
+        else if (parsed.trainingModel !== undefined) next.trainingModel = parsed.trainingModel;
+        await save(next);
         return get();
       });
     },
@@ -373,21 +402,12 @@ export async function projectTwin(options: TwinOptions) {
             safeMemoryText(JSON.stringify(accepted), options.secrets()) !== JSON.stringify(accepted)
           )
             throw new Error("Remove credentials before saving a preference.");
-          if (!entries.some((entry) => entry.id === accepted.id)) {
-            if (entries.length >= TWIN_LIMITS.maxProfileEntries)
-              throw new Error(
-                "Twin profile is full. Forget an obsolete trait before adding another.",
-              );
-            entries = [
-              ...entries,
-              { ...accepted, revision: 1, updatedAt: new Date().toISOString() },
-            ];
-          }
+          entries = appendTwinEntry(entries, accepted, TWIN_LIMITS.maxProfileEntries);
         }
         await save({
           ...state,
           entries,
-          candidates: state.candidates.filter((item) => item.id !== candidateId),
+          candidates: state.candidates.filter((i) => i.id !== candidateId),
         });
         return get();
       });
@@ -408,93 +428,71 @@ export async function projectTwin(options: TwinOptions) {
       const parsed = TwinTeachSchema.parse(input);
       if (safeMemoryText(JSON.stringify(parsed), options.secrets()) !== JSON.stringify(parsed))
         throw new Error("Remove credentials before teaching Twin.");
-      const quote = parsed.content;
-      const candidate: TwinCandidate = {
-        id: memoryDigest(JSON.stringify(parsed)).slice(0, 40),
-        kind: "lesson",
-        reaction: parsed.reaction ?? "anger",
-        strength: parsed.strength ?? 2,
-        voice: parsed.voice ?? parsed.content.slice(0, 600),
-        summary: parsed.summary,
-        content: parsed.content,
-        appliesWhen: parsed.appliesWhen,
-        evidence: [
-          {
-            sourceId: "flecten",
-            sessionId: "twin-editor",
-            reference: parsed.path ?? "Twin profile editor",
-            digest: memoryDigest(quote),
-            quote,
-          },
-        ],
-      };
+      const candidate = buildTaughtTwinCandidate(parsed);
       return mutex.run(async () => {
         writable();
-        let entries = state.entries;
-        if (!entries.some((entry) => entry.id === candidate.id)) {
-          if (entries.length >= TWIN_LIMITS.maxProfileEntries)
-            throw new Error(
-              "Twin profile is full. Forget an obsolete trait before adding another.",
-            );
-          entries = [
-            ...entries,
-            { ...candidate, revision: 1, updatedAt: new Date().toISOString() },
-          ];
-        }
-        await save({ ...state, entries });
+        await save({
+          ...state,
+          entries: appendTwinEntry(state.entries, candidate, TWIN_LIMITS.maxProfileEntries),
+        });
         return get();
       });
     },
-    async consult(input: unknown) {
-      const { question } = TwinConsultSchema.parse(input);
-      if (!state.enabled) throw new Error("Enable Twin before consulting its profile.");
-      if (safeMemoryText(question, options.secrets()) !== question)
-        throw new Error("Remove credentials from the question.");
-      const answer = await consult(
-        options.target(),
-        question,
-        (await get()).entries,
-        AbortSignal.any([lifetime.signal, AbortSignal.timeout(60_000)]),
-      );
-      return { ...answer, answer: safeMemoryText(answer.answer, options.secrets()) };
-    },
     async delegate(input: TwinDelegateInput, signal: AbortSignal) {
-      // Redact values so masking cannot corrupt serialized JSON quotes or escapes.
       const parsed = TwinDelegateInputSchema.parse(redactKnown(input, options.secrets()));
       if (!state.enabled) throw new Error("Twin is disabled");
-      const decision = await delegate(
-        options.target(),
-        parsed,
-        state.entries,
-        AbortSignal.any([signal, lifetime.signal, AbortSignal.timeout(60_000)]),
-      );
+      const timeout = AbortSignal.any([signal, lifetime.signal, AbortSignal.timeout(60_000)]);
+      const decision = await delegate(options.target(), parsed, state.entries, timeout, {
+        cwd: options.cwd,
+        secrets: options.secrets(),
+      });
       return {
         ...decision,
         voice: safeMemoryText(decision.voice, options.secrets()),
         instructions: safeMemoryText(decision.instructions, options.secrets()),
       };
     },
+    async observe(
+      input: { sessionId: string; text: string; precedingAssistant?: string; reference?: string },
+      signal?: AbortSignal,
+    ) {
+      if (!state.enabled || operation || loadError) return undefined;
+      const built = buildObserveMessage(
+        input.sessionId,
+        input.text,
+        options.secrets(),
+        state.processed,
+        input.precedingAssistant,
+        input.reference,
+      );
+      if (!built) return undefined;
+      const result = await learn(
+        options.target(),
+        [built.message],
+        [...state.entries, ...state.candidates],
+        options.secrets(),
+        AbortSignal.any([
+          ...(signal ? [signal] : []),
+          lifetime.signal,
+          AbortSignal.timeout(30_000),
+        ]),
+      ).catch(() => undefined);
+      if (!result) return undefined;
+      return mutex.run(async () => {
+        if (operation || loadError) return undefined;
+        const next = mergeTwinAdditions(
+          state,
+          result.candidates,
+          [built.digest],
+          TWIN_LIMITS.maxProfileEntries,
+        );
+        await save({ ...state, entries: next.entries, processed: next.processed });
+        return { added: next.accepted, usage: result.usage };
+      });
+    },
     async dispose() {
       lifetime.abort();
       await pending;
     },
   };
-}
-
-export function createTwin(
-  cwd: string,
-  access: { config(): HarnessConfig; provider(): ModelProvider },
-) {
-  return projectTwin({
-    cwd,
-    secrets: () => configSecrets(access.config()),
-    target: () => ({
-      provider: access.provider(),
-      model: access.config().model,
-      providerId: access.config().provider,
-      modalities: inputModalities(access.config()),
-      price: usagePrice(access.config()),
-      priceFor: sessionModelOptions(access.config(), access.provider()).priceFor,
-    }),
-  });
 }

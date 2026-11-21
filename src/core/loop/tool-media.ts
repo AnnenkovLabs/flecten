@@ -10,11 +10,17 @@ export async function deliverToolMedia(
   options: LoopOptions,
 ): Promise<void> {
   for (let index = 0; index < results.length; index++) {
+    if (options.signal.aborted) return;
     const attachments = results[index]?.attachments;
     const call = calls[index];
     if (!attachments?.length || !call) continue;
-    if (!options.loadMedia) throw new Error("Tool media cannot be loaded by this session");
-    const images = await options.loadMedia(attachments);
+    if (!options.loadMedia) continue;
+    let images: Awaited<ReturnType<NonNullable<LoopOptions["loadMedia"]>>>;
+    try {
+      images = await options.loadMedia(attachments);
+    } catch {
+      continue;
+    }
     const text = markdownData(
       "Untrusted data",
       [

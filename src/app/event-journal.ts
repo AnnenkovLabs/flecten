@@ -38,6 +38,7 @@ function streamScope(event: Event): string {
 interface RunLog {
   events: StampedEvent[];
   running: boolean;
+  workerRunning?: boolean;
 }
 
 /**
@@ -61,10 +62,16 @@ export class EventJournal {
       leaf.type === "message.finished" ||
       leaf.type === "message.reset" ||
       leaf.type === "session.finished" ||
-      leaf.type === "session.started"
+      leaf.type === "session.started" ||
+      leaf.type === "run.interrupted" ||
+      leaf.type === "subagent.finished"
     ) {
+      const targetScope = streamScope(event);
+      const isBoundary = leaf.type === "session.finished" || leaf.type === "run.interrupted";
       for (const [key, entry] of this.#streams) {
-        if (streamScope(entry.event) !== streamScope(event)) continue;
+        const entryScope = streamScope(entry.event);
+        if (entryScope !== targetScope && !(isBoundary && entryScope.startsWith(`${targetScope}:`)))
+          continue;
         const text = entry.stream.finish();
         this.#streams.delete(key);
         if (text && leaf.type !== "message.reset" && leaf.type !== "session.started")
@@ -113,13 +120,23 @@ export class EventJournal {
     const sessionId = event.sessionId;
     if (sessionId === undefined) return stamped;
     if (event.type === "session.started") {
+      const previous = this.#runs.get(sessionId);
       this.#runs.delete(sessionId);
-      this.#runs.set(sessionId, { events: [stamped], running: true });
+      this.#runs.set(sessionId, {
+        events: [stamped],
+        running: true,
+        ...(previous?.workerRunning ? { workerRunning: true } : {}),
+      });
       this.#evict();
       return stamped;
     }
     const run = this.#runs.get(sessionId);
     if (!run) return stamped;
+    if (event.type === "worker.event") {
+      if (event.event.type === "session.started") run.workerRunning = true;
+      else if (event.event.type === "session.finished" || event.event.type === "run.interrupted")
+        run.workerRunning = false;
+    }
     const leaf = leafEvent(event);
     // A finished message replaces its deltas, but replay still needs the reasoning clock.
     if (leaf.type === "message.finished") {
@@ -142,7 +159,10 @@ export class EventJournal {
           streamScope(entry) !== streamScope(event) || !STREAM_EVENTS.has(leafEvent(entry).type),
       );
     }
-    if (event.type === "session.finished") run.running = false;
+    if (event.type === "session.finished" || event.type === "run.interrupted") {
+      run.running = false;
+      if (event.type === "run.interrupted") run.workerRunning = false;
+    }
     run.events.push(stamped);
     if (run.events.length > MAX_EVENTS_PER_RUN) {
       // ponytail: a run with more than 20k structural events keeps its newest ones; the disk log has all of them.
@@ -161,7 +181,7 @@ export class EventJournal {
       sessionId,
       events: run ? [...run.events] : [],
       seq: this.#seq,
-      running: run?.running ?? false,
+      running: Boolean(run?.running || run?.workerRunning),
     };
   }
 
@@ -174,7 +194,7 @@ export class EventJournal {
   #evict(): void {
     for (const [id, run] of this.#runs) {
       if (this.#runs.size <= MAX_SESSIONS) return;
-      if (!run.running) this.forget(id);
+      if (!run.running && !run.workerRunning) this.forget(id);
     }
   }
 }

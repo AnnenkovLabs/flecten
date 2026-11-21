@@ -66,7 +66,8 @@ export async function markInterrupted(
     if (session.running !== true && !workerInterrupted) continue;
     const lastStart = envelopes.findLast(({ event }) => event.type === "session.started")?.event;
     const wasResumed =
-      workerInterrupted || (lastStart?.type === "session.started" && lastStart.resumed === true);
+      (workerInterrupted && workerBoundary.resumed === true) ||
+      (lastStart?.type === "session.started" && lastStart.resumed === true);
     await persist({
       type: "run.interrupted",
       sessionId: session.id,

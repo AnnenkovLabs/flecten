@@ -32,6 +32,6 @@
   .st-row-copy { flex-basis: 220px; }
   .scale-control { display: flex; align-items: center; gap: var(--space-2); flex: 1 1 240px; max-width: 280px; }
   input { min-width: 80px; width: 100%; height: var(--control-h); margin: 0; cursor: pointer; }
-  output { min-width: 4ch; color: var(--text-2); font-size: 12px; text-align: end; }
+  output { min-width: 4ch; color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; text-align: end; }
   button { flex: none; width: var(--control-h); padding: 0; }
 </style>

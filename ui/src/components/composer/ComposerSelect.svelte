@@ -112,9 +112,12 @@
     min-width: 0;
     height: 32px;
     padding: 0 6px;
-    border-radius: 6px;
+    border-radius: 7px;
     color: var(--muted);
     font-size: 12.5px;
+    transition:
+      background 120ms var(--ease),
+      color 120ms var(--ease);
   }
   .composer-select > span:not(.caret) {
     overflow: hidden;

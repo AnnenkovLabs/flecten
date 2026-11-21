@@ -122,6 +122,7 @@
     min-width: 44px;
     color: var(--muted);
     font-size: 12px;
+    font-variant-numeric: tabular-nums;
     line-height: 1.3;
     text-align: right;
     white-space: nowrap;
@@ -133,16 +134,14 @@
     width: 40px;
     height: 40px;
     flex: none;
-    border-radius: 7px;
+    border-radius: 8px;
     color: var(--muted);
     transition:
       background 220ms var(--ease),
-      color 220ms var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      color 220ms var(--ease);
   }
 
   .search-btn:hover:not(:disabled) {
-    border-radius: 10px;
     background: rgba(240, 239, 237, 0.05);
     color: var(--text-2);
   }

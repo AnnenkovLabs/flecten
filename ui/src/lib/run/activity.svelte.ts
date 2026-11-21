@@ -70,17 +70,26 @@ export class TaskActivity {
   apply(event: AgentEvent): void {
     if (event.type === "worker.event") {
       const child = event.event;
-      if (child.type === "session.state")
-        this.#workers = {
-          ...this.#workers,
-          [event.sessionId]: {
-            running: child.state.running,
-            approvals: child.state.approvals.length,
-            jobs: child.state.jobs.filter((job) => job.status === "running").length,
-            interrupted: child.state.interrupted,
-          },
-        };
-      else if (child.type === "run.interrupted")
+      if (child.type === "session.state") {
+        const incoming = SessionStateSchema.parse(child.state);
+        const key = `${event.sessionId}:worker`;
+        const current = this.#states.get(key) ?? null;
+        const retired = this.#retiredEpochs.get(key) ?? new Set<string>();
+        if (newerSessionState(current, incoming, retired)) {
+          if (current && current.epoch !== incoming.epoch) retired.add(current.epoch);
+          this.#retiredEpochs.set(key, retired);
+          this.#states.set(key, incoming);
+          this.#workers = {
+            ...this.#workers,
+            [event.sessionId]: {
+              running: incoming.running,
+              approvals: incoming.approvals.length,
+              jobs: incoming.jobs.filter((job) => job.status === "running").length,
+              interrupted: incoming.interrupted,
+            },
+          };
+        }
+      } else if (child.type === "run.interrupted")
         this.#workers = { ...this.#workers, [event.sessionId]: { ...IDLE, interrupted: true } };
     }
     if (event.type === "session.state") this.applyState(event.state);
@@ -106,7 +115,9 @@ export class TaskActivity {
     const { [sessionId]: _worker, ...workers } = this.#workers;
     this.#workers = workers;
     this.#states.delete(sessionId);
+    this.#states.delete(`${sessionId}:worker`);
     this.#retiredEpochs.delete(sessionId);
+    this.#retiredEpochs.delete(`${sessionId}:worker`);
     const { [sessionId]: _gone, ...rest } = this.tasks;
     this.tasks = rest;
   }

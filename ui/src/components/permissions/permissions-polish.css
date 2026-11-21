@@ -55,7 +55,7 @@
 }
 
 .perm-seg {
-  border-radius: 8px;
+  border-radius: 9px;
   background: #141414;
   grid-template-columns: repeat(4, minmax(62px, 1fr));
 }

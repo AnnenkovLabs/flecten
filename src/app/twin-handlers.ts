@@ -11,7 +11,6 @@ export const TWIN_COMMANDS = [
   "twin.update",
   "twin.forget",
   "twin.teach",
-  "twin.consult",
 ] as const;
 export type TwinCommandType = (typeof TWIN_COMMANDS)[number];
 
@@ -26,9 +25,5 @@ export function twinHandlers(app: AppService): Record<TwinCommandType, Handler> 
     "twin.review": async (command) => ({ twin: await app.twin.review(command) }),
     "twin.forget": async (command) => ({ twin: await app.twin.forget(command) }),
     "twin.teach": async (command) => ({ twin: await app.twin.teach(command) }),
-    "twin.consult": async (command) => ({
-      twin: await app.twin.get(),
-      answer: await app.twin.consult(command),
-    }),
   };
 }

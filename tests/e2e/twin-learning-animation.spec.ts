@@ -85,17 +85,6 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
         animation.playbackRate = 0.01;
       }
     });
-    await scene.getByRole("button", { name: "Pause motion", exact: true }).press("Enter");
-    await expect
-      .poll(() =>
-        scene.evaluate((element) =>
-          element
-            .getAnimations({ subtree: true })
-            .filter((animation) => !(animation instanceof CSSAnimation))
-            .map((animation) => animation.playState),
-        ),
-      )
-      .toEqual(["paused", "paused"]);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect
       .poll(() =>
@@ -107,7 +96,6 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
         ),
       )
       .toBe(0);
-    await scene.getByRole("button", { name: "Resume motion", exact: true }).press("Enter");
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await expect(canvas).toHaveAttribute("data-renderer", "webgl");
     await expect
@@ -127,8 +115,6 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
         { intervals: [20] },
       )
       .toBe(true);
-    await scene.getByRole("button", { name: "Pause motion", exact: true }).press("Enter");
-    await stopped(scene, canvas);
 
     for (const [width, height] of [
       [1480, 940],
@@ -151,9 +137,6 @@ test("Twin learns through the real bridge with trailer cards, synchronized pause
       await page.screenshot({ path: test.info().outputPath(`twin-learning-${width}.png`) });
     }
 
-    await scene.getByRole("button", { name: "Resume motion", exact: true }).press("Enter");
-    const resumeFrame = await scene.getAttribute("data-frame");
-    await expect.poll(() => scene.getAttribute("data-frame")).not.toBe(resumeFrame);
     await expect(canvas).toHaveAttribute("data-active", "true");
     // Keep the real WebGL renderer within CI raster capacity; layout was checked at both sizes.
     const graphics = await page.context().newCDPSession(page);

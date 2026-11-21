@@ -152,11 +152,8 @@ test("a saved edit teaches Twin only after an explicit rule and preserves the pe
       model: "model",
     },
     limits: {
-      maxSessions: 100,
-      maxMessages: 160,
-      maxInputCharacters: 64000,
       maxCandidates: 12,
-      maxProfileEntries: 64,
+      maxProfileEntries: 200,
     },
   };
   bridge(async (command) => {

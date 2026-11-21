@@ -48,7 +48,7 @@ function repairPath(
       : isObject(parent)
         ? parent[key]
         : undefined;
-  const required = parentNode?.required?.includes(field) ?? false;
+  const required = typeof key === "string" ? (parentNode?.required?.includes(key) ?? false) : true;
   const type = schemaType(node);
 
   if (!required && (value === null || value === undefined)) {

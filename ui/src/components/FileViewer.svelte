@@ -232,6 +232,7 @@
     border-right: 1px solid var(--line);
     background: var(--bg);
     color: var(--muted);
+    font-variant-numeric: tabular-nums;
     text-align: right;
     user-select: none;
   }

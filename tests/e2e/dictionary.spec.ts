@@ -15,7 +15,7 @@ test("public and local dictionary can be reviewed, customized and removed", asyn
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: "Settings", exact: true }).press("Enter");
     const dialog = page.locator("dialog.settings-dialog");
-    await dialog.getByRole("button", { name: "Memory and dictionary", exact: true }).press("Enter");
+    await dialog.getByRole("button", { name: "Dictionary", exact: true }).press("Enter");
     const search = dialog.getByLabel("Search dictionary", { exact: true });
     await search.fill("Oh My Pi");
     await expect(dialog.getByRole("heading", { name: "Oh My Pi", exact: true })).toBeVisible();

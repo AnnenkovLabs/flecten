@@ -80,7 +80,7 @@ test("Twin live 3D, interactions and character workflow stay usable at both desk
     await expect(
       panel.getByRole("heading", { name: "Your standards, applied automatically", exact: true }),
     ).toBeVisible();
-    await expect(panel.locator(".twin-source")).toHaveCount(9);
+    await expect(panel.locator(".twin-source")).toHaveCount(10);
     const character = panel.locator(".twin-portrait [data-testid='twin-character']");
     const canvas = character.locator("canvas");
     const input = character.getByRole("button", { name: "Interact with Twin", exact: true });
@@ -111,14 +111,7 @@ test("Twin live 3D, interactions and character workflow stay usable at both desk
     await expect
       .poll(async () => Number(await canvas.getAttribute("data-frame")))
       .toBeGreaterThan(frame + 1);
-    await character.getByRole("button", { name: "Pause motion", exact: true }).click();
-    await assertStopped(canvas);
-    const paused = await pixels(canvas);
-    await input.press("ArrowLeft");
-    await expect.poll(async () => (await pixels(canvas)).hash).not.toBe(paused.hash);
-    await assertStopped(canvas);
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await character.getByRole("button", { name: "Resume motion", exact: true }).click();
     await assertStopped(canvas);
     const restore = await canvas.evaluateHandle((element) => {
       const extension = (element as HTMLCanvasElement)
@@ -279,6 +272,48 @@ test("Twin live 3D, interactions and character workflow stay usable at both desk
       }
       await latest.getByText("Instructions to Worker", { exact: true }).click();
     }
+
+    if ((await work.getAttribute("open")) !== null) {
+      await work.locator(":scope > summary").click();
+    }
+
+    // Verify Twin chat message blob wrapped in 3D GLSL shader with rounded-rectangle furry contour
+    await h.app.evaluate(
+      ({ BrowserWindow }, payload) => {
+        BrowserWindow.getAllWindows()[0]?.webContents.send("agent:event", payload);
+      },
+      {
+        type: "steer.applied",
+        sessionId,
+        text: "Блядь, вы всё сделали не так! В саммари написали что чекаут готов, а там опять регистрация на 5 экранов. Переделывайте в один экран.",
+        actor: "twin",
+      },
+    );
+    const twinBlob = page.getByTestId("twin-blob").first();
+    await expect(twinBlob).toBeVisible();
+    await expect(twinBlob).toContainText("Блядь, вы всё сделали не так!");
+    const blobCanvas = page.getByTestId("twin-blob-canvas").first();
+    await expect(blobCanvas).toBeVisible();
+    const blobPixels = await pixels(blobCanvas);
+    expect(blobPixels.covered).toBeGreaterThan(200);
+    expect(blobPixels.colored).toBeGreaterThan(100);
+    for (const [width, height] of [
+      [1480, 940],
+      [1180, 640],
+    ] as const) {
+      await h.app.evaluate(
+        ({ BrowserWindow }, size) =>
+          BrowserWindow.getAllWindows()[0]?.setContentSize(size.width, size.height),
+        { width, height },
+      );
+      await page.setViewportSize({ width, height });
+      await twinBlob.scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: test.info().outputPath(`twin-chat-blob-${width}x${height}.png`),
+        animations: "disabled",
+      });
+    }
+
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();

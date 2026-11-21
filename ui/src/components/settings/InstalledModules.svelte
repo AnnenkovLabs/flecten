@@ -40,8 +40,9 @@
   .module-list { display: grid; gap: 0; }
   .module-row { padding: 22px 0; border-bottom: 1px solid var(--line); display: grid; gap: 10px; min-width: 0; }
   .module-row h3, .module-row p { margin: 0; overflow-wrap: anywhere; }
+  .module-row p { text-wrap: pretty; }
   .module-heading { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .module-heading h3 { font-size: 15px; }
+  .module-heading h3 { font-size: 15px; text-wrap: balance; }
   .module-status { margin-left: auto; font-size: 12px; color: var(--muted); }
   .module-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .module-row .st-details { margin: 0; }

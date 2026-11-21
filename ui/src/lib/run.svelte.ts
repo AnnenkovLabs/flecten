@@ -216,6 +216,7 @@ export class RunStore implements TaskHost, ModelHost {
     const sessionId = this.#sessionId;
     if (this.history.changing) return false;
     if (!this.view.busy || !sessionId) return this.start(text, attachments, contexts);
+    const generation = this.view.generation;
     const id = uniqueId("q");
     const extra = {
       ...(attachments.length > 0 ? { attachments } : {}),
@@ -227,11 +228,10 @@ export class RunStore implements TaskHost, ModelHost {
         : ({ type: "queue.add", sessionId, id, text, ...extra } as const);
     requestAgent(command, 10_000)
       .then((response) => {
-        if (this.#sessionId === sessionId) this.view.attach(response.state);
+        if (this.#sessionId === sessionId && this.view.generation === generation)
+          this.view.attach(response.state);
       })
-      .catch((error: unknown) => {
-        toast.error(t("Message was not queued: {0}", [message(error)]));
-      });
+      .catch((error: unknown) => toast.error(t("Message was not queued: {0}", [message(error)])));
     return true;
   }
   start(text: string, attachments: string[] = [], contexts: ContextReference[] = []): boolean {
@@ -266,9 +266,7 @@ export class RunStore implements TaskHost, ModelHost {
     focusComposer();
     return true;
   }
-  sessionId(): string | null {
-    return this.#sessionId;
-  }
+  sessionId = (): string | null => this.#sessionId;
   ensureSession(): string {
     const sessionId = this.#sessionId ?? uniqueId("s");
     if (this.#sessionId === null) {
@@ -284,7 +282,6 @@ export class RunStore implements TaskHost, ModelHost {
   repeat(prompt?: string): void {
     const next = prompt ?? this.view.lastPrompt;
     if (next && !this.view.busy) this.start(next);
-    // A locked project with nothing to repeat: the core tries the project again.
     else if (this.#reconnect.held) sendAgent({ type: "hello" });
   }
   newTask(): void {
@@ -321,25 +318,19 @@ export class RunStore implements TaskHost, ModelHost {
       const response = await requestAgent({ type: "files.list" }, 15_000);
       this.files = response.files ?? [];
       this.#filesLoaded = true;
-    } catch {
-      // The picker simply stays empty; typing a path still works.
-    }
+    } catch {}
   }
-  setSendMode(mode: SendMode): void {
+  setSendMode = (mode: SendMode): void => {
     preferences.followUpBehavior = mode;
-  }
-  setReasoning(value: ReasoningChoice): void {
+  };
+  setReasoning = (value: ReasoningChoice): void => {
     void this.#models.reasoning(value);
-  }
-  setModel(provider: string, model: string): Promise<void> {
-    return this.#models.choose(provider, model);
-  }
-  setVariant(value: string | undefined): Promise<void> {
-    return this.#models.variant(value);
-  }
-  #titleOf(id: string): string {
-    return this.sessions.find((session) => session.id === id)?.title || t("task");
-  }
+  };
+  setModel = (provider: string, model: string): Promise<void> =>
+    this.#models.choose(provider, model);
+  setVariant = (value: string | undefined): Promise<void> => this.#models.variant(value);
+  #titleOf = (id: string): string =>
+    this.sessions.find((session) => session.id === id)?.title || t("task");
   #show(id: string | null): void {
     this.history.set([]);
     this.modules.reset();
@@ -355,8 +346,8 @@ export class RunStore implements TaskHost, ModelHost {
     this.#buffer = { id, events: [] };
     this.openingTask = id;
     try {
-      const [stored, replay, status] = await Promise.all([
-        requestAgent({ type: "sessions.get", id }),
+      const stored = await requestAgent({ type: "sessions.get", id });
+      const [replay, status] = await Promise.all([
         requestAgent({ type: "events.replay", sessionId: id })
           .then((response) => response.replay)
           .catch(() => undefined),
@@ -385,16 +376,20 @@ export class RunStore implements TaskHost, ModelHost {
   #sessionEvent(event: SessionEvent): void {
     this.activity.apply(event);
     if (event.type === "model.selected") this.#models.selected(event);
-    if (event.type === "session.started" && !event.internal) {
+    const userStart = event.type === "session.started" && !event.internal;
+    if (userStart)
       this.sessions = startedSessions(this.sessions, event.sessionId, event.prompt ?? "");
-    } else if (event.type === "session.finished") {
+    else if (event.type === "session.finished")
       this.sessions = finishedSessions(this.sessions, event.sessionId, event.result.stopReason);
-      if (event.sessionId === this.#sessionId) void this.history.refresh();
-    }
+    if (
+      event.sessionId === this.#sessionId &&
+      !this.#buffer &&
+      (userStart || event.type === "steer.applied" || event.type === "session.finished")
+    )
+      void this.history.refresh();
     if (this.#buffer?.id === event.sessionId) this.#buffer.events.push(event);
-    else if (event.sessionId === this.#sessionId) {
-      if (!this.history.changing) this.view.apply(event);
-    } else
+    else if (event.sessionId === this.#sessionId) this.view.apply(event);
+    else
       backgroundEvent(event, this.#titleOf(event.sessionId), () => void this.checkpoints.refresh());
   }
   #status(event: Extract<AgentEvent, { type: "status" }>): void {

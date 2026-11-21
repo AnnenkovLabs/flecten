@@ -71,9 +71,6 @@ function snapshot(state: TwinSnapshot["training"]["state"] = "idle"): TwinSnapsh
       model: "test-model",
     },
     limits: {
-      maxSessions: 10,
-      maxMessages: 100,
-      maxInputCharacters: 1000,
       maxCandidates: 10,
       maxProfileEntries: 10,
     },
@@ -164,15 +161,13 @@ test("Twin does not send empty training or repeated cancellation requests", asyn
 
 test("changing project clears the selected section and ignores responses from the old project", async () => {
   const h = bridge();
-  h.store.tab = "ask";
-  h.store.question = "Checkout decision";
+  h.store.tab = "profile";
   const loading = h.store.load();
   h.store.reset();
   h.reply(h.requests[0], { ok: true, twin: snapshot("learning") });
   await loading;
   expect(h.store.snapshot).toBeNull();
   expect(h.store.busy).toBe(false);
-  expect(h.store.question).toBe("");
   expect(String(h.store.tab)).toBe("sources");
   expect(h.store.projectEpoch).toBe(1);
 });
@@ -254,4 +249,20 @@ test("failed saves restore the canonical Twin state and disposal cancels pending
   await pending;
   jest.advanceTimersByTime(TWIN_PLEADING_MS + TWIN_FALLING_MS);
   expect(h.store.power).toBe(disposed);
+});
+
+test("dismissTransientErrors hides stale training errors when leaving and re-entering Twin", async () => {
+  const h = bridge();
+  const loading = h.store.load();
+  h.reply(h.requests[0], {
+    ok: true,
+    twin: {
+      ...snapshot("error"),
+      training: { ...snapshot("error").training, message: "Provider 400" },
+    },
+  });
+  await loading;
+  expect(h.store.snapshot?.training.message).toBe("Provider 400");
+  h.store.dismissTransientErrors();
+  expect(h.store.dismissedError).toBe("Provider 400");
 });

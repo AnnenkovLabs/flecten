@@ -19,15 +19,18 @@ export const PageReportSchema = z
     result: z.string().trim().min(1).max(100000).optional(),
   })
   .strict();
-const complete = PageReportSchema.extend({
-  op: z.literal("complete"),
+const compactOp = z.enum(["compact", "complete"]);
+
+const compact = PageReportSchema.extend({
+  op: compactOp,
+  title: z.string().trim().min(1).max(200).optional(),
   finalResult: z.string().trim().min(1).max(100000).optional(),
 });
 const block = PageReportSchema.extend({ op: z.literal("block") });
 
 export const PageCommandSchema = z.discriminatedUnion("op", [
   begin,
-  complete,
+  compact,
   block,
   z.object({ op: z.literal("list") }).strict(),
   PageReadSchema.extend({ op: z.literal("read") }),
@@ -40,6 +43,9 @@ export function parsePageCommand(value: unknown) {
     for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
       if (entry !== null && entry !== undefined) cleaned[key] = entry;
     }
+    if (!("op" in cleaned) && typeof cleaned.summary === "string") {
+      cleaned.op = "compact";
+    }
     return PageCommandSchema.safeParse(cleaned);
   }
   return PageCommandSchema.safeParse(value);
@@ -48,9 +54,9 @@ export function parsePageCommand(value: unknown) {
 // Provider schemas require an object root; the runtime validates each operation separately.
 export const PageToolSchema = z
   .object({
-    op: z.enum(["begin", "complete", "block", "list", "read", "search"]),
+    op: z.enum(["compact", "complete", "begin", "block", "list", "read", "search"]).optional(),
     ...ActivePageSchema.partial().shape,
-    ...complete.omit({ op: true }).partial().shape,
+    ...compact.omit({ op: true }).partial().shape,
     ...PageReadSchema.partial().shape,
     query: PageSearchSchema.shape.query.optional(),
   })

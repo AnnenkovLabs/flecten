@@ -231,12 +231,13 @@ export async function executeCalls(
         nestedContext: ToolContext = current,
       ): Promise<ToolResult> => {
         const nested: ToolResult[] = [];
+        const { contextPages: _pages, ...isolatedContext } = nestedContext;
         await executeCalls(
           [{ id: `${call.id}-${crypto.randomUUID()}`, name: tool.name, args }],
           {
             ...options,
             tools: new ToolRegistry([tool], { limits: context.limits }),
-            toolContext: nestedContext,
+            toolContext: isolatedContext,
             signal: nestedContext.signal,
             parallelTools: false,
           },
@@ -350,28 +351,41 @@ export async function executeCalls(
     };
     const canonical = options.tools.canonicalName(prepared.call.name);
     const needsLock = options.tools.isMutating(canonical);
-    let result = needsLock ? await mutex.run(task) : await task();
-    if (isSubagent) {
+    let taskRan = false;
+    const runTask = async (): Promise<ToolResult> => {
+      if (options.stopSignal?.aborted) return stopped();
+      taskRan = true;
+      return task();
+    };
+    let result = needsLock
+      ? await mutex.run(runTask, options.stopSignal).catch((err) => {
+          if (options.stopSignal?.aborted) return stopped();
+          throw err;
+        })
+      : await runTask();
+    if (isSubagent && taskRan) {
       const after = await options.hooks?.run(
         "subagent",
         {
           ...prepared.hookInput,
           subagent: { agent, phase: "stop", output: result.output, ok: result.ok },
         },
-        options.signal,
+        prepared.context.signal,
       );
       emitHooks(after, emit);
     }
-    const post = await options.hooks?.run(
-      "postToolUse",
-      {
-        ...prepared.hookInput,
-        toolOk: result.ok,
-        toolOutput: result.output,
-        ...(result.error ? { toolError: result.error } : {}),
-      },
-      options.signal,
-    );
+    const post = taskRan
+      ? await options.hooks?.run(
+          "postToolUse",
+          {
+            ...prepared.hookInput,
+            toolOk: result.ok,
+            toolOutput: result.output,
+            ...(result.error ? { toolError: result.error } : {}),
+          },
+          prepared.context.signal,
+        )
+      : undefined;
     emitHooks(post, emit);
     if (prepared.pre) result = withHookContext(result, prepared.pre);
     if (post) result = withHookContext(result, post);
@@ -410,26 +424,62 @@ export async function executeCalls(
     }
   };
 
-  if (
-    !options.parallelTools ||
-    calls.length <= 1 ||
-    calls.some((call) => {
+  const canRunParallelBatch =
+    options.parallelTools &&
+    calls.length > 1 &&
+    !calls.some((call) => {
       const canonical = options.tools.canonicalName(call.name);
       return (
         ["skill", "module"].includes(options.tools.source(canonical)) ||
         ["context", "criterion", "done"].includes(canonical)
       );
-    })
-  ) {
+    });
+  if (canRunParallelBatch) {
+    const settled = await Promise.all(
+      calls.map((call, index) => perform(call, display[index] ?? call)),
+    );
+    results.push(...settled);
+    return;
+  }
+  const firstCall = calls[0];
+  const firstCanonical = firstCall ? options.tools.canonicalName(firstCall.name) : undefined;
+  const tailCalls = calls.slice(1);
+  const canParallelizeTailAfterContextBegin =
+    options.parallelTools &&
+    calls.length > 2 &&
+    firstCanonical === "context" &&
+    isObject(firstCall?.args) &&
+    firstCall.args.op === "begin" &&
+    tailCalls.every((call) => {
+      const canonical = options.tools.canonicalName(call.name);
+      return (
+        !["skill", "module"].includes(options.tools.source(canonical)) &&
+        !["context", "criterion", "done"].includes(canonical)
+      );
+    });
+  if (canParallelizeTailAfterContextBegin && firstCall) {
+    const firstResult = await perform(firstCall, display[0] ?? firstCall);
+    results.push(firstResult);
+    if (!firstResult.ok) {
+      const error = "Start one small logical page with context begin before using work tools.";
+      for (const [i, call] of tailCalls.entries()) {
+        const shown = display[i + 1] ?? call;
+        const result: ToolResult = { ok: false, output: "", error };
+        emit({ type: "tool.started", call: shown });
+        emit({ type: "tool.finished", call: shown, result });
+        results.push(result);
+      }
+      return;
+    }
+    const settled = await Promise.all(
+      tailCalls.map((call, index) => perform(call, display[index + 1] ?? call)),
+    );
+    results.push(...settled);
+  } else {
     for (let index = 0; index < calls.length; index += 1) {
       const call = calls[index];
       const shown = display[index];
       if (call && shown) results.push(await perform(call, shown));
     }
-  } else {
-    const settled = await Promise.all(
-      calls.map((call, index) => perform(call, display[index] ?? call)),
-    );
-    results.push(...settled);
   }
 }

@@ -22,13 +22,22 @@ export default {
   Like: "Подобається",
   Delight: "Захоплення",
   "{0} sessions found": ["Знайдено сесій: ", 0, ""],
-  "Choose which agent histories Twin can learn from.":
-    "Виберіть історію агентів для навчання Twin.",
+  "Choose which agent histories and saved memories Twin can learn from.":
+    "Виберіть історії агентів і збережену пам'ять для навчання Twin.",
   "Scan first": "Спочатку знайдіть джерела",
   "Not found": "Не знайдено",
   "Export needed": "Потрібен експорт",
   "Learn from {0}": ["Навчатися на історії ", 0, ""],
   "Source details": "Відомості про джерело",
+  "Training model": "Модель навчання",
+  "Reasoning level": "Рівень міркування",
+  "Training reasoning level": "Рівень міркування для навчання",
+  "Model variant": "Варіант моделі",
+  "Training model variant": "Варіант моделі для навчання",
+  "Model default": "За замовчуванням моделі",
+  "Default variant": "Варіант за замовчуванням",
+  "Reasoning is not supported": "Міркування не підтримується",
+  "Select a model first": "Спочатку виберіть модель",
   "Reading selected sessions…": "Читає вибрані сесії…",
   "Read {0} sessions and {1} messages": ["Прочитано сесій: ", 0, ", повідомлень: ", 1, ""],
   "Training Twin": "Навчання Twin",
@@ -36,37 +45,18 @@ export default {
   "Train Twin": "Навчити Twin",
   "Scanning…": "Шукає джерела…",
   "Scan sources": "Знайти джерела",
+  "Training reads all unread sessions and saved harness memories in batches and may consume significant API tokens and funds.":
+    "Навчання читає всі непрочитані сесії та збережену пам'ять харнесів пакетами й може витратити багато токенів і коштів API.",
   "Twin is ready. Learned traits apply immediately and you can edit them.":
     "Twin готовий. Засвоєні риси застосовуються одразу, їх можна змінити.",
   "View your character": "Переглянути характер",
   "Training cancelled. Your existing character is unchanged.":
     "Навчання скасовано. Поточний характер Twin збережено.",
   "What is sent to the model?": "Що надсилається моделі?",
-  "Scanning is local. Learning sends your messages and preceding agent replies to your configured provider, within the limits below.":
-    "Пошук джерел виконується локально. Для навчання ваші повідомлення й попередні відповіді агента надсилаються вибраному провайдеру в межах, указаних нижче.",
+  "Scanning is local. Learning sends your messages, saved harness memories, and preceding agent replies to the selected provider.":
+    "Пошук джерел виконується локально. Для навчання ваші повідомлення, збережена пам'ять харнесів і попередні відповіді агента надсилаються вибраному провайдеру.",
   "Training model: {0} / {1}": ["Модель навчання: ", 0, " / ", 1, ""],
-  "Per training: up to {0} sessions, {1} messages and {2} characters": [
-    "За одне навчання: до ",
-    0,
-    " сесій, ",
-    1,
-    " повідомлень і ",
-    2,
-    " символів",
-  ],
-  "Would Twin choose what you would?": "Twin вибере те саме, що й ви?",
-  "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "Поставте реальне питання щодо коду чи архітектури, щоб перевірити, як Twin відповість Worker на основі ваших рис.",
-  "Question for Twin": "Запитання до Twin",
-  "How should we design checkout for this project?": "Як оформити чекаут у цьому проєкті?",
-  "Asking Twin…": "Twin відповідає…",
-  "Ask Twin": "Запитати Twin",
-  "Uses your configured model. Each answer shows its sources.":
-    "Використовує вибрану модель. Кожна відповідь показує підстави.",
-  "Twin needs your answer": "Twin потрібна ваша відповідь",
-  "No supported answer. Ask the user directly.":
-    "У збережених рисах недостатньо підстав; Twin запитає вас напряму.",
-  "Based on your character": "На основі вашого характеру",
+  "Twin agent activity": "Робота агента Twin",
   "Input: {0} tokens · Output: {1} tokens": ["Вхід: ", 0, " токенів · Вихід: ", 1, " токенів"],
   "Learning…": "Навчається…",
   "Ready to represent you": "Готовий представляти вас",
@@ -129,8 +119,6 @@ export default {
   "Representing your intent to the Worker": "Передаю воркеру твій задум",
   "Corrections: {0} / 4": ["Доопрацювання: ", 0, " / 4"],
   "Interact with Twin": "Пограти з Twin",
-  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
-    "Тягни, щоб повернути. Twin стежить за курсором. Натисни, щоб привітатися. Стрілки повертають, Home скидає.",
   "Resume motion": "Продовжити рух",
   "Pause motion": "Зупинити рух",
 } as const;

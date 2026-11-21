@@ -169,8 +169,8 @@
   }
   button:enabled:hover { background: var(--raised); color: var(--text); }
   button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
-  .project-menu { position: fixed; margin: 0; width: min(230px, calc(100vw - 24px)); padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: 0 8px 24px #0006; }
-  .project-menu p { max-height: 64px; overflow: auto; overflow-wrap: anywhere; margin: 6px 8px 10px; font-size: 12px; color: var(--muted); }
+  .project-menu { position: fixed; margin: 0; width: min(230px, calc(100vw - 24px)); padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); box-shadow: 0 8px 24px #0006; }
+  .project-menu p { max-height: 64px; overflow: auto; overflow-wrap: anywhere; margin: 6px 8px 8px; font-size: 12px; color: var(--muted); }
   .project-menu button { display: block; width: 100%; min-height: 32px; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); text-align: start; font: inherit; font-size: 13px; }
   .project-menu button:hover { background: var(--raised); }
   .project-error { margin: 4px 8px; color: var(--error); font-size: 12px; overflow-wrap: anywhere; }

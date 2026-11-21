@@ -25,6 +25,7 @@ const TOOLS: Record<string, { label: MessageKey; icon: IconName; field?: string 
   skill: { label: "Use skill", icon: "spark", field: "name" },
   module: { label: "Modules", icon: "layers", field: "name" },
   worker: { label: "Worker", icon: "brain", field: "task" },
+  context: { label: "Context compacted", icon: "layers", field: "summary" },
   done: { label: "Complete task", icon: "check", field: "summary" },
   memory: { label: "Project memory", icon: "brain", field: "query" },
 };

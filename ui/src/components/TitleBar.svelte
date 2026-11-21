@@ -190,25 +190,23 @@
   .tb-btn {
     width: 40px;
     height: 40px;
-    border-radius: 6px;
+    border-radius: 7px;
     transition:
       background var(--t-touch) var(--ease),
-      color var(--t-touch) var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      color var(--t-touch) var(--ease);
   }
 
   .tb-btn :global(.icon) {
-    transition: transform 460ms var(--ease-jelly);
+    transition: transform 320ms var(--ease);
   }
 
   .tb-btn:hover {
-    border-radius: 11px;
     background: rgba(240, 239, 237, 0.06);
     color: var(--text);
   }
 
   .tb-btn:hover :global(.icon) {
-    transform: scale(1.08) rotate(7deg);
+    transform: scale(1.04);
   }
 
   .tb-update {
@@ -224,11 +222,11 @@
     color: var(--text-2);
     font-size: 12.5px;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
     -webkit-app-region: no-drag;
     transition:
       background var(--t-touch) var(--ease),
-      color var(--t-touch) var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      color var(--t-touch) var(--ease);
   }
 
   .tb-update span {
@@ -238,7 +236,6 @@
   }
 
   .tb-update:hover:not(:disabled) {
-    border-radius: 9px;
     background: rgba(240, 239, 237, 0.1);
     color: var(--text);
   }
@@ -271,12 +268,10 @@
     height: 100%;
     transition:
       background var(--t-touch) var(--ease),
-      color var(--t-touch) var(--ease),
-      border-radius 320ms var(--ease-jelly);
+      color var(--t-touch) var(--ease);
   }
 
   .win-btn:hover {
-    border-radius: 9px;
     background: rgba(240, 239, 237, 0.08);
     color: var(--text);
   }

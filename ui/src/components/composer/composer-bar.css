@@ -10,7 +10,7 @@
   user-select: none;
 }
 .composer-left { gap: var(--space-1); min-width: 0; flex-wrap: wrap; }
-.composer-right { gap: var(--space-1); flex: none; margin-left: auto; align-self: flex-end; }
+.composer-right { gap: var(--space-1); flex: none; margin-left: auto; align-self: center; }
 .composer-bar .attach, .composer-bar .voice, .composer-bar .voice-cancel,
 .composer-action-set button {
   display: grid;
@@ -18,7 +18,7 @@
   width: var(--action-size);
   height: var(--action-size);
   flex: none;
-  border-radius: 8px;
+  border-radius: 7px;
   color: var(--muted);
   transition: color 150ms var(--ease), background 150ms var(--ease);
 }
@@ -36,7 +36,7 @@
 .composer-action-set {
   display: flex;
   flex: none;
-  border-radius: 8px;
+  border-radius: 7px;
   transition: background-color var(--t-touch) var(--ease), box-shadow var(--t-touch) var(--ease);
 }
 .composer-action-set.composer-actions {
@@ -52,7 +52,7 @@
     border-radius 220ms var(--ease-drawer);
 }
 .composer-action-set.is-split .composer-primary {
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 7px 7px 0;
   box-shadow: inset 1px 0 0 var(--line-strong);
 }
 .composer-actions button, .composer-action-set .composer-followups button { color: var(--text-2); }
@@ -100,7 +100,7 @@
 .composer-followups { justify-content: flex-end; }
 .composer-followups button { border-radius: 0; }
 .composer-followups button + button { border-left: 1px solid var(--line-strong); }
-.composer-followups button:first-child { border-radius: 8px 0 0 8px; }
+.composer-followups button:first-child { border-radius: 7px 0 0 7px; }
 .composer-action-set.is-split .composer-followups {
   inline-size: calc(2 * var(--action-size));
   transition-duration: 220ms;

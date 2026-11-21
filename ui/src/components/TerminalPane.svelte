@@ -210,14 +210,13 @@
     place-items: center;
     min-width: 40px;
     height: 40px;
-    border-radius: 6px;
+    border-radius: 7px;
     color: var(--muted);
     font-family: var(--mono);
     font-size: 12px;
     transition:
       background var(--t-touch) var(--ease),
-      color var(--t-touch) var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      color var(--t-touch) var(--ease);
   }
 
   .term-btn:disabled {
@@ -225,7 +224,6 @@
   }
 
   .term-btn:hover:not(:disabled) {
-    border-radius: 9px;
     background: rgba(240, 239, 237, 0.06);
     color: var(--text-2);
   }

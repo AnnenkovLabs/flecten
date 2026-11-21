@@ -26,7 +26,9 @@ export function attachedEvents(
     last?.type === "session.started" &&
     live?.type === "session.started" &&
     last.prompt === live.prompt &&
-    last.queueId === live.queueId;
+    last.queueId === live.queueId &&
+    Boolean(last.internal) === Boolean(live.internal) &&
+    Boolean(last.resumed) === Boolean(live.resumed);
   const before = same ? stored.slice(0, lastStart) : [...stored];
   return [...before, ...replay.events];
 }

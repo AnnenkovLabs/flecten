@@ -24,7 +24,7 @@
   .selection span { position: absolute; top: 0; left: 0; width: 80px; height: var(--control-h); border-radius: 7px; background: var(--raised-hover); }
   .pill { transition: transform 360ms cubic-bezier(0.2, 0, 0, 1), border-radius 360ms cubic-bezier(0.2, 0, 0, 1); }
   .trail { transition: transform 480ms cubic-bezier(0.2, 0, 0, 1); }
-  .is-ide .selection span { transform: translateX(80px); border-radius: 8px; }
+  .is-ide .selection span { transform: translateX(80px); border-radius: 7px; }
   @media (max-width: 600px) { button { width: 66px; } .selection span { width: 66px; } .is-ide .selection span { transform: translateX(66px); } button :global(.icon) { display: none; } }
   @media (pointer: coarse) { .mode-switch { padding-block: 2px; } .selection { inset-block: 2px; } }
   @media (prefers-reduced-motion: reduce) { .selection span { transition: none; } }

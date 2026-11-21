@@ -321,7 +321,7 @@
       {run} hidden={sidebarHidden || mode === "ide"}
       onSelectTask={selectTask} onNewTask={newTask}
       twinActive={twinOpen}
-      onOpenTwin={() => { setMode("agent"); twinOpen = true; }}
+      onOpenTwin={() => { setMode("agent"); run.twin.dismissTransientErrors(); twinOpen = true; }}
       onOpenDictionary={() => settings.openPanel("dictionary")}
       onOpenModules={() => settings.openPanel("modules")}
       onOpenSettings={() => settings.openPanel()}
@@ -333,7 +333,7 @@
     {/if}
     <div class="workspace-content" hidden={mode === "ide"} inert={run.openingTask !== null || mode === "ide"}>
     {#if twinOpen}
-      <TwinPanel twin={run.twin} project={run.project} onClose={() => twinOpen = false} />
+      <TwinPanel twin={run.twin} {run} onClose={() => twinOpen = false} />
     {/if}
     <div class="task-workspace" hidden={twinOpen} inert={twinOpen}>
     {#if !startScreen}

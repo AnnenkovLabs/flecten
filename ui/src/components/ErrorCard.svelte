@@ -95,11 +95,10 @@
     font-size: 12.5px;
     transition:
       background 220ms var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      color 220ms var(--ease);
   }
 
   .error-retry:hover {
-    border-radius: 10px;
     background: var(--raised-hover);
     color: var(--text);
   }

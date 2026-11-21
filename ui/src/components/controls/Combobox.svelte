@@ -64,7 +64,7 @@
   }
 </script>
 
-<div class="combobox-field">
+<div class="combobox-field" class:is-open={expanded}>
   <input {...attributes} bind:this={input} type="text" role="combobox"
     class="custom-combobox {className}" {value} {disabled} autocomplete="off"
     aria-autocomplete="list" aria-haspopup="listbox" aria-expanded={expanded}
@@ -72,7 +72,24 @@
     aria-activedescendant={expanded && active >= 0 ? `${uid}-option-${active}` : undefined}
     oninput={(event) => { value = event.currentTarget.value; query = value; open = true; active = -1; }}
     onfocus={show} onclick={() => { if (!open) show(); }} onblur={close} onkeydown={keydown} />
-  <span class="combobox-caret" aria-hidden="true"><Icon name="chevron-down" size={14} /></span>
+  <button
+    class="combobox-caret"
+    type="button"
+    tabindex="-1"
+    aria-hidden="true"
+    {disabled}
+    onpointerdown={(event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (open) close();
+      else {
+        input?.focus({ preventScroll: true });
+        show();
+      }
+    }}
+  >
+    <Icon name="chevron-down" size={14} />
+  </button>
 </div>
 {#if expanded}
   <FloatingMenu anchor={input} {label} preferred="below"
@@ -92,7 +109,9 @@
 <style>
   .combobox-field { position: relative; width: 100%; min-width: 0; }
   .custom-combobox { padding-right: 32px; }
-  .combobox-caret { position: absolute; inset-inline-end: 10px; top: 50%; display: flex; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .combobox-caret { position: absolute; inset-inline-end: 4px; top: 50%; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; transform: translateY(-50%); color: var(--muted); transition: color var(--t-touch) var(--ease); }
+  .combobox-caret:hover:not(:disabled) { color: var(--text-2); }
+  .combobox-field.is-open .combobox-caret :global(.icon) { rotate: 180deg; }
   .combobox-options { padding: 4px; overflow-y: auto; overscroll-behavior: contain; }
   .combobox-options button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: var(--control-h); padding: 6px 8px; border-radius: 6px; color: var(--text-2); font-size: 13px; line-height: 1.4; text-align: start; overflow-wrap: anywhere; }
   .combobox-options button.is-active { background: var(--raised); color: var(--text); outline: 2px solid var(--primary); outline-offset: -2px; }

@@ -324,7 +324,7 @@
         data-thread-id={item.id}
       >
         {#if item.kind === "message"}
-          <UserMessage text={item.text} versions={item.versions} at={item.at} {now} disabled={historyDisabled}
+          <UserMessage text={item.text} actor={item.actor} versions={item.versions} at={item.at} {now} disabled={historyDisabled}
             onEdit={item.versions && onEditMessage ? (text) => onEditMessage!(item.versions!.messageId, text) : undefined}
             onSelectVersion={item.versions && onSelectVersion ? (variant) => onSelectVersion!(item.versions!.messageId, variant) : undefined} />
         {:else if item.kind === "run"}

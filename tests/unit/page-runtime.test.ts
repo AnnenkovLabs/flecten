@@ -3,14 +3,13 @@ import type { PageCommand } from "../../src/core/pages/control";
 import { PageRuntime } from "../../src/core/pages/runtime";
 import type { Message, ToolCall } from "../../src/core/types";
 
-test("logical pages require a begin and cannot continue until their completed history is compacted", async () => {
+test("logical pages compact directly at logical-block boundaries without requiring context begin", async () => {
   const messages: Message[] = [{ role: "user", content: "Build authentication and a dashboard." }];
   const runtime = new PageRuntime(messages);
-  expect(runtime.canFinish()).toBe(false);
-  expect(runtime.guard([{ id: "premature", name: "done", args: {} }])).toContain("checkpoint");
+  expect(runtime.canFinish()).toBe(true);
   const work: ToolCall = { id: "work", name: "read", args: { path: "src/auth.ts" } };
   let index = 0;
-  const call = async (args: PageCommand) => {
+  const call = async (args: PageCommand | Record<string, unknown>) => {
     const toolCall: ToolCall = { id: `context-${index++}`, name: "context", args };
     const result = await runtime.execute(args);
     messages.push(
@@ -25,35 +24,23 @@ test("logical pages require a begin and cannot continue until their completed hi
     );
     return result;
   };
-  expect(runtime.guard([work])).toContain("context begin");
-  expect(
-    (await call({ op: "complete", summary: "False claim", evidence: ["None"], next: "Stop" })).ok,
-  ).toBe(false);
-  const begin = {
-    op: "begin" as const,
-    title: "Authentication",
-    objective: "Build Login and Registration.",
-  };
-  expect((await call(begin)).ok).toBe(true);
   expect(runtime.guard([work])).toBeUndefined();
-  expect(runtime.canFinish()).toBe(false);
-  expect((await call(begin)).ok).toBe(false);
-  const complete = {
-    op: "complete" as const,
+  const compact = {
+    op: "compact" as const,
     summary: "Authentication ready.",
     evidence: ["Auth checks passed."],
     next: "Build the dashboard shell.",
   };
-  expect(runtime.guard([work, { id: "complete", name: "context", args: complete }])).toContain(
+  expect(runtime.guard([work, { id: "compact", name: "context", args: compact }])).toContain(
     "alone",
   );
   expect(
     runtime.guard([
       { id: "crit", name: "criterion", args: { operation: "list" } },
-      { id: "complete", name: "context", args: complete },
+      { id: "compact", name: "context", args: compact },
     ]),
   ).toBeUndefined();
-  expect((await call(complete)).ok).toBe(true);
+  expect((await call(compact)).ok).toBe(true);
   const restored = new PageRuntime(structuredClone(messages));
   expect(restored.pending()).toBe(true);
   expect(restored.guard([work])).toContain("must be compacted");
@@ -73,33 +60,15 @@ test("logical pages require a begin and cannot continue until their completed hi
     },
   });
   expect(runtime.pending()).toBe(false);
-  expect(runtime.canFinish()).toBe(false);
   runtime.checkpointed();
   expect(runtime.canFinish()).toBe(true);
-  expect(new PageRuntime(messages).canFinish()).toBe(false);
-  expect(runtime.guard([work])).toContain("context begin");
-  expect(
-    (await call({ ...begin, title: "Dashboard", objective: "Build only the shell." })).ok,
-  ).toBe(true);
-  const activePage = runtime.active();
-  if (!activePage) throw new Error("Expected an active dashboard page");
-  messages.splice(0, messages.length, {
-    role: "user",
-    content: "Emergency compression; dashboard remains active.",
-    contextSummary: {
-      page: 2,
-      fields: {
-        changed: "shell",
-        where: "src/shell.ts",
-        rules: "preserve API",
-        next: "verify",
-        risks: "unfinished",
-      },
-      activePage,
-    },
+  expect(runtime.guard([work])).toBeUndefined();
+  const implicitCompact = await call({
+    summary: "Dashboard shell ready.",
+    evidence: ["Shell checks passed."],
+    next: "Done.",
   });
-  expect(new PageRuntime(messages).active()?.title).toBe("Dashboard");
-  expect(new PageRuntime(messages).guard([work])).toBeUndefined();
+  expect(implicitCompact.ok).toBe(true);
 });
 
 test("an explicit blocker survives restart as a pending checkpoint without completing its objective", async () => {

@@ -169,6 +169,7 @@
     font-size: 12px;
     text-decoration: underline;
     text-decoration-color: rgba(240, 239, 237, 0.24);
+    text-decoration-skip-ink: auto;
     text-underline-offset: 3px;
     transition:
       color 200ms var(--ease),

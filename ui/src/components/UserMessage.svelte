@@ -3,9 +3,12 @@
   import type { MessageVersions } from "../lib/message-types";
   import { relativeTime, timeTitle } from "../lib/ui-polish";
   import Icon from "./Icon.svelte";
+  import TwinBlob from "./twin/TwinBlob.svelte";
+  import TwinCharacter from "./twin/TwinCharacter.svelte";
 
   interface Props {
     text: string;
+    actor?: "user" | "twin" | undefined;
     at?: string | undefined;
     now?: number;
     versions?: MessageVersions | undefined;
@@ -14,7 +17,7 @@
     onSelectVersion?: ((variantId: string) => Promise<boolean>) | undefined;
   }
 
-  let { text, at, now = Date.now(), versions, disabled = false, onEdit, onSelectVersion }: Props = $props();
+  let { text, actor, at, now = Date.now(), versions, disabled = false, onEdit, onSelectVersion }: Props = $props();
   let pending = $state(false);
   let error = $state("");
   const locked = $derived(disabled || pending);
@@ -41,10 +44,20 @@
   }
 </script>
 
-<div class="msg user">
+<div class="msg user" class:is-twin={actor === "twin"} data-actor={actor ?? "user"}>
   <div class="message-content">
-    <div class="bubble">{text}</div>
-    {#if onEdit || (versions && versions.count > 1)}
+    {#if actor === "twin"}
+      <TwinBlob>
+        <div class="twin-message-head">
+          <TwinCharacter state="ready" compact size={20} />
+          <span class="twin-message-badge">{t("Your Twin")}</span>
+        </div>
+        <div class="bubble is-twin-bubble">{text}</div>
+      </TwinBlob>
+    {:else}
+      <div class="bubble">{text}</div>
+    {/if}
+    {#if actor !== "twin" && (onEdit || (versions && versions.count > 1))}
       <div class="message-actions">
         {#if versions && versions.count > 1}
           <div class="message-versions" role="group" aria-label={t("Message versions")}>
@@ -68,7 +81,7 @@
 </div>
 
 <style>
-  .msg-time { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.3; text-align: right; }
+  .msg-time { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; line-height: 1.3; text-align: right; }
   .msg.user {
     display: flex;
     justify-content: flex-end;
@@ -99,6 +112,29 @@
     border-radius: 2px;
     background: var(--primary);
     content: "";
+  }
+
+  .bubble.is-twin-bubble {
+    padding: 0;
+    color: rgba(248, 245, 255, 0.98);
+  }
+
+  .bubble.is-twin-bubble::before {
+    display: none;
+  }
+
+  .twin-message-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .twin-message-badge {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: rgba(226, 212, 255, 0.92);
   }
 
   .message-actions,

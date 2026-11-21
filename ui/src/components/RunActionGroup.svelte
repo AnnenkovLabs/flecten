@@ -53,19 +53,17 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    min-height: 30px;
+    min-height: var(--control-h);
     margin-left: -7px;
     padding: 0 7px;
     border-radius: 6px;
     color: var(--text-2);
     font-size: 12.5px;
     text-align: left;
-    transition:
-      background 150ms var(--ease);
+    transition: background 150ms var(--ease);
   }
 
   .group-line:hover {
-    border-radius: 10px;
     background: rgba(240, 239, 237, 0.035);
   }
 

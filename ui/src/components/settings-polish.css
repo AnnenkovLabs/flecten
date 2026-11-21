@@ -137,6 +137,7 @@
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  text-wrap: balance;
 }
 
 .st-group {
@@ -206,7 +207,10 @@
 }
 
 .st-row--stacked .st-row-control {
+  display: grid;
+  gap: 8px;
   width: 100%;
+  min-width: 0;
 }
 
 .st-control-stack {
@@ -306,6 +310,11 @@
   background: #1b1b1b;
 }
 
+.st-card .st-input,
+.server-card .st-input {
+  border-radius: 8px;
+}
+
 .server-list {
   gap: 10px;
 }
@@ -376,7 +385,13 @@
   text-wrap: pretty;
 }
 
-.st-row-control > [role="combobox"].st-input {
+.st-row:not(.st-row--stacked) .st-row-control > [role="combobox"].st-input,
+.st-row:not(.st-row--stacked) .st-row-control > input.st-input:not(.st-input--number) {
   width: 230px;
   max-width: 100%;
+}
+
+.st-row--stacked .st-row-control > [role="combobox"].st-input,
+.st-row--stacked .st-row-control > input.st-input {
+  width: 100%;
 }

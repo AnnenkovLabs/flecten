@@ -73,7 +73,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    height: 26px;
+    min-height: 28px;
     margin-left: -7px;
     padding: 0 7px;
     border-radius: 6px;
@@ -81,13 +81,11 @@
     font-size: 12.5px;
     line-height: 1;
     transition:
-      background 240ms var(--ease),
-      color 240ms var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      background 180ms var(--ease),
+      color 180ms var(--ease);
   }
 
   button.reasoning-head:hover {
-    border-radius: 9px;
     background: rgba(240, 239, 237, 0.035);
     color: var(--text-2);
   }

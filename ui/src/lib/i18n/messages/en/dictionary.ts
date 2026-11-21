@@ -1,5 +1,5 @@
 export default {
-  "Memory and dictionary": "Memory and dictionary",
+  "Memory and dictionary": "Dictionary",
   "Definitions are supplied automatically when a term appears in your prompt. Local meanings take priority.":
     "Definitions are supplied automatically when a term appears in your prompt. Local meanings take priority.",
   "Reload dictionary": "Reload dictionary",

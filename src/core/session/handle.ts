@@ -21,6 +21,7 @@ export interface SessionHandle extends HarnessService {
   waitsFor(approvalId: string): boolean;
   getSessionId(): SessionId | undefined;
   getHistory(): readonly Message[];
+  appendHistory?(...messages: Message[]): void;
   flush(): Promise<void>;
   dispose(): Promise<void>;
 }

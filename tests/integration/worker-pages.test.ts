@@ -107,16 +107,12 @@ async function fixture(scripts: ModelEvent[][]) {
 test("Worker checkpoints small logical pages before the next request and retrieves earlier details after replay", async () => {
   const detail = "ORBIT_DETAIL_61927";
   const f = await fixture([
-    call("premature", "write", { path: "forbidden.txt", content: "must not execute" }),
-    call("begin-auth", "context", begin("Login and Registration")),
     call("auth", "write", { path: "auth.txt", content: detail }),
-    end("<summary>Premature task completion.</summary>"),
-    call("complete-auth", "context", complete),
+    call("complete-auth", "context", { ...complete, op: "compact" }),
     call("find-auth", "context", { op: "search", query: detail }),
     call("read-auth", "context", { op: "read", page: 1, kind: "transcript", limit: 100 }),
-    call("begin-shell", "context", begin("Dashboard shell")),
     call("shell", "write", { path: "shell.txt", content: "Dashboard shell without sections" }),
-    call("complete-shell", "context", complete),
+    call("complete-shell", "context", { ...complete, op: "compact" }),
     end("<summary>Both requested blocks verified.</summary>"),
   ]);
   const events: Event[] = [];
@@ -143,7 +139,6 @@ test("Worker checkpoints small logical pages before the next request and retriev
       prompt: "Build authentication and a dashboard shell. Preserve the API.",
     });
     expect(result).toMatchObject({ stopReason: "done" });
-    expect(await Bun.file(join(f.cwd, "forbidden.txt")).exists()).toBe(false);
     expect(await readFile(join(f.cwd, "auth.txt"), "utf8")).toBe(detail);
     const checkpoints = events.filter((event) => event.type === "context.compacted");
     expect(checkpoints).toHaveLength(2);
@@ -153,22 +148,19 @@ test("Worker checkpoints small logical pages before the next request and retriev
     expect(
       checkpoints[0]?.type === "context.compacted" && (checkpoints[0].before ?? Infinity) < 20_000,
     ).toBe(true);
-    expect(
-      events.some((event) => event.type === "turn.finished" && event.reason === "page_incomplete"),
-    ).toBe(true);
     const search = events.find(
       (event) => event.type === "tool.finished" && event.call.id === "find-auth",
     );
     expect(search?.type === "tool.finished" && search.result.output).toContain(detail);
     const main = f.requests.filter((request) => request.tools.length > 0);
-    expect(main[5]?.messages).toHaveLength(1);
-    expect(main[5]?.messages[0]?.content).not.toContain(detail);
+    expect(main[2]?.messages).toHaveLength(1);
+    expect(main[2]?.messages[0]?.content).not.toContain(detail);
     const replayed = replayMessages(
       events.map((event, index) => ({ seq: index + 1, event })),
     ).messages;
     expect(new PageRuntime(replayed).pending()).toBe(false);
     expect(new PageRuntime(replayed).active()).toBeUndefined();
-    expect(new PageRuntime(replayed).canFinish()).toBe(false);
+    expect(new PageRuntime(replayed).canFinish()).toBe(true);
     const restarted = new PageWriter(
       {
         provider: f.provider,
@@ -224,15 +216,9 @@ test("archive failure preserves pending history, and a resumed Worker checkpoint
   expect(new PageRuntime(messages).active()).toBeUndefined();
 });
 
-test("text-only Worker tasks need a fresh logical-page checkpoint on every run", async () => {
+test("text-only Worker tasks can complete directly without mandatory page-opening ceremony", async () => {
   const f = await fixture([
-    end("<summary>Bypass without a page.</summary>"),
-    call("first-begin", "context", begin("Explain authentication")),
-    call("first-complete", "context", complete),
     end("<summary>First explanation verified.</summary>"),
-    end("<summary>Reuse the old checkpoint.</summary>"),
-    call("second-begin", "context", begin("Explain dashboard")),
-    call("second-complete", "context", complete),
     end("<summary>Second explanation verified.</summary>"),
   ]);
   const events: LoopEvent[] = [];
@@ -248,10 +234,7 @@ test("text-only Worker tasks need a fresh logical-page checkpoint on every run",
     stopReason: "done",
     summary: "Second explanation verified.",
   });
-  expect(events.filter((event) => event.type === "context.compacted")).toHaveLength(2);
-  expect(
-    events.filter((event) => event.type === "turn.finished" && event.reason === "page_incomplete"),
-  ).toHaveLength(2);
+  expect(events.filter((event) => event.type === "context.compacted")).toHaveLength(0);
   expect(
     events.filter((event) => event.type === "message.finished" && event.complete),
   ).toHaveLength(2);
@@ -284,7 +267,7 @@ test("a blocked page reports the blocker after checkpoint and resumes its unfini
   const recovered = new PageRuntime(structuredClone(messages), f.options.pageWriter?.archive);
   expect(recovered.active()?.title).toBe("Authentication");
   expect(recovered.pending()).toBe(false);
-  expect(recovered.canFinish()).toBe(false);
+  expect(recovered.canFinish()).toBe(true);
   expect((await recovered.execute({ op: "search", query: blocked.summary })).output).toContain(
     blocked.summary,
   );
@@ -346,9 +329,7 @@ test("emergency compaction carries the active page, while Talker never receives 
   expect(roles.talker.tools.get("context")).toBeUndefined();
   expect(roles.talker.system).not.toContain("# Logical pages and context compression");
   expect(roles.worker.tools.get("context")).toBeDefined();
-  expect(roles.worker.system).toContain(
-    "Never postpone this checkpoint until a context percentage",
-  );
+  expect(roles.worker.system).toContain("Logical page compaction replaces arbitrary");
 });
 
 test("complete publishes a saved final result on the last allowed turn and replay agrees with live history", async () => {
@@ -403,4 +384,67 @@ test("atomic final result cannot bypass acceptance or goal criteria", async () =
   expect(result.done).toBeUndefined();
   expect(events.some((event) => event.type === "message.finished" && event.complete)).toBe(false);
   expect(messages.at(-1)?.content).toBe("The required artifact is still missing");
+});
+
+test("context begin batched with multiple read/grep/glob calls runs context begin first and parallelizes the tail", async () => {
+  const f = await fixture([]);
+  await Bun.write(join(f.cwd, "a.txt"), "alpha");
+  await Bun.write(join(f.cwd, "b.txt"), "beta");
+  let activeReads = 0;
+  let maxConcurrentReads = 0;
+  const baseRead = f.tools.get("read");
+  if (!baseRead) throw new Error("missing read tool");
+  const customTools = new ToolRegistry(
+    [
+      ...f.tools.list().filter((tool) => tool.name !== "read"),
+      {
+        ...baseRead,
+        async execute(args, context) {
+          activeReads += 1;
+          maxConcurrentReads = Math.max(maxConcurrentReads, activeReads);
+          await Bun.sleep(25);
+          try {
+            return await baseRead.execute(args, context);
+          } finally {
+            activeReads -= 1;
+          }
+        },
+      },
+    ],
+    { limits },
+  );
+  let step = 0;
+  const provider: ModelProvider = {
+    id: "parallel-pages",
+    model: "parallel-pages",
+    async *stream() {
+      step += 1;
+      if (step === 1) {
+        yield { type: "tool_call", id: "c1", name: "context", args: begin("Read files") };
+        yield { type: "tool_call", id: "r1", name: "read", args: { path: "a.txt" } };
+        yield { type: "tool_call", id: "r2", name: "read", args: { path: "b.txt" } };
+        yield { type: "done", reason: "tool_use" };
+        return;
+      }
+      if (step === 2) {
+        yield {
+          type: "tool_call",
+          id: "c2",
+          name: "context",
+          args: { ...complete, finalResult: "Read both files in parallel" },
+        };
+        yield { type: "done", reason: "tool_use" };
+        return;
+      }
+      for (const event of end("<summary>Done</summary>")) yield event;
+    },
+  };
+  const result = await runLoop("Read a.txt and b.txt", {
+    ...f.options,
+    tools: customTools,
+    provider,
+    parallelTools: true,
+  });
+  expect(result.stopReason).toBe("done");
+  expect(maxConcurrentReads).toBe(2);
 });

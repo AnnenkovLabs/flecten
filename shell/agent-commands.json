@@ -87,7 +87,6 @@
   "trust.reject",
   "twin.cancel",
   "twin.configure",
-  "twin.consult",
   "twin.forget",
   "twin.get",
   "twin.review",

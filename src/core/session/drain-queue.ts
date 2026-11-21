@@ -29,6 +29,7 @@ export function drainQueue(
   void runtime.saveQueue();
   return run(next, {
     queueId: next.id,
+    ...(next.actor ? { actor: next.actor } : {}),
     ...(next.attachmentSnapshot ? { attachmentSnapshot: next.attachmentSnapshot } : {}),
     ...(next.contexts ? { contexts: next.contexts } : {}),
   }).catch((error: unknown) => {

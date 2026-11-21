@@ -27,12 +27,12 @@
 <style>
   .market-entry { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
   .preview-button { position: relative; width: 100%; text-align: start; border-radius: 10px; }
-  .installed-badge { display: inline-flex; align-items: center; gap: var(--space-1); position: absolute; inset-inline-start: var(--space-2); inset-block-start: var(--space-2); max-width: calc(100% - var(--space-4)); padding: var(--space-1) var(--space-2); background: var(--raised); color: var(--text); border-radius: 5px; font-size: 11px; }
+  .installed-badge { display: inline-flex; align-items: center; gap: var(--space-1); position: absolute; inset-inline-start: var(--space-2); inset-block-start: var(--space-2); max-width: calc(100% - var(--space-4)); padding: var(--space-1) var(--space-2); background: var(--raised); color: var(--text); border-radius: 6px; font-size: 11px; }
   .product-copy { display: grid; gap: var(--space-1); padding-inline: var(--space-1); }
   h4, p { margin: 0; overflow-wrap: anywhere; }
-  h4 { color: var(--text); font-size: 16px; font-weight: 650; line-height: 1.4; }
+  h4 { color: var(--text); font-size: 16px; font-weight: 650; line-height: 1.4; text-wrap: balance; }
   h4 button { text-align: start; border-radius: 3px; }
-  .product-publisher { font-size: 12px; color: var(--text-2); }
+  .product-publisher { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-2); }
   .product-publisher span { color: var(--muted); }
   .product-description { color: var(--muted); font-size: 12px; line-height: 1.5; text-wrap: pretty; margin-top: var(--space-1); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   .product-action { margin-top: auto; width: 100%; min-height: 40px; background: var(--raised); color: var(--text); white-space: normal; padding-block: var(--space-2); }

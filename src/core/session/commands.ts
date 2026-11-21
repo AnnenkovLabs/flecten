@@ -39,6 +39,7 @@ export async function dispatch(
         command.id,
         command.contexts,
         snapshot,
+        command.actor,
       );
       if (item.mode === "steer" && item.state === "pending") steering.push(item);
       await runtime.saveQueue();
@@ -81,12 +82,15 @@ export async function dispatch(
       return options.checkpoints?.list() ?? [];
     case "checkpoint.diff":
       return options.checkpoints?.diff(command.id);
-    case "checkpoint.restore":
-      return options.checkpoints?.restore(command.id, command.target ?? "before", {
+    case "checkpoint.restore": {
+      const restored = await options.checkpoints?.restore(command.id, command.target ?? "before", {
         ...(command.force ? { force: true } : {}),
         ...(command.includeProtected ? { includeProtected: true } : {}),
         ...(command.paths && command.paths.length > 0 ? { paths: command.paths } : {}),
       });
+      runtime.reads().clear();
+      return restored;
+    }
     case "context.compact": {
       const request = command.focus ? { focus: command.focus } : {};
       if (runtime.active()) {

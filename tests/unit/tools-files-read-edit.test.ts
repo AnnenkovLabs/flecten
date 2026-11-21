@@ -1,13 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { newerSessionState, SessionStateSchema } from "../../shared/session-state";
+import { EventJournal } from "../../src/app/event-journal";
+import { deliveredQueueIds } from "../../src/store/queue";
 import { builtinTools } from "../../src/tools/builtin";
 import { runEdit } from "../../src/tools/edit/run";
 import { runRead } from "../../src/tools/read/run";
 import { ToolRegistry } from "../../src/tools/registry";
 import type { ToolContext } from "../../src/tools/types";
 import { ReadTracker } from "../../src/tools/util/read-tracker";
+import { runWrite } from "../../src/tools/write/run";
 
 const dirs: string[] = [];
 const limits = {
@@ -334,5 +338,140 @@ describe("edit files", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toContain("either");
     expect(await readFile(path, "utf8")).toBe("one\n");
+  });
+
+  test("round-trips UTF-16LE and UTF-8 BOM files through read, edit and write", async () => {
+    const cwd = await tempDir();
+    const utf16Path = join(cwd, "utf16.txt");
+    const utf16Bytes = Buffer.concat([
+      Buffer.from([0xff, 0xfe]),
+      Buffer.from("hello\nworld\n", "utf16le"),
+    ]);
+    await writeFile(utf16Path, utf16Bytes);
+    const reads = new ReadTracker();
+    expect((await runRead({ path: "utf16.txt" }, context(cwd, reads))).ok).toBe(true);
+    const edited = await runEdit(
+      { path: "utf16.txt", oldString: "world", newString: "flecten" },
+      context(cwd, reads),
+    );
+    expect(edited.ok).toBe(true);
+    const rewritten = await runWrite(
+      { path: "utf16.txt", content: "hello\nupdated\n" },
+      context(cwd, reads),
+    );
+    expect(rewritten.ok).toBe(true);
+    const raw = await readFile(utf16Path);
+    expect(raw[0]).toBe(0xff);
+    expect(raw[1]).toBe(0xfe);
+    expect(raw.subarray(2).toString("utf16le")).toBe("hello\nupdated\n");
+  });
+
+  test("refuses writing or editing through a symlink that points outside the workspace", async () => {
+    if (process.platform === "win32") return;
+    const cwd = await tempDir();
+    const outside = await tempDir();
+    const secret = join(outside, "secret.txt");
+    await writeFile(secret, "secret\n");
+    await symlink(secret, join(cwd, "escape.txt"));
+    const reads = new ReadTracker();
+    const writeRes = await runWrite(
+      { path: "escape.txt", content: "overwritten" },
+      context(cwd, reads),
+    );
+    expect(writeRes.ok).toBe(false);
+    expect(writeRes.error).toContain("symbolic link");
+    const editRes = await runEdit(
+      { path: "escape.txt", oldString: "secret", newString: "hacked" },
+      context(cwd, reads),
+    );
+    expect(editRes.ok).toBe(false);
+    expect(editRes.error).toContain("symbolic link");
+    expect(await readFile(secret, "utf8")).toBe("secret\n");
+  });
+
+  test("orders monotonic session state epochs, tracks worker replay running state and resolves worker queue ids from parent log", async () => {
+    const older = SessionStateSchema.parse({
+      sessionId: "s_1",
+      epoch: "001700000000000-00000001-a",
+      revision: 5,
+      phase: "idle",
+      running: false,
+      interrupted: false,
+      turns: 1,
+      queue: [],
+      approvals: [],
+      jobs: [],
+    });
+    const newer = SessionStateSchema.parse({
+      ...older,
+      epoch: "001700000000001-00000002-b",
+      revision: 1,
+      phase: "running",
+      running: true,
+    });
+    expect(newerSessionState(newer, older)).toBe(false);
+    expect(newerSessionState(older, newer)).toBe(true);
+
+    const journal = new EventJournal();
+    journal.accept({
+      type: "session.started",
+      sessionId: "s_1",
+      provider: "p",
+      model: "m",
+      prompt: "go",
+    });
+    journal.accept({
+      type: "worker.event",
+      sessionId: "s_1",
+      event: {
+        type: "session.started",
+        sessionId: "s_1_worker",
+        provider: "p",
+        model: "m",
+        prompt: "work",
+      },
+    });
+    journal.accept({
+      type: "session.finished",
+      sessionId: "s_1",
+      result: {
+        sessionId: "s_1",
+        pass: true,
+        stopReason: "end",
+        summary: "delegated",
+        turns: 1,
+        usage: { input: 1, output: 1, cached: 0 },
+      },
+    });
+    expect(journal.replay("s_1").running).toBe(true);
+    journal.accept({
+      type: "worker.event",
+      sessionId: "s_1",
+      event: {
+        type: "run.interrupted",
+        sessionId: "s_1_worker",
+        at: 1,
+        reason: "stopped",
+      },
+    });
+    expect(journal.replay("s_1").running).toBe(false);
+
+    const cwd = await tempDir();
+    const { DurableEventLog } = await import("../../src/store/events/envelope");
+    const { sessionPaths } = await import("../../src/store/paths");
+    const log = await DurableEventLog.open(sessionPaths(cwd, "s_1").events, "s_1");
+    await log.append({
+      type: "worker.event",
+      sessionId: "s_1",
+      event: {
+        type: "steer.applied",
+        sessionId: "s_1_worker",
+        queueId: "q_worker_1",
+        text: "steer worker",
+      },
+    });
+    await log.close();
+    const delivered = await deliveredQueueIds(cwd, "s_1_worker");
+    expect(delivered.has("q_worker_1")).toBe(true);
   });
 });

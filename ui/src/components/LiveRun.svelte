@@ -108,6 +108,7 @@
   .live-meta {
     overflow: hidden;
     color: var(--muted);
+    font-variant-numeric: tabular-nums;
     text-overflow: ellipsis;
     white-space: nowrap;
   }

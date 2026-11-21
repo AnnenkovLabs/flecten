@@ -75,6 +75,7 @@ export type LoopEvent =
       text: string;
       input?: string;
       queueId?: string;
+      actor?: "user" | "twin";
       attachments?: AttachmentReference[];
       attachmentSnapshot?: AttachmentSnapshot;
       contexts?: ContextReference[];
@@ -170,6 +171,7 @@ export interface SteeringMessage {
   text: string;
   /** A harness notice (finished job) instead of a message the user typed. */
   kind?: "notice";
+  actor?: "user" | "twin";
   queueId?: string;
   /** What the user typed, shown in the thread; text may also carry attachment blocks. */
   display?: string;

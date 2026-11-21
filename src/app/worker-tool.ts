@@ -50,7 +50,7 @@ export function workerTool(
   return defineTool({
     name: "worker",
     description:
-      "Start an independent persistent Worker with an explicit assignment, steer it, inspect its status and acceptance ledger, or stop it immediately. Start returns immediately; live updates arrive automatically. Only one task can run at a time. The legacy task string is supported; use assignment to preserve constraints, outputs and individual acceptance criteria.",
+      "Start an independent persistent Worker with a dense compiled brief (`task`, after translating user slang through dictionary and memory) or structured `assignment`, steer it, resume it, inspect its status, or stop it immediately. Start returns immediately; live updates arrive automatically. Only one task can run at a time.",
     schema: WorkerRequestSchema,
     parametersSchema: WorkerParametersSchema,
     mutating: true,

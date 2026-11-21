@@ -108,9 +108,8 @@
     color: var(--muted);
     font-size: 12px;
     transition:
-      background 220ms var(--ease),
-      color 220ms var(--ease),
-      border-radius 460ms var(--ease-jelly);
+      background 180ms var(--ease),
+      color 180ms var(--ease);
   }
 
   .action-cancel:hover {

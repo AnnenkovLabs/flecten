@@ -91,13 +91,13 @@ export class MessageHistory {
     if (!edit) return;
     clearComposerDraft(edit.key);
     delete this.#edits[id];
-    composerDrafts.insertion++;
+    if (this.host.sessionId() === id) composerDrafts.insertion++;
   }
 
   get items(): ThreadItem[] {
     let index = 0;
     return this.host.view.thread.items.map((item) => {
-      if (item.kind !== "message") return item;
+      if (item.kind !== "message" || item.actor === "twin") return item;
       const version = this.versions[index++];
       return version
         ? {
@@ -120,6 +120,7 @@ export class MessageHistory {
       !this.host.connected() ||
       this.host.view.busy ||
       this.host.view.queued.length > 0 ||
+      (this.host.view.state?.approvals.length ?? 0) > 0 ||
       this.host.view.subagents.items.some((agent) => agent.status === "running") ||
       this.host.view.jobs.some((job) => job.status === "running")
     );

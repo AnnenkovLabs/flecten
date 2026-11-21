@@ -11,6 +11,7 @@ export interface UserMessageItem {
   kind: "message";
   id: string;
   text: string;
+  actor?: "user" | "twin";
   at?: string;
   versions?: MessageVersions;
 }

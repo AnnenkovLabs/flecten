@@ -18,7 +18,6 @@
   let frame = $state<number>(LEARNING.start);
   let completionFrame = $state<number>();
   let still = $state(false);
-  let paused = $state(false);
   let playback = $state<ReturnType<typeof learningPlayback>>();
   let entranceMotion = $state<ReturnType<typeof learningEntrance>>();
   const cards = $derived(learningCards(frame).map((card) => ({
@@ -27,6 +26,7 @@
     pose: done && card.a > frame - (completionFrame ?? 0) ? null : learningCardFrame(frame, card),
   })));
   const cardOpacity = $derived(done ? 1 - settle((completionFrame ?? 0) / 16) : 1);
+  const trace = $derived(snapshot?.training.trace ?? []);
 
   $effect(() => {
     const next = snapshot?.training.samples;
@@ -34,10 +34,9 @@
       samples = next;
     }
   });
-  $effect(() => { playback?.pause(paused); });
   $effect(() => { playback?.feed(samples.length > 0); });
   $effect(() => { playback?.finish(done); });
-  $effect(() => { entranceMotion?.pause(paused || still); });
+  $effect(() => { entranceMotion?.pause(still); });
 
   onMount(() => {
     const current = learningPlayback(root, (value, stopped, completion) => { frame = value; still = stopped; completionFrame = completion; entranceMotion?.pause(stopped); });
@@ -56,11 +55,28 @@
   });
 </script>
 
-<div bind:this={root} class="twin-learning" role="region" aria-label={t("Training Twin")} data-testid="twin-learning" data-frame={frame} data-paused={paused || still}>
+<div bind:this={root} class="twin-learning" role="region" aria-label={t("Training Twin")} data-testid="twin-learning" data-frame={frame} data-paused={still}>
   <div class="learning-controls">
-    <button class="st-btn st-btn--quiet" type="button" aria-pressed={paused} onclick={() => paused = !paused}>
-      {paused ? t("Resume motion") : t("Pause motion")}
-    </button>
+    {#if trace.length > 0 && !done}
+      <details class="learning-agent-trace">
+        <summary>
+          <span class="trace-dot" aria-hidden="true"></span>
+          <span>{trace[trace.length - 1]?.label}</span>
+          {#if trace[trace.length - 1]?.detail}<span class="trace-detail">{trace[trace.length - 1]?.detail}</span>{/if}
+        </summary>
+        <ul class="trace-list" aria-label={t("Twin agent activity")}>
+          {#each trace as step (step.id)}
+            <li data-status={step.status}>
+              <span class="trace-kind">{step.kind}</span>
+              <span class="trace-label">{step.label}</span>
+              {#if step.detail}<span class="trace-detail">{step.detail}</span>{/if}
+            </li>
+          {/each}
+        </ul>
+      </details>
+    {:else}
+      <span></span>
+    {/if}
     <button class="st-btn st-btn--quiet" type="button" onclick={onBack}>{t("Back to task")}<Icon name="chevron-right" size={14} /></button>
   </div>
   <div class="learning-film" style={`--film-scale:${scale}`} aria-hidden="true">
@@ -79,7 +95,7 @@
         </article>
       {/if}
     {/each}
-    <div class="learning-character"><TwinCharacter state="learning" learningFrame={frame} {completionFrame} motionPaused={paused || still || !samples.length} controls={false} size={430 / 0.78} /></div>
+    <div class="learning-character"><TwinCharacter state="learning" learningFrame={frame} {completionFrame} motionPaused={still || !samples.length} controls={false} size={430 / 0.78} /></div>
     <div class="learning-progress">
       <div><Icon name={done ? "check" : "spark"} size={20} /><strong>{done ? t("Ready to represent you") : t("Learning…")}</strong>{#if done}<span>100 %</span>{/if}</div>
       <progress aria-label={t("Training Twin")} value={done ? 1 : undefined} max="1"></progress>
@@ -115,9 +131,21 @@
   progress::-webkit-progress-value { background: var(--primary); }
   progress:indeterminate { background: linear-gradient(90deg, transparent, var(--primary), transparent) 0 0 / 40% 100% no-repeat var(--line-strong); animation: learning-pending 1800ms linear infinite; }
   .learning-progress p { margin: 10px 0 0; font-size: max(14px, 11px / var(--film-scale)); color: var(--muted); font-variant-numeric: tabular-nums; }
-  .learning-controls { position: absolute; z-index: 1; top: 16px; inset-inline: 20px; display: flex; justify-content: space-between; gap: 12px; }
-  .learning-footer { position: absolute; z-index: 1; bottom: 12px; inset-inline: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .learning-status { margin: 0; font-size: 12px; color: var(--text-2); }
+  .learning-controls { position: absolute; z-index: 2; top: 16px; inset-inline: 20px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .learning-footer { position: absolute; z-index: 1; bottom: 12px; inset-inline: 20px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .learning-status { margin: 0; font-size: 12px; color: var(--text-2); align-self: center; }
+  .learning-agent-trace { position: relative; max-width: min(440px, 54vw); font-size: 11px; color: var(--muted); opacity: 0.68; transition: opacity 150ms; }
+  .learning-agent-trace:hover, .learning-agent-trace[open] { opacity: 1; }
+  .learning-agent-trace summary { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; cursor: pointer; list-style: none; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .learning-agent-trace summary::-webkit-details-marker { display: none; }
+  .learning-agent-trace[open] summary { background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text-2); }
+  .trace-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); flex: none; opacity: 0.85; }
+  .trace-detail { color: var(--muted); font-family: var(--mono); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trace-list { position: absolute; top: 100%; left: 0; width: min(440px, 75vw); max-height: 210px; overflow: auto; margin: 6px 0 0; padding: 8px 10px; list-style: none; display: grid; gap: 5px; border-radius: 8px; background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: inset 0 0 0 1px var(--line), 0 10px 28px rgb(0 0 0 / 45%); backdrop-filter: blur(8px); }
+  .trace-list li { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 11px; color: var(--text-2); }
+  .trace-list li[data-status="error"] { color: var(--error); }
+  .trace-kind { flex: none; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.04em; color: var(--muted); font-family: var(--mono); }
+  .trace-label { flex: none; color: var(--text-2); }
   .learning-error { position: absolute; z-index: 1; bottom: 52px; inset-inline: 20px; margin: 0; color: var(--error); font-size: 13px; overflow-wrap: anywhere; }
   [data-paused="true"] progress { animation-play-state: paused; }
   @keyframes learning-pending { from { background-position: -65% 0; } to { background-position: 165% 0; } }

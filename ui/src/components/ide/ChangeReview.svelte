@@ -29,7 +29,7 @@
   .diff { flex: 1; overflow: auto; min-height: 0; font-family: var(--mono); font-size: 13px; line-height: 22px; padding-bottom: 24px; }
   .hunk { padding: 8px 20px; color: var(--muted); background: var(--surface); white-space: pre; }
   .line { display: flex; width: max-content; min-width: 100%; color: var(--text-body); }
-  .number { width: 48px; flex: none; padding-right: 12px; color: var(--muted); text-align: right; user-select: none; }
+  .number { width: 48px; flex: none; padding-right: 12px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; user-select: none; }
   .sign { width: 22px; flex: none; text-align: center; user-select: none; } pre { margin: 0; padding-right: 24px; font: inherit; tab-size: 2; }
   .added { background: color-mix(in srgb, var(--add) 9%, transparent); } .added .sign { color: var(--add); } .deleted { background: color-mix(in srgb, var(--del) 9%, transparent); } .deleted .sign { color: var(--del); }
   p { font-family: var(--font); color: var(--muted); padding: 24px; }

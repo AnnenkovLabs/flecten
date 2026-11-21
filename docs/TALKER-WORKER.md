@@ -10,23 +10,23 @@ Each row in **Settings > Models** exposes its own `reasoning` selector populated
 
 ## Conversing During Execution
 
-Talker coordinates Worker through the five-operation `worker` tool:
+Talker acts as a semantic compiler (resolving user slang, shorthand, and implicit references through the term dictionary, project memory, and conversation history) and coordinates Worker through the five-operation `worker` tool:
 
 | Operation | Argument | Behavior |
 |---|---|---|
-| `start` | `assignment` | Launches an asynchronous Worker run and returns control to Talker immediately. Carries `objective`, verbatim `userConstraints`, `expectedOutputs`, and `acceptanceCriteria`. |
+| `start` | `task` or `assignment` | Launches an asynchronous Worker run with a dense compiled English brief (`task`) or structured `assignment` and returns control to Talker immediately while preserving the latest raw user quote in `userConstraints`. |
 | `steer` | `message` | Delivers updated guidance at Worker's next safe turn boundary without interrupting an in-flight command. |
 | `resume` | none | Resumes an unfinished assignment with preserved criteria and blockers after re-checking workspace state. |
 | `status` | none | Returns current Worker phase and latest result summary without dumping raw logs. |
 | `stop` | none | Cancels Worker immediately via its `AbortSignal`. |
 
-At most one Worker runs per chat at a time (calling `start` while active is rejected in favor of `steer`). Talker has read/search tools and `skill` access, delegating all file mutations and shell execution to Worker (which enforces project instructions, permissions, sandboxing, and gates; Talker explicitly embeds any needed skill instructions into `assignment`).
+At most one Worker runs per chat at a time (calling `start` while active is rejected in favor of `steer`). Talker has read/search tools and `skill` access, delegating all file mutations and shell execution to Worker (which enforces project instructions, permissions, sandboxing, and gates; Talker explicitly embeds any needed skill instructions into the brief).
 
-## Structured Assignments and Acceptance
+## Assignments and Runtime Acceptance
 
-`assignment` works uniformly across coding, research, writing, math, media, and desktop tasks via `objective`, verbatim `userConstraints`, `expectedOutputs`, and `acceptanceCriteria` (each carrying a stable `id`, description, and `evidenceRequirement`: `"tool_result"` or `"model_assertion"`). Legacy string `task` payloads remain supported for older integrations by wrapping into a single `model_assertion` criterion.
+`task` provides a direct, zero-ceremony compiled brief (automatically preserving the user's latest verbatim quote in `userConstraints`), while `assignment` works uniformly across coding, research, writing, math, media, and desktop tasks when distinct `acceptanceCriteria` (`"tool_result"` or `"model_assertion"`), `expectedOutputs`, or step boundaries add clarity.
 
-Worker calls `criterion` to inspect criteria or mark each item `open`, `met` (with verified evidence), or `blocked` (with cause and required next action). Runtime validation checks that `"tool_result"` citations reference an actual successful tool call from the current assignment; `"model_assertion"` cannot close a `"tool_result"` criterion. User steering or Twin `revise` feedback bumps `revision` and reopens criteria so stale evidence from a superseded direction no longer counts. Acceptance state persists via `worker.acceptance` events and blocks Talker from emitting a final completion summary while Worker or Twin review is still running or while criteria remain `open`/`blocked` (Talker may still report status in plain Markdown).
+Runtime acceptance automatically binds observed successful tool results from the current revision to open criteria on Worker completion, while rejecting completion when a `"tool_result"` criterion has no successful tool execution in the active revision. Worker can also call `criterion` explicitly to inspect criteria, bind a specific tool call ID, or mark an item `blocked` (with cause and required next action). User steering or Twin `revise` feedback bumps `revision` and reopens criteria so stale evidence from a superseded direction no longer counts. Acceptance state persists via `worker.acceptance` events and blocks Talker from emitting a final completion summary while Worker or Twin review is still running or while criteria remain `open`/`blocked` (Talker may still report status in plain Markdown).
 
 For modules, tool schemas restrict Talker to `list`, `status`, `tools`, and `read`, reserving `activate`, `call`, and `deactivate` for Worker while binding both roles and the **Computer** workspace tab to the same shared module instance (human Computer previews use a separate observation ID at one in-flight refresh at a time so they never overwrite Worker's action observation ID).
 
@@ -60,4 +60,4 @@ Covered by `tests/integration/conversation.test.ts` (concurrent chat during live
 
 ## Worker Context Pages
 
-Worker uses `context` (`begin`, `complete`, `block`, plus archive `list`, `read`, `search`) to scope each page to one self-contained subtask: `complete` archives the full segment to `.flecten/sessions/<chat>_worker/pages/` and replaces active history with its structured summary immediately, even when context utilization is low. Acting before `begin`, mixing lifecycle calls in one batch, or emitting a final answer without closing the active page in the current run is rejected. When blocked by an external dependency, `context block` records cause, evidence, and next action, returning a blocker report to Talker so the next run resumes that page cleanly (emergency window-limit compaction preserves unfinished goals in `ContextSummary.activePage`).
+Worker uses `context` (`op: "compact"` or `"complete"`, plus archive `list`, `read`, `search`) to compact completed logical blocks at natural boundaries without mandatory page-opening ceremony: `compact` archives the full segment to `.flecten/sessions/<chat>_worker/pages/` and replaces active history with its structured summary immediately, even when context utilization is low. Short single-block tasks can complete directly without an extra compaction round-trip. When blocked by an external dependency, `context block` records cause, evidence, and next action, returning a blocker report to Talker so the next run resumes cleanly.

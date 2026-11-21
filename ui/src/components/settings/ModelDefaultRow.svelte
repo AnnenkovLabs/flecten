@@ -45,43 +45,119 @@
 </script>
 
 <SettingsRow {title} {description} stacked>
-  <div class="model-default-controls">
-    <ModelPicker {providers} provider={choice?.provider ?? ""} model={choice?.model ?? ""}
-      placeholder={inherit ?? t("Select a model")} ariaLabel={title} {disabled}
-      onSelect={(provider, model) => onChange({ provider, model })} />
-    <div class="model-default-field">
-      <span class="model-default-label">{t("Reasoning level")}</span>
-      <Select class="st-input" aria-label={`${title}: ${t("Model reasoning level")}`} disabled={disabled || !hasReasoning || !!fixedReasoning}
-        value={hasReasoning ? fixedReasoning ?? effective?.reasoning ?? "" : ""} onchange={setReasoning}
-        options={hasReasoning ? [
-          { value: "", label: reasoningDefault === "none" ? t("Default: no reasoning") : t("Model default") },
-          ...(fixedReasoning && !levels.includes(fixedReasoning) ? [{ value: fixedReasoning, label: REASONING_LABELS[fixedReasoning] ?? fixedReasoning }] : []),
-          ...levels.map((level) => ({ value: level, label: toggle ? (level === "none" ? t("Off") : t("Enabled")) : REASONING_LABELS[level] ?? level })),
-        ] : [{ value: "", label: model ? t("Reasoning is not supported") : t("Select a model first") }]} />
-    </div>
-    {#if choice && variants.length}
-      <div class="model-default-field">
-        <span class="model-default-label">{t("Model variant")}</span>
-        <Select class="st-input" aria-label={`${title}: ${t("Model variant")}`} {disabled}
-          value={choice.variant ?? ""} onchange={setVariant}
-          options={[{ value: "", label: t("Default variant") }, ...variants.map(([id, variant]) => ({ value: id, label: variant.name ?? id }))]} />
+  <div class="model-default-stack">
+    <div class="model-default-controls">
+      <div class="model-default-field model-default-field--model">
+        <span class="model-default-label">{t("Model")}</span>
+        <div class="model-default-picker">
+          <ModelPicker {providers} provider={choice?.provider ?? ""} model={choice?.model ?? ""}
+            placeholder={inherit ?? t("Select a model")} ariaLabel={title} {disabled}
+            onSelect={(provider, model) => onChange({ provider, model })} />
+          {#if choice && inherit}
+            <button class="st-btn st-btn--quiet model-default-reset" type="button" {disabled} onclick={() => onChange(undefined)}>{inherit}</button>
+          {/if}
+        </div>
       </div>
+      <div class="model-default-field">
+        <span class="model-default-label">{t("Reasoning level")}</span>
+        <Select class="st-input" aria-label={`${title}: ${t("Model reasoning level")}`} disabled={disabled || !hasReasoning || !!fixedReasoning}
+          value={hasReasoning ? fixedReasoning ?? effective?.reasoning ?? "" : ""} onchange={setReasoning}
+          options={hasReasoning ? [
+            { value: "", label: reasoningDefault === "none" ? t("Default: no reasoning") : t("Model default") },
+            ...(fixedReasoning && !levels.includes(fixedReasoning) ? [{ value: fixedReasoning, label: REASONING_LABELS[fixedReasoning] ?? fixedReasoning }] : []),
+            ...levels.map((level) => ({ value: level, label: toggle ? (level === "none" ? t("Off") : t("Enabled")) : REASONING_LABELS[level] ?? level })),
+          ] : [{ value: "", label: model ? t("Reasoning is not supported") : t("Select a model first") }]} />
+      </div>
+      {#if choice && variants.length}
+        <div class="model-default-field">
+          <span class="model-default-label">{t("Model variant")}</span>
+          <Select class="st-input" aria-label={`${title}: ${t("Model variant")}`} {disabled}
+            value={choice.variant ?? ""} onchange={setVariant}
+            options={[{ value: "", label: t("Default variant") }, ...variants.map(([id, variant]) => ({ value: id, label: variant.name ?? id }))]} />
+        </div>
+      {/if}
+    </div>
+    {#if fixedReasoning}
+      <p class="model-default-hint">{t("Reasoning is set by the model variant.")}</p>
     {/if}
-    {#if choice && inherit}
-      <button class="st-btn st-btn--quiet" type="button" {disabled} onclick={() => onChange(undefined)}>{inherit}</button>
+    {#if !choice && fallback && hasReasoning}
+      <p class="model-default-hint">{t("Changing reasoning selects the inherited model for this role.")}</p>
     {/if}
   </div>
-  {#if fixedReasoning}<span class="model-default-hint">{t("Reasoning is set by the model variant.")}</span>{/if}
-  {#if !choice && fallback && hasReasoning}
-    <span class="model-default-hint">{t("Changing reasoning selects the inherited model for this role.")}</span>
-  {/if}
 </SettingsRow>
 
 <style>
-  .model-default-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; min-width: 0; }
-  .model-default-field { display: grid; gap: 4px; min-width: 0; }
-  .model-default-label, .model-default-hint { color: var(--muted); font-size: 12px; }
-  .model-default-hint { display: block; margin-top: 8px; }
-  .model-default-controls :global(.model-trigger) { max-width: 100%; }
-  .model-default-controls :global(.st-input) { width: auto; max-width: 100%; }
+  .model-default-stack {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+  }
+  .model-default-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    align-items: start;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    margin-top: 2px;
+  }
+  .model-default-field {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+  .model-default-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .model-default-label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .model-default-hint {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+    text-wrap: pretty;
+  }
+  .model-default-controls :global(.model-picker) {
+    flex: 1;
+    min-width: 0;
+  }
+  .model-default-controls :global(.model-picker .model-button) {
+    justify-content: space-between;
+    width: 100%;
+    max-width: 100%;
+    height: var(--control-h);
+    padding: 0 11px;
+    border-radius: 8px;
+    background: #141414;
+    color: var(--text);
+    font-size: 13px;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+  .model-default-controls :global(.model-picker .model-button:hover:not(:disabled)) {
+    background: var(--raised);
+  }
+  .model-default-controls :global(.model-picker .model-button:disabled) {
+    opacity: 0.42;
+    cursor: default;
+  }
+  .model-default-controls :global(.st-input) {
+    width: 100%;
+    max-width: 100%;
+    height: var(--control-h);
+    min-height: var(--control-h);
+  }
+  .model-default-reset {
+    height: var(--control-h);
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
 </style>

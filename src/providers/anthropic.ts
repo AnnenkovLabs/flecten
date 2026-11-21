@@ -271,11 +271,12 @@ function rawBlock(block: StreamBlock): Record<string, unknown> | undefined {
     return block.text.length > 0 ? { type: "text", text: block.text } : undefined;
   }
   if (!block.stopped) return undefined;
+  const parsed = block.partialJson.trim().length > 0 ? parseToolArgs(block.partialJson) : {};
   return {
     type: "tool_use",
     id: block.id,
     name: block.name,
-    input: block.partialJson.trim().length > 0 ? parseToolArgs(block.partialJson) : {},
+    input: isObject(parsed) ? parsed : {},
   };
 }
 
@@ -356,30 +357,25 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
           if (type === "content_block_start" && isObject(event.content_block)) {
             const block = event.content_block;
             const index = typeof event.index === "number" ? event.index : blocks.size;
-            if (block.type === "text") {
+            if (block.type === "text" || block.type === "thinking") {
+              const isText = block.type === "text";
+              const initial =
+                typeof (isText ? block.text : block.thinking) === "string"
+                  ? ((isText ? block.text : block.thinking) as string)
+                  : "";
               blocks.set(index, {
                 index,
-                type: "text",
-                text: typeof block.text === "string" ? block.text : "",
+                type: block.type,
+                text: initial,
                 partialJson: "",
                 id: "",
                 name: "",
-                signature: "",
+                signature: !isText && typeof block.signature === "string" ? block.signature : "",
                 data: "",
                 stopped: false,
               });
-            } else if (block.type === "thinking") {
-              blocks.set(index, {
-                index,
-                type: "thinking",
-                text: typeof block.thinking === "string" ? block.thinking : "",
-                partialJson: "",
-                id: "",
-                name: "",
-                signature: typeof block.signature === "string" ? block.signature : "",
-                data: "",
-                stopped: false,
-              });
+              if (initial)
+                yield events.emit({ type: isText ? "text" : "reasoning", delta: initial });
             } else if (block.type === "redacted_thinking") {
               blocks.set(index, {
                 index,
@@ -443,17 +439,10 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
             const block = blocks.get(index);
             if (block?.type === "tool_use" && !block.stopped) {
               block.stopped = true;
-              const call: ToolCall = {
+              calls.push({
                 id: block.id,
                 name: block.name,
                 args: parseToolArgs(block.partialJson || "{}"),
-              };
-              calls.push(call);
-              yield events.emit({
-                type: "tool_call",
-                id: call.id,
-                name: call.name,
-                args: call.args,
               });
             }
             continue;
@@ -473,11 +462,18 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
           }
         }
       } catch (error) {
+        if (usage.input > 0 || usage.output > 0) yield events.emit({ type: "usage", ...usage });
         if (signal.aborted) throw error;
         events.interrupted(error, "message_stop");
       }
 
-      if (!sawStop) events.requireDone("message_stop");
+      if (!sawStop) {
+        if (usage.input > 0 || usage.output > 0) yield events.emit({ type: "usage", ...usage });
+        events.requireDone("message_stop");
+      }
+      for (const call of calls) {
+        yield events.emit({ type: "tool_call", id: call.id, name: call.name, args: call.args });
+      }
       const ordered = [...blocks.values()]
         .sort((left, right) => left.index - right.index)
         .map(rawBlock)
@@ -485,9 +481,7 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
       if (ordered.length > 0) {
         yield events.emit({ type: "provider_data", data: { kind: "anthropic", blocks: ordered } });
       }
-      if (usage.input > 0 || usage.output > 0) {
-        yield events.emit({ type: "usage", ...usage });
-      }
+      if (usage.input > 0 || usage.output > 0) yield events.emit({ type: "usage", ...usage });
       yield events.done(mapStop(stopReason, calls.length > 0));
     },
   };

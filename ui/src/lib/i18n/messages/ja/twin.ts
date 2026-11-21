@@ -22,13 +22,22 @@ export default {
   Like: "気に入る",
   Delight: "感動",
   "{0} sessions found": ["見つかったセッション: ", 0, ""],
-  "Choose which agent histories Twin can learn from.":
-    "Twinの学習に使うエージェントの履歴を選んでください。",
+  "Choose which agent histories and saved memories Twin can learn from.":
+    "Twinの学習に使うエージェントの履歴と保存済みメモリを選んでください。",
   "Scan first": "先に検索してください",
   "Not found": "見つかりません",
   "Export needed": "エクスポートが必要です",
   "Learn from {0}": ["", 0, "の履歴から学習する"],
   "Source details": "ソースの詳細",
+  "Training model": "学習モデル",
+  "Reasoning level": "推論レベル",
+  "Training reasoning level": "学習時の推論レベル",
+  "Model variant": "モデルバリアント",
+  "Training model variant": "学習時のモデルバリアント",
+  "Model default": "モデル既定",
+  "Default variant": "既定バリアント",
+  "Reasoning is not supported": "推論は非対応です",
+  "Select a model first": "先にモデルを選択してください",
   "Reading selected sessions…": "選択したセッションを読み込み中…",
   "Read {0} sessions and {1} messages": ["", 0, "セッション、", 1, "メッセージを読み込み済み"],
   "Training Twin": "Twinの学習",
@@ -36,37 +45,18 @@ export default {
   "Train Twin": "Twinを学習させる",
   "Scanning…": "ソースを検索中…",
   "Scan sources": "ソースを検索",
+  "Training reads all unread sessions and saved harness memories in batches and may consume significant API tokens and funds.":
+    "学習は未読のセッションと保存済みメモリをバッチで全て読み込むため、大量のAPIトークンと費用を消費する場合があります。",
   "Twin is ready. Learned traits apply immediately and you can edit them.":
     "Twinの準備ができました。学習した特徴はすぐに適用され、編集できます。",
   "View your character": "あなたの特徴を見る",
   "Training cancelled. Your existing character is unchanged.":
     "学習をキャンセルしました。現在の特徴は変更されていません。",
   "What is sent to the model?": "モデルには何が送信されますか？",
-  "Scanning is local. Learning sends your messages and preceding agent replies to your configured provider, within the limits below.":
-    "ソースの検索はローカルで行います。学習時には、以下の上限内であなたのメッセージと直前のエージェントの応答を設定済みプロバイダーへ送信します。",
+  "Scanning is local. Learning sends your messages, saved harness memories, and preceding agent replies to the selected provider.":
+    "ソースの検索はローカルで行います。学習時にはあなたのメッセージ、保存済みメモリ、直前のエージェントの応答が選択したプロバイダーへ送信されます。",
   "Training model: {0} / {1}": ["学習に使うモデル: ", 0, " / ", 1, ""],
-  "Per training: up to {0} sessions, {1} messages and {2} characters": [
-    "1回の学習: 最大",
-    0,
-    "セッション、",
-    1,
-    "メッセージ、",
-    2,
-    "文字",
-  ],
-  "Would Twin choose what you would?": "Twinはあなたと同じ判断をしますか？",
-  "Try a real decision. Twin picks the best supported option in your voice, just as it does for the Worker.":
-    "設計や実装の判断を質問し、保存済みの特性から Twin が Worker にどう答えるか確認できます。",
-  "Question for Twin": "Twinへの質問",
-  "How should we design checkout for this project?": "このプロジェクトの購入手続きはどう設計する？",
-  "Asking Twin…": "Twinに確認中…",
-  "Ask Twin": "Twinに聞く",
-  "Uses your configured model. Each answer shows its sources.":
-    "設定したモデルを使います。回答ごとに根拠を表示します。",
-  "Twin needs your answer": "あなたの回答が必要です",
-  "No supported answer. Ask the user directly.":
-    "保存された特性に十分な根拠がないため、Twin はあなたに直接確認します。",
-  "Based on your character": "あなたの特徴に基づく判断",
+  "Twin agent activity": "Twinエージェントの動作",
   "Input: {0} tokens · Output: {1} tokens": ["入力: ", 0, "トークン · 出力: ", 1, "トークン"],
   "Learning…": "学習中…",
   "Ready to represent you": "あなたの代理を務められます",
@@ -129,8 +119,6 @@ export default {
   "Representing your intent to the Worker": "あなたの意図を Worker に伝えています",
   "Corrections: {0} / 4": ["修正: ", 0, " / 4"],
   "Interact with Twin": "Twin と触れ合う",
-  "Drag to turn. Move to look. Click to greet. Arrow keys turn; Home resets.":
-    "ドラッグで回転、カーソルを目で追います。クリックで挨拶。矢印キーで回転、Home でリセット。",
   "Resume motion": "動きを再開",
   "Pause motion": "動きを止める",
 } as const;
