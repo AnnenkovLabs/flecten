@@ -1,225 +1,322 @@
 <div align="center">
 
-<img src="docs/assets/logo.png" width="132" alt="Flecten logo" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/hero-en-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/hero-en-light.svg">
+  <img src="docs/assets/readme/hero-en-dark.svg" alt="Flecten" width="840">
+</picture>
 
-# Flecten
+<p>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.7%20Alpha-b7a1e8?style=flat-square" alt="0.1.7 Alpha"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-7c65b8?style=flat-square" alt="AGPL-3.0"></a>
+  <img src="https://img.shields.io/badge/platform-Win%20%C2%B7%20Linux%20%C2%B7%20macOS-242428?style=flat-square" alt="Windows, Linux, macOS">
+  <a href="docs/i18n/README.ru.md"><img src="https://img.shields.io/badge/lang-%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-a6c19f?style=flat-square" alt="Читать на русском"></a>
+</p>
 
-**The desktop workspace for coding agents.**
-Conversations, files, tools, and changes in one window.
+<p><strong>Talk to your coding agent at human speed while it edits, checks, and ships in the background.</strong><br>
+Built for real engineering flow: interactive UI inside replies, an opinionated 3D clone that guards your taste, and codebase search that hits the exact function on turn one.</p>
 
-[![CI](https://github.com/AnnenkovLabs/flecten/actions/workflows/ci.yml/badge.svg)](https://github.com/AnnenkovLabs/flecten/actions/workflows/ci.yml)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-b7a1e8?style=flat-square)](LICENSE)
-[![Bun 1.4](https://img.shields.io/badge/Bun-1.4-171717?style=flat-square&logo=bun&logoColor=f0efed)](https://bun.sh)
-[![TypeScript 7](https://img.shields.io/badge/TypeScript-7-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?style=flat-square&logo=svelte&logoColor=white)](https://svelte.dev)
-[![Electron 45](https://img.shields.io/badge/Electron-45-47848f?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-b7a1e8?style=flat-square)](CONTRIBUTING.md)
+<br>
 
-[English](README.md) · [简体中文](docs/i18n/README.zh-Hans.md) · [Português (Brasil)](docs/i18n/README.pt-BR.md) · [Español](docs/i18n/README.es.md) · [日本語](docs/i18n/README.ja.md) · [Українська](docs/i18n/README.uk.md) · [Русский](docs/i18n/README.ru.md)
+<img src="docs/assets/desktop.png" alt="Flecten workspace with Twin approval and interactive HTML answer" width="880">
+
+<br><br>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/glance-en-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/glance-en-light.svg">
+  <img src="docs/assets/readme/glance-en-dark.svg" alt="Flecten at a glance" width="840">
+</picture>
 
 </div>
 
-![Flecten window: a task with tool calls, a rendered answer, and the composer](docs/assets/desktop.png)
+| | | |
+| :--- | :--- | :--- |
+| **[Interactive HTML Answers](#interactive-html-answers)**<br>Clickable tables, tabs, filters, and two-way actions right inside chat replies. | **[Talker and Worker](#talker-and-worker)**<br>Chat stays sub-second and wide open while code edits and checks run in parallel. | **[Twin (3D Digital Clone)](#twin)**<br>Learns your standards from 10 AI tools and barges in before weak code ships. |
+| **[Sniper Search and Speed](#sniper-search-and-speed)**<br>AST + BM25 search, function-aware reads, shared read memory, ~90% cache reuse. | **[Built for Daily Flow](#built-for-daily-flow)**<br>10-second provider setup, ChatGPT-style history branches, file + shell undo, built-in IDE. | **[Under the Hood](#under-the-hood)**<br>Hot-load modules, quote-verified memory with zero fan-fiction, 114-term slang dictionary. |
 
-<p align="center"><sub>Preview running on a local demo provider.</sub></p>
-
-> [!WARNING]
-> **Alpha.** Flecten is early: there are a lot of bugs and a lot of unfinished pieces right now. Over the coming days I'm putting maximum effort into polishing and tightening everything up. Expect fast changes, and please [report what breaks](https://github.com/AnnenkovLabs/flecten/issues).
-
-## ⚡ Why Flecten
-
-The agent loop is table stakes. Flecten fixes what breaks after the demo.
-
-| The problem you already know | What Flecten does |
-|---|---|
-| 🔇 Conversation and coding in one chat degrade both, and steering means interrupting | **Talker and Worker** run as separate sessions: keep talking, steer mid-task, stop the worker alone |
-| 💭 Every new chat forgets your project and your corrections | **Project memory** backed by your own words, carried across sessions |
-| 📖 It misreads your project terms and jargon | A **dictionary** hands the model your exact definitions before it answers |
-| 🔌 Wiring a provider is JSON archaeology | Paste a **base URL and API key**; Flecten sets up the provider and imports every model from the API |
-| 🧱 A substantial result is a wall of markdown | **Interactive HTML answers**: sortable tables, tabs, charts, buttons |
-| 🪞 It works like a generic assistant, not like you | A **Twin** that learns your voice and rejects work that is not yours |
+<br>
 
 <p align="center">
-<b>18</b> built-in tools &nbsp;·&nbsp; <b>4</b> provider protocols &nbsp;·&nbsp; <b>7</b> interface languages &nbsp;·&nbsp; <b>85%</b> coverage gate
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/strip-html-en-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/strip-html-en-light.svg">
+    <img src="docs/assets/readme/strip-html-en-dark.svg" alt="Interactive HTML answers" width="840">
+  </picture>
 </p>
 
-## 🚀 Quick start
+## Interactive HTML Answers
 
-Requires [Bun](https://bun.sh) 1.4 or newer.
+Most coding harnesses dump a wall of Markdown text and leave you copying file paths by hand or typing `"yes, do option 2"`. In Flecten, the model renders real **interactive mini-apps** directly inside the reply: sortable and filterable tables, comparison tabs, sliders, checkboxes, diagrams, and action buttons wired to your project.
 
-```bash
-bun install
-export OPENAI_API_KEY=...
-bun run app:dev
-```
+And this is not read-only eye candy. It is a **true two-way loop between you and the model**:
 
-`bun run app:dev` starts Vite, launches the core on Bun, and opens an Electron window with hot reload. A fresh profile starts without a project. Add a folder in the app or set `FLECTEN_CWD` to select one explicitly; later launches restore your selection.
+- **Click in the report, move the session:** Select the fixes to keep, flip a toggle, or hit an action button inside the card. Your real choices flow straight back to the agent so it executes the exact path you picked without re-explaining.
+- **Four smart delivery rhythms:** Replies can wait quietly until your next message, fire immediately when you hit an action button, trigger right after your first clicks, or give you a brief countdown before continuing.
+- **Real human clicks only:** Every action is verified at the browser boundary as a genuine user gesture. Stray scripts inside the report cannot fake clicks or spoof your approval.
+- **Jump straight into code:** File and line links inside any table open that exact spot directly inside Flecten's built-in IDE or jump straight to the right Settings pane.
+- **Zero-trust offline sandbox:** Each interactive card runs completely isolated with zero network access, zero parent-window access, and zero access to your disk. Live previews start streaming while the model is still typing and stay `-65%` lighter on output tokens than raw sprawling dashboards.
 
-```bash
-# or another provider
-FLECTEN_PROVIDER=anthropic FLECTEN_MODEL=claude-sonnet-4-6 bun run app:dev
-```
-
-To inspect the UI in a browser without the core, run `bun run dev:ui`.
-
-## ✨ What makes Flecten different
-
-### 🗣️ Talk while it works
-
-**Keep talking while the Worker runs.**
-New chats split into a Talker in your language and a Worker on a focused assignment. Steer mid-task, ask questions, or stop just the Worker. Every call is a live card with its own log and stop button.
-
-### 🖥️ A full IDE, one toggle away
-
-**Agent and IDE in the same window.**
-Flip the header to IDE: file tree, editor tabs, project search and replace, go to line, source control, terminal. The conversation stays available as an island.
-
-### 🩹 Diffs you can trust
-
-**Review every edit. Undo without git surgery.**
-Each change lands as a reviewable diff; accept or discard per file. Saving checks the on-disk version, so a conflict never clobbers your draft. Checkpoints and a shadow git power `/undo` and `/redo`.
-
-### 🧠 Memory that survives the chat
-
-**Your project, remembered across sessions.**
-The model decides what to keep: preferences, lessons, decisions. Each entry is backed by your own words, versioned, and organized by topic. Stale entries invalidate themselves.
-
-### 📖 A dictionary for your terms
-
-**Your vocabulary, resolved before the model is called.**
-A public design and AI dictionary syncs from GitHub; local project terms win. Fuzzy matching even fixes layout typos: `мшиусщвштп` → `vibecoding`. Your message stays word for word.
-
-### 🔌 Providers in one click
-
-**Pick from a catalog, not a JSON file.**
-Add a known service with logos and model lists, or point at your own server. Flecten probes the connection and discovers models. Four protocols, with visible failover when one drops.
-
-### 📊 Answers that are live HTML
-
-**A result you can interact with, not just read.**
-Final answers can be sandboxed HTML: sortable tables, tabs, charts, and buttons that open settings or a file. Rendered as it streams, with no network and no external scripts.
-
-### 🪞 It learns your voice
-
-**A Twin that works like you, not like a generic assistant.**
-It learns from your past sessions and sources, writes specs in your terms, and rejects work that is not yours. Memory and a profile close the loop.
-
-## ✅ And everything else you would expect
-
-| | Area | What you get |
-|---|---|---|
-| 🛠️ | Tools | 18 built-in: `read`, `write`, `edit`, `apply_patch`, `delete`, `move`, `todo`, `task`, `grep`, `glob`, `ask`, `web_fetch`, `web_search`, `terminal`, `bash`, `jobs`, `memory`, `done`; plus `skill` and `module` |
-| 🛡️ | Safety | `deny` / `auto` / `ask` / `allow` permissions, a bubblewrap / seatbelt sandbox, command hooks, and approvals that wait inside the call |
-| 💻 | Terminal | A persistent PTY per session, background `jobs` with logs and `wait`, and process-tree cancellation |
-| 🔁 | Runs | Parallel tasks, a queue that survives reloads, steering, recovery after a core crash, and per-run token, cost, and time budgets |
-| 🧩 | Extensions | Agent Skills, MCP over stdio and HTTP with OAuth, hooks, and modules that bundle tools, instructions, and services |
-| 📎 | Input | Images, PDFs, and audio; `@` references to files, symbols, tasks, and public GitHub PRs; a slash menu; voice input |
-| 📝 | Output | Markdown, Mermaid, and a built-in file and log viewer |
-| 🌍 | Reach | 7 interface languages, signed auto-update, and opt-in telemetry |
-
-## 🏗️ Architecture
-
-The UI never reads files or calls models. It sends commands to a Bun sidecar over a JSONL protocol and receives typed events back. The core never imports Electron or the UI.
-
-```mermaid
-flowchart LR
-  U[You] --> UI[Svelte 5 UI]
-  UI <-->|commands / events| SC[Sidecar on Bun]
-  SC <--> CORE[Agent core]
-  CORE --> PROV[Providers<br/>OpenAI · Anthropic · Gemini]
-  CORE --> TOOLS[18 tools + Skills + MCP]
-  TOOLS --> SEC[Security<br/>permissions · sandbox · hooks]
-  CORE --> STORE[(events.jsonl<br/>checkpoints · shadow git)]
-```
-
-Events carry `seq`, `ts`, and `schemaVersion`, so a reopened window rebuilds the task from `events.jsonl` and catches up with the live stream from its cursor.
-
-## 🔗 Connect your stack
-
-The default provider is `openai` with `gpt-5.1`. Keys come from environment variables: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`. Any compatible service can be added in the window or in `flecten.config.json`:
-
-```json
-{
-  "provider": "local",
-  "model": "qwen3-coder",
-  "providers": {
-    "local": {
-      "protocol": "openai-chat",
-      "baseUrl": "http://127.0.0.1:11434/v1"
-    }
-  }
-}
-```
-
-A provider without a key works without authentication, which suits local servers. Advanced fields set `headers`, `proxy`, and `transportTimeoutMs`; a key can come from `apiKeyEnv` or an `auth.command`. Pick a reasoning level in the composer: `auto`, `low`, `medium`, `high`.
-
-- 🧩 **Skills** load from `~/.agents/skills` and the project's `.agents/skills`; the model sees a catalog and opens a full `SKILL.md` on demand.
-- 🔌 **MCP** servers expose their tools, resources, and prompts, with OAuth discovery and PKCE.
-- 🪝 **Hooks** can block startup, a prompt, or a tool; a `failClosed` hook blocks the action when it crashes.
-- 📦 **Modules** bundle tools, instructions, hooks, and services, activated per task after content review.
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "docs": { "command": "bun", "args": ["mcp/docs-server.ts"] }
-    }
-  },
-  "hooks": {
-    "preToolUse": [
-      { "command": "bun .agents/hooks/guard.ts", "matcher": "bash" }
-    ]
-  }
-}
-```
-
-> ⚠️ Project configuration with MCP, hooks, or skills launches processes. Only open it in a repository you trust.
-
-Full contract: [docs/EXTENSIONS.md](docs/EXTENSIONS.md).
-
-## ⌨️ Commands
-
-| Command | What it does |
-|---|---|
-| `bun run app:dev` | Open an Electron window with hot reload |
-| `bun run app` | Build the UI and core, then open the window |
-| `bun run dev:ui` | Run the UI in a browser without Electron |
-| `bun run build:ui` | Build `ui/dist` |
-| `bun run build:agent` | Build the core binary at `dist/flecten-agent` |
-| `bun test` | Run tests for the core and pure UI logic |
-| `bun run check` | Run `tsc` and `svelte-check` |
-| `bun run lint` | Run Biome and project rules (file size, regex, dead modules) |
-| `bun run verify` | Tests, types, lint, docs checks, and both builds |
-| `bun run test:e2e` | Playwright E2E in Electron, with visual regression at 1480x940 and 1180x640 |
-| `bun run coverage` | Check line coverage against the 85% threshold |
-| `bun run package` | Create an unpacked Electron package in `release/` |
-| `bun run release` | Create an installer for the current platform |
-
-A change is not ready until it passes `bun run verify`.
-
-## 📚 Documentation
-
-- 🏗️ [Architecture](docs/ARCHITECTURE.md) · 🗣️ [Talker and Worker](docs/TALKER-WORKER.md) · 🧠 [Memory](docs/MEMORY.md) · 📖 [Dictionary](docs/DICTIONARY.md)
-- 🧩 [Extensions](docs/EXTENSIONS.md) · 📦 [Modules](docs/MODULES.md) · 🎙️ [Voice](docs/VOICE.md)
-- 🗂️ [Structure](docs/STRUCTURE.md) · 🎨 [Design](design.md) · 📐 [Conventions](docs/CONVENTIONS.md)
-- 🚢 [Release](docs/RELEASE.md) · 📝 [Changelog](CHANGELOG.md) · 🖼️ [UI guidelines](ui/README.md) · 🐚 [Shell guidelines](shell/README.md)
-
-## 🚦 Status
-
-The agent foundation works and is covered by tests and snapshots. Still in progress: release signing, the Windows sandbox, per-command resource isolation, and native platform acceptance testing. Windows PTY uses ConPTY from Bun 1.4.2.
-
-Auto-update uses `FLECTEN_UPDATE_URL` and verifies an Ed25519 manifest with an embedded public key before downloading the installer.
-
-## 🤝 Contributing
-
-Before opening a PR, read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Report vulnerabilities according to [SECURITY.md](SECURITY.md), not in a public issue.
-
-## 📄 License
-
-AGPL-3.0. See [LICENSE](LICENSE). Free to use, modify, and share; community norms live in [ETHICS.md](ETHICS.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/flow-html-en-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/flow-html-en-light.svg">
+    <img src="docs/assets/readme/flow-html-en-dark.svg" alt="Two-way interactive HTML loop" width="840">
+  </picture>
+</p>
 
 ---
 
-<p align="center"><sub>Flecten was previously called Liquid Harness. Existing <code>liquid.config.json</code> files, <code>LIQUID_*</code> variables, <code>liquid-harness://</code> links, and saved profiles still work. The primary names are now <code>flecten.config.json</code>, <code>FLECTEN_*</code>, and <code>flecten://</code>. The <code>.flecten/</code> folder stores sessions, attachments, and checkpoints. Existing <code>.liquid/</code> data moves there automatically when the project opens.</sub></p>
+## Talker and Worker
 
-<p align="center"><sub>The interface starts in English. Choose a language in <b>Settings → General → Interface language</b>. The choice is saved on this device and is separate from the language of agent replies.</sub></p>
+In a single-loop harness, a simple follow-up question gets trapped behind a ten-minute refactor. Wait until tool calls finish, hope the model still remembers what you asked at the top of the prompt, or hit Stop and wipe half its progress.
+
+Flecten splits the job in two like an engineering lead and a focused builder:
+
+- **Talker stays with you (`< 1 s`):** Compiles your plain request into a tight, unambiguous assignment with exact context, answers questions right away, and renders clean progress updates and interactive HTML summaries without blocking your input box.
+- **Worker executes in the background:** Reads files, writes patches, spawns parallel subagents, runs tests, and streams live action cards upward while Talker stays free for you.
+- **Steer mid-flight without restarts:** Change your mind halfway through and type a quick correction. Talker translates it into a surgical course adjustment for the running Worker without tearing down the session or invalidating prompt cache.
+- **Phase compaction that never cheats:** At natural milestones, the Worker compresses sprawling tool trails into crisp summaries anchored to real observed checks. Open work can never quietly mark itself finished without proof.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/flow-talker-worker-en-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/flow-talker-worker-en-light.svg">
+    <img src="docs/assets/readme/flow-talker-worker-en-dark.svg" alt="Talker and Worker parallel flow" width="840">
+  </picture>
+</p>
+
+---
+
+## Twin
+
+<img src="docs/assets/readme/twin-furious.png" align="right" width="175" alt="Twin furious 3D portrait">
+
+**Tired of telling every fresh session `"don't add abstractions I didn't ask for"`, `"one screen, no wizards"`, and `"run real tests first"`?** Twin stops making you repeat yourself. It imports your real engineering habits and sharp reactions across **10 AI coding tools** on your machine: Claude Code, Codex, Cursor, OpenCode, Oh-My-Pi, Gemini CLI, Kilo Code, DeepSeek CLI, Command Code, and Flecten itself.
+
+Flecten scans up to **50,000 deduplicated messages** locally first, then learns up to **200 living rules** backed by verbatim quotes and an emotional intensity level (`like`, `delight`, or pure unfiltered `anger`). You inspect every rule, tweak how blunt it sounds, or turn Twin on per project. When active, Twin sits quietly behind the scenes as a live non-blocking watchdog. If the agent drifts from your standards mid-task or delivers lazy shortcuts, Twin does not drop a polite gray note in the logs: it **barges straight into the thread in your own voice** inside a pulsing 3D furry bubble and forces a clean fix.
+
+<br clear="all">
+
+<p align="center">
+  <img src="docs/assets/readme/twin-quote-en.png" alt="Example Twin barge-in quote" width="680">
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/assets/twin-bargein.png" alt="Live Twin barge-in inside an active task thread" width="860">
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/assets/twin.png" alt="Twin control screen with imported sources and 3D character" width="860">
+</p>
+
+<br>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/strip-search-en-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/strip-search-en-light.svg">
+    <img src="docs/assets/readme/strip-search-en-dark.svg" alt="Sniper search and speed" width="840">
+  </picture>
+</p>
+
+## Sniper Search and Speed
+
+Ordinary agents waste the first five turns poking blindly through tests, changelogs, and lookalike filenames before they ever touch the real function. Flecten treats search and context like latency-critical systems code so the agent lands on the right block on turn one and keeps prompt caches warm.
+
+- **Splits compound names into real meaning:** Ask for anything across mixed casing, underscores, hyphens, or abbreviations. Search breaks identifiers into semantic pieces and still handles exact symbols, multi-word code questions, and fast literal grep automatically.
+- **Lifts real definitions above noisy matches:** Declarations (functions, classes, hooks, types) float straight to the top while test suites, fixtures, build artifacts, lockfiles, and old docs stay pushed down.
+- **Shows top function bodies right inside search:** For the top three matches, Flecten expands the surrounding function right there in the search output. Most of the time the agent skips a follow-up file read completely and edits on turn one (`25-40 ms` search, zero extra round trips).
+- **Function-aware reads and shared read memory:** Opening a file snaps cleanly to full function boundaries instead of slicing halfway through logic. Across parallel subagents and background workers, a shared file-state ledger returns crisp compact notices (`304 unchanged` when untouched, or only what changed since last read) instead of burning tokens re-reading identical code.
+- **Clean terminal output and hot prompt cache:** Verbose spinners, ANSI garbage, and repetitive progress bars get trimmed before reaching the model, while dynamic state changes sit behind an append-only boundary so `~90%` of every prompt stays cache-hot.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/flow-search-en-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/flow-search-en-light.svg">
+    <img src="docs/assets/readme/flow-search-en-dark.svg" alt="AST and BM25 search vs ordinary grep" width="840">
+  </picture>
+</p>
+
+### What this buys you on real runs
+
+| Metric | Before (Typical Harness) | After (Flecten) | Gain |
+| :--- | :--- | :--- | :--- |
+| **Fresh uncached tokens** | Repeated file dumps & cold prefixes | Shared reads + append-only cache boundary | **`3.52x` fewer tokens** |
+| **Multi-file editing speed** | One file per turn & sequential tool waits | Parallel tool batches + inline search hits | **Up to `4.33x` faster** *(real run · v0.1.5)* |
+| **Code lookup time** | 4-6 exploratory turns across tests & docs | Structural AST + BM25 ranking + top-3 bodies | **`25-40 ms` · turn-1 hit** |
+| **Prompt cache hit rate** | Dynamic inserts break prefix every turn | Stable system + dictionary + dynamic boundary | **`~90%` cached input** *(In theory / benchmarked)* |
+| **Interactive report weight** | Bloated multi-turn status walls | Compact semantic tags hydrated in sandbox | **`-65%` summary tokens** |
+
+<br>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/strip-workspace-en-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/strip-workspace-en-light.svg">
+    <img src="docs/assets/readme/strip-workspace-en-dark.svg" alt="Daily workflow tools" width="840">
+  </picture>
+</p>
+
+## Built for Daily Flow
+
+### Any provider connected in 10 seconds
+
+Zero hand-editing fragile config files. Pick a service from the live built-in catalog of dozens of providers with automatic model capabilities and pricing, connect local servers (Ollama, LM Studio, vLLM, LocalAI) detected automatically on your machine, or paste any custom endpoint. Sitting behind a restricted corporate gateway that blocks model-list discovery? Flip off automatic discovery and add the model in two clicks.
+
+<p align="center">
+  <img src="docs/assets/providers.png" alt="Add provider dialog with live catalog" width="840">
+</p>
+
+---
+
+### Message branching + File and command rollback
+
+<img src="docs/assets/readme/twin-pleading.png" align="right" width="125" alt="Twin pleading character">
+
+**Regret an instruction or want to compare two architectural paths side by side?** Edit any past user message just like classic ChatGPT and fork a clean alternate continuation. Switch freely with `< 1 / 2 >` without losing the earlier run or your unsent draft in the input box.
+
+And when a command goes sideways, Flecten does not shrug because shell side effects live outside a Git commit. Shadow snapshots track **both file edits AND shell commands** independently of Git: run `/undo` or `/redo` to cleanly roll back file writes alongside what commands changed, backed by a warm snapshot cache so switching directions feels instant.
+
+<br clear="all">
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/flow-timemachine-en-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/flow-timemachine-en-light.svg">
+    <img src="docs/assets/readme/flow-timemachine-en-dark.svg" alt="Message branching and file plus command undo" width="840">
+  </picture>
+</p>
+
+<br>
+
+<p align="center">
+  <img src="docs/assets/branching.png" alt="Switched dialogue version 2/2 in Flecten" width="800">
+</p>
+
+---
+
+### Full built-in IDE one click away
+
+No alt-tabbing back and forth just to tweak three lines or read a diff. Click **IDE** at the top center (or any link inside an interactive HTML answer) to open a crisp workspace with a fast file explorer, syntax editor, inline split diffs for every agent change, line review comments, live terminals, and the agent conversation docked neatly on the right.
+
+<p align="center">
+  <img src="docs/assets/ide.png" alt="Flecten built-in IDE with docked HTML agent summary" width="860">
+</p>
+
+<br>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/strip-deep-en-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/strip-deep-en-light.svg">
+    <img src="docs/assets/readme/strip-deep-en-dark.svg" alt="Under the hood" width="840">
+  </picture>
+</p>
+
+## Under the Hood
+
+### Hot-load modules that can even reshape the UI
+
+Need custom tools, lifecycle hooks, automated review passes, or even desktop automation (`Computer Use` with screenshot capture, mouse actions, and keyboard input)? Drop a module into Flecten, toggle it on at runtime with zero app restart, and keep your prompt cache intact. Modules can even install a **custom full UI surface** so teams or builders can skin and extend Flecten itself without maintaining a fork.
+
+---
+
+### Honest quote-verified Memory (zero fan-fiction)
+
+Most "AI memory" systems run a noisy background summarizer after every chat that slowly drifts into hallucinated rules and contradicts last week's preferences. Flecten takes the opposite engineering route:
+
+- **Zero background memory bots:** Only the primary agent records memory, strictly when you ask or express a durable preference. Nothing gets guessed from casual chatter.
+- **Byte-verified verbatim quotes:** Every stored fact must match a real quote you actually typed in this session or earlier. If a model cannot ground a memory in your own exact words, the store rejects it on the spot.
+- **Lifecycle superseding instead of rule rot:** Switching databases, testing frameworks, or formatting styles updates and cleanly replaces the conflicting entry rather than stacking contradicting rules forever.
+- **Secret-proof and transparent:** API keys, tokens, and credentials are caught and blocked before persistence. Every rule stays human-readable, searchable, and editable directly inside Settings whenever you want to trim or change it.
+
+---
+
+### Zero-latency slang and broken-layout Dictionary
+
+Every developer writes shorthand like `fix auth flow`, `make it pop`, or forgets to switch keyboard layouts and sends `ghbdtn` or `rfr ltkf?`. Flecten ships with a curated **114-term built-in engineering dictionary** spanning English, Russian, and Ukrainian slang plus instant broken keyboard-layout recovery (`EN <-> RU/UK`) in **0 ms** before any token hits the API. Your team can add project acronyms and internal jargon right alongside it so models understand you verbatim on the first try without burning extra explanation turns.
+
+---
+
+## Also Built In
+
+| Feature | What it gives you day to day |
+| :--- | :--- |
+| **Voice input (`Ctrl+Shift+V`)** | Dictate tasks locally with Whisper or Groq, auto-cleaning filler words before sending ([Voice docs](docs/VOICE.md)). |
+| **Seamless live translation** | Chat naturally in your native language while heavy code reasoning runs in English behind the scenes with zero quality tax. |
+| **Parallel subagents** | Fan out isolated exploration, implementation, and review workers simultaneously with per-agent tool rules and clean reports. |
+| **OS sandbox** | Wrap shell execution at the operating-system boundary (`bubblewrap` / `Seatbelt` / Windows restrictions) with explicit writable roots. |
+| **7 native UI languages** | Full desktop localization in English, Russian, Ukrainian, Spanish, Portuguese (BR), Japanese, and Simplified Chinese. |
+| **Signed delta auto-updates** | Cosign-verified release installers and deltas (`stable`, `beta`, `alpha`) straight inside the desktop shell. |
+
+---
+
+## Self-Healing Error Handling
+
+Providers stall, drop streams mid-JSON, rotate rate limits, and hit output ceilings. Flecten absorbs those bumps quietly in the background:
+
+- **Automatic stream recovery:** Detects empty completions, cut-off arguments, and reasoning-only drops, retrying cleanly with backoff instead of bricking your task halfway through.
+- **Adaptive failover and cooldowns:** Steps through fallback models on outages or rate limits, quarantining unhealthy endpoints automatically while resetting budget trackers only for healthy turns.
+- **Self-repairing edits:** Fuzzy line-matching fixes minor whitespace or indentation drift automatically instead of bouncing every small patch back as a failure.
+- **Protected context window:** Oversized files, binary dumps, and giant tool responses are clamped cleanly at every boundary so one runaway log never overflows your context.
+
+---
+
+## Quick Start
+
+### Option 1: Install the desktop app (recommended)
+
+Download the installer for your OS from [GitHub Releases](https://github.com/AnnenkovLabs/flecten/releases):
+- **Windows:** `.exe` installer
+- **Linux:** `.AppImage` or `.deb`
+- **macOS:** `.dmg`
+
+### Option 2: Run or build from source
+
+Requires **[Bun](https://bun.sh) 1.4.4+**:
+
+```bash
+git clone https://github.com/AnnenkovLabs/flecten.git
+cd flecten
+bun install
+bun run app:dev
+```
+
+<details>
+<summary>Upgrading from Liquid Harness?</summary>
+
+Existing `~/.liquidharness`, `.liquidharness/`, and `liquid.config.json` project data is automatically recognized and migrated safely into `.flecten/` and `flecten.config.json` on first launch.
+
+</details>
+
+---
+
+## Documentation
+
+| Guide | Topic |
+| :--- | :--- |
+| [Twin](docs/TWIN.md) | 3D taste clone, 10-tool history import, background watch & barge-in |
+| [Talker and Worker](docs/TALKER-WORKER.md) | Dual-agent split, live steering, phase acceptance |
+| [Memory](docs/MEMORY.md) | Quote-verified durable memory & secret protection |
+| [Dictionary](docs/DICTIONARY.md) | Zero-latency slang, glossary & keyboard-layout repair |
+| [Modules](docs/MODULES.md) | Hot-load plugins, custom tools & UI replacement |
+| [Computer Use](docs/COMPUTER-USE.md) | Screen, mouse & keyboard automation module |
+| [Voice](docs/VOICE.md) | Local Whisper & Groq push-to-talk dictation |
+| [Provider Protection](docs/PROVIDER-PROTECTION.md) | Adaptive safety & endpoint cooldown rules |
+| [Benchmarks](docs/BENCHMARK.md) | Real comparative runs & latency measurements |
+| [Architecture](docs/ARCHITECTURE.md) | System boundaries, layers & security model |
+
+<div align="center">
+
+<br>
+
+<img src="docs/assets/readme/twin-ready.png" width="54" alt="Twin">
+
+Licensed under **[AGPL-3.0](LICENSE)** · Made by [AnnenkovLabs](https://github.com/AnnenkovLabs/flecten) · [Changelog](CHANGELOG.md)
+
+</div>
