@@ -64,13 +64,13 @@
     <div class="dictionary-controls-card">
       <div class="dictionary-toolbar">
         <nav class="dictionary-tabs" aria-label={t("Dictionary source")}>
-          <button class="dictionary-tab" class:current={dictionary.scope === "public"} aria-pressed={dictionary.scope === "public"} type="button" onclick={() => { dictionary.scope = "public"; dictionary.deleting = null; }}>
+          <button class="dictionary-tab" class:current={dictionary.scope === "public"} aria-pressed={dictionary.scope === "public"} aria-label={t("Public dictionary")} type="button" onclick={() => { dictionary.scope = "public"; dictionary.deleting = null; }}>
             <span>{t("Public dictionary")}</span>
-            {#if dictionary.snapshot}<span class="dictionary-tab-count">{publicCount}</span>{/if}
+            {#if dictionary.snapshot}<span class="dictionary-tab-count" aria-hidden="true">{publicCount}</span>{/if}
           </button>
-          <button class="dictionary-tab" class:current={dictionary.scope === "local"} aria-pressed={dictionary.scope === "local"} type="button" onclick={() => { dictionary.scope = "local"; dictionary.deleting = null; }}>
+          <button class="dictionary-tab" class:current={dictionary.scope === "local"} aria-pressed={dictionary.scope === "local"} aria-label={t("Local dictionary")} type="button" onclick={() => { dictionary.scope = "local"; dictionary.deleting = null; }}>
             <span>{t("Local dictionary")}</span>
-            {#if dictionary.snapshot}<span class="dictionary-tab-count">{localCount}</span>{/if}
+            {#if dictionary.snapshot}<span class="dictionary-tab-count" aria-hidden="true">{localCount}</span>{/if}
           </button>
         </nav>
 

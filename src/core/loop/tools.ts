@@ -358,7 +358,7 @@ export async function executeCalls(
       return task();
     };
     let result = needsLock
-      ? await mutex.run(runTask, options.stopSignal).catch((err) => {
+      ? await mutex.run(runTask).catch((err: unknown) => {
           if (options.stopSignal?.aborted) return stopped();
           throw err;
         })

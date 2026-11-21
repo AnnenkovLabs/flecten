@@ -466,8 +466,6 @@ export function createSession(options: SessionOptions): SessionHandle {
       }
       if (command.type !== "run") {
         const result = await dispatch(runtime, command);
-        if (command.type === "stop" && (result as { stopped?: boolean })?.stopped === false)
-          return result;
         if (
           command.type === "queue.add" &&
           (command.mode === "steer" || !runtime.busy()) &&
@@ -475,6 +473,7 @@ export function createSession(options: SessionOptions): SessionHandle {
           currentSessionId
         )
           startQueuedRun(currentSessionId, command.mode === "steer" ? "steer" : "any");
+        // A no-op stop still republishes: the caller needs the current state to render its result.
         statePublisher.publish(runtime);
         return result;
       }
