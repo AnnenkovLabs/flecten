@@ -33,7 +33,7 @@ Built for real engineering flow: interactive UI inside replies, an opinionated 3
 | | | |
 | :--- | :--- | :--- |
 | **[Interactive HTML Answers](#interactive-html-answers)**<br>Clickable tables, tabs, filters, and two-way actions right inside chat replies. | **[Talker and Worker](#talker-and-worker)**<br>Chat stays sub-second and wide open while code edits and checks run in parallel. | **[Twin (3D Digital Clone)](#twin)**<br>Learns your standards from 10 AI tools and barges in before weak code ships. |
-| **[Sniper Search and Speed](#sniper-search-and-speed)**<br>AST + BM25 search, function-aware reads, shared read memory, ~90% cache reuse. | **[Built for Daily Flow](#built-for-daily-flow)**<br>10-second provider setup, ChatGPT-style history branches, file + shell undo, built-in IDE. | **[Under the Hood](#under-the-hood)**<br>Hot-load modules, quote-verified memory with zero fan-fiction, 114-term slang dictionary. |
+| **[Sniper Search and Speed](#sniper-search-and-speed)**<br>AST + BM25 search, function-aware reads, shared read memory, ~90% cache reuse. | **[Built for Daily Flow](#built-for-daily-flow)**<br>10-second providers, ChatGPT-style branches, rollback for **even shell commands**, built-in IDE. | **[Under the Hood](#under-the-hood)**<br>Hot-load modules, quote-verified memory with zero fan-fiction, 114-term slang dictionary. |
 
 <br>
 
@@ -92,9 +92,9 @@ Flecten splits the job in two like an engineering lead and a focused builder:
 
 <img src="docs/assets/readme/twin-furious.png" align="right" width="175" alt="Twin furious 3D portrait">
 
-**Tired of telling every fresh session `"don't add abstractions I didn't ask for"`, `"one screen, no wizards"`, and `"run real tests first"`?** Twin stops making you repeat yourself. It imports your real engineering habits and sharp reactions across **10 AI coding tools** on your machine: Claude Code, Codex, Cursor, OpenCode, Oh-My-Pi, Gemini CLI, Kilo Code, DeepSeek CLI, Command Code, and Flecten itself.
+**Memory handles objective project facts. Twin is about your subjective taste, gut reactions, and the exact moment you lose your patience.** You cannot capture "this layout feels cramped and AI-slop", "stop lecturing me with disclaimers", or "don't turn a two-line tweak into an architecture museum" in a dry spec rule. Twin learns those instincts across **10 AI coding tools** on your machine: Claude Code, Codex, Cursor, OpenCode, Oh-My-Pi, Gemini CLI, Kilo Code, DeepSeek CLI, Command Code, and Flecten itself.
 
-Flecten scans up to **50,000 deduplicated messages** locally first, then learns up to **200 living rules** backed by verbatim quotes and an emotional intensity level (`like`, `delight`, or pure unfiltered `anger`). You inspect every rule, tweak how blunt it sounds, or turn Twin on per project. When active, Twin sits quietly behind the scenes as a live non-blocking watchdog. If the agent drifts from your standards mid-task or delivers lazy shortcuts, Twin does not drop a polite gray note in the logs: it **barges straight into the thread in your own voice** inside a pulsing 3D furry bubble and forces a clean fix.
+Flecten scans up to **50,000 deduplicated messages** locally first and distills up to **200 living rules** paired with verbatim quotes and an emotional intensity level (`like`, `delight`, or unfiltered `anger`). You control what goes in and toggle Twin per project. While the agent works, Twin watches silently without blocking a step. And when its instincts trip, it **barges straight into the chat in your own voice** inside a pulsing 3D furry bubble. Best part: **the model has zero clue Twin wrote it.** As far as the agent knows, the real user just slammed the brakes on it directly, so it drops the autopilot immediately and fixes it right.
 
 <br clear="all">
 
@@ -174,13 +174,23 @@ Zero hand-editing fragile config files. Pick a service from the live built-in ca
 
 ---
 
-### Message branching + File and command rollback
+### Message branching like classic ChatGPT
+
+**Want to take back an instruction or compare two directions side by side?** Edit any past user message just like classic ChatGPT and fork a clean alternate continuation. Switch freely between versions with `< 1 / 2 >` at any moment without losing earlier runs or even an unsent draft sitting in the input box.
+
+<p align="center">
+  <img src="docs/assets/branching.png" alt="Switched dialogue version 2/2 in Flecten" width="800">
+</p>
+
+---
+
+### Roll back files AND EVEN terminal commands
 
 <img src="docs/assets/readme/twin-pleading.png" align="right" width="125" alt="Twin pleading character">
 
-**Regret an instruction or want to compare two architectural paths side by side?** Edit any past user message just like classic ChatGPT and fork a clean alternate continuation. Switch freely with `< 1 / 2 >` without losing the earlier run or your unsent draft in the input box.
+**Most coding agents can only undo edits made through their own file tool. Once a terminal command installs packages, runs a generator, reformats twenty files, or moves folders around, you are on your own cleaning up the mess.** Flecten tracks workspace changes across **both file edits AND shell commands** completely independently of Git.
 
-And when a command goes sideways, Flecten does not shrug because shell side effects live outside a Git commit. Shadow snapshots track **both file edits AND shell commands** independently of Git: run `/undo` or `/redo` to cleanly roll back file writes alongside what commands changed, backed by a warm snapshot cache so switching directions feels instant.
+Shadow snapshots catch what commands actually changed on disk with zero Git commits or dirty-branch juggling: run `/undo` or `/redo` and rewind the whole step cleanly, backed by a warm snapshot cache so hopping back in time feels instant.
 
 <br clear="all">
 
@@ -190,12 +200,6 @@ And when a command goes sideways, Flecten does not shrug because shell side effe
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme/flow-timemachine-en-light.svg">
     <img src="docs/assets/readme/flow-timemachine-en-dark.svg" alt="Message branching and file plus command undo" width="840">
   </picture>
-</p>
-
-<br>
-
-<p align="center">
-  <img src="docs/assets/branching.png" alt="Switched dialogue version 2/2 in Flecten" width="800">
 </p>
 
 ---
@@ -243,16 +247,18 @@ Every developer writes shorthand like `fix auth flow`, `make it pop`, or forgets
 
 ---
 
-## Also Built In
+## Everything you already love in other harnesses (yes, we have that too)
 
-| Feature | What it gives you day to day |
-| :--- | :--- |
-| **Voice input (`Ctrl+Shift+V`)** | Dictate tasks locally with Whisper or Groq, auto-cleaning filler words before sending ([Voice docs](docs/VOICE.md)). |
-| **Seamless live translation** | Chat naturally in your native language while heavy code reasoning runs in English behind the scenes with zero quality tax. |
-| **Parallel subagents** | Fan out isolated exploration, implementation, and review workers simultaneously with per-agent tool rules and clean reports. |
-| **OS sandbox** | Wrap shell execution at the operating-system boundary (`bubblewrap` / `Seatbelt` / Windows restrictions) with explicit writable roots. |
-| **7 native UI languages** | Full desktop localization in English, Russian, Ukrainian, Spanish, Portuguese (BR), Japanese, and Simplified Chinese. |
-| **Signed delta auto-updates** | Cosign-verified release installers and deltas (`stable`, `beta`, `alpha`) straight inside the desktop shell. |
+No sales essays for table stakes. Just the checklist:
+
+| | | | |
+| :--- | :--- | :--- | :--- |
+| **MCP** (`stdio`, `HTTP`, `OAuth`) | **Skills** | **Lifecycle Hooks** | **Parallel Subagents** |
+| **Access Modes & Permission Rules** | **OS Sandbox** (`bwrap` / `Seatbelt` / Win) | **LSP Symbols & Diagnostics** | **Git Diffs & PR Context** |
+| **Image & Vision Input** | **Voice Input** (Whisper / Groq) | **Live Background Translation** | **Computer Use** |
+| **Background Jobs & Terminal** | **Web Search & Fetch** | **Custom Slash Commands** | **Inline `@file` Mentions** |
+| **Reasoning Effort Levels** | **Token & USD Cost Budgets** | **Session Search & Export** | **Message Queue & Steering** |
+| **Multi-Project Switcher** | **Module Marketplace** | **7 UI Languages** | **Signed Delta Auto-Updates** |
 
 ---
 
