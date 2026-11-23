@@ -3,13 +3,13 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/hero-ru-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="../assets/readme/hero-ru-light.svg">
-  <img src="../assets/readme/hero-ru-dark.svg" alt="Flecten" width="840">
+  <img src="../assets/readme/hero-ru-dark.svg" alt="Flecten: Десктопный ИИ-харнесс для работы с кодом на скорости твоей мысли. Векторный баннер с логотипом-каплей и поддержкой тёмной и светлой темы." width="840">
 </picture>
 
 <p>
-  <a href="../../CHANGELOG.md"><img src="https://img.shields.io/badge/версия-0.1.7%20Alpha-b7a1e8?style=flat-square" alt="0.1.7 Alpha"></a>
-  <a href="../../LICENSE"><img src="https://img.shields.io/badge/лицензия-AGPL--3.0-7c65b8?style=flat-square" alt="AGPL-3.0"></a>
-  <img src="https://img.shields.io/badge/платформы-Win%20%C2%B7%20Linux%20%C2%B7%20macOS-242428?style=flat-square" alt="Windows, Linux, macOS">
+  <a href="../../CHANGELOG.md"><img src="https://img.shields.io/badge/версия-0.1.7%20Alpha-b7a1e8?style=flat-square" alt="Версия: 0.1.7 Alpha"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/лицензия-AGPL--3.0-7c65b8?style=flat-square" alt="Лицензия: AGPL-3.0"></a>
+  <img src="https://img.shields.io/badge/платформы-Win%20%C2%B7%20Linux%20%C2%B7%20macOS-242428?style=flat-square" alt="Платформы: Windows, Linux, macOS">
   <a href="../../README.md"><img src="https://img.shields.io/badge/lang-English-a6c19f?style=flat-square" alt="Read in English"></a>
 </p>
 
@@ -18,17 +18,31 @@
 
 <br>
 
-<img src="../assets/desktop.png" alt="Интерфейс Flecten с проверкой Twin и живым HTML-отчётом" width="880">
+<img src="../assets/desktop.png" alt="Скриншот рабочего окна Flecten: сверху переключатель Agent/IDE, слева панель с разделами Twin, Словарь, Модули и проектом atlas, открытая задача аудита оплаты, строка статуса с 3D-персонажем Twin ('Twin accepted the result: Clean, direct, no fluff.', Corrections 0/4) и живой HTML-отчёт внутри ответа с 4 карточками метрик (2 Blockers, 2 files Scope, -62% Steps, 12/12 Tests), сортируемой таблицей ссылок на Cart.tsx и api.ts:11 и кликабельными кнопками действий (Apply both, GuestFlow only, Open in IDE)." width="880">
 
 <br><br>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/glance-ru-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="../assets/readme/glance-ru-light.svg">
-  <img src="../assets/readme/glance-ru-dark.svg" alt="Flecten за 5 секунд" width="840">
+  <img src="../assets/readme/glance-ru-dark.svg" alt="Инфографика Flecten за 5 секунд: 5 ключевых цифр (быстрее 1 с ответ Talker, 25-40 мс поиск AST + BM25, в 3.52x меньше трат на токены, 10 сред в памяти Twin, 0 выдуманных фактов) и 4 блока возможностей (Диалог и экран, Скорость и поиск, Вкус и память, Среда и защита)." width="840">
 </picture>
 
 </div>
+
+<details>
+<summary>Текстовая версия шапки, главного скриншота и инфографики (для скринридеров и ИИ-агентов)</summary>
+
+- **Баннер:** `Flecten` - *Десктопный ИИ-харнесс для работы с кодом на скорости твоей мысли.*
+- **Главный скриншот (`docs/assets/desktop.png`):** Тёмный десктопный интерфейс с переключателем `Agent | IDE` в шапке, боковым меню (`New task`, `Search tasks`, `Twin`, `Dictionary`, `Modules`, проект `atlas`) и вкладками задачи (`Conversation`, `Changes`, `History`, `Terminal`, `Worker activity 2`, `Side by side`). Под заголовком пушистый 3D-персонаж Twin подтверждает результат (`Twin accepted the result: Clean, direct, no fluff.`, `Corrections: 0 / 4`). Внутри ответа встроен интерактивный HTML-отчёт: 4 плитки метрик (`2 Blockers`, `2 files Scope`, `-62% Steps`, `12 / 12 Tests`), сортируемая таблица (`Cart.tsx` / `Signup gate` / `High`, `api.ts:11` / `Retry key` / `High`) и кнопки действий (`Apply both`, `GuestFlow only`, `Open in IDE`), клики по которым уходят напрямую в модель.
+- **Инфографика (`docs/assets/readme/glance-ru-dark.svg`):**
+  - `< 1 с` ответ Talker | `25-40 мс` поиск AST + BM25 | `3.52x` меньше трат на токены | `10 сред` в памяти Twin | `0` выдуманных фактов
+  - **Диалог и экран:** Живые HTML-ответы, Быстрый Talker, Ветки как в GPT, Встроенный IDE
+  - **Скорость и поиск:** Фоновый Worker, Поиск AST + BM25, Умное чтение, Чистый терминал
+  - **Вкус и память:** 3D-клон Twin (10 сред), Память с цитатами, Словарь сленга на 114 терминов
+  - **Среда и защита:** Провайдеры за 10 с, Откат файлов и команд, Модули, Автолечение сбоев
+
+</details>
 
 | | | |
 | :--- | :--- | :--- |
@@ -41,7 +55,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/strip-html-ru-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="../assets/readme/strip-html-ru-light.svg">
-    <img src="../assets/readme/strip-html-ru-dark.svg" alt="Живые HTML-ответы" width="840">
+    <img src="../assets/readme/strip-html-ru-dark.svg" alt="Баннер раздела: Живые HTML-ответы - нажимаешь в отчёте, агент действует" width="840">
   </picture>
 </p>
 
@@ -61,9 +75,22 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/flow-html-ru-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="../assets/readme/flow-html-ru-light.svg">
-    <img src="../assets/readme/flow-html-ru-dark.svg" alt="Двусторонняя петля живого HTML-отчёта" width="840">
+    <img src="../assets/readme/flow-html-ru-dark.svg" alt="Схема двусторонней петли живого HTML-отчёта из 4 шагов: 1. ОТРИСОВКА (HTML/CSS/JS отчёт с таблицами, вкладками, графиками и ссылками прямо в код); 2. ТВОЙ КЛИК (только живые нажатия, кнопки и переключатели, например 'Применить обе правки', подделку не пропустит); 3. 4 РЕЖИМА ДОСТАВКИ (со следующим текстом, по кнопке, после первых кликов, по таймеру); 4. ХОД МОДЕЛИ (получает выбор и сразу применяет решение, проверено и готово)." width="840">
   </picture>
 </p>
+
+<details>
+<summary>Текстовая версия схемы: Двусторонняя петля живого HTML-отчёта</summary>
+
+```text
+[1 · ОТРИСОВКА]             [2 · ТВОЙ КЛИК]              [3 · 4 РЕЖИМА ДОСТАВКИ]      [4 · ХОД МОДЕЛИ]
+Живой HTML-отчёт      --->  Только живые нажатия   --->  - Со следующим текстом --->  Получает твой выбор
+Таблицы, вкладки,           Кнопки и переключатели       - По кнопке                  И сразу применяет
+графики, ссылки в код       (подделку не пропустит)      - После первых кликов        нужное решение
+HTML · CSS · JS             [Применить обе правки]       - По таймеру                 Проверено и готово
+```
+
+</details>
 
 ---
 
@@ -82,15 +109,29 @@ Flecten разделяет разговор и чёрную работу на д
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/flow-talker-worker-ru-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="../assets/readme/flow-talker-worker-ru-light.svg">
-    <img src="../assets/readme/flow-talker-worker-ru-dark.svg" alt="Параллельная работа Talker и Worker" width="840">
+    <img src="../assets/readme/flow-talker-worker-ru-dark.svg" alt="Двухпоточная схема Talker и Worker: верхняя дорожка ТЫ И TALKER (быстрее 1 с, чистый чат: просьба своим языком, плотный бриф + цитата, правка курса на лету, живой HTML-отчёт); нижняя дорожка WORKER В ФОНЕ (параллельно, не вешает чат: читает и правит залпом, шлёт живые карточки в чат, подруливает без обрыва, сжимает этап + проверки)." width="840">
   </picture>
 </p>
+
+<details>
+<summary>Текстовая версия схемы: Параллельная работа Talker и Worker</summary>
+
+```text
+ДОРОЖКА 1 · ТЫ И TALKER (< 1 с · чистый чат)
+  Просьба своим языком  --->  Плотный бриф + цитата  --->  Правка курса на лету  --->  Живой HTML-отчёт
+                                     |                              |                         ^
+                                     v                              v                         |
+ДОРОЖКА 2 · WORKER В ФОНЕ (параллельно · не вешает чат)
+  Читает и правит залпом --->  Живые карточки в чат   --->  Подруливает без обрыва --->  Сжимает этап + проверки
+```
+
+</details>
 
 ---
 
 ## Twin
 
-<img src="../assets/readme/twin-furious.png" align="right" width="175" alt="Разъярённый 3D-портрет Twin">
+<img src="../assets/readme/twin-furious.png" align="right" width="175" alt="3D-рендер разъярённого Twin: маленький круглый сиреневый пушистый маскот со сдвинутыми бровями и сердитой гримасой">
 
 **Сухие факты про проект хранит память. А Twin: это твои психи, вкусовщина, субъективные решения и то, от чего у тебя лично закипает кровь.** Ты не запишешь в сухой конфиг «опять выглядит как бездушная поделка нейросети», «хватит оправданий, просто поправь» или «зачем городить архитектуру там, где хватит пары строк». Twin вытаскивает именно этот характер, живую манеру речи и вкусовые триггеры из истории **10 ИИ-сред** на твоём компьютере: Claude Code, Codex, Cursor, OpenCode, Oh-My-Pi, Gemini CLI, Kilo Code, DeepSeek CLI, Command Code и самого Flecten.
 
@@ -99,20 +140,35 @@ Flecten разделяет разговор и чёрную работу на д
 <br clear="all">
 
 <p align="center">
-  <img src="../assets/readme/twin-quote-ru.png" alt="Пример живого вмешательства Twin в пушистой 3D-рамке" width="680">
+  <img src="../assets/readme/twin-quote-ru.png" alt="Пушистый сиреневый 3D-пузырь сообщения с подписью 'Twin · агент уверен, что это написал ты' и цитатой: 'Да ну нет, ты на это вообще смотрел?! Выглядит как дешёвая нейросетевая поделка: кнопки слиплись, воздух пропал, а в тексте опять вода. Сноси этот цирк и сделай чисто, чтобы глазами было приятно!'" width="680">
 </p>
 
 <br>
 
 <p align="center">
-  <img src="../assets/twin-bargein-ru.png" alt="Twin перехватывает задачу прямо в диалоге Flecten" width="860">
+  <img src="../assets/twin-bargein-ru.png" alt="Скриншот живого диалога Flecten по задаче 'Переделай оплату в один гостевой экран - без окон регистрации и паролей.': после шага 1.1 с (6 действий, 1 файл +0 -1) в пушистой сиреневой 3D-рамке врывается Ваш Twin с требованием вырезать модалку регистрации и поле пароля из GuestFlow.tsx и прогнать тесты; сверху статус подтверждает итоговую приёмку Twin ('Вот теперь чисто. Один экран, без лишних окон.')." width="860">
 </p>
 
 <br>
 
 <p align="center">
-  <img src="../assets/twin.png" alt="Экран настройки Twin со сканером источников и 3D-персонажем" width="860">
+  <img src="../assets/twin.png" alt="Скриншот экрана настройки Twin: тумблер 'Twin is on', вкладки Sources и Your character, слева карточка улыбающегося пушистого 3D-персонажа с тегами эмоций Anger, Like, Delight, справа список найденных локальных ИИ-сред (DeepSeek Harness 12, OpenCode, Hermes Agent, Command Code 22, Flecten 2), выбор модели обучения (Claude Opus 4.7), уровня размышлений и кнопки Train Twin и Scan sources." width="860">
 </p>
+
+<details>
+<summary>Текстовая расшифровка скриншотов Twin и живого перехвата</summary>
+
+- **Цитата в пушистом 3D-пузыре (`docs/assets/readme/twin-quote-ru.png`):**
+  > **Twin · агент уверен, что это написал ты:**
+  > «Да ну нет, ты на это вообще смотрел?! Выглядит как дешёвая нейросетевая поделка: кнопки слиплись, воздух пропал, а в тексте опять вода. Сноси этот цирк и сделай чисто, чтобы глазами было приятно!»
+- **Живой перехват в задаче (`docs/assets/twin-bargein-ru.png`):**
+  - **Задача:** `Переделай оплату в один гостевой экран - без окон регистрации и паролей.`
+  - **Шаг Worker:** `Работал 1.1 с · 6 действий · 1 файл +0 -1`
+  - **Ваш Twin (в сиреневой пушистой 3D-рамке):** «Стоп, ты сейчас серьёзно?! Я же прямым текстом просил ОДИН экран гостевой оплаты, ноль попапов и никаких паролей - а ты всё равно впихнул окно регистрации прямо перед кнопкой «Оплатить»! Вырезай эту модалку немедленно и оставь только почту, карту и оплату! Удали модалку регистрации и поле пароля из GuestFlow.tsx, оставь один экран оплаты и прогони тесты.»
+  - **Итоговый статус:** `Twin принял результат: Вот теперь чисто. Один экран, без лишних окон.` (`Доработки: 0 / 4`)
+- **Экран управления Twin (`docs/assets/twin.png`):** Карточка улыбающегося 3D-персонажа (`Your standards, applied automatically`, теги `Anger`, `Like`, `Delight`), переключатель Twin для проекта, автосканер локальных источников (`DeepSeek Harness`, `OpenCode`, `Hermes Agent`, `Command Code`, `Flecten`), выбор модели и глубины размышлений, кнопки `Train Twin` и `Scan sources`.
+
+</details>
 
 <br>
 
@@ -120,7 +176,7 @@ Flecten разделяет разговор и чёрную работу на д
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/strip-search-ru-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="../assets/readme/strip-search-ru-light.svg">
-    <img src="../assets/readme/strip-search-ru-dark.svg" alt="Снайперский поиск и ускорение" width="840">
+    <img src="../assets/readme/strip-search-ru-dark.svg" alt="Баннер раздела: Снайперский поиск и ускорение - попадание в нужную функцию с 1 хода" width="840">
   </picture>
 </p>
 
@@ -138,9 +194,23 @@ Flecten разделяет разговор и чёрную работу на д
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/flow-search-ru-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="../assets/readme/flow-search-ru-light.svg">
-    <img src="../assets/readme/flow-search-ru-dark.svg" alt="Сравнение обычного поиска и AST + BM25 во Flecten" width="840">
+    <img src="../assets/readme/flow-search-ru-dark.svg" alt="Сравнительная схема поиска: ОБЫЧНЫЙ ПОИСК даёт 184 сырые строки по tests/checkout.spec.ts, tests/e2e/flow.spec.ts, docs/CHANGELOG.md и fixtures/cart.json (4-6 холостых ходов), а FLECTEN AST + BM25 за 25-40 мс разбирает составные имена по смыслу, поднимает определения в коде выше тестов и доков и сразу разворачивает нужную функцию целиком для правки с 1 хода." width="840">
   </picture>
 </p>
+
+<details>
+<summary>Текстовая версия схемы: Обычный поиск против Flecten AST + BM25</summary>
+
+```text
+ОБЫЧНЫЙ ПОИСК (184 сырые строки)                FLECTEN AST + BM25 (25-40 мс)
+  tests/checkout.spec.ts  (совпадение в тесте)    1. Понимает составные имена по частям смысла
+  tests/e2e/flow.spec.ts  (заглушка)              2. Ставит определения в коде выше тестов и доков
+  docs/CHANGELOG.md       (упоминание в доках)    3. Сразу разворачивает нужную функцию целиком
+  fixtures/cart.json      (тестовый файл)
+-> 4-6 холостых ходов по тестам и докам         -> Нужное место на 1-й строчке -> правка с 1 хода
+```
+
+</details>
 
 ### Что это даёт в цифрах
 
@@ -158,7 +228,7 @@ Flecten разделяет разговор и чёрную работу на д
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/strip-workspace-ru-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="../assets/readme/strip-workspace-ru-light.svg">
-    <img src="../assets/readme/strip-workspace-ru-dark.svg" alt="Повседневный поток работы" width="840">
+    <img src="../assets/readme/strip-workspace-ru-dark.svg" alt="Баннер раздела: Повседневный поток - провайдеры, ветки чата, встроенный IDE" width="840">
   </picture>
 </p>
 
@@ -169,7 +239,7 @@ Flecten разделяет разговор и чёрную работу на д
 Забудь про ручную возню с конфигами. Выбери нужный сервис из встроенного живого каталога (с уже подтянутыми моделями, ценами и возможностями), подключи локальные серверы (Ollama, LM Studio, vLLM, LocalAI), которые Flecten находит на машине сам, или вбей свой адрес. Если сидишь за строгим шлюзом без списка моделей, просто выключи автопроверку и добавь модель в два клика.
 
 <p align="center">
-  <img src="../assets/providers.png" alt="Окно быстрого добавления провайдера из каталога" width="840">
+  <img src="../assets/providers.png" alt="Скриншот окна Add provider во Flecten: вкладки From catalog и Custom server, живой поиск и каталог сервисов (302.AI на 127 моделей, Abacus на 108 моделей, AbliteratedLLM на 15 моделей, above.dev на 10 моделей, Adaption на 7 моделей) с адресами API, бейджами OpenAI Chat, подсказками переменных ключей и кнопками добавления в один клик." width="840">
 </p>
 
 ---
@@ -179,14 +249,14 @@ Flecten разделяет разговор и чёрную работу на д
 **Захотел откатить формулировку или сравнить два подхода к задаче бок о бок?** Отредактируй любое прошлое сообщение ровно так, как это работало в старом GPT, и отпочкуй альтернативную ветку диалога. Переключайся между версиями стрелками `< 1 / 2 >` в любой момент: старая ветка и даже недописанный черновик внизу никуда не пропадают.
 
 <p align="center">
-  <img src="../assets/branching.png" alt="Переключение ветки диалога 2/2 во Flecten" width="800">
+  <img src="../assets/branching.png" alt="Скриншот ветвления диалога во Flecten: задача 'Use Redis sessions for cart caching.', переключённая версия сообщения 2/2 ('Keep cart state stateless in signed cookies instead - no Redis dependency.') и ответ агента за 164 мс с переходом на подписанные куки и готовым /undo." width="800">
 </p>
 
 ---
 
 ### Откат файлов и ДАЖЕ команд терминала
 
-<img src="../assets/readme/twin-pleading.png" align="right" width="125" alt="Просящий 3D-персонаж Twin">
+<img src="../assets/readme/twin-pleading.png" align="right" width="125" alt="3D-рендер просящего Twin: круглый сиреневый пушистый персонаж с влажными глазами и одной слезинкой перед откатом неудачной команды">
 
 **Большинство харнессов умеют отменять только свои правки файлов. Стоит агенту запустить команду в терминале: поставить лишние пакеты, прогнать кодоген, переформатировать пол-репозитория или поудалять файлы - и дальше разгребаешь сам.** Во Flecten всё иначе: откатить можно **не только файлы, но и то, что натворили команды терминала**.
 
@@ -198,9 +268,21 @@ Flecten разделяет разговор и чёрную работу на д
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/flow-timemachine-ru-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="../assets/readme/flow-timemachine-ru-light.svg">
-    <img src="../assets/readme/flow-timemachine-ru-dark.svg" alt="Ветки сообщений и откат файлов и команд" width="840">
+    <img src="../assets/readme/flow-timemachine-ru-dark.svg" alt="Двухпанельная схема машины времени: слева ВЕТКИ ДИАЛОГА (как в старом GPT: в1 'Сессии в Redis' и в2 'Без Redis, на куках' с переключателем версий 2/2 и сохранённым черновиком); справа ОТКАТ ФАЙЛОВ И КОМАНД (без танцев с Git: Правка кода, Команда терминала, Патч файлов, где /undo откатывает и файлы, и эффекты команд через теневые слепки с горячим кэшем)." width="840">
   </picture>
 </p>
+
+<details>
+<summary>Текстовая версия схемы: Ветки диалога и откат файлов + команд</summary>
+
+```text
+ВЕТКИ ДИАЛОГА (как в старом GPT)                ОТКАТ ФАЙЛОВ И КОМАНД (без танцев с Git)
+  в1 · Сессии в Redis                             [Правка кода] -> [Команда терминала] -> [Патч файлов]
+  в2 · Без Redis, на куках  < 2 / 2 >             /undo откатывает и файлы, и эффекты команд
+  Переключайся свободно; черновик не пропадает    Теневые слепки с горячим кэшем
+```
+
+</details>
 
 ---
 
@@ -209,7 +291,7 @@ Flecten разделяет разговор и чёрную работу на д
 Не нужно постоянно скакать в соседний редактор ради трёх строк или просмотра диффа. Нажми **IDE** сверху по центру (или кликни на любую ссылку прямо в HTML-отчёте), и перед тобой дерево файлов, редактор с подсветкой, разбор изменений агента, комментарии прямо к строкам, живые терминалы и чат справа на одной удобной панели.
 
 <p align="center">
-  <img src="../assets/ide.png" alt="Встроенный IDE Flecten с живым HTML-отчётом справа" width="860">
+  <img src="../assets/ide.png" alt="Скриншот встроенного IDE Flecten: трёхпанельное окно с переключателем Agent/IDE сверху, деревом файлов слева (atlas/src/checkout/api.ts, GuestFlow.tsx), редактором TypeScript JSX с подсветкой синтаксиса и быстрым открытием Ctrl+P в центре (строка 17, колонка 10) и пристыкованной справа панелью агента с живым HTML-отчётом аудита и полем чата." width="860">
 </p>
 
 <br>
@@ -218,7 +300,7 @@ Flecten разделяет разговор и чёрную работу на д
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/strip-deep-ru-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="../assets/readme/strip-deep-ru-light.svg">
-    <img src="../assets/readme/strip-deep-ru-dark.svg" alt="Глубоко под капотом" width="840">
+    <img src="../assets/readme/strip-deep-ru-dark.svg" alt="Баннер раздела: Глубоко под капотом - модули, честная память, словарь сленга" width="840">
   </picture>
 </p>
 
@@ -321,7 +403,7 @@ bun run app:dev
 
 <br>
 
-<img src="../assets/readme/twin-ready.png" width="54" alt="Twin">
+<img src="../assets/readme/twin-ready.png" width="54" alt="3D-рендер улыбающегося Twin, готового к работе">
 
 Лицензия **[AGPL-3.0](../../LICENSE)** · Команда [AnnenkovLabs](https://github.com/AnnenkovLabs/flecten) · [История версий](../../CHANGELOG.md)
 

@@ -7,12 +7,22 @@ interface Measurements {
 }
 const measurements = new Map<string, Measurements>();
 
+function sameRange(a: ThreadRange, b: ThreadRange): boolean {
+  return (
+    a.start === b.start &&
+    a.end === b.end &&
+    Math.abs(a.before - b.before) < 0.5 &&
+    Math.abs(a.after - b.after) < 0.5
+  );
+}
+
 /** DOM ownership and measurements stay here; Thread owns follow/search/navigation intent. */
 export class ThreadViewport {
   readonly window = new ThreadWindow();
-  #revision = $state(0);
-  #top = $state(0);
-  #height = $state(600);
+  #range = $state<ThreadRange>({ start: 0, end: 0, before: 0, after: 0 });
+  #top = 0;
+  #height = 600;
+  #insetValue = 0;
   #task = "";
   #width = 0;
   #scroller: HTMLElement | undefined;
@@ -22,17 +32,12 @@ export class ThreadViewport {
   #rows = new Map<string, HTMLElement>();
   #frame = 0;
   #change = 0;
-  #adjusting = false;
   #follow = (): boolean => false;
   #onResize = (): void => {};
+  #onAdjust = (_scrollTop: number): void => {};
 
   get range(): ThreadRange {
-    void this.#revision;
-    return this.window.range(this.#top, this.#height);
-  }
-
-  get adjusting(): boolean {
-    return this.#adjusting;
+    return this.#range;
   }
 
   setRows(task: string, ids: readonly string[]): void {
@@ -43,12 +48,10 @@ export class ThreadViewport {
       this.#width = cached?.width ?? 0;
       this.window.setRows(ids, cached?.heights ?? new Map());
       this.#top = 0;
-      this.#revision += 1;
-      this.#adjusting = true;
+      this.#updateRange();
       this.#schedule();
     } else if (this.window.setRows(ids)) {
-      this.#revision += 1;
-      this.#adjusting = true;
+      this.#updateRange();
       this.#schedule();
     }
   }
@@ -58,6 +61,7 @@ export class ThreadViewport {
     content: HTMLElement,
     follows: () => boolean,
     onResize: () => void,
+    onAdjust: (scrollTop: number) => void,
     header?: HTMLElement,
   ): () => void {
     this.#scroller = scroller;
@@ -65,11 +69,13 @@ export class ThreadViewport {
     this.#header = header;
     this.#follow = follows;
     this.#onResize = onResize;
+    this.#onAdjust = onAdjust;
     this.#observer = new ResizeObserver(() => this.#schedule());
     this.#observer.observe(scroller);
     this.#observer.observe(content);
     if (header) this.#observer.observe(header);
     for (const element of this.#rows.values()) this.#observer.observe(element);
+    this.refreshInset();
     this.scroll();
     this.#schedule();
     return () => {
@@ -77,8 +83,8 @@ export class ThreadViewport {
       this.#change += 1;
       this.#observer?.disconnect();
       cancelAnimationFrame(this.#frame);
+      this.#frame = 0;
       this.#observer = undefined;
-      this.#adjusting = false;
       this.#scroller = undefined;
       this.#content = undefined;
       this.#header = undefined;
@@ -97,11 +103,37 @@ export class ThreadViewport {
     };
   };
 
+  refreshInset(): void {
+    const content = this.#content;
+    const scroller = this.#scroller;
+    if (!content || !scroller) {
+      this.#insetValue = 0;
+      return;
+    }
+    this.#insetValue =
+      content.getBoundingClientRect().top -
+      scroller.getBoundingClientRect().top +
+      scroller.scrollTop +
+      Number.parseFloat(getComputedStyle(content).paddingTop) +
+      (this.#header?.getBoundingClientRect().height ?? 0);
+  }
+
   scroll(): void {
     const scroller = this.#scroller;
     if (!scroller || scroller.clientHeight === 0) return;
     this.#height = scroller.clientHeight;
-    this.#top = Math.max(0, scroller.scrollTop - this.#inset());
+    this.#top = Math.max(0, scroller.scrollTop - this.#insetValue);
+    this.#updateRange();
+  }
+
+  /** Measure mounted rows right after a window slice renders so scroll compensation runs before paint. */
+  syncAfterRender(): void {
+    if (!this.#scroller || !this.#content || this.#scroller.clientHeight === 0) return;
+    if (this.#frame) {
+      cancelAnimationFrame(this.#frame);
+      this.#frame = 0;
+    }
+    this.#measure();
   }
 
   anchor(): ThreadAnchor | undefined {
@@ -123,27 +155,21 @@ export class ThreadViewport {
 
   restore(anchor: ThreadAnchor): number | undefined {
     const top = this.window.restore(anchor);
-    return top === undefined ? undefined : top + this.#inset();
+    return top === undefined ? undefined : top + this.#insetValue;
   }
 
   reveal(id: string): void {
     const top = this.window.topOf(id);
     if (top === undefined || !this.#scroller) return;
-    this.#scroller.scrollTop = Math.max(0, top + this.#inset() - this.#height / 3);
+    const nextTop = Math.max(0, top + this.#insetValue - this.#height / 3);
+    this.#scroller.scrollTop = nextTop;
+    this.#onAdjust(nextTop);
     this.scroll();
   }
 
-  #inset(): number {
-    const content = this.#content;
-    const scroller = this.#scroller;
-    if (!content || !scroller) return 0;
-    return (
-      content.getBoundingClientRect().top -
-      scroller.getBoundingClientRect().top +
-      scroller.scrollTop +
-      Number.parseFloat(getComputedStyle(content).paddingTop) +
-      (this.#header?.getBoundingClientRect().height ?? 0)
-    );
+  #updateRange(): void {
+    const next = this.window.range(this.#top, this.#height);
+    if (!sameRange(this.#range, next)) this.#range = next;
   }
 
   #schedule(): void {
@@ -158,39 +184,59 @@ export class ThreadViewport {
     const scroller = this.#scroller;
     const content = this.#content;
     if (!scroller || !content || scroller.clientHeight === 0) return;
-    const scrollTop = scroller.scrollTop;
-    const anchor = this.anchor();
+    this.refreshInset();
+    this.#height = scroller.clientHeight;
+    this.#top = Math.max(0, scroller.scrollTop - this.#insetValue);
     const width = content.clientWidth;
-    let changed = false;
-    if (this.#width && Math.abs(width - this.#width) > 1) {
-      this.window.reset();
-      changed = true;
-    }
+    const widthChanged = this.#width > 0 && Math.abs(width - this.#width) > 1;
     this.#width = width;
-    for (const [id, element] of this.#rows)
-      changed = this.window.measure(id, element.getBoundingClientRect().height) || changed;
-    this.scroll();
-    if (!changed) {
-      this.#onResize();
-      const change = this.#change;
-      requestAnimationFrame(() => {
-        if (change === this.#change) this.#adjusting = false;
+
+    if (widthChanged) {
+      const scrollTop = scroller.scrollTop;
+      const anchor = this.anchor();
+      this.window.reset();
+      for (const [id, element] of this.#rows) {
+        this.window.measure(id, element.getBoundingClientRect().height);
+      }
+      this.#updateRange();
+      const change = ++this.#change;
+      void tick().then(() => {
+        if (change !== this.#change || this.#scroller !== scroller) return;
+        if (!this.#follow() && anchor && Math.abs(scroller.scrollTop - scrollTop) < 1) {
+          const restored = this.restore(anchor);
+          if (restored !== undefined) {
+            scroller.scrollTop = restored;
+            this.#onAdjust(restored);
+          }
+        }
+        this.scroll();
+        this.#onResize();
       });
       return;
     }
-    this.#adjusting = true;
-    this.#revision += 1;
-    const change = ++this.#change;
-    void tick().then(() => {
-      if (change !== this.#change || this.#scroller !== scroller) return;
-      if (!this.#follow() && anchor && Math.abs(scroller.scrollTop - scrollTop) < 1)
-        scroller.scrollTop = this.restore(anchor) ?? scrollTop;
-      this.scroll();
-      this.#onResize();
-      requestAnimationFrame(() => {
-        if (change === this.#change) this.#adjusting = false;
-      });
-    });
+
+    const first = this.window.indexAt(this.#top);
+    let deltaAbove = 0;
+    for (const [id, element] of this.#rows) {
+      if (!element.isConnected) continue;
+      const index = this.window.indexOf(id);
+      const previous = this.window.heightOf(id);
+      if (this.window.measure(id, element.getBoundingClientRect().height)) {
+        if (index !== undefined && index < first) {
+          deltaAbove += this.window.heightOf(id) - previous;
+        }
+      }
+    }
+
+    if (!this.#follow() && Math.abs(deltaAbove) >= 0.5) {
+      const nextTop = Math.max(0, scroller.scrollTop + deltaAbove);
+      scroller.scrollTop = nextTop;
+      this.#onAdjust(nextTop);
+      this.#top = Math.max(0, nextTop - this.#insetValue);
+    }
+
+    this.#updateRange();
+    this.#onResize();
   }
 
   #save(): void {

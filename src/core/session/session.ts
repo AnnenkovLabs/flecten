@@ -72,7 +72,8 @@ export function createSession(options: SessionOptions): SessionHandle {
     permissions: () => options.permissions,
     timeoutMs: () => options.approvalTimeoutMs ?? DEFAULT_APPROVAL_TIMEOUT_MS,
   });
-  const jobs = new JobNotices(terminals, emit, () => active?.sessionId ?? currentSessionId);
+  const owner = () => active?.sessionId ?? currentSessionId;
+  const jobs = new JobNotices(terminals, emit, owner, options);
   const persistence = new SessionPersistence(options, (error) => {
     active?.controller.abort("persistence_failed");
     bus.emit({
@@ -163,7 +164,7 @@ export function createSession(options: SessionOptions): SessionHandle {
     if (requestedSessionId && !/^[\w-]+$/.test(requestedSessionId)) {
       throw new HarnessError("invalid_input", "sessionId is invalid");
     }
-    const authority = permissionIntent.forRun(options, prompt, extras.internal, extras.actor);
+    const authority = permissionIntent.forRun(options, prompt, extras);
     preparing = new AbortController();
     const controller = preparing;
     starting = true;
@@ -231,6 +232,7 @@ export function createSession(options: SessionOptions): SessionHandle {
       ...(options.promptStamp && !options.language ? { system: options.promptStamp } : {}),
       ...(extras.queueId ? { queueId: extras.queueId } : {}),
       ...(extras.resumed ? { resumed: true } : {}),
+      ...(extras.continuation ? { continuation: true } : {}),
       ...(extras.internal ? { internal: true } : {}),
       ...(extras.actor ? { actor: extras.actor } : {}),
       ...(budget.hasLimits() ? { budget: budget.view() } : {}),
@@ -270,7 +272,7 @@ export function createSession(options: SessionOptions): SessionHandle {
         options,
         sessionId,
         emit,
-        extras.resumed,
+        extras.resumed || extras.continuation,
       );
       const memory = sessionMemory(options, sessionId, system, history);
       const dictionary = sessionDictionary(options, prompt, sessionId);
@@ -280,6 +282,7 @@ export function createSession(options: SessionOptions): SessionHandle {
         ...(memory ? { memory } : {}),
         ...(dictionary ? { dictionary } : {}),
         ...authority.input,
+        ...(extras.continuation ? { syntheticPrompt: true } : {}),
         provider: options.provider,
         loadMedia: toolMediaOptions(options, sessionId).loadMedia,
         ...(options.modules && !extras.summaryWake ? { modules: options.modules } : {}),
@@ -444,8 +447,8 @@ export function createSession(options: SessionOptions): SessionHandle {
       await queuedRun;
       if (currentSessionId) await options.modules?.close(currentSessionId);
       await subagents.dispose();
-      jobs.dispose();
       await terminals.closeAll();
+      jobs.dispose();
       await persistence.flush();
     },
     update(next: Partial<SessionOptions>): void {
@@ -487,6 +490,7 @@ export function createSession(options: SessionOptions): SessionHandle {
         ...(command.attachmentSnapshot ? { attachmentSnapshot: command.attachmentSnapshot } : {}),
         ...(command.contexts ? { contexts: command.contexts } : {}),
         ...(command.resumed ? { resumed: true } : {}),
+        ...(command.continuation ? { continuation: true } : {}),
         ...(command.internal ? { internal: true } : {}),
         ...(command.actor ? { actor: command.actor } : {}),
         ...(command.summaryWake ? { summaryWake: true } : {}),

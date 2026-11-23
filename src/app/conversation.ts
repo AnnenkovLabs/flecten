@@ -181,7 +181,7 @@ export async function createConversation(
     task: string,
     epoch: number,
     reasoning?: ReasoningEffort,
-    resumed?: boolean,
+    resume?: "resumed" | "continuation",
   ): Promise<void> {
     try {
       if (disposed || muted || epoch !== executionEpoch) return;
@@ -190,7 +190,7 @@ export async function createConversation(
         sessionId: workerId,
         prompt: task,
         ...(reasoning ? { reasoning } : {}),
-        ...(resumed ? { resumed: true } : {}),
+        ...(resume ? { [resume]: true } : {}),
       })) as RunResult;
       if (disposed || muted || epoch !== executionEpoch) return;
       acceptance.reviewing(result);
@@ -273,7 +273,12 @@ export async function createConversation(
     const reasoning = pendingReasoning;
     pendingReasoning = undefined;
     executing = true;
-    workerRun = executeTask(task, ++executionEpoch, reasoning, request.operation === "resume");
+    workerRun = executeTask(
+      task,
+      ++executionEpoch,
+      reasoning,
+      request.operation === "resume" ? "resumed" : undefined,
+    );
     return { workerId, state: "running", acceptance: acceptance.state };
   }
   const initial = await setup.configure(options, control);
@@ -330,8 +335,7 @@ export async function createConversation(
     if (forwarded.type === "worker.event") note(forwarded.event);
   });
   talker.subscribe((event) => {
-    if (event.type === "session.started" && !event.internal && event.actor !== "twin")
-      acceptance.human(event.prompt);
+    if (event.type === "session.started") acceptance.humanStart(event);
     if (event.type === "steer.applied" && event.actor !== "twin") acceptance.human(event.text);
     emit(event);
     if (event.type === "session.finished") schedule();
@@ -440,7 +444,7 @@ export async function createConversation(
         if (command.reasoning) pendingReasoning = command.reasoning;
         if (
           !command.internal &&
-          (command.resumed || command.prompt.trim() === RESUME_PROMPT) &&
+          (command.resumed || command.continuation || command.prompt.trim() === RESUME_PROMPT) &&
           !executing &&
           !worker.isBusy() &&
           acceptance.state &&
@@ -455,12 +459,12 @@ export async function createConversation(
             `${acceptance.resume()}\n\n${recovery.markdown()}`,
             ++executionEpoch,
             reasoning,
-            true,
+            command.resumed ? "resumed" : "continuation",
           );
           await workerRun;
           return lastResult;
         }
-        if (!command.internal && command.actor !== "twin") acceptance.human(command.prompt);
+        acceptance.humanStart(command);
         const { reasoning: _r, ...talkerCmd } = command;
         if (!talker.isBusy()) {
           talkerRun = talker.send(talkerCmd);

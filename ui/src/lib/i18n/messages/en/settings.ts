@@ -1,9 +1,31 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "Interface Scale": "Interface Scale",
-  "Resize text, controls, and the chat column. Changes apply immediately.":
-    "Resize text, controls, and the chat column. Changes apply immediately.",
-  "Reset to 100%": "Reset to 100%",
+  Appearance: "Appearance",
+  "Reset all": "Reset all",
+  "Adjust window zoom, reading sizes, and workspace typography. Changes apply immediately.":
+    "Adjust window zoom, reading sizes, and workspace typography. Changes apply immediately.",
+  Interface: "Interface",
+  "Interface scale": "Interface scale",
+  "Resize the entire window, including controls, menus, and layout.":
+    "Resize the entire window, including controls, menus, and layout.",
+  "Chat and summaries": "Chat and summaries",
+  "Text scale": "Text scale",
+  "Scale messages, Markdown replies, reasoning, and the composer input.":
+    "Scale messages, Markdown replies, reasoning, and the composer input.",
+  "HTML summary scale": "HTML summary scale",
+  "Scale interactive HTML summaries, tables, and diagrams in replies.":
+    "Scale interactive HTML summaries, tables, and diagrams in replies.",
+  "Chat width": "Chat width",
+  "Maximum width of the conversation column and composer.":
+    "Maximum width of the conversation column and composer.",
+  "Code and terminal": "Code and terminal",
+  "Code text size": "Code text size",
+  "Font size for code blocks, diffs, file previews, and the IDE editor.":
+    "Font size for code blocks, diffs, file previews, and the IDE editor.",
+  "Terminal text size": "Terminal text size",
+  "Font size for the integrated terminal.": "Font size for the integrated terminal.",
+  "Reset to {0}": ["Reset to ", 0],
+  "Reset {0} to {1}": ["Reset ", 0, " to ", 1],
   none: "none",
   "not visible": "not visible",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [
@@ -57,7 +79,10 @@ export default {
   "Lines to read": "Lines to read",
   "The response limit must not exceed the context window.":
     "The response limit must not exceed the context window.",
-  "Specify a reasoning budget.": "Specify a reasoning budget.",
+  "Saved. Invalid model settings were not applied: {0}": [
+    "Saved. Invalid model settings were not applied: ",
+    0,
+  ],
   "The reasoning budget must be less than the response limit.":
     "The reasoning budget must be less than the response limit.",
   "Only http and https are supported.": "Only http and https are supported.",

@@ -1,7 +1,7 @@
 import { t } from "../i18n.svelte";
 import { toast } from "../toast.svelte";
 import { finishedLabel } from "./sessions";
-import { hasCheckpoint } from "./thread.svelte";
+import { hasCheckpoint } from "./thread-artifacts";
 import type { SessionEvent } from "./view.svelte";
 
 /** Only actionable changes in a task behind the visible conversation interrupt the user. */

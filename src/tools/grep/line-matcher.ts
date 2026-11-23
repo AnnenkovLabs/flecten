@@ -8,13 +8,51 @@ const { parentPort, workerData } = require("node:worker_threads");
 let expression;
 try { expression = new RegExp(workerData.pattern, workerData.flags); parentPort.postMessage({ ready: true }); }
 catch (error) { parentPort.postMessage({ error: String(error.message) }); }
+function matchedLines(lines) {
+  if (!workerData.multiline) {
+    const indices = [];
+    for (let index = 0; index < lines.length; index++) {
+      if (expression.test(lines[index])) indices.push(index);
+    }
+    return indices;
+  }
+  if (lines.length === 0) return [];
+  const joined = lines.join("\\n");
+  const starts = new Array(lines.length);
+  let offset = 0;
+  for (let i = 0; i < lines.length; i++) {
+    starts[i] = offset;
+    offset += lines[i].length + 1;
+  }
+  const lineFor = (pos) => {
+    let lo = 0;
+    let hi = starts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (starts[mid] <= pos) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo;
+  };
+  const hit = new Set();
+  expression.lastIndex = 0;
+  let match;
+  while ((match = expression.exec(joined)) !== null) {
+    const start = match.index;
+    const end = match[0].length > 0 ? start + match[0].length - 1 : start;
+    const from = lineFor(start);
+    const to = lineFor(end);
+    for (let i = from; i <= to; i++) hit.add(i);
+    if (match[0].length === 0) {
+      if (expression.lastIndex >= joined.length) break;
+      expression.lastIndex += 1;
+    }
+  }
+  return [...hit].sort((a, b) => a - b);
+}
 parentPort.on("message", (lines) => {
   if (!expression) return;
-  const indices = [];
-  for (let index = 0; index < lines.length; index++) {
-    if (expression.test(lines[index])) indices.push(index);
-  }
-  parentPort.postMessage({ indices });
+  parentPort.postMessage({ indices: matchedLines(lines) });
 });
 `;
 
@@ -24,10 +62,19 @@ const Reply = z.union([
   z.object({ ready: z.literal(true) }).strict(),
 ]);
 
-export function createLineMatcher(pattern: string, caseSensitive: boolean, signal: AbortSignal) {
+export function createLineMatcher(
+  pattern: string,
+  caseSensitive: boolean,
+  signal: AbortSignal,
+  multiline = false,
+) {
   const worker = new Worker(SOURCE, {
     eval: true,
-    workerData: { pattern, flags: caseSensitive ? "" : "i" },
+    workerData: {
+      pattern,
+      flags: `${caseSensitive ? "" : "i"}${multiline ? "gms" : ""}`,
+      multiline,
+    },
   });
   let failure: Error | undefined;
   const readiness = Promise.withResolvers<void>();

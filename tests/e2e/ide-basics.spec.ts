@@ -28,7 +28,7 @@ test("IDE supports everyday file, search, command, split and terminal workflows"
     await page.getByRole("button", { name: "IDE", exact: true }).click();
     await page.locator('.explorer .entry[data-tooltip="src"]').click();
     await page.locator('.explorer .entry[data-tooltip="src/main.ts"]').click();
-    const editor = page.locator(".editor-columns .cm-content:visible").first();
+    const editor = page.locator(".editor-columns .monaco-editor:visible .view-lines").first();
     await expect(editor).toContainText("answer = 42");
     await page.keyboard.press("ControlOrMeta+g");
     const go = page.getByRole("dialog", { name: "Перейти к строке" });
@@ -41,7 +41,7 @@ test("IDE supports everyday file, search, command, split and terminal workflows"
     await palette.getByRole("combobox").fill("Переносить длинные строки");
     await page.keyboard.press("Enter");
     await expect(palette).toBeHidden();
-    await expect(page.locator(".cm-editor").first()).toHaveClass(/cm-editor/);
+    await expect(page.locator(".monaco-editor").first()).toHaveClass(/monaco-editor/);
     await expect
       .poll(() =>
         page.evaluate(() => JSON.parse(localStorage.getItem("flecten.ide.layout") ?? "{}").wrap),
@@ -75,6 +75,16 @@ test("IDE supports everyday file, search, command, split and terminal workflows"
       "true",
     );
 
+    await expect(page.locator(".open-editors")).toHaveCount(0);
+    await expect(page.locator(".agent-island")).toHaveCount(0);
+    await page.keyboard.press("ControlOrMeta+p");
+    const quickText = page.getByRole("dialog", { name: "Открыть файл", exact: true });
+    await quickText.getByRole("combobox").fill("%greeting");
+    await expect(page.locator(".quick-open .text-hit")).toHaveCount(1);
+    await expect(page.locator(".quick-open .text-hit")).toContainText("greeting");
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".ide-status")).toContainText(/Стр.*2/);
+
     await page.keyboard.press("ControlOrMeta+Shift+f");
     await page.getByLabel("Найти в файлах", { exact: true }).fill("greeting");
     await page.getByLabel("Найти в файлах", { exact: true }).press("Enter");
@@ -99,22 +109,22 @@ test("IDE supports everyday file, search, command, split and terminal workflows"
     await expect.poll(() => git("diff", "--cached", "--name-only")).toBe("");
     await page.getByRole("button", { name: "Открыть файл", exact: true }).click();
     await page.getByRole("button", { name: "Разделить редактор", exact: true }).click();
-    await expect(page.locator(".editor-columns .cm-content:visible")).toHaveCount(2);
+    await expect(page.locator(".editor-columns .monaco-editor:visible .view-lines")).toHaveCount(2);
     await page.getByRole("tab", { name: "renamed.ts", exact: true }).click();
-    await expect(page.locator(".editor-columns .cm-content:visible").nth(0)).toContainText(
-      "edited",
-    );
-    await expect(page.locator(".editor-columns .cm-content:visible").nth(1)).toContainText(
-      "salutation",
-    );
-    await page.locator(".editor-columns .cm-content:visible").nth(1).click();
+    await expect(
+      page.locator(".editor-columns .monaco-editor:visible .view-lines").nth(0),
+    ).toContainText("edited");
+    await expect(
+      page.locator(".editor-columns .monaco-editor:visible .view-lines").nth(1),
+    ).toContainText("salutation");
+    await page.locator(".editor-columns .monaco-editor:visible .view-lines").nth(1).click();
     await page.keyboard.press("ControlOrMeta+g");
     await go.locator("input").fill("2:4");
     await go.locator("input").press("Enter");
     await expect(page.locator(".ide-status")).toContainText(/2.*4/);
-    await expect(page.locator(".editor-columns .cm-content:visible").nth(0)).toContainText(
-      "edited",
-    );
+    await expect(
+      page.locator(".editor-columns .monaco-editor:visible .view-lines").nth(0),
+    ).toContainText("edited");
     await page.getByRole("button", { name: "Закрыть разделённую панель", exact: true }).click();
     await page.keyboard.press("ControlOrMeta+w");
     await expect(page.getByRole("tab", { name: "renamed.ts", exact: true })).toHaveCount(0);

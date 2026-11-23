@@ -1,17 +1,33 @@
-import { z } from "zod";
-import { requestAgent } from "../desktop";
+import {
+  type IdeTerminalAction,
+  type IdeTerminalResponse,
+  IdeTerminalResponseSchema,
+} from "../../../../shared/terminal";
+import { requestAgent, sendAgent } from "../desktop";
 
-const Snapshot = z.object({
-  data: z.string(),
-  cursor: z.number().int().nonnegative(),
-  epoch: z.number().int(),
-  reset: z.boolean(),
-  running: z.boolean(),
-});
+export interface TerminalCommandOptions {
+  id?: string;
+  shell?: string;
+  cwd?: string;
+  title?: string;
+  cursor?: number;
+  data?: string;
+  cols?: number;
+  rows?: number;
+}
+
 export async function terminalCommand(
-  action: "read" | "write" | "resize" | "restart" | "stop",
-  input: { cursor?: number; data?: string; cols?: number; rows?: number } = {},
-): Promise<z.infer<typeof Snapshot>> {
+  action: IdeTerminalAction,
+  input: TerminalCommandOptions = {},
+): Promise<IdeTerminalResponse> {
   const response = await requestAgent({ type: "ide.terminal", action, ...input }, 15_000);
-  return Snapshot.parse(response.terminal);
+  return IdeTerminalResponseSchema.parse(response.terminal);
+}
+
+/** Fire-and-forget write or resize for instant zero-round-trip interactive responsiveness. */
+export function terminalSend(
+  action: "write" | "resize",
+  input: { id?: string; data?: string; cols?: number; rows?: number },
+): boolean {
+  return sendAgent({ type: "ide.terminal", action, ...input, noReply: true });
 }

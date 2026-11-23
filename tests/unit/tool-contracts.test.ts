@@ -49,6 +49,30 @@ afterEach(async () => {
 });
 
 describe("search tool contracts", () => {
+  test("built-in tool order groups inspection tools first and places bash ahead of terminal", () => {
+    const names = builtinTools().map((tool) => tool.name);
+    const readIdx = names.indexOf("read");
+    const grepIdx = names.indexOf("grep");
+    const globIdx = names.indexOf("glob");
+    const editIdx = names.indexOf("edit");
+    const bashIdx = names.indexOf("bash");
+    const terminalIdx = names.indexOf("terminal");
+
+    expect(readIdx).toBeGreaterThanOrEqual(0);
+    expect(grepIdx).toBe(readIdx + 1);
+    expect(globIdx).toBe(grepIdx + 1);
+    expect(globIdx).toBeLessThan(editIdx);
+    expect(bashIdx).toBeLessThan(terminalIdx);
+
+    const byName = new Map(builtinTools().map((tool) => [tool.name, tool]));
+    expect(byName.get("grep")?.description).toContain("ripgrep");
+    expect(byName.get("grep")?.description).toContain("BM25");
+    expect(byName.get("grep")?.description).toContain("symbol");
+    expect(byName.get("bash")?.description).toContain("sequentially");
+    expect(byName.get("bash")?.description).toContain("prefer grep");
+    expect(byName.get("terminal")?.description).toContain("Prefer grep, glob and read");
+  });
+
   test("literal searches preserve metacharacters through registry and fallback", async () => {
     const ctx = await context();
     await writeFile(join(ctx.cwd, "source.ts"), "value = [Needle](x)\nvalue = Needle\n");

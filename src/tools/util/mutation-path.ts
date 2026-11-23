@@ -1,6 +1,6 @@
 import { lstat, realpath } from "node:fs/promises";
 import { dirname } from "node:path";
-import { ensureInside, isInside, resolveToolPath } from "./paths";
+import { ensureInside, isInside, resolveToolPath, windowsReservedPathError } from "./paths";
 
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === "ENOENT";
@@ -38,6 +38,8 @@ export async function mutationPath(
   why: string | undefined,
   roots: readonly string[] = [],
 ): Promise<string> {
+  const reserved = windowsReservedPathError(input);
+  if (reserved) throw new Error(reserved);
   const path = resolveToolPath(cwd, input);
   ensureInside(cwd, path, why, roots);
   await assertRealPathInside(cwd, input, dirname(path), roots);

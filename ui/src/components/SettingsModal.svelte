@@ -23,6 +23,7 @@
   import ProviderGlyph from "./ProviderGlyph.svelte";
   import ModulesSettings from "./settings/ModulesSettings.svelte";
   import AboutSettings from "./settings/AboutSettings.svelte";
+  import AppearanceSettings from "./settings/AppearanceSettings.svelte";
   import GeneralSettings from "./settings/GeneralSettings.svelte";
   import ModelsSettings from "./settings/ModelsSettings.svelte";
   import HistorySettings from "./settings/HistorySettings.svelte";
@@ -312,6 +313,8 @@
           {:else if config}
             {#if section === "general"}
               <GeneralSettings />
+            {:else if section === "appearance"}
+              <AppearanceSettings />
             {:else if section === "models"}
               <ModelsSettings />
             {:else if section === "providers"}
@@ -369,6 +372,8 @@
                   <Icon name="check" size={13} />
                   {settings.notice}
                 </span>
+              {:else if settings.modelWarning}
+                <span class="st-error foot-error" role="status">{settings.modelWarning}</span>
               {:else if settings.dirty}
                 <span class="st-hint">{t("Not saved")}</span>
               {/if}

@@ -2,6 +2,7 @@ import { providerConfig } from "../config/load";
 import type { HarnessConfig, Protocol, ProviderConfig } from "../config/schema";
 import { HarnessError, MissingKeyError } from "../errors";
 import { ProviderProtection } from "../security/provider-protection";
+import { spawnCommandSpec } from "../terminal/shell";
 import { createAnthropic } from "./anthropic";
 import { providerAttempt } from "./attempt";
 import { buildFailoverPlan, createFailoverProvider } from "./failover";
@@ -31,7 +32,9 @@ function commandApiKey(name: string, definition: ProviderConfig): string | undef
   const cacheKey = JSON.stringify([name, auth]);
   const cached = commandTokens.get(name);
   if (cached && cached.signature === cacheKey && cached.expiresAt > Date.now()) return cached.value;
-  const result = Bun.spawnSync([auth.command, ...auth.args], {
+  const execution = spawnCommandSpec(auth.command, auth.args);
+  const result = Bun.spawnSync({
+    ...execution,
     timeout: auth.timeoutMs,
     stdout: "pipe",
     stderr: "pipe",

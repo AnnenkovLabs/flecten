@@ -122,7 +122,11 @@ export function timeTitle(iso: string, now: Date = new Date()): string {
   return relative ? `${relative} · ${absolute}` : absolute;
 }
 
-export function itemSearchText(item: ThreadItem, tools?: ReadonlyMap<string, RunAction>): string {
+export function itemSearchText(
+  item: ThreadItem,
+  tools?: ReadonlyMap<string, RunAction>,
+  thoughts?: ReadonlyMap<string, import("./run/worker-mirrors").WorkerReasoning>,
+): string {
   switch (item.kind) {
     case "message":
     case "answer":
@@ -136,6 +140,8 @@ export function itemSearchText(item: ThreadItem, tools?: ReadonlyMap<string, Run
       return ["Worker", item.status, ...item.actions.map((action) => action.label)].join("\n");
     case "worker-tool":
       return tools?.get(item.reference)?.label ?? "Worker";
+    case "worker-reasoning":
+      return thoughts?.get(item.reference)?.text ?? "";
     case "run":
       return [
         item.summary.text,
@@ -180,11 +186,12 @@ export function searchThread(
   items: readonly ThreadItem[],
   query: string,
   tools?: ReadonlyMap<string, RunAction>,
+  thoughts?: ReadonlyMap<string, import("./run/worker-mirrors").WorkerReasoning>,
 ): ThreadSearchHit[] {
   if (!query.trim()) return [];
   const hits: ThreadSearchHit[] = [];
   for (const item of items) {
-    const score = searchScore(itemSearchText(item, tools), query);
+    const score = searchScore(itemSearchText(item, tools, thoughts), query);
     if (score > 0) hits.push({ id: item.id, kind: item.kind, score });
   }
   return hits;

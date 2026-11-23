@@ -9,7 +9,12 @@
   const config = $derived(settings.settings);
   const sources = $derived(config?.skills?.sources ?? SKILL_SOURCE_OPTIONS.map((entry) => entry.id));
   const savedSources = $derived(settings.baseline?.skills?.sources ?? SKILL_SOURCE_OPTIONS.map((entry) => entry.id));
-  const changed = $derived(SKILL_SOURCE_OPTIONS.some(({ id }) => sources.includes(id) !== savedSources.includes(id)));
+  const builtinEnabled = $derived(config?.skills?.builtin ?? true);
+  const savedBuiltin = $derived(settings.baseline?.skills?.builtin ?? true);
+  const changed = $derived(
+    builtinEnabled !== savedBuiltin ||
+      SKILL_SOURCE_OPTIONS.some(({ id }) => sources.includes(id) !== savedSources.includes(id)),
+  );
   $effect(() => {
     void settings.baseline?.skills;
     if (settings.baseline) void extensions.loadSkills();
@@ -21,6 +26,23 @@
 
   {#if config}
     <p class="st-hint">{t("Choose folders to load skills from. Your selection is saved in the current configuration.")}</p>
+    <div class="st-group">
+      <h3 class="st-group-title">{t("Built-in skills")}</h3>
+      <div class="st-card">
+        <label class="st-switch st-row">
+          <span class="st-switch-copy">
+            <strong>Flecten</strong>
+            <span>{t("Plugin conversion and harness self-configuration guides.")}</span>
+          </span>
+          <input type="checkbox" aria-label={t("Built-in skills")}
+            checked={builtinEnabled} disabled={settings.saving}
+            onchange={(event) => {
+              config.skills = { sources: [...sources], ...config.skills, builtin: event.currentTarget.checked };
+            }} />
+          <span class="st-switch-track" aria-hidden="true"></span>
+        </label>
+      </div>
+    </div>
     {#each [{ id: "user", label: t("Shared folders") }, { id: "project", label: t("Project folders") }] as scope (scope.id)}
       <div class="st-group">
         <h3 class="st-group-title">{scope.label}</h3>
@@ -46,7 +68,7 @@
       </div>
     {/each}
     <p class="st-hint">{t("Takes effect after saving, with no restart needed. Active tasks use the new set on their next run.")}</p>
-    {#if sources.length === 0}
+    {#if sources.length === 0 && !builtinEnabled}
       <p class="st-hint">{t("All sources are disabled. No skills will be loaded after saving.")}</p>
     {/if}
     {#if changed}
@@ -63,7 +85,7 @@
         <summary>{skill.name}{#if skill.version}<span class="st-hint">v{skill.version}</span>{/if}<Icon name="chevron-down" size={14} class="st-chevron" /></summary>
         <div class="st-details-body">
           <p class="st-hint">{skill.description}</p>
-          <p class="st-hint">{t("Source: {0}. Trust: {1}.", [skill.source === "project" ? t("project") : t("user"), skill.trust === "trusted" ? t("allowed") : t("requires approval")])}</p>
+          <p class="st-hint">{t("Source: {0}. Trust: {1}.", [skill.source === "builtin" ? t("built-in") : skill.source === "project" ? t("project") : t("user"), skill.trust === "trusted" ? t("allowed") : t("requires approval")])}</p>
           <p class="st-hint st-mono">{skill.location}</p>
           {#if config}
             <label class="st-switch st-row">

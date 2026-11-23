@@ -234,9 +234,10 @@ export async function runGlob(args: GlobArgs, context: SearchContext): Promise<T
     ? stdout.text.slice(0, stdout.text.lastIndexOf("\n"))
     : stdout.text;
   const verify = Boolean(context.permissions || context.sandbox);
-  for (const line of completeLines.split("\n")) {
+  for (const rawLine of completeLines.split("\n")) {
+    const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
     if (!line) continue;
-    const clean = withoutPrefix(line, "./");
+    const clean = withoutPrefix(line.replaceAll("\\", "/"), "./");
     if (ignored(clean, args) || !filter.match(clean)) continue;
     if (verify && !(await canReadSearchPath(context, join(searchPath, clean), "glob"))) continue;
     results.push(prefix === "." ? clean : `${prefix}/${clean}`);

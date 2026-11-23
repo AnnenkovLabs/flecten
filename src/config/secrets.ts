@@ -20,7 +20,7 @@ export function setSecretBackend(backend: SecretBackend | undefined): void {
 
 function hasCommand(command: string): boolean {
   try {
-    return Bun.spawnSync(["which", command], { stdout: "pipe", stderr: "pipe" }).success;
+    return Bun.which(command) !== null;
   } catch {
     return false;
   }
@@ -50,7 +50,7 @@ export function secretsPath(cwd: string): string {
 function account(cwd: string, name: string): string {
   let project = resolve(cwd);
   try {
-    project = realpathSync(project);
+    project = realpathSync.native(project);
   } catch {}
   return `${createHash("sha256").update(project).digest("hex")}:${name}`;
 }

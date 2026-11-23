@@ -57,7 +57,7 @@ export const STOPWORDS = new Set([
   "with",
 ]);
 
-function filePathPenalty(filePath: string): number {
+export function filePathPenalty(filePath: string): number {
   const normalized = filePath.replaceAll("\\", "/").toLowerCase();
   const segments = normalized.split("/");
   const base = segments.at(-1) ?? "";

@@ -1,18 +1,18 @@
 import { HOOK_NAMES } from "../../../../shared/hooks";
 import { canDescribeImages } from "../../../../shared/vision";
 import { t } from "../i18n.svelte";
-import { contextIssue } from "../settings-utils";
+import { cleanSettings, clone, contextIssue } from "../settings-utils";
 import type { HarnessSettings, ModelInfo, ProviderSettings } from "../types";
 import { hookEventLabel, hookIssue } from "./hooks";
 import { agentModelIssue } from "./model-defaults";
 
 export function numberIssue(
-  value: number | undefined,
+  value: number | null | undefined,
   min = 1,
   max = Infinity,
   integer = true,
 ): string {
-  if (value === undefined) return "";
+  if (value === undefined || value === null) return "";
   if (!Number.isFinite(value) || (integer && !Number.isInteger(value))) {
     return integer ? t("Enter a whole number.") : t("Enter a number.");
   }
@@ -134,12 +134,69 @@ export function modelIssues(model: ModelInfo): Record<string, string> {
   }
   if (model.context && model.output && model.output > model.context)
     issues.output = t("The response limit must not exceed the context window.");
-  if (model.reasoningMode === "budget") {
-    if (!model.reasoningBudget) issues.reasoningBudget = t("Specify a reasoning budget.");
-    else if (model.output && model.reasoningBudget >= model.output)
-      issues.reasoningBudget = t("The reasoning budget must be less than the response limit.");
+  if (
+    model.reasoningMode === "budget" &&
+    model.reasoningBudget !== undefined &&
+    model.reasoningBudget !== null &&
+    model.output &&
+    model.reasoningBudget >= model.output
+  ) {
+    issues.reasoningBudget = t("The reasoning budget must be less than the response limit.");
   }
   return issues;
+}
+
+export function firstModelIssue(config: HarnessSettings): string {
+  for (const [providerId, provider] of Object.entries(config.providers)) {
+    for (const [modelId, model] of Object.entries(provider.models)) {
+      const issue = Object.values(modelIssues(model))[0];
+      if (issue) return `${provider.name || providerId}: ${model.name || modelId}: ${issue}`;
+    }
+  }
+  return "";
+}
+
+function hasModelSchemaIssue(model: ModelInfo): boolean {
+  if (Object.keys(modelIssues(model)).length > 0) return true;
+  return Boolean(model.context && model.input && model.input > model.context);
+}
+
+function sanitizeInvalidModel(model: ModelInfo): void {
+  for (const key of ["context", "input", "output", "reasoningBudget"] as const) {
+    if (numberIssue(model[key])) delete model[key];
+  }
+  if (model.context && model.output && model.output > model.context) delete model.output;
+  if (model.context && model.input && model.input > model.context) delete model.input;
+  if (
+    model.reasoningMode === "budget" &&
+    model.reasoningBudget !== undefined &&
+    model.output &&
+    model.reasoningBudget >= model.output
+  ) {
+    delete model.reasoningBudget;
+  }
+}
+
+/** Keeps an error on one model from blocking Save for the rest of settings. */
+export function prepareSettingsForSave(
+  draft: HarnessSettings,
+  baseline: HarnessSettings | null,
+): { config: HarnessSettings; skippedModels: string[] } {
+  const config = cleanSettings(draft);
+  const skippedModels: string[] = [];
+  for (const [providerId, provider] of Object.entries(config.providers)) {
+    for (const [modelId, model] of Object.entries(provider.models)) {
+      if (!hasModelSchemaIssue(model)) continue;
+      skippedModels.push(`${provider.name || providerId}: ${model.name || modelId}`);
+      const saved = baseline?.providers[providerId]?.models[modelId];
+      if (saved && !hasModelSchemaIssue(saved)) {
+        provider.models[modelId] = clone(saved);
+      } else {
+        sanitizeInvalidModel(model);
+      }
+    }
+  }
+  return { config, skippedModels };
 }
 
 export function providerIssue(provider: ProviderSettings): string {
@@ -152,9 +209,5 @@ export function providerIssue(provider: ProviderSettings): string {
   }
   const timeout = numberIssue(provider.transportTimeoutMs, 1000, 600_000);
   if (timeout) return t("Request timeout: {0}", [timeout]);
-  for (const [id, model] of Object.entries(provider.models)) {
-    const issue = Object.values(modelIssues(model))[0];
-    if (issue) return `${model.name || id}: ${issue}`;
-  }
   return "";
 }

@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, posix } from "node:path";
 import type { ToolResult } from "../../core/types";
 import { atomicWrite } from "../../util/atomic";
@@ -15,6 +15,10 @@ const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 const records = (context: ToolContext) => join(dirname(context.logDir), "remote-jobs");
 const recordPath = (context: ToolContext, id: string) => join(records(context), `${id}.json`);
 
+async function readJsonFile(path: string): Promise<unknown> {
+  return JSON.parse(await readFile(path, "utf8")) as unknown;
+}
+
 export async function savedRemoteJobs(context: ToolContext): Promise<RemoteJob[]> {
   const entries = await readdir(records(context)).catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") return [];
@@ -23,7 +27,7 @@ export async function savedRemoteJobs(context: ToolContext): Promise<RemoteJob[]
   const jobs: RemoteJob[] = [];
   for (const entry of entries) {
     if (!entry.endsWith(".json")) continue;
-    const parsed = RemoteJobSchema.safeParse(await Bun.file(join(records(context), entry)).json());
+    const parsed = RemoteJobSchema.safeParse(await readJsonFile(join(records(context), entry)));
     if (parsed.success) jobs.push(parsed.data);
   }
   return jobs;
@@ -55,22 +59,31 @@ export async function runRemoteJob(
       ),
     });
     // Persist before submitting. A broken SSH response leaves a reconcilable handle.
-    const saved = await Bun.file(recordPath(context, id)).exists();
-    if (saved) {
-      const previous = RemoteJobSchema.parse(await Bun.file(recordPath(context, id)).json());
+    let existing: RemoteJob | undefined;
+    try {
+      existing = RemoteJobSchema.parse(await readJsonFile(recordPath(context, id)));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    if (existing) {
       if (
-        JSON.stringify(previous.target) !== JSON.stringify(job.target) ||
-        JSON.stringify(previous.argv) !== JSON.stringify(job.argv)
+        JSON.stringify(existing.target) !== JSON.stringify(job.target) ||
+        JSON.stringify(existing.argv) !== JSON.stringify(job.argv)
       )
         return { ok: false, output: "", error: "Job id already belongs to another operation" };
-      job = previous;
+      job = existing;
     } else await atomicWrite(recordPath(context, id), JSON.stringify(job), 0o600, context.signal);
   } else {
     if (!args.id || !RemoteJobSchema.shape.id.safeParse(args.id).success)
       return { ok: false, output: "", error: "Invalid remote job id" };
-    const saved = await Bun.file(recordPath(context, args.id)).exists();
-    if (!saved) return { ok: false, output: "", error: "Remote job not found in this session" };
-    job = RemoteJobSchema.parse(await Bun.file(recordPath(context, args.id)).json());
+    try {
+      job = RemoteJobSchema.parse(await readJsonFile(recordPath(context, args.id)));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return { ok: false, output: "", error: "Remote job not found in this session" };
+      }
+      throw error;
+    }
   }
   const capability = await prepareSsh(job.target, context);
   if (!capability.ok) return capability;

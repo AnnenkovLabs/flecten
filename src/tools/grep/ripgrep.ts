@@ -2,9 +2,16 @@ import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 import type { ToolResult } from "../../core/types";
 import { withoutPrefix } from "../../util/text";
-import { displayPath } from "../util/paths";
+import { displayPath, resolveToolPath } from "../util/paths";
 import { enrichTopRankedBlocks, expandFileMatchIndices, findBm25LinesInFile } from "./bm25";
-import { type GrepBlock, type GrepRenderLine, rankGrepBlocks, renderGrepBlocks } from "./ranking";
+import {
+  filePathPenalty,
+  type GrepBlock,
+  type GrepRenderLine,
+  rankGrepBlocks,
+  renderGrepBlocks,
+  STOPWORDS,
+} from "./ranking";
 import type { GrepArgs } from "./schema";
 
 const MAX_COLLECT = 2 * 1024 * 1024;
@@ -64,7 +71,7 @@ async function attachEnclosingHeaders(
     const block = blocks[i];
     if (!block || block.lines.length === 0 || fileCache.has(block.path)) continue;
     try {
-      const fullPath = join(cwd, block.path);
+      const fullPath = resolveToolPath(cwd, block.path);
       const text = await Bun.file(fullPath).text();
       reads?.record(fullPath, text);
       const lines = text
@@ -107,7 +114,7 @@ async function result(
     if (!verifyPath) return true;
     const cached = allowedCache.get(relPath);
     if (cached !== undefined) return cached;
-    const ok = await verifyPath(join(cwd, relPath));
+    const ok = await verifyPath(resolveToolPath(cwd, relPath));
     allowedCache.set(relPath, ok);
     return ok;
   };
@@ -128,7 +135,8 @@ async function result(
     currentMatches = 0;
   };
   const pathFor = (path: z.infer<typeof textSchema>): string => {
-    const clean = withoutPrefix(decoded(path), "./");
+    const normalized = decoded(path).replaceAll("\\", "/");
+    const clean = withoutPrefix(normalized, "./");
     return prefix === "." ? clean : `${prefix}/${clean}`;
   };
 
@@ -136,7 +144,8 @@ async function result(
   // colons, digits or newlines. Human output cannot carry that distinction safely.
   const records = stdout.text.split("\n");
   if (stdout.capped && records.at(-1) !== "") records.pop();
-  for (const record of records) {
+  for (const rawRecord of records) {
+    const record = rawRecord.endsWith("\r") ? rawRecord.slice(0, -1) : rawRecord;
     if (record.length === 0) continue;
     let raw: unknown;
     try {
@@ -174,19 +183,24 @@ async function result(
       }
       continue;
     }
+    let rawText = decoded(line.data.lines);
+    if (rawText.endsWith("\n")) rawText = rawText.slice(0, -1);
+    const subLines = rawText
+      .split("\n")
+      .map((entry) => (entry.endsWith("\r") ? entry.slice(0, -1) : entry));
     if (
       previous &&
       (previous.path !== path || !args.context || line.data.line_number > previous.line + 1)
     ) {
       flushBlock();
     }
-    let text = decoded(line.data.lines);
-    if (text.endsWith("\n")) text = text.slice(0, -1);
-    if (text.endsWith("\r")) text = text.slice(0, -1);
-    if (text.length > MAX_LINE) text = `${text.slice(0, MAX_LINE)}... [truncated]`;
-    if (matched) currentMatches += 1;
-    currentLines.push({ path, line: line.data.line_number, matched, text });
-    previous = { path, line: line.data.line_number };
+    for (let offset = 0; offset < subLines.length; offset += 1) {
+      let text = subLines[offset] ?? "";
+      if (text.length > MAX_LINE) text = `${text.slice(0, MAX_LINE)}... [truncated]`;
+      if (matched) currentMatches += 1;
+      currentLines.push({ path, line: line.data.line_number + offset, matched, text });
+    }
+    previous = { path, line: line.data.line_number + subLines.length - 1 };
   }
   flushBlock();
 
@@ -240,11 +254,19 @@ export async function runRipgrep(
   verifyPath?: (fullPath: string) => Promise<boolean>,
 ): Promise<ToolResult> {
   const limit = args.maxResults ?? 200;
-  const command = [rg, "--json", "--no-config", "--no-require-git", "--color=never"];
+  const command = [
+    rg,
+    "--json",
+    "--no-config",
+    "--no-require-git",
+    "--color=never",
+    "--path-separator=/",
+  ];
   if (args.glob) command.push("--glob", args.glob);
   if (args.type) command.push("--type", args.type);
   if (args.literal) command.push("--fixed-strings");
   if (args.caseSensitive === false) command.push("--ignore-case");
+  if (args.multiline) command.push("--multiline", "--multiline-dotall");
   if (args.hidden) command.push("--hidden");
   command.push("--glob", "!**/.flecten-migration/**");
   command.push("--glob", "!**/.flecten-scratch/**");
@@ -328,8 +350,10 @@ export async function runRipgrepBm25Fallback(
   },
   verifyPath?: (fullPath: string) => Promise<boolean>,
 ): Promise<ToolResult | undefined> {
-  if (args.filesWithMatches || args.count) return undefined;
-  const safeTerms = [...new Set(queryTerms.filter(isAsciiIdentTerm))].slice(0, 12);
+  if (args.literal || args.filesWithMatches || args.count) return undefined;
+  const asciiTerms = [...new Set(queryTerms.filter(isAsciiIdentTerm))];
+  const nonStop = asciiTerms.filter((term) => !STOPWORDS.has(term));
+  const safeTerms = (nonStop.length >= 2 ? nonStop : asciiTerms).slice(0, 12);
   if (safeTerms.length < 2) return undefined;
 
   const limit = args.maxResults ?? 200;
@@ -381,7 +405,11 @@ export async function runRipgrepBm25Fallback(
       .split("\n")
       .map((line) => withoutPrefix(line.trim(), "./"))
       .filter((line) => line.length > 0)
-      .sort()
+      .sort((a, b) => {
+        const pa = filePathPenalty(prefix === "." ? a : `${prefix}/${a}`);
+        const pb = filePathPenalty(prefix === "." ? b : `${prefix}/${b}`);
+        return pb - pa || a.localeCompare(b);
+      })
       .slice(0, 250);
   }
 
@@ -423,6 +451,7 @@ export async function runRipgrepBm25Fallback(
   const enriched = await attachEnclosingHeaders(ranked, contextLines, args.pattern, cwd, reads);
   const rendered = renderGrepBlocks(enriched, contextLines > 0, limit);
   const output = [...rendered.lines];
+  output.push("[No exact regex matches; showing BM25 identifier matches]");
   if (rendered.truncated) {
     output.push(`[${limit} matches limit reached; refine the pattern]`);
   }

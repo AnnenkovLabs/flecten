@@ -30,6 +30,7 @@ export interface WindowsProcessSnapshot {
 // MSFT_NetTCPConnection State=2 is LISTEN; UDP endpoints have no listen state.
 const QUERY = `
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $processes = @(Get-CimInstance -ClassName Win32_Process -Property ProcessId,ParentProcessId,WorkingSetSize |
   Where-Object { $_.ProcessId -gt 0 } | ForEach-Object {
     [pscustomobject]@{ ProcessId = [long]$_.ProcessId; ParentProcessId = [long]$_.ParentProcessId; WorkingSetSize = [long]$_.WorkingSetSize }

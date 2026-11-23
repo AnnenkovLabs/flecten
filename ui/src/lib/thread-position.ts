@@ -26,3 +26,23 @@ export function restoredThreadTop(
   const end = Math.max(0, scrollHeight - clientHeight);
   return !position || position.atEnd ? end : Math.max(0, Math.min(end, position.top));
 }
+
+/** Returns true when a wheel gesture is still scrolling a nested overflow region inside the thread. */
+export function isInnerScrollable(
+  scroller: HTMLElement,
+  target: EventTarget | null,
+  deltaY: number,
+): boolean {
+  let node = target instanceof Element ? target : null;
+  while (node && node !== scroller) {
+    if (node.scrollHeight > node.clientHeight + 1) {
+      const overflowY = getComputedStyle(node).overflowY;
+      if (overflowY === "auto" || overflowY === "scroll") {
+        if (deltaY < 0 && node.scrollTop > 0) return true;
+        if (deltaY > 0 && node.scrollTop + node.clientHeight < node.scrollHeight - 1) return true;
+      }
+    }
+    node = node.parentElement;
+  }
+  return false;
+}

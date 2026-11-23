@@ -7,8 +7,13 @@ export class SessionPermissionIntent {
   #revoke = () => {};
   #read: () => string | undefined = () => undefined;
 
-  forRun(options: SessionOptions, prompt: string, internal = false, actor?: "user" | "twin") {
-    const human = !internal && actor !== "twin" && options.role !== "worker";
+  forRun(
+    options: SessionOptions,
+    prompt: string,
+    extras: { internal?: boolean; actor?: "user" | "twin"; continuation?: boolean } = {},
+  ) {
+    const { internal = false, actor, continuation = false } = extras;
+    const human = !internal && !continuation && actor !== "twin" && options.role !== "worker";
     let source = human ? prompt : undefined;
     if (human) {
       this.#revoke();
@@ -21,9 +26,11 @@ export class SessionPermissionIntent {
     return {
       input: human
         ? { userSource: prompt, allowUserMemory: true }
-        : inheritedSource
-          ? { userSource: inheritedSource, allowUserMemory: true }
-          : {},
+        : continuation && !internal && actor !== "twin" && options.role !== "worker"
+          ? { allowUserMemory: true }
+          : inheritedSource
+            ? { userSource: inheritedSource, allowUserMemory: true }
+            : {},
       read: options.permissionIntent ?? (options.role === "worker" ? () => undefined : this.#read),
     };
   }

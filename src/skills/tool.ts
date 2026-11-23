@@ -4,7 +4,9 @@ import { z } from "zod";
 import type { ToolResult } from "../core/types";
 import { defineTool, type Tool } from "../tools/types";
 import { markdownValue } from "../util/markdown";
-import { listSkillResources, MAX_SKILL_RESOURCES } from "./resources";
+import { readBuiltinSkillFile } from "./builtin";
+import { readSkillResource } from "./resource";
+import { listSkillResourcesFor, MAX_SKILL_RESOURCES } from "./resources";
 import { MAX_SKILL_BYTES, parseSkillFile, type Skill, type SkillTrust } from "./schema";
 
 export interface SkillActivationData {
@@ -47,6 +49,8 @@ function skillMessage(skill: Skill, body: string, resources: string[]): string {
       "",
       "## Resources",
       "",
+      `Read any listed resource on demand with \`skill({ name: ${JSON.stringify(skill.name)}, resource: "<path>" })\`.`,
+      "",
       ...resources.map((path) => `- Path: ${markdownValue(path)}`),
     );
     if (resources.length >= MAX_SKILL_RESOURCES) {
@@ -68,8 +72,51 @@ function activationData(skill: Skill, resources: string[]): Omit<SkillActivation
   };
 }
 
+async function runSkillResource(
+  skill: Skill,
+  resourcePath: string,
+  activations: SkillActivations,
+  sessionId: string,
+): Promise<ToolResult> {
+  if (skill.allowedTools?.length && !activations.get(sessionId)?.has(skill.name)) {
+    return {
+      ok: false,
+      output: "",
+      error: `Activate skill "${skill.name}" with skill({ name: ${JSON.stringify(skill.name)} }) before reading its resources.`,
+    };
+  }
+  try {
+    const resource = await readSkillResource(skill, resourcePath);
+    const header = [
+      "# Skill resource",
+      "",
+      `- Skill: ${markdownValue(skill.name)}`,
+      `- Path: ${markdownValue(resource.path)}`,
+      ...(resource.truncated ? ["- Note: content truncated to 256 KiB."] : []),
+      "",
+    ].join("\n");
+    return {
+      ok: true,
+      output: `${header}${resource.text}`,
+      data: {
+        kind: "skill-resource",
+        name: skill.name,
+        path: resource.path,
+        truncated: resource.truncated,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      output: "",
+      error: `Cannot read resource "${resourcePath}" in skill "${skill.name}": ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
 async function runSkill(
   name: string,
+  resourcePath: string | undefined,
   byName: Map<string, Skill>,
   activations: Map<string, Map<string, CachedActivation>>,
   sessionId: string,
@@ -88,23 +135,35 @@ async function runSkill(
     };
   }
 
+  if (resourcePath !== undefined) {
+    return runSkillResource(skill, resourcePath, activations, sessionId);
+  }
+
   let text: string;
-  try {
-    const info = await stat(skill.location);
-    if (!info.isFile() || info.size > MAX_SKILL_BYTES) {
+  if (skill.source === "builtin") {
+    const bundled = readBuiltinSkillFile(skill.name);
+    if (bundled === undefined) {
+      return { ok: false, output: "", error: `Built-in skill "${name}" is unavailable` };
+    }
+    text = bundled;
+  } else {
+    try {
+      const info = await stat(skill.location);
+      if (!info.isFile() || info.size > MAX_SKILL_BYTES) {
+        return {
+          ok: false,
+          output: "",
+          error: `Skill "${name}" is missing or exceeds ${MAX_SKILL_BYTES / 1024}KB`,
+        };
+      }
+      text = await Bun.file(skill.location).text();
+    } catch (error) {
       return {
         ok: false,
         output: "",
-        error: `Skill "${name}" is missing or exceeds ${MAX_SKILL_BYTES / 1024}KB`,
+        error: `Cannot read skill "${name}": ${error instanceof Error ? error.message : String(error)}`,
       };
     }
-    text = await Bun.file(skill.location).text();
-  } catch (error) {
-    return {
-      ok: false,
-      output: "",
-      error: `Cannot read skill "${name}": ${error instanceof Error ? error.message : String(error)}`,
-    };
   }
 
   const revision = createHash("sha256").update(text).update(JSON.stringify(skill)).digest("hex");
@@ -137,7 +196,7 @@ async function runSkill(
     };
   }
 
-  const resources = await listSkillResources(skill.directory);
+  const resources = await listSkillResourcesFor(skill);
   const current = parsed.skill;
   const output = skillMessage(current, parsed.body, resources);
   const data = activationData(current, resources);
@@ -168,10 +227,17 @@ export function createSkillTool(
     source: "skill",
     mutating: true,
     description:
-      "Load the full instructions for an installed Agent Skill. Call it when a task matches a skill description, before doing the work.",
+      "Load an installed Agent Skill's instructions, or read one of its bundled reference/playbook files on demand via the optional `resource` path.",
     schema: z.object({
       name: z.enum(names).describe("Skill name from the Available skills catalog"),
+      resource: z
+        .string()
+        .min(1)
+        .max(1024)
+        .optional()
+        .describe("Optional relative resource path from the skill's Resources list to read"),
     }),
-    execute: (args, context) => runSkill(args.name, byName, activations, context.sessionId),
+    execute: (args, context) =>
+      runSkill(args.name, args.resource, byName, activations, context.sessionId),
   });
 }

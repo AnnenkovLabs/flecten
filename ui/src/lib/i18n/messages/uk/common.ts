@@ -7,10 +7,7 @@ export default {
   Deny: "Заборонити",
   "Always block.": "Завжди блокувати.",
   Auto: "Авто",
-  "Allow safe actions and ask about the rest.":
-    "Безпечні дії виконувати, для решти запитувати дозвіл.",
   Ask: "Запитувати",
-  "Ask before every call.": "Запитувати дозвіл перед кожним викликом.",
   Allow: "Дозволити",
   "Allow without asking.": "Виконувати без запитів.",
   Read: "Читання",
@@ -20,38 +17,19 @@ export default {
   "Create, edit, and delete files.": "Створення, зміна та видалення файлів.",
   Terminal: "Термінал",
   "Shell commands and child processes.": "Команди оболонки та дочірні процеси.",
-  "Commands can change files outside the project and send data out.":
-    "Команда може змінити файли за межами проєкту та надіслати дані назовні.",
   Network: "Мережа",
   "External addresses, downloads, and web requests.": "Зовнішні адреси, завантаження та вебзапити.",
-  "Requests go to an external server. The address and request body leave your machine.":
-    "Запит надсилається на зовнішній сервер. Адреса й тіло запиту залишають комп’ютер.",
   "Tools from connected MCP servers.": "Інструменти підключених MCP-серверів.",
   Skills: "Навички",
   "Activate skills and read their resources.": "Активація навичок і читання їхніх ресурсів.",
   "External paths": "Зовнішні шляхи",
   "Files outside the working folder.": "Файли за межами робочої папки.",
-  "Paths may lead outside the working folder, including to system files and secrets.":
-    "Шлях може вести за межі робочої папки, зокрема до системних файлів і секретів.",
   "Read-only": "Лише читання",
-  "Reads the project and skills. Writing, shell commands, and external paths are blocked. Network and MCP access require approval.":
-    "Читає проєкт і навички. Запис, команди оболонки та зовнішні шляхи заблоковано. Мережа й MCP потребують дозволу.",
-  "Working folder": "Робоча папка",
-  "Writes within the project. Shell commands, network, MCP, and external paths require approval.":
-    "Записує в межах проєкту. Команди оболонки, мережа, MCP і зовнішні шляхи потребують підтвердження.",
   "Full access": "Повний доступ",
-  "Allows all actions without asking. Use only in a trusted project.":
-    "Дозволяє всі дії без запитів. Використовуйте лише в довіреному проєкті.",
-  "These settings don't match any preset. Check each row before saving.":
-    "Власна комбінація правил.",
-  "just now": "щойно",
   "{0} sec": [0, " с"],
   "{0} min": [0, " хв"],
   "{0} hr": [0, " год"],
   "{0} d": [0, " дн"],
-  "Policies must be an object.": "Некоректний формат правил доступу.",
-  "Unknown action: {0}.": ["Невідома дія: ", 0, "."],
-  "Unknown policy for action {0}: {1}.": ["Невідома політика для дії ", 0, ": ", 1, "."],
   "Opening a browser is available in the desktop app":
     "Посилання відкриваються лише в настільному застосунку",
   "the core returned no file": "вміст файлу недоступний",

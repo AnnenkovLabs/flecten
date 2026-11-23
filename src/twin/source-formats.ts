@@ -92,6 +92,7 @@ const flectenStarted = z.object({
   prompt: z.string(),
   internal: z.boolean().optional(),
   resumed: z.boolean().optional(),
+  continuation: z.boolean().optional(),
   role: z.string().optional(),
   actor: z.string().optional(),
 });
@@ -229,6 +230,7 @@ export function userWords(id: TwinSourceId, value: unknown): string[] {
     }
     return !parsed.data.internal &&
       !parsed.data.resumed &&
+      !parsed.data.continuation &&
       parsed.data.role !== "worker" &&
       parsed.data.actor !== "twin"
       ? [parsed.data.prompt]

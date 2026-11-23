@@ -4,6 +4,7 @@ import { markdownValue } from "../../util/markdown";
 import { wrapUntrusted } from "../loop/tool-message";
 import type { SteeringMessage } from "../loop/types";
 import type { Event, SessionId } from "../types";
+import type { SessionOptions } from "./options";
 
 const NOTICE_TAIL_LINES = 12;
 
@@ -40,8 +41,34 @@ export class JobNotices {
     terminals: TerminalManager,
     emit: (event: Event) => void,
     sessionId: () => SessionId | undefined,
+    lifecycle?: Pick<SessionOptions, "onTerminalLifecycle" | "role">,
   ) {
+    const onTerminalLifecycle = lifecycle?.onTerminalLifecycle;
+    const role = lifecycle?.role;
     this.#unsubscribe = terminals.onEvent((event) => {
+      if (event.type === "session.created" || event.type === "session.closed") {
+        const owner = sessionId();
+        if (!owner || !onTerminalLifecycle) return;
+        if (event.type === "session.created") {
+          onTerminalLifecycle({
+            kind: "created",
+            sessionId: owner,
+            ...(role ? { role } : {}),
+            id: event.session.id,
+            ...(event.title ? { title: event.title } : {}),
+            session: event.session,
+            close: () => terminals.close(event.session.id),
+          });
+        } else {
+          onTerminalLifecycle({
+            kind: "closed",
+            sessionId: owner,
+            ...(role ? { role } : {}),
+            id: event.id,
+          });
+        }
+        return;
+      }
       if (event.type === "job.started") {
         const owner = sessionId();
         if (owner === undefined) return;

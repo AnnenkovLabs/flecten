@@ -79,6 +79,8 @@ export type LeafSessionEvent =
       queueId?: string;
       /** The run continues a task that a crash or restart interrupted. */
       resumed?: boolean;
+      /** The run continues stopped or failed work silently without adding a user message. */
+      continuation?: boolean;
       internal?: boolean;
       actor?: "user" | "twin";
       budget?: BudgetView;

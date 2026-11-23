@@ -1,8 +1,16 @@
 import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 
-const { canonicalProjectPath, readProjectIndex, selectProject, removeProject } = createRequire(import.meta.url)("../shared/project-index.cjs");
+const { canonicalProjectPath, sameProjectPath, readProjectIndex, selectProject, removeProject } = createRequire(import.meta.url)("../shared/project-index.cjs");
+
+function usableLegacyCwd(legacyCwd, platform = process.platform, env = process.env, execPath = process.execPath) {
+  if (!legacyCwd) return false;
+  if (platform !== "win32") return true;
+  const root = env.SystemRoot ?? env.WINDIR ?? "C:\\Windows";
+  const systemDirs = [root, `${root}\\System32`, `${root}\\SysWOW64`, dirname(execPath)];
+  return !systemDirs.some((dir) => sameProjectPath(legacyCwd, dir, "win32"));
+}
 
 /** The shell owns folder selection; project content remains in the sidecar. */
 export function projectSelection(profile, initial, legacyCwd) {
@@ -13,7 +21,7 @@ export function projectSelection(profile, initial, legacyCwd) {
   else if (existsSync(join(profile, "projects.json"))) selected = readProjectIndex(profile).selected;
   else {
     let previous = null;
-    if (legacyCwd && existsSync(join(profile, "flecten.config.json"))) {
+    if (usableLegacyCwd(legacyCwd) && existsSync(join(profile, "flecten.config.json"))) {
       try { previous = canonicalProjectPath(legacyCwd); }
       catch { /* An unavailable legacy folder opens without a project. */ }
     }
@@ -33,7 +41,7 @@ export function projectSelection(profile, initial, legacyCwd) {
     },
     remove(path) {
       const index = removeProject(profile, path);
-      const changed = selected === path;
+      const changed = sameProjectPath(selected, path);
       if (changed) selected = index.selected;
       return changed;
     },

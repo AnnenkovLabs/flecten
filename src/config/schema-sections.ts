@@ -6,6 +6,7 @@ import {
 } from "../../shared/hooks";
 import { ModelChoiceSchema } from "../../shared/model-choice";
 import { isGithubName, UPDATE_CHANNELS } from "../../shared/update-settings.cjs";
+import { defaultTerminalEnvAllowlist } from "../terminal/settings";
 
 /** Config sections outside providers and models: tools, safety, terminal, sessions, limits. */
 
@@ -67,16 +68,14 @@ export const SandboxConfigSchema = z
     allowNetwork: z.boolean().default(ACCESS_MODES.agent.sandbox.allowNetwork),
     readDenyPrefixes: z.array(z.string()).default([]),
     writeDenyPrefixes: z.array(z.string()).default([]),
-    envAllowlist: z
-      .array(z.string())
-      .default(["PATH", "HOME", "USER", "SHELL", "TERM", "LANG", "LC_ALL", "TMPDIR", "PWD"]),
+    envAllowlist: z.array(z.string()).default(() => defaultTerminalEnvAllowlist()),
   })
-  .default({
+  .default(() => ({
     ...ACCESS_MODES.agent.sandbox,
     readDenyPrefixes: [],
     writeDenyPrefixes: [],
-    envAllowlist: ["PATH", "HOME", "USER", "SHELL", "TERM", "LANG", "LC_ALL", "TMPDIR", "PWD"],
-  });
+    envAllowlist: defaultTerminalEnvAllowlist(),
+  }));
 
 export const FailoverTargetSchema = z.object({
   provider: z.string().min(1),

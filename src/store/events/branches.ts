@@ -23,6 +23,7 @@ export function isUserMessage(event: Event): boolean {
     (event.type === "session.started" &&
       !event.internal &&
       !event.resumed &&
+      !event.continuation &&
       event.actor !== "twin" &&
       event.role !== "worker") ||
     (event.type === "steer.applied" && event.actor !== "twin")

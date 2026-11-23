@@ -15,7 +15,7 @@ export class RunControls {
     private readonly view: TaskView,
     private readonly sessionId: () => string | null,
     private readonly connected: () => boolean,
-    private readonly start: (prompt: string) => boolean,
+    private readonly resume: () => boolean,
   ) {}
 
   get canContinue(): boolean {
@@ -25,7 +25,7 @@ export class RunControls {
   continue(): boolean {
     if (this.coolingDown || !this.canContinue) return false;
     this.#cooldown();
-    return this.start("/continue");
+    return this.resume();
   }
 
   stop(): void {

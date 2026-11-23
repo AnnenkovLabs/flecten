@@ -57,7 +57,7 @@ test("a subagent keeps its task, lifecycle and readable report through live even
   view.restore([finished]);
   const complete = run.summary.list[0];
   if (!complete) throw new Error("No result");
-  expect(toolState(complete)).toBe("Finished");
+  expect(toolState(complete)).toBeUndefined();
   expect(subagentReport(complete.detail?.resultData)?.summary).toBe("Found the cause");
   expect(subagentReport(complete.detail?.resultData)?.sections).toEqual([
     { label: "Findings", items: ["Fallback hides details"] },

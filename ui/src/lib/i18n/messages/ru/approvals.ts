@@ -13,7 +13,6 @@ export default {
   "Allow this action?": "Разрешить действие?",
   "More options": "Другие варианты",
   "Add a note (optional)": "Комментарий (необязательно)",
-  "Only this action in this folder.": "Только это действие в этой папке.",
   "Tasks in progress: {0}. Permissions apply to the next action; other settings apply to the next run.":
     [
       "Выполняется задач: ",
@@ -21,9 +20,6 @@ export default {
       ". Права применятся к следующему действию, остальные настройки к следующему запуску.",
     ],
   Chat: "Чат",
-  "Always ask a person": "Всегда спрашивать человека",
-  "These checkpoints cannot be bypassed by saved approvals or automatic review.":
-    "Сохранённые правила и режим «Авто» не обходят эти проверки.",
   "Human approval required every time": "Подтверждение человека требуется каждый раз",
   "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.":
     "Разрешать безопасные действия в проекте; сомнительные команды проверять и спрашивать при неясности.",
@@ -36,36 +32,22 @@ export default {
   "Affected paths": "Затрагиваемые пути",
   "Applying decision…": "Применяем решение…",
   "Expired: waiting for confirmation": "Срок истёк: ждём подтверждения",
-  "Save this exact action for this project?": "Сохранить это точное действие для проекта?",
   "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
     "Совпасть должны все аргументы, пути и рабочая папка. Отозвать правило можно в разделе «Доступ».",
   "For this chat": "Для этого чата",
   "Save exact rule": "Сохранить точное правило",
   "Remember…": "Запомнить…",
-  "Allow bounded built-in actions. Ask before arbitrary code or external tools.":
-    "Разрешать безопасные встроенные действия; спрашивать перед командами и внешними инструментами.",
-  "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
-    "Разрешает обычные действия. Правила опасных операций и ограничения песочницы продолжают действовать.",
   "Saved rules": "Сохранённые правила",
   "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
     "Правила сохраняются глобально. Удаление правила вступает в силу после сохранения, в том числе во время работы агента.",
-  "No saved rules.": "Нет сохранённых правил.",
   "All matching actions": "Все подходящие действия",
   "Exact arguments and resources": "Точные аргументы и ресурсы",
-  "Configured scope": "Заданный охват",
   "Remove rule": "Удалить правило",
   "Destructive actions": "Необратимые действия",
-  "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.":
-    "Отдельное подтверждение необратимых операций, даже если обычные действия разрешены.",
-  "Execution boundary": "Граница песочницы",
-  "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.":
-    "Песочница ОС ограничивает команды папкой проекта и одобренными путями независимо от прав инструментов.",
-  "Workspace isolation enabled": "Изоляция рабочей папки включена",
-  "Workspace isolation disabled": "Изоляция рабочей папки выключена",
+  "Irreversible operations like force push or deleting outside the project.":
+    "Необратимые операции вроде force push или удаления вне проекта.",
   "Only the requests shown here are included. New requests remain pending.":
     "Решение касается только показанных запросов. Новые останутся в ожидании.",
-  "What should the agent do instead? (optional)":
-    "Что агенту сделать вместо этого? (необязательно)",
   "Feedback for the agent": "Комментарий для агента",
   "OS sandbox available": "Песочница ОС доступна",
   "OS sandbox unavailable": "Песочница ОС недоступна",
@@ -81,25 +63,20 @@ export default {
   "Works across your computer without routine approvals. Process isolation is off.":
     "Работает на всём компьютере без обычных запросов разрешений. Изоляция процессов выключена.",
   "Advanced settings differ from these modes.": "Расширенные настройки отличаются от этих режимов.",
-  "Saved rules and human checkpoints still apply in every mode.":
-    "Сохранённые правила и обязательные подтверждения действуют во всех режимах.",
+  "Saved rules still apply in every mode.": "Сохранённые правила действуют во всех режимах.",
   "Advanced access settings": "Расширенные настройки доступа",
   "Action permissions": "Разрешения по действиям",
   "Process isolation": "Изоляция процессов",
   "Isolate processes": "Изолировать процессы",
   "Limit commands to the project and approved folders.":
     "Ограничивать команды проектом и разрешёнными папками.",
-  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
-    "При включённой изоляции команды работают внутри проекта и папок, разрешённых для этого чата.",
+  "Allow network in isolated commands": "Разрешить сеть в изолированных командах",
+  "Allow shell commands inside the sandbox to reach websites and external services.":
+    "Разрешить командам в песочнице обращаться к сайтам и внешним сервисам.",
   "Allow folder access?": "Разрешить доступ к папке?",
   "Folder access covers the displayed paths and their subfolders.":
     "Доступ распространяется на указанные папки и все вложенные папки.",
   "Access is shared with agents in this chat.": "Доступ общий для агентов этого чата.",
   "Repeat this action in this chat": "Разрешить в этом чате",
   "Remember folder access": "Запомнить доступ к папке",
-  "Access mode: {0}": ["Режим доступа: ", 0],
-  "Could not change access. Try again. {0}": [
-    "Не удалось изменить доступ. Попробуйте ещё раз. ",
-    0,
-  ],
 } as const;

@@ -7,10 +7,7 @@ export default {
   Deny: "Запретить",
   "Always block.": "Всегда блокировать.",
   Auto: "Авто",
-  "Allow safe actions and ask about the rest.":
-    "Выполнять безопасные действия, для остальных запрашивать подтверждение.",
   Ask: "Спрашивать",
-  "Ask before every call.": "Запрашивать подтверждение перед каждым вызовом.",
   Allow: "Разрешить",
   "Allow without asking.": "Выполнять без подтверждения.",
   Read: "Чтение",
@@ -20,44 +17,19 @@ export default {
   "Create, edit, and delete files.": "Создание, изменение и удаление файлов.",
   Terminal: "Терминал",
   "Shell commands and child processes.": "Команды оболочки и дочерние процессы.",
-  "Commands can change files outside the project and send data out.":
-    "Команда может изменить файлы за пределами проекта и отправить данные за пределы компьютера.",
   Network: "Сеть",
   "External addresses, downloads, and web requests.": "Внешние адреса, загрузки и веб-запросы.",
-  "Requests go to an external server. The address and request body leave your machine.":
-    "Запрос отправляется на внешний сервер. Адрес и тело запроса передаются за пределы компьютера.",
   "Tools from connected MCP servers.": "Инструменты подключённых MCP-серверов.",
   Skills: "Навыки",
   "Activate skills and read their resources.": "Активация навыков и чтение их ресурсов.",
   "External paths": "Внешние пути",
   "Files outside the working folder.": "Файлы за пределами рабочей папки.",
-  "Paths may lead outside the working folder, including to system files and secrets.":
-    "Путь может вести за пределы рабочей папки, в том числе к системным файлам и секретным данным.",
   "Read-only": "Только чтение",
-  "Reads the project and skills. Writing, shell commands, and external paths are blocked. Network and MCP access require approval.":
-    "Разрешено чтение проекта и навыков. Запись, команды оболочки и доступ к внешним путям запрещены. Сеть и MCP требуют подтверждения.",
-  "Working folder": "Рабочая папка",
-  "Writes within the project. Shell commands, network, MCP, and external paths require approval.":
-    "Разрешена запись внутри проекта. Команды оболочки, сеть, MCP и доступ к внешним путям требуют подтверждения.",
   "Full access": "Полный доступ",
-  "Allows all actions without asking. Use only in a trusted project.":
-    "Все действия разрешены без подтверждения. Используйте только в доверенном проекте.",
-  "These settings don't match any preset. Check each row before saving.":
-    "Собственная комбинация правил.",
-  "just now": "только что",
   "{0} sec": [0, " с"],
   "{0} min": [0, " мин"],
   "{0} hr": [0, " ч"],
   "{0} d": [0, " д"],
-  "Policies must be an object.": "Некорректный формат правил доступа.",
-  "Unknown action: {0}.": ["Неизвестное действие: ", 0, "."],
-  "Unknown policy for action {0}: {1}.": [
-    "Неизвестное правило доступа для действия ",
-    0,
-    ": ",
-    1,
-    ".",
-  ],
   "Opening a browser is available in the desktop app":
     "Ссылки открываются только в настольном приложении",
   "the core returned no file": "содержимое файла недоступно",

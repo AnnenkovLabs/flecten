@@ -70,6 +70,10 @@ export default {
   "Not saved": "Not saved",
   "Saving…": "Saving…",
   user: "user",
+  "built-in": "built-in",
+  "Built-in skills": "Built-in skills",
+  "Plugin conversion and harness self-configuration guides.":
+    "Plugin conversion and harness self-configuration guides.",
   allowed: "allowed",
   "requires approval": "requires approval",
   "shared session permissions": "shared session permissions",

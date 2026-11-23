@@ -3,11 +3,17 @@ import { z } from "zod";
 export const terminalSpec = {
   name: "terminal",
   description:
-    "Use a persistent PTY when a command needs stdin or shell state across calls. Prefer bash for isolated commands and bash background=true with jobs for servers or long builds. run waits for command completion; a nonzero exit is a failed result. A wait timeout leaves the process running: inspect with read, send input with write, or stop it with kill. write sends literal input, read returns scrollback, resize changes PTY dimensions, and list shows terminal ids.",
+    "Use persistent interactive PTY tabs when commands need interactive stdin, live terminal visibility, or shell state across calls. Each distinct id opens its own live tab in the user's Terminal panel so you can run separate terminals in parallel (e.g., id='dev-server', id='tests') while the user can watch or type into any tab directly. Prefer grep, glob and read for code search and file inspection, bash for one-shot commands, and bash background=true with jobs for simple background logs. run waits for command completion; a nonzero exit is a failed result. A wait timeout leaves the process running: inspect with read, send input with write, or stop it with kill. write sends literal input, read returns scrollback, resize changes PTY dimensions, and list shows terminal ids.",
   schema: z
     .object({
       op: z.enum(["run", "write", "read", "resize", "kill", "list"]).describe("Operation"),
-      id: z.string().min(1).optional().describe("Terminal id, default terminal"),
+      id: z.string().min(1).optional().describe("Terminal tab id, default 'default'"),
+      title: z
+        .string()
+        .min(1)
+        .max(80)
+        .optional()
+        .describe("Optional human-readable label for the terminal tab"),
       command: z.string().optional().describe("Required for run: shell command to execute"),
       input: z
         .string()

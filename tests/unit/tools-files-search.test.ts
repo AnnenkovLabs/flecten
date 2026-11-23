@@ -198,6 +198,101 @@ describe("grep flags", () => {
     const res = await runGrep({ pattern: "terminal kill tree" }, context(cwd));
     expect(res.ok).toBe(true);
     expect(res.output).toContain("process-tree.ts:1: export function killTerminalSubprocessTree");
+    expect(res.output).toContain("[No exact regex matches; showing BM25 identifier matches]");
+  });
+
+  test("literal=true stays exact and does not trigger fuzzy BM25 fallback", async () => {
+    const cwd = await tempDir();
+    await writeFile(
+      join(cwd, "process-tree.ts"),
+      "export function killTerminalSubprocessTree(pid: number): void {}\n",
+    );
+    for (const search of [runGrep, runGrepFallback]) {
+      const res = await search({ pattern: "terminal kill tree", literal: true }, context(cwd));
+      expect(res.ok).toBe(true);
+      expect(res.output).toBe("No matches found");
+      expect(res.data).toMatchObject({ kind: "search", count: 0 });
+    }
+  });
+
+  test("BM25 prefilter ignores stopwords and prioritizes src/ over >250 earlier docs files", async () => {
+    const cwd = await tempDir();
+    await mkdir(join(cwd, "docs"), { recursive: true });
+    await mkdir(join(cwd, "src"), { recursive: true });
+    await Promise.all(
+      Array.from({ length: 260 }, (_, idx) =>
+        writeFile(
+          join(cwd, "docs", `doc-${String(idx).padStart(3, "0")}.md`),
+          "How to configure unrelated auth settings.\n",
+        ),
+      ),
+    );
+    await writeFile(
+      join(cwd, "src", "session-token.ts"),
+      [
+        "export function verifySessionAuthToken(raw: string): boolean {",
+        "  return raw.startsWith('Bearer ');",
+        "}",
+      ].join("\n"),
+    );
+    const res = await runGrep({ pattern: "how to verify session token" }, context(cwd));
+    expect(res.ok).toBe(true);
+    expect(res.output).toContain("src/session-token.ts:1: export function verifySessionAuthToken");
+    expect(res.output).toContain("[No exact regex matches; showing BM25 identifier matches]");
+  });
+
+  test("multiline=true matches across line breaks identically in ripgrep and fallback", async () => {
+    const cwd = await tempDir();
+    await writeFile(
+      join(cwd, "sig.ts"),
+      [
+        "export async function startWorker(",
+        "  brief: string,",
+        "  timeoutMs: number,",
+        "): Promise<void> {",
+        "  return undefined;",
+        "}",
+      ].join("\n"),
+    );
+    for (const search of [runGrep, runGrepFallback]) {
+      const regexRes = await search(
+        { pattern: "startWorker\\(.*timeoutMs: number", multiline: true },
+        context(cwd),
+      );
+      expect(regexRes.ok).toBe(true);
+      expect(regexRes.output).toContain("sig.ts:1: export async function startWorker(");
+      expect(regexRes.output).toContain("sig.ts:2:   brief: string,");
+      expect(regexRes.output).toContain("sig.ts:3:   timeoutMs: number,");
+
+      const literalRes = await search(
+        { pattern: "brief: string,\n  timeoutMs: number,", literal: true, multiline: true },
+        context(cwd),
+      );
+      expect(literalRes.ok).toBe(true);
+      expect(literalRes.output).toContain("sig.ts:2:   brief: string,");
+      expect(literalRes.output).toContain("sig.ts:3:   timeoutMs: number,");
+    }
+  });
+
+  test("external absolute directory grep expands definitions and primes ReadTracker", async () => {
+    const cwd = await tempDir();
+    const external = await tempDir();
+    const target = join(external, "widget.ts");
+    const source = [
+      "export function computeWidgetScore(input: number): number {",
+      "  return input * 2;",
+      "}",
+      "",
+    ].join("\n");
+    await writeFile(target, source);
+    for (const search of [runGrep, runGrepFallback]) {
+      const ctx = context(cwd);
+      const res = await search({ pattern: "computeWidgetScore", path: external }, ctx);
+      expect(res.ok).toBe(true);
+      expect(res.output).toContain("export function computeWidgetScore");
+      expect(res.output).toContain("return input * 2;");
+      expect(ctx.reads.verify(target, source)).toBe("ok");
+    }
   });
 });
 

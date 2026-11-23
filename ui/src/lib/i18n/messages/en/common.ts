@@ -7,9 +7,7 @@ export default {
   Deny: "Deny",
   "Always block.": "Always block.",
   Auto: "Auto",
-  "Allow safe actions and ask about the rest.": "Allow safe actions and ask about the rest.",
   Ask: "Ask",
-  "Ask before every call.": "Ask before every call.",
   Allow: "Allow",
   "Allow without asking.": "Allow without asking.",
   Read: "Read",
@@ -19,39 +17,20 @@ export default {
   "Create, edit, and delete files.": "Create, edit, and delete files.",
   Terminal: "Terminal",
   "Shell commands and child processes.": "Shell commands and child processes.",
-  "Commands can change files outside the project and send data out.":
-    "Commands can change files outside the project and send data out.",
   Network: "Network",
   "External addresses, downloads, and web requests.":
     "External addresses, downloads, and web requests.",
-  "Requests go to an external server. The address and request body leave your machine.":
-    "Requests go to an external server. The address and request body leave your machine.",
   "Tools from connected MCP servers.": "Tools from connected MCP servers.",
   Skills: "Skills",
   "Activate skills and read their resources.": "Activate skills and read their resources.",
   "External paths": "External paths",
   "Files outside the working folder.": "Files outside the working folder.",
-  "Paths may lead outside the working folder, including to system files and secrets.":
-    "Paths may lead outside the working folder, including to system files and secrets.",
   "Read-only": "Read-only",
-  "Reads the project and skills. Writing, shell commands, and external paths are blocked. Network and MCP access require approval.":
-    "Reads the project and skills. Writing, shell commands, and external paths are blocked. Network and MCP access require approval.",
-  "Working folder": "Working folder",
-  "Writes within the project. Shell commands, network, MCP, and external paths require approval.":
-    "Writes within the project. Shell commands, network, MCP, and external paths require approval.",
   "Full access": "Full access",
-  "Allows all actions without asking. Use only in a trusted project.":
-    "Allows all actions without asking. Use only in a trusted project.",
-  "These settings don't match any preset. Check each row before saving.":
-    "Custom rule combination.",
-  "just now": "just now",
   "{0} sec": [0, " sec"],
   "{0} min": [0, " min"],
   "{0} hr": [0, " hr"],
   "{0} d": [0, " d"],
-  "Policies must be an object.": "Invalid permission policy format.",
-  "Unknown action: {0}.": ["Unknown action: ", 0, "."],
-  "Unknown policy for action {0}: {1}.": ["Unknown policy for action ", 0, ": ", 1, "."],
   "Opening a browser is available in the desktop app": "Browser links require the desktop app",
   "the core returned no file": "file content unavailable",
   model: "model",

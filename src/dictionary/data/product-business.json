@@ -22,11 +22,40 @@
     {
       "id": "mera-tw4b4c314f",
       "term": "AI slop",
-      "aliases": ["слоп", "ии-слоп", "slop PR", "слоп контент", "нагенерённый слоп"],
+      "aliases": [
+        "slop",
+        "ai-slop",
+        "ai design slop",
+        "design slop",
+        "ui slop",
+        "slop ui",
+        "slop PR",
+        "slop farm",
+        "slop content",
+        "слоп",
+        "слопа",
+        "слопу",
+        "слопом",
+        "слопе",
+        "ии-слоп",
+        "ии слоп",
+        "нейрослоп",
+        "слоп контент",
+        "нагенерённый слоп",
+        "слопный дизайн",
+        "слоп дизайн",
+        "ии-слоп дизайн",
+        "слопный ui",
+        "ші-слоп",
+        "ші слоп"
+      ],
       "category": "product-business",
-      "definition": "Low-quality, mass-produced AI-generated content - text, images, video, code, PRs - churned out with no human curation, valued for volume rather than substance. It was named 2025 word of the year by major dictionaries and is now the standard pejorative in editorial, moderation and code-review contexts (\"slop PR\", \"slop farm\"). In practice: a maintainer closes an issue saying \"this is slop\" meaning AI-generated, unverified and not worth reviewing. По-русски: закрой этот PR - это слоп, сгенерённый ИИ и никем не проверенный (since 2024, mainstream 2025 (2025 word of the year))",
-      "clarification": "Not literal waste or pig feed and not generic spam; it means unreviewed mass-produced AI content.",
-      "sources": ["https://www.merriam-webster.com/wordplay/word-of-the-year"]
+      "definition": "Low-quality, formulaic, mass-produced AI-generated output churned out with little or no human taste, curation or verification (Merriam-Webster and Macquarie Dictionary 2025 Word of the Year). Applies across every digital medium: (1) UI and web design slop - generic LLM-generated interfaces regressing to statistical defaults: purple/indigo Tailwind gradients, glowing background orbs, Inter/default sans monoculture, centered hero with a vague slogan and two CTA buttons, identical 3-column icon-card feature grids, gratuitous glassmorphism, pulsing badges and decorative animations with no product identity. (2) Image and video slop - glossy, plastic, uncanny generative visuals (extra fingers, melting details, engagement-bait like Shrimp Jesus) and automated Reels/Shorts/TikTok slop farms chasing clicks and ad revenue. (3) Writing, SEO, books and workplace slop - padded, cliché-ridden AI copy, junk SEO articles, unedited AI e-books, and corporate workslop (reports/emails/decks that look finished but lack substance). (4) Code, PR and security-report slop - unreviewed, bloated or hallucinated LLM pull requests and bug reports dumped on maintainers ('slop PR'). (5) Music, audio and game slop - automated AI ghost-artist tracks flooding streaming services and conveyor-belt asset-flip games. По-русски: ИИ-слоп / слоп - любой шаблонный, дешёвый и массово нагенерённый ИИ-контент без вкуса и проверки: в дизайне (фиолетовые Tailwind-градиенты, одинаковые 3 карточки с иконками, бесцельный glassmorphism), в картинках и видео (пластиковый рендер, фермы рилсов), в текстах (шаблонная вода и SEO-мусор), в коде (непроверенные PR и галлюцинации), в музыке и играх (since 2024, mainstream 2025).",
+      "clarification": "Not literal waste or pig feed and not generic human spam; it means uncurated, statistically generic AI output across any medium (UI design, visuals, video, writing, audio, games or code/PRs). When a user asks to avoid AI slop in design or code, eliminate generic template clichés (purple gradients, 3-card icon grids, filler copy, unverified bloat) and apply deliberate, domain-specific craft.",
+      "sources": [
+        "https://www.merriam-webster.com/wordplay/word-of-the-year",
+        "https://en.wikipedia.org/wiki/AI_slop"
+      ]
     },
     {
       "id": "mera-tw6e5c2dfd",

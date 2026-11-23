@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import type { ToolResult } from "../../core/types";
+import { renameWithRetry } from "../../util/atomic";
 import { defineTool, type ToolContext } from "../types";
 import { type DiffHunk, diffText } from "../util/diff";
 import { mutationPath } from "../util/mutation-path";
@@ -291,26 +292,21 @@ async function stageFile(path: string, content: string): Promise<string> {
   return temp;
 }
 
-async function restoreFile(path: string, content: string): Promise<void> {
-  const temp = await stageFile(path, content);
-  await rename(temp, path);
-}
-
+const pathKey = (path: string) => (process.platform === "win32" ? path.toLowerCase() : path);
 async function commitChanges(changes: FileChange[], signal: AbortSignal): Promise<void> {
   signal.throwIfAborted();
   const staged: Array<{ path: string; temp: string }> = [];
   let published = false;
   try {
     for (const change of changes) {
-      if (change.content === null) continue;
-      staged.push({ path: change.path, temp: await stageFile(change.path, change.content) });
+      if (change.content !== null)
+        staged.push({ path: change.path, temp: await stageFile(change.path, change.content) });
     }
     signal.throwIfAborted();
     published = true;
-    for (const entry of staged) await rename(entry.temp, entry.path);
-    for (const change of changes) {
-      if (change.content === null) await rm(change.path);
-    }
+    const retry = process.platform === "win32" ? { maxRetries: 5, retryDelay: 50 } : undefined;
+    for (const change of changes) if (change.content === null) await rm(change.path, retry);
+    for (const entry of staged) await renameWithRetry(entry.temp, entry.path, signal);
   } catch (error) {
     await Promise.all(
       staged.map((entry) => rm(entry.temp, { force: true }).catch(() => undefined)),
@@ -318,7 +314,7 @@ async function commitChanges(changes: FileChange[], signal: AbortSignal): Promis
     for (const change of published ? changes : []) {
       try {
         if (change.previous === null) await rm(change.path, { force: true });
-        else await restoreFile(change.path, change.previous);
+        else await renameWithRetry(await stageFile(change.path, change.previous), change.path);
       } catch {}
     }
     throw error;
@@ -357,8 +353,8 @@ export async function runApplyPatch(
         context.authorizedExternalPaths,
       );
       await checkSandbox(context, path);
-      if (seen.has(path)) throw new Error(`Patch changes ${file.path} more than once`);
-      seen.add(path);
+      if (seen.has(pathKey(path))) throw new Error(`Patch changes ${file.path} more than once`);
+      seen.add(pathKey(path));
       resolved.set(file, path);
     }
 
@@ -406,10 +402,15 @@ export async function runApplyPatch(
         context.authorizedExternalPaths,
       );
       await checkSandbox(context, targetPath);
-      if (seen.has(targetPath)) throw new Error(`Patch moves to ${file.moveTo} more than once`);
-      seen.add(targetPath);
+      const caseOnlyMove =
+        process.platform === "win32" &&
+        pathKey(targetPath) === pathKey(path) &&
+        targetPath !== path;
+      if (!caseOnlyMove && seen.has(pathKey(targetPath)))
+        throw new Error(`Patch moves to ${file.moveTo} more than once`);
+      seen.add(pathKey(targetPath));
       const targetDisplay = displayPath(context.cwd, targetPath);
-      const targetPrevious = await readExisting(targetPath, file.moveTo);
+      const targetPrevious = caseOnlyMove ? null : await readExisting(targetPath, file.moveTo);
       if (targetPrevious !== null) throw new Error(`Move to: ${file.moveTo} already exists`);
 
       changes.push({ path, display, previous, content: null });

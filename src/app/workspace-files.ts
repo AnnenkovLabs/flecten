@@ -1,9 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, realpath, rename, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative as relativePath, resolve } from "node:path";
 import { z } from "zod";
 import { isInside } from "../tools/util/paths";
 import { Mutex } from "../util/mutex";
+
+const PROTECTED_ROOTS = new Set([".git", ".flecten", ".liquid", ".flecten-migration"]);
+
+function isProtectedRoot(root: string, target: string): boolean {
+  const rel = relativePath(root, target).replaceAll("\\", "/");
+  const top = rel.split("/")[0] ?? "";
+  return PROTECTED_ROOTS.has(process.platform === "win32" ? top.toLowerCase() : top);
+}
 
 const Path = z
   .string()
@@ -19,25 +27,12 @@ const mutations = new Mutex();
 
 async function checkedPath(root: string, path: string): Promise<string> {
   const target = resolve(root, path);
-  const relative = target
-    .slice(root.length + 1)
-    .split("\\")
-    .join("/");
-  if (
-    !isInside(root, target) ||
-    target === root ||
-    [".git", ".flecten", ".liquid", ".flecten-migration"].includes(relative.split("/")[0] ?? "")
-  )
+  if (!isInside(root, target) || target === root || isProtectedRoot(root, target))
     throw new Error("Choose a path inside the project, outside .git and .flecten.");
   const parent = await realpath(dirname(target));
   if (!isInside(root, parent)) throw new Error("Target folder is outside the project.");
   const canonical = join(parent, basename(target));
-  if (
-    !isInside(root, canonical) ||
-    [".git", ".flecten", ".liquid", ".flecten-migration"].includes(
-      canonical.slice(root.length + 1).split("/")[0] ?? "",
-    )
-  )
+  if (!isInside(root, canonical) || isProtectedRoot(root, canonical))
     throw new Error("Protected internal folders cannot be modified here.");
   return canonical;
 }

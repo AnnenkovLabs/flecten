@@ -70,6 +70,10 @@ export default {
   "Not saved": "Não salvo",
   "Saving…": "Salvando…",
   user: "usuário",
+  "built-in": "integrada",
+  "Built-in skills": "Habilidades integradas",
+  "Plugin conversion and harness self-configuration guides.":
+    "Guias de conversão de plugins e configuração do próprio Flecten.",
   allowed: "permitido",
   "requires approval": "exige confirmação",
   "shared session permissions": "permissões gerais da sessão",

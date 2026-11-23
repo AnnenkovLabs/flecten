@@ -1,11 +1,13 @@
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
+import { readBuiltinSkillResource } from "./builtin";
 import { listSkillResources } from "./resources";
 import type { Skill } from "./schema";
 import { MAX_SKILL_BYTES } from "./schema";
 
 /** A selected resource is previewed as text, never executed or added as instructions. */
 export async function readSkillResource(skill: Skill, path: string) {
+  if (skill.source === "builtin") return readBuiltinSkillResource(skill.name, path);
   const available = await listSkillResources(skill.directory);
   if (!available.includes(path)) throw new Error("Resource is not listed in this skill.");
   const [root, target] = await Promise.all([

@@ -2,6 +2,7 @@ import { readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { SKILL_SOURCES, type SkillSourceId } from "../config/skills";
+import { builtinSkills } from "./builtin";
 import {
   MAX_SKILL_BYTES,
   parseSkillFile,
@@ -30,6 +31,8 @@ export interface DiscoverSkillsOptions {
   home?: string;
   sources?: readonly SkillSourceId[] | undefined;
   trust?: Readonly<Record<string, SkillTrust>> | undefined;
+  /** Include skills shipped with Flecten (lowest precedence so user/project skills can override). */
+  builtin?: boolean | undefined;
 }
 
 export function skillScopes(cwd: string, home: string): SkillScope[] {
@@ -91,6 +94,13 @@ export async function discoverSkills(
   const root = resolve(options.projectRoot ?? cwd);
   const home = resolve(options.home ?? homedir());
   const enabled = new Set(options.sources ?? SKILL_SOURCES);
+
+  if (options.builtin) {
+    for (const skill of builtinSkills(options.trust)) {
+      skills.set(skill.name, skill);
+      sourceOf.set(skill.name, skill.location);
+    }
+  }
 
   for (const scope of skillScopes(root, home)) {
     if (options.projectRoot === null && scope.source === "project") continue;

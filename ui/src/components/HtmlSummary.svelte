@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SummaryInteractionPacketSchema, type SummaryInteraction } from "../../../shared/summary-interaction";
+  import { appearance } from "../lib/appearance.svelte";
   import { t } from "../lib/i18n.svelte";
   import manropeCyrillic from "../assets/fonts/manrope-cyrillic.woff2?url";
   import manropeLatin from "../assets/fonts/manrope-latin.woff2?url";
@@ -83,7 +84,7 @@
   function configCss(): Promise<string> {
     config ??= fontCss().then(
       (font) =>
-        `${font}${themeCss}${summaryKitCss}${tokensCss()}html,body{margin:0;max-width:100%;background:transparent}body{color:var(--text-body);font-family:var(--font);-webkit-font-smoothing:antialiased}#summary-root{max-width:100%;padding:0}`,
+        `${font}${themeCss}${summaryKitCss}${tokensCss()}html,body{margin:0;max-width:100%;background:transparent}body{color:var(--text-body);font-family:var(--font);-webkit-font-smoothing:antialiased}#summary-root{max-width:100%;padding:0;zoom:var(--summary-scale,1)}`,
     );
     return config;
   }
@@ -203,7 +204,7 @@
               };
             }
             target.postMessage(
-              { type: TYPE, version: VERSION, kind: "config", css },
+              { type: TYPE, version: VERSION, kind: "config", css, scale: appearance.summaryScale / 100 },
               "*",
               channel ? [channel.port2] : [],
             );
@@ -231,6 +232,12 @@
       interactionPort?.close();
       window.removeEventListener("message", receive);
     };
+  });
+
+  $effect(() => {
+    const scale = appearance.summaryScale / 100;
+    if (!frameReady) return;
+    post({ kind: "scale", scale });
   });
 
   $effect(() => {

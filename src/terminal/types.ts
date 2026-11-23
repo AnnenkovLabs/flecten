@@ -3,6 +3,9 @@ import type { TerminalResourceLimits } from "./settings";
 export interface TerminalStartOptions {
   cwd: string;
   shell?: string;
+  title?: string;
+  /** True for user-owned interactive shells: native env, login/interactive args, full job control. */
+  interactive?: boolean;
   env?: Record<string, string>;
   envAllowlist?: string[];
   ansi?: boolean;

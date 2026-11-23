@@ -10,11 +10,15 @@
   const policyMap = $derived(buildPolicy(policies));
 </script>
 
-<div class="perm-section" role="group" aria-label={t("Action permissions")}>
-  <h3 class="perm-section-title">{t("Action permissions")}</h3>
-  <div class="perm-policy-list">
+<div class="st-group" role="group" aria-label={t("Action permissions")}>
+  <h3 class="st-group-title">{t("Action permissions")}</h3>
+  <div class="st-card perm-policy-list">
     {#each POLICY_ACTIONS as action (action)}
-      <PolicyRow meta={ACTION_META[action]} value={policyMap[action]} onChange={(policy) => onChange(action, policy)} />
+      <PolicyRow
+        meta={ACTION_META[action]}
+        value={policyMap[action]}
+        onChange={(policy) => onChange(action, policy)}
+      />
     {/each}
   </div>
 </div>

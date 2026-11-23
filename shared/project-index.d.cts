@@ -10,6 +10,11 @@ export interface ProjectIndex {
   projects: RememberedProject[];
 }
 export function canonicalProjectPath(path: string): string;
+export function sameProjectPath(
+  left: string | null | undefined,
+  right: string | null | undefined,
+  platform?: NodeJS.Platform,
+): boolean;
 export function readProjectIndex(profile: string): ProjectIndex;
 export function selectProject(profile: string, path: string | null): ProjectIndex;
 export function removeProject(profile: string, path: string): ProjectIndex;

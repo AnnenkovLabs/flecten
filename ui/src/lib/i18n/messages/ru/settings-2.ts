@@ -45,23 +45,11 @@ export default {
   "The agent receives shortened output. The full result is saved in the tool log.":
     "Агент получает сокращённый вывод. Полный результат сохраняется в журнале инструмента.",
   Enabled: "Включена",
-  "Check paths, secrets, and network access before execution.":
-    "Проверять пути, секреты и сеть перед выполнением.",
-  "Sandbox enabled": "Песочница включена sandbox enabled",
-  "Allow network access": "Разрешить сеть",
-  "Access to websites and external services.": "Доступ к сайтам и внешним сервисам.",
-  "Network allowNetwork": "Сеть allowNetwork",
-  "Blocked paths": "Запрещённые пути",
-  "Blocked read paths readDenyPrefixes": "Пути, запрещённые для чтения readDenyPrefixes",
-  "Blocked write paths writeDenyPrefixes": "Пути, запрещённые для записи writeDenyPrefixes",
   "One prefix per line. Use absolute paths or paths relative to the project root.":
     "Один префикс на строку. Абсолютные пути или пути от корня проекта.",
   Environment: "Окружение",
-  "Environment variables envAllowlist": "Переменные окружения envAllowlist",
   "Only these variables are available to commands and extensions. Provider keys are not passed on.":
     "Командам и расширениям доступны только эти переменные. Ключи провайдера не передаются.",
-  "Sandbox is not configured. Save settings to create a configuration file.":
-    "Песочница не настроена. Сохраните настройки, чтобы создать файл конфигурации.",
   unknown: "неизвестна",
   "Could not collect diagnostics. Try again.":
     "Не удалось собрать диагностику. Попробуйте ещё раз.",

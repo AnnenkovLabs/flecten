@@ -64,10 +64,10 @@
 
 <style>
   .answer {
-    max-width: 68ch;
+    max-width: calc(68ch + max(0px, var(--content-w, 780px) - 780px));
     margin-top: 16px;
     color: var(--text-body);
-    font-size: 16px;
+    font-size: calc(16px * var(--text-scale, 1));
     line-height: 1.65;
     text-wrap: pretty;
     transition: opacity 280ms var(--ease);

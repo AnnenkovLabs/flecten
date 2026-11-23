@@ -125,6 +125,11 @@ export function toolSubject(call: AgentToolCall): string {
   if (call.name === "memory")
     return textArg(args, "query") || textArg(args, "summary") || textArg(args, "id");
   if (call.name === "worker") return textArg(args, "task") || textArg(args, "message");
+  if (call.name === "skill") {
+    const name = textArg(args, "name");
+    const resource = textArg(args, "resource");
+    return resource ? `${name}: ${resource}` : name;
+  }
   const field = own(TOOLS, call.name)?.field;
   return field ? textArg(args, field) : "";
 }
@@ -135,5 +140,5 @@ export function toolState(action: RunAction): MessageKey | undefined {
   if (action.state === "cancelled") return "Stopped";
   if (action.failed) return "Failed";
   if (action.running) return "Running";
-  return action.state === "succeeded" ? "Finished" : "Queued";
+  return action.state === "succeeded" ? undefined : "Queued";
 }

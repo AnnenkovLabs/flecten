@@ -1,6 +1,7 @@
-import { lstat, mkdir, readFile, rename } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readFile, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ToolResult } from "../../core/types";
+import { renameWithRetry } from "../../util/atomic";
 import type { ToolContext } from "../types";
 import { defineTool } from "../types";
 import { mutationPath } from "../util/mutation-path";
@@ -55,7 +56,9 @@ export async function runMove(args: MoveArgs, context: ToolContext): Promise<Too
     return { ok: false, output: "", error: `Move supports regular files only: ${args.from}` };
   }
 
-  const target = await statOrNull(to);
+  const caseOnlyRename =
+    process.platform === "win32" && from.toLowerCase() === to.toLowerCase() && from !== to;
+  const target = caseOnlyRename ? undefined : await statOrNull(to);
   if (target?.isSymbolicLink()) {
     return { ok: false, output: "", error: `Refusing to overwrite symbolic link: ${args.to}` };
   }
@@ -99,7 +102,13 @@ export async function runMove(args: MoveArgs, context: ToolContext): Promise<Too
     context.signal.throwIfAborted();
     await mkdir(dirname(to), { recursive: true });
     context.signal.throwIfAborted();
-    await rename(from, to);
+    try {
+      await renameWithRetry(from, to, context.signal);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EXDEV") throw error;
+      await copyFile(from, to);
+      await rm(from, process.platform === "win32" ? { maxRetries: 5, retryDelay: 50 } : undefined);
+    }
   } catch (error) {
     return { ok: false, output: "", error: message(error) };
   }

@@ -3,7 +3,7 @@ import { McpElicitationBroker } from "../mcp/elicitation";
 import { McpOAuthClient } from "../mcp/oauth-client";
 import type { McpSessionRuntime } from "../mcp/session";
 import { readSkillResource } from "../skills/resource";
-import { listSkillResources } from "../skills/resources";
+import { listSkillResourcesFor } from "../skills/resources";
 import type { AppExtensions } from "./extensions";
 import { mcpSecretStore } from "./mcp-oauth";
 
@@ -94,7 +94,7 @@ export function extensionRuntime(
       return Promise.all(
         current().skills.skills.map(async (skill) => ({
           ...skill,
-          resources: await listSkillResources(skill.directory),
+          resources: await listSkillResourcesFor(skill),
         })),
       );
     },

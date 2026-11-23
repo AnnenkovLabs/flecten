@@ -129,6 +129,8 @@ export interface LoopOptions {
   /** Actual human input, absent for internal and delegated prompts. */
   userSource?: string;
   allowUserMemory?: boolean;
+  /** True when the turn's prompt is a harness continuation rather than new user prose. */
+  syntheticPrompt?: boolean;
   language?: LanguageRun | undefined;
   tools: ToolRegistry;
   system: string;

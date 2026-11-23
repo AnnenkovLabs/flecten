@@ -10,7 +10,9 @@ async function project(
   run: (cwd: string, handlers: ReturnType<typeof createHandlers>) => Promise<void>,
 ): Promise<void> {
   const cwd = await mkdtemp(join(tmpdir(), "ide-basics-"));
-  const terminal = new IdeTerminal(cwd, () => ({}));
+  const terminal = new IdeTerminal(cwd, () =>
+    process.platform === "win32" ? {} : { shell: Bun.which("bash") ?? "/bin/sh" },
+  );
   const handlers = createHandlers(
     { info: () => ({ cwd }), ideTerminal: terminal } as unknown as AppService,
     () => undefined,
@@ -89,6 +91,18 @@ test("project search returns real line positions, literal metacharacters, case a
     await writeFile(join(cwd, "many.txt"), "needle\n".repeat(600));
     expect(await find("needle")).toMatchObject({ limited: true });
     expect((await find("needle")).matches).toHaveLength(500);
+    await mkdir(join(cwd, "node_modules/pkg"), { recursive: true });
+    await writeFile(join(cwd, "node_modules/pkg/index.js"), "const uniqueSearchToken = 1;\n");
+    await mkdir(join(cwd, ".next"), { recursive: true });
+    await writeFile(join(cwd, ".next/chunk.js"), "const uniqueSearchToken = 2;\n");
+    await writeFile(join(cwd, "bun.lock"), "uniqueSearchToken\n");
+    await writeFile(join(cwd, "bundle.min.js"), "var uniqueSearchToken=3;\n");
+    await writeFile(join(cwd, "image.png"), Buffer.from("uniqueSearchToken\x00PNG"));
+    await writeFile(join(cwd, "raw-bin"), Buffer.from("uniqueSearchToken\x00\x01\x02"));
+    await writeFile(join(cwd, "real.ts"), "export const uniqueSearchToken = 4;\n");
+    const filtered = await find("uniqueSearchToken");
+    expect(filtered.matches).toHaveLength(1);
+    expect(filtered.matches[0]).toMatchObject({ path: "real.ts", line: 1 });
   });
 });
 

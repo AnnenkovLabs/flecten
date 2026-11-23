@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
+import { canonicalPath } from "../../util/canonical-path";
 
 /**
  * A private git repository in `.flecten/shadow` that indexes the workspace for shell checkpoints.
@@ -44,6 +45,64 @@ const SHADOW_CONFIG = `[core]
 /** Content goes into the shadow repository byte for byte: no line ending or filter conversion. */
 const SHADOW_ATTRIBUTES = "* -text -filter -eol -ident -working-tree-encoding -diff\n";
 
+const WINDOWS_GIT_ENV_KEYS = [
+  "SystemRoot",
+  "WINDIR",
+  "ComSpec",
+  "PATHEXT",
+  "TEMP",
+  "TMP",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "ProgramData",
+  "ProgramFiles",
+  "ProgramFiles(x86)",
+  "SystemDrive",
+] as const;
+
+export function gitBaseEnvironment(
+  platform: NodeJS.Platform = process.platform,
+  source: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const lookup = (name: string): string | undefined => {
+    if (platform !== "win32") return source[name];
+    const upper = name.toUpperCase();
+    const key = Object.keys(source).find((entry) => entry.toUpperCase() === upper);
+    return key === undefined ? undefined : source[key];
+  };
+  const env: Record<string, string> = {};
+  if (platform === "win32") {
+    for (const key of WINDOWS_GIT_ENV_KEYS) {
+      const value = lookup(key);
+      if (value !== undefined && value.length > 0) env[key] = value;
+    }
+  }
+  const path = lookup("PATH");
+  env.PATH =
+    path && path.length > 0
+      ? path
+      : platform === "win32"
+        ? "C:\\Windows\\System32"
+        : "/usr/bin:/bin";
+  const home = lookup("HOME") ?? (platform === "win32" ? lookup("USERPROFILE") : undefined);
+  env.HOME = home && home.length > 0 ? home : platform === "win32" ? "C:\\" : "/";
+  env.LC_ALL = "C";
+  return env;
+}
+
+function sameGitRoot(
+  left: string,
+  right: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const a = canonicalPath(left);
+  const b = canonicalPath(right);
+  return platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
 export class ShadowGit {
   readonly gitDir: string;
   readonly workTree: string;
@@ -61,8 +120,7 @@ export class ShadowGit {
 
   env(): Record<string, string> {
     return {
-      PATH: process.env.PATH ?? "/usr/bin:/bin",
-      HOME: process.env.HOME ?? "/",
+      ...gitBaseEnvironment(),
       GIT_DIR: this.gitDir,
       GIT_WORK_TREE: this.workTree,
       GIT_INDEX_FILE: this.indexFile,
@@ -71,7 +129,6 @@ export class ShadowGit {
       GIT_OPTIONAL_LOCKS: "0",
       GIT_TERMINAL_PROMPT: "0",
       GIT_LITERAL_PATHSPECS: "1",
-      LC_ALL: "C",
     };
   }
 
@@ -140,11 +197,7 @@ export async function findUserRepo(
   binary = "git",
   deadline = Date.now() + 4000,
 ): Promise<UserRepo | undefined> {
-  const env = {
-    PATH: process.env.PATH ?? "/usr/bin:/bin",
-    HOME: process.env.HOME ?? "/",
-    LC_ALL: "C",
-  };
+  const env = gitBaseEnvironment();
   const out = await runGit(
     binary,
     ["rev-parse", "--path-format=absolute", "--show-toplevel", "--git-dir", "--git-common-dir"],
@@ -153,8 +206,11 @@ export async function findUserRepo(
     { deadline: Math.min(deadline, Date.now() + 2000) },
   ).catch(() => undefined);
   if (out === undefined || out.code !== 0) return undefined;
-  const [top, gitDir, commonDir] = out.stdout.toString("utf8").split("\n");
-  if (!top || !gitDir || !commonDir || resolve(top) !== resolve(workTree)) return undefined;
+  const [top, gitDir, commonDir] = out.stdout
+    .toString("utf8")
+    .split("\n")
+    .map((line) => (line.endsWith("\r") ? line.slice(0, -1) : line));
+  if (!top || !gitDir || !commonDir || !sameGitRoot(top, workTree)) return undefined;
   const settings = await runGit(binary, ["config", "--list", "--null"], workTree, env, {
     deadline: Math.min(deadline, Date.now() + 2000),
   }).catch(() => undefined);

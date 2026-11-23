@@ -3,7 +3,7 @@ import { isAbsolute, resolve } from "node:path";
 import { parseShell } from "./shell-lexer";
 import { sshResources } from "./ssh-resources";
 
-const SAFE_DEVICES = new Set(["/dev/null", "/dev/stdout", "/dev/stderr", "/dev/zero"]);
+const SAFE_DEVICES = new Set(["/dev/null", "/dev/stdout", "/dev/stderr", "/dev/zero", "nul"]);
 
 /** Lexical file arguments only. Expansions and subprocess effects remain OS-enforced. */
 export function shellPaths(command: string, cwd: string): string[] {
@@ -28,9 +28,18 @@ export function shellPaths(command: string, cwd: string): string[] {
       const equals = word.indexOf("=");
       let path = equals >= 0 ? word.slice(equals + 1) : word;
       if (path === "~") path = homedir();
-      else if (path.startsWith("~/")) path = resolve(homedir(), path.slice(2));
-      if (!isAbsolute(path) && !path.startsWith("../") && !path.startsWith("./")) continue;
-      if (!path.includes("\0") && !SAFE_DEVICES.has(path)) paths.add(resolve(cwd, path));
+      else if (path.startsWith("~/") || path.startsWith("~\\"))
+        path = resolve(homedir(), path.slice(2));
+      if (
+        !isAbsolute(path) &&
+        !path.startsWith("../") &&
+        !path.startsWith("./") &&
+        !path.startsWith("..\\") &&
+        !path.startsWith(".\\")
+      )
+        continue;
+      if (!path.includes("\0") && !SAFE_DEVICES.has(path.toLowerCase()))
+        paths.add(resolve(cwd, path));
     }
   }
   return [...paths];

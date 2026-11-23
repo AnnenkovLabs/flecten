@@ -1,20 +1,6 @@
 import { opendir } from "node:fs/promises";
 import { join } from "node:path";
-
-const IGNORED = new Set([
-  "node_modules",
-  ".git",
-  "dist",
-  "release",
-  ".flecten",
-  ".liquid",
-  ".flecten-migration",
-  ".flecten-scratch",
-  ".kilo",
-  ".commandcode",
-  ".cache",
-  "coverage",
-]);
+import { IGNORED_DIRECTORIES, isIgnoredPath } from "./workspace-ignore";
 
 // ponytail: bounded startup index; add lazy directory expansion for larger workspaces.
 const MAX_FILES = 5000;
@@ -63,7 +49,7 @@ async function gitFiles(cwd: string, deadline: number): Promise<WorkspaceFileInd
       while (end >= 0) {
         const path = pending.slice(0, end);
         pending = pending.slice(end + 1);
-        if (path && !path.split("/").some((part) => IGNORED.has(part))) result.files.push(path);
+        if (path && !isIgnoredPath(path)) result.files.push(path);
         if (result.files.length >= MAX_FILES) {
           stop();
           break;
@@ -105,7 +91,7 @@ async function walk(cwd: string, result: WorkspaceFileIndex, deadline: number, f
         result.limited = true;
         return;
       }
-      if (IGNORED.has(entry.name) || entry.isSymbolicLink()) continue;
+      if (IGNORED_DIRECTORIES.has(entry.name) || entry.isSymbolicLink()) continue;
       const path = directory.path ? `${directory.path}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
         if (result.directories.length >= MAX_DIRECTORIES) {

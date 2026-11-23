@@ -3,7 +3,7 @@ import { z } from "zod";
 export const readSpec = {
   name: "read",
   description:
-    "Read images (PNG, JPEG, WebP, GIF, AVIF) or text files with 1-based line numbers. Use glob to find paths and grep to locate relevant sections before reading large files. Read existing files before edit or write; reread if a tool reports that the file changed. offset and limit select a line range, and truncation footers explain how to continue. Displayed line-number prefixes are not part of the file. Images are returned visually or described by the configured vision model. Directories and other binary files are rejected.",
+    "Read images (PNG, JPEG, WebP, GIF, AVIF) or text files with 1-based line numbers (prefer over bash/terminal cat, head, tail or sed). Runs in parallel with grep and glob, aligns offset/limit slices to nearby symbol boundaries, and lists remaining file symbols on truncation. Use glob to find paths and grep to locate relevant sections before reading large files. Read existing files before edit or write; reread if a tool reports that the file changed. Displayed line-number prefixes are not part of the file. Images are returned visually or described by the configured vision model. Directories and other binary files are rejected.",
   schema: z
     .object({
       focus: z

@@ -1,8 +1,18 @@
 import { readdir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
+import { listBuiltinSkillResources } from "./builtin";
+import type { Skill } from "./schema";
 
 export const MAX_SKILL_RESOURCES = 200;
 const MAX_RESOURCE_DEPTH = 4;
+
+export async function listSkillResourcesFor(
+  skill: Pick<Skill, "name" | "directory" | "source">,
+  limit = MAX_SKILL_RESOURCES,
+): Promise<string[]> {
+  if (skill.source === "builtin") return listBuiltinSkillResources(skill.name).slice(0, limit);
+  return listSkillResources(skill.directory, limit);
+}
 
 export async function listSkillResources(
   directory: string,

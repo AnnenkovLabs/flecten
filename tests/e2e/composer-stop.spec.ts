@@ -165,6 +165,8 @@ test("composer shares send and stop, splits drafts and supports graceful then fo
     await expect(stop).toBeDisabled();
     await expect(stop).toBeEnabled();
     await expect(resume).toHaveCount(0);
+    await expect(page.locator(".msg.user .bubble").first()).toHaveText("Проверь README.md");
+    await expect(page.locator(".thread")).not.toContainText("/continue");
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();
@@ -337,6 +339,9 @@ for (const mode of ["graceful", "force"] as const) {
       await resume.click();
       await expect(page.getByRole("button", { name: "Остановка", exact: true })).toBeEnabled();
       await expect(resume).toHaveCount(0);
+      await expect(page.locator(".msg.user")).toHaveCount(1);
+      await expect(page.locator(".msg.user .bubble")).toHaveText(title);
+      await expect(page.locator(".thread")).not.toContainText("/continue");
       expect(h.consoleErrors).toEqual([]);
     } finally {
       await h.close();

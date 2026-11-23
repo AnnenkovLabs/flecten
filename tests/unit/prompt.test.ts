@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { workerTool } from "../../src/app/worker-tool";
 import type { InstructionLocations } from "../../src/context";
 import { promptBudget } from "../../src/context";
 import { buildPrompt, buildSystemPrompt, promptStamp, promptVersion } from "../../src/core/prompt";
@@ -42,9 +43,24 @@ describe("summary presentation", () => {
           "add headings when they separate meaningful parts of the result",
         );
         expect(built.system).not.toContain("headings only for multi-step answers");
+        expect(built.system).toContain("Focus the brief on taste and the real end result");
+        expect(built.system).toContain("Do not turn briefs or steers into verification checklists");
+        expect(built.system).not.toContain("and how to verify the result");
+        expect(built.system).not.toContain("Match verification to the outcome");
       }
     },
   );
+
+  test("worker tool schema focuses Talker briefs on taste and end results rather than check checklists", () => {
+    const tool = workerTool(async () => ({}));
+    const properties = tool.parameters.properties as Record<string, { description?: string }>;
+    expect(tool.description).toContain("desired output and taste");
+    expect(tool.description).toContain("rather than verification checklists");
+    expect(properties.task?.description).toContain("taste, user intent, and the real end result");
+    expect(properties.task?.description).toContain("Omit verification checklists");
+    expect(properties.assignment?.description).toContain("real result and user taste");
+    expect(properties.message?.description).toContain("updated intent, taste, or output changes");
+  });
 
   test.each([{ role: "worker" as const }, { responseFormat: "structured" as const }])(
     "keeps internal result contracts separate: %j",

@@ -1,9 +1,30 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "Interface Scale": "界面缩放",
-  "Resize text, controls, and the chat column. Changes apply immediately.":
-    "调整文字、控件和聊天栏的大小。更改立即生效。",
-  "Reset to 100%": "重置为 100%",
+  Appearance: "外观",
+  "Reset all": "全部重置",
+  "Adjust window zoom, reading sizes, and workspace typography. Changes apply immediately.":
+    "调整窗口缩放、阅读字号与工作区排版。更改立即生效。",
+  Interface: "界面",
+  "Interface scale": "界面缩放",
+  "Resize the entire window, including controls, menus, and layout.":
+    "缩放整个窗口，包括控件、菜单和布局。",
+  "Chat and summaries": "聊天与摘要",
+  "Text scale": "文本缩放",
+  "Scale messages, Markdown replies, reasoning, and the composer input.":
+    "调整消息、Markdown 回复、推理过程和输入框的文字大小。",
+  "HTML summary scale": "HTML 摘要缩放",
+  "Scale interactive HTML summaries, tables, and diagrams in replies.":
+    "缩放回复中的交互式 HTML 摘要、表格和图表。",
+  "Chat width": "聊天栏宽度",
+  "Maximum width of the conversation column and composer.": "对话栏与输入框的最大宽度。",
+  "Code and terminal": "代码与终端",
+  "Code text size": "代码字号",
+  "Font size for code blocks, diffs, file previews, and the IDE editor.":
+    "代码块、差异对比、文件预览和 IDE 编辑器的字体大小。",
+  "Terminal text size": "终端字号",
+  "Font size for the integrated terminal.": "集成终端的字体大小。",
+  "Reset to {0}": ["重置为 ", 0],
+  "Reset {0} to {1}": ["将", 0, "重置为 ", 1],
   none: "无",
   "not visible": "不可见",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [
@@ -55,7 +76,7 @@ export default {
   "bash timeout": "bash 等待时间",
   "Lines to read": "读取行数",
   "The response limit must not exceed the context window.": "回复上限不能超过上下文窗口。",
-  "Specify a reasoning budget.": "请指定推理预算。",
+  "Saved. Invalid model settings were not applied: {0}": ["已保存。未应用无效的模型设置：", 0],
   "The reasoning budget must be less than the response limit.": "推理预算必须小于回复上限。",
   "Only http and https are supported.": "仅支持 http 和 https。",
   "Enter the full API URL.": "请填写完整的 API 地址。",

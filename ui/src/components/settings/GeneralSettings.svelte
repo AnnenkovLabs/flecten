@@ -7,7 +7,6 @@
   import SettingsNumber from "./SettingsNumber.svelte";
   import SettingsRow from "./SettingsRow.svelte";
   import VoiceSettings from "./VoiceSettings.svelte";
-  import InterfaceScale from "./InterfaceScale.svelte";
 
   const config = $derived(settings.settings);
 </script>
@@ -24,7 +23,6 @@
             options={locales.map((locale) => ({ value: locale.id, label: locale.name, lang: locale.id }))}
             onchange={(value) => setLocale(value)} />
         </SettingsRow>
-        <InterfaceScale />
       </div>
     </div>
 

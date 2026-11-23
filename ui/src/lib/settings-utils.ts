@@ -150,6 +150,12 @@ export function cleanSettings(input: HarnessSettings): HarnessSettings {
       if (model.canonicalId === "") delete model.canonicalId;
       if (model.knowledge === "") delete model.knowledge;
       if (model.releaseDate === "") delete model.releaseDate;
+      for (const key of ["context", "input", "output", "reasoningBudget"] as const) {
+        const value = model[key] as unknown;
+        if (value === null || (typeof value === "number" && !Number.isFinite(value))) {
+          delete model[key];
+        }
+      }
       if (model.headers && Object.keys(model.headers).length === 0) delete model.headers;
       if (model.extraBody && Object.keys(model.extraBody).length === 0) delete model.extraBody;
       if (model.variants && Object.keys(model.variants).length === 0) delete model.variants;
@@ -263,6 +269,7 @@ const PERMISSION_FIELDS = [
   { action: "mcp", field: "mcp" },
   { action: "skill", field: "skill" },
   { action: "external_path", field: "externalPath" },
+  { action: "destructive", field: "destructive" },
 ] as const;
 
 const PERMISSION_DEFAULTS: Omit<NonNullable<HarnessSettings["permissions"]>, "rules"> = {

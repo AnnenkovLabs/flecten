@@ -57,7 +57,7 @@ export async function prepareSessionInput(
     extras.attachmentSnapshot,
   );
   const summary =
-    !extras.internal && !extras.resumed && options.role !== "worker"
+    !extras.internal && !extras.resumed && !extras.continuation && options.role !== "worker"
       ? options.takeSummaryContext?.(sessionId)
       : undefined;
   const contexts = summary ? [...(extras.contexts ?? []), summary] : (extras.contexts ?? []);

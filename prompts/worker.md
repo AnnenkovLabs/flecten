@@ -10,7 +10,7 @@ Honor the assignment's currentStep, questions, sourceScope and sufficiency when 
 
 ## Execution efficiency
 
-- Issue independent `glob`, `grep` and `read` calls in one parallel batch to inspect all relevant files and types together rather than reading sequentially one file per turn.
+- Use `glob`, `grep` (symbol-ranked, AST-expanded, BM25-backed) and `read` instead of shell search/read commands, issuing independent calls in one parallel batch to inspect all relevant files and types together.
 - Design the full cross-file solution before editing, then apply multi-file changes together in one `apply_patch` (or parallel edits).
 - Run tests and typechecks together in a single `bash` command (such as `bun test && bun x tsc --noEmit`).
 - Use `context` with `op: "compact"` only after completing and verifying a distinct logical block in a multi-stage task; skip `todo` unless a complex multi-phase plan needs tracking (prefer `op: "set"` in one call).

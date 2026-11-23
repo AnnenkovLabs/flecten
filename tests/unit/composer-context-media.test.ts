@@ -2,8 +2,6 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { javascript } from "@codemirror/lang-javascript";
-import { EditorState } from "@codemirror/state";
 import { pullRequestParts } from "../../src/app/pull-request-context";
 import { inputModalities } from "../../src/app/service-policy";
 import { HarnessConfigSchema } from "../../src/config/schema";
@@ -85,12 +83,7 @@ describe("structured user context", () => {
 
   test("selection and symbol come from the editor selection and parsed grammar", () => {
     const doc = "export function calculate() {\n  return 42;\n}\n";
-    const state = EditorState.create({
-      doc,
-      selection: { anchor: 35, head: 41 },
-      extensions: [javascript()],
-    });
-    const context = editorContext("math.ts", state);
+    const context = editorContext("math.ts", doc, 35, 41);
     expect(context.selection?.text).toBe(doc.slice(35, 41));
     expect(context.symbol?.text).toBe("function calculate() {\n  return 42;\n}");
   });

@@ -15,6 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { _electron as electron } from "@playwright/test";
+import { buildSpawnSpec, terminateChildProcess } from "../shell/agent-process.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const scenarioPath = process.argv[2];
@@ -27,14 +28,20 @@ const scenario = JSON.parse(readFileSync(scenarioPath, "utf8"));
 mkdirSync(outDir, { recursive: true });
 
 function startMock() {
-  const child = spawn("bun", [join(repoRoot, "scripts/e2e-mock.mjs")], {
+  const launch = buildSpawnSpec("bun", [join(repoRoot, "scripts/e2e-mock.mjs")]);
+  const child = spawn(launch.command, launch.args, {
     cwd: repoRoot,
     env: { ...process.env, E2E_MOCK_PORT: "0", ...(scenario.mockEnv ?? {}) },
     stdio: ["ignore", "pipe", "ignore"],
+    ...launch.options,
   });
   return new Promise((resolveUrl, reject) => {
-    const lines = createInterface({ input: child.stdout });
+    const lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
     const timer = setTimeout(() => reject(new Error("mock provider did not start")), 15_000);
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
     lines.on("line", (line) => {
       let port;
       try {
@@ -44,7 +51,7 @@ function startMock() {
       }
       if (typeof port !== "number") return;
       clearTimeout(timer);
-      resolveUrl({ url: `http://127.0.0.1:${port}`, stop: () => child.kill("SIGTERM") });
+      resolveUrl({ url: `http://127.0.0.1:${port}`, stop: () => terminateChildProcess(child) });
     });
   });
 }

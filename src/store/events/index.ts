@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { cp, mkdir, readdir, readFile, rename, stat, utimes } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, stat, utimes } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { z } from "zod";
 import type { Event } from "../../core/types";
-import { atomicWrite } from "../../util/atomic";
+import { atomicWrite, renameWithRetry } from "../../util/atomic";
 import { newId } from "../../util/ids";
 import { redact } from "../../util/redact";
 import { copyPageArchive } from "../pages";
@@ -160,7 +160,8 @@ async function scanSession(cwd: string, id: string): Promise<SessionSummary | un
       applyLifecycle(lifecycle, envelope.event);
       switch (envelope.event.type) {
         case "session.started":
-          if (!envelope.event.internal) lastPrompt = redact(envelope.event.prompt);
+          if (!envelope.event.internal && !envelope.event.resumed && !envelope.event.continuation)
+            lastPrompt = redact(envelope.event.prompt);
           break;
         case "message.finished":
           messageCount += 1;
@@ -301,7 +302,8 @@ export async function recordSessionEvent(cwd: string, event: Event): Promise<voi
       next = { ...current, updatedAt: now };
       if (event.type === "session.started") {
         next.project = basename(cwd);
-        if (!event.internal) next.lastPrompt = redact(event.prompt);
+        if (!event.internal && !event.resumed && !event.continuation)
+          next.lastPrompt = redact(event.prompt);
       } else if (event.type === "message.finished") {
         next.messageCount += 1;
       } else if (event.type === "session.finished") {
@@ -359,7 +361,7 @@ export async function deleteSession(
     if (await stat(trash).catch(() => undefined)) {
       trash = join(trashRoot, `${id}-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`);
     }
-    await rename(paths.session, trash);
+    await renameWithRetry(paths.session, trash);
     await archiveSessionScratch(cwd, id, trash);
     const deletedAt = new Date();
     await utimes(trash, deletedAt, deletedAt);

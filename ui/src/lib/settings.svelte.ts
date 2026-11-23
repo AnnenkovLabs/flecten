@@ -12,9 +12,8 @@ import {
   inspectChangedProviders,
   ProviderProtectionDraft,
 } from "./settings/provider-protection.svelte";
-import { settingsIssue } from "./settings/validation";
+import { firstModelIssue, prepareSettingsForSave, settingsIssue } from "./settings/validation";
 import {
-  cleanSettings,
   clone,
   emptyProvider,
   filterCatalog,
@@ -104,6 +103,12 @@ export class SettingsStore {
     const config = this.settings;
     if (!config) return "";
     return settingsIssue(config);
+  }
+
+  get modelWarning(): string {
+    const config = this.settings;
+    if (!config) return "";
+    return firstModelIssue(config);
   }
 
   get canSave(): boolean {
@@ -366,10 +371,11 @@ export class SettingsStore {
     this.notice = "";
     try {
       await inspectChangedProviders(this);
+      const { config, skippedModels } = prepareSettingsForSave(this.settings, this.baseline);
       const response = await requestAgent<Response>(
         {
           type: "settings.save",
-          config: cleanSettings(this.settings),
+          config,
           ...(this.baseline ? { baseline: this.baseline } : {}),
           ...(this.clearApiKeys.length > 0 ? { clearApiKeys: [...this.clearApiKeys] } : {}),
         },
@@ -381,7 +387,10 @@ export class SettingsStore {
       }
       this.clearApiKeys = [];
       await this.load();
-      this.notice = t("Saved");
+      this.notice =
+        skippedModels.length > 0
+          ? t("Saved. Invalid model settings were not applied: {0}", [skippedModels.join(", ")])
+          : t("Saved");
     } catch (error) {
       this.error = error instanceof Error ? error.message : String(error);
     } finally {

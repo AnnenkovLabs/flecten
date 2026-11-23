@@ -85,6 +85,7 @@ function measureOnce(binary, args, cwd) {
       cwd,
       env: { ...env, FLECTEN_CWD: cwd, FLECTEN_CONFIG: join(cwd, "flecten.config.json") },
       stdio: ["pipe", "pipe", "pipe"],
+      windowsHide: true,
     });
     let out = "";
     let err = "";
@@ -167,7 +168,12 @@ export async function measureStartup(
 }
 
 if (import.meta.main) {
-  const binary = fileURLToPath(new URL("../dist/flecten-agent", import.meta.url));
+  const binary = fileURLToPath(
+    new URL(
+      process.platform === "win32" ? "../dist/flecten-agent.exe" : "../dist/flecten-agent",
+      import.meta.url,
+    ),
+  );
   try {
     const result = await measureStartup(binary);
     console.log(formatStartupReport(result.samples, result.budgetMs));

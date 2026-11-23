@@ -1,9 +1,31 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "Interface Scale": "Масштаб інтерфейсу",
-  "Resize text, controls, and the chat column. Changes apply immediately.":
-    "Змінює розмір тексту, елементів керування та колонки чату. Застосовується одразу.",
-  "Reset to 100%": "Скинути до 100%",
+  Appearance: "Зовнішній вигляд",
+  "Reset all": "Скинути все",
+  "Adjust window zoom, reading sizes, and workspace typography. Changes apply immediately.":
+    "Налаштування масштабу вікна, розміру тексту та робочого простору. Зміни застосовуються одразу.",
+  Interface: "Інтерфейс",
+  "Interface scale": "Масштаб інтерфейсу",
+  "Resize the entire window, including controls, menus, and layout.":
+    "Масштабує все вікно: елементи керування, меню та розмітку.",
+  "Chat and summaries": "Чат і підсумки",
+  "Text scale": "Масштаб тексту",
+  "Scale messages, Markdown replies, reasoning, and the composer input.":
+    "Розмір повідомлень, Markdown-відповідей, міркувань і поля введення.",
+  "HTML summary scale": "Масштаб HTML-підсумків",
+  "Scale interactive HTML summaries, tables, and diagrams in replies.":
+    "Масштаб інтерактивних HTML-підсумків, таблиць і діаграм у відповідях.",
+  "Chat width": "Ширина чату",
+  "Maximum width of the conversation column and composer.":
+    "Максимальна ширина колонки діалогу та поля введення.",
+  "Code and terminal": "Код і термінал",
+  "Code text size": "Розмір тексту коду",
+  "Font size for code blocks, diffs, file previews, and the IDE editor.":
+    "Розмір шрифту для блоків коду, дифу, перегляду файлів і редактора IDE.",
+  "Terminal text size": "Розмір тексту термінала",
+  "Font size for the integrated terminal.": "Розмір шрифту у вбудованому терміналі.",
+  "Reset to {0}": ["Скинути до ", 0],
+  "Reset {0} to {1}": ["Скинути «", 0, "» до ", 1],
   none: "немає",
   "not visible": "не видно",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [
@@ -57,7 +79,10 @@ export default {
   "Lines to read": "Читання рядків",
   "The response limit must not exceed the context window.":
     "Ліміт відповіді не має перевищувати вікно контексту.",
-  "Specify a reasoning budget.": "Укажіть бюджет міркувань.",
+  "Saved. Invalid model settings were not applied: {0}": [
+    "Збережено. Некоректні налаштування моделей не застосовано: ",
+    0,
+  ],
   "The reasoning budget must be less than the response limit.":
     "Бюджет міркувань має бути меншим за ліміт відповіді.",
   "Only http and https are supported.": "Підтримуються лише http і https.",

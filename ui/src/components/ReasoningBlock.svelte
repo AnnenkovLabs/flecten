@@ -3,29 +3,45 @@
   import { tick } from "svelte";
   import { formatDuration } from "../lib/agent";
   import { expandable } from "../lib/motion";
+  import { reasoningPreviewLine } from "../lib/run/worker-mirrors";
   import Icon from "./Icon.svelte";
   import Markdown from "./Markdown.svelte";
 
   interface Props {
     text: string;
     streaming: boolean;
+    startedAt?: number | undefined;
     reasoningMs?: number | undefined;
+    livePreview?: boolean | undefined;
   }
 
-  let { text, streaming, reasoningMs }: Props = $props();
+  let { text, streaming, startedAt, reasoningMs, livePreview = false }: Props = $props();
   const uid = $props.id();
   const bodyId = `reasoning-body-${uid}`;
 
   let open = $state(false);
+  let userToggled = $state(false);
   let viewport = $state<HTMLDivElement | null>(null);
+  let now = $state(Date.now());
 
-  const expanded = $derived(open);
+  const expanded = $derived(userToggled ? open : (livePreview && streaming) || open);
+  const liveDuration = $derived(
+    streaming && startedAt !== undefined
+      ? formatDuration(Math.max(0, now - startedAt))
+      : "",
+  );
   const duration = $derived(
     reasoningMs === undefined ? "" : formatDuration(reasoningMs),
   );
+  const previewLine = $derived(streaming && !expanded ? reasoningPreviewLine(text) : "");
 
   $effect(() => {
-    if (!streaming) open = false;
+    if (!streaming || startedAt === undefined) return;
+    now = Date.now();
+    const timer = setInterval(() => {
+      now = Date.now();
+    }, 1000);
+    return () => clearInterval(timer);
   });
 
   $effect(() => {
@@ -35,7 +51,8 @@
   });
 
   function toggle(): void {
-    open = !open;
+    userToggled = true;
+    open = !expanded;
     if (!open) return;
     void tick().then(() => viewport?.scrollTo({ top: 0 }));
   }
@@ -51,8 +68,15 @@
     onclick={toggle}
   >
     <span>{streaming ? t("Thinking") : duration ? t("Thought for {0}", [duration]) : t("Reasoning")}</span>
+    {#if liveDuration}
+      <span class="reasoning-time">{liveDuration}</span>
+    {/if}
     <span class="chevron" class:is-open={expanded}><Icon name="chevron-right" size={12} /></span>
   </button>
+
+  {#if previewLine}
+    <p class="reasoning-preview">{previewLine}</p>
+  {/if}
 
   <div class="reasoning-body" id={bodyId} use:expandable={expanded}>
     <div class="viewport" class:is-streaming={streaming} bind:this={viewport}>
@@ -95,6 +119,24 @@
     outline-offset: 1px;
   }
 
+  .reasoning-time {
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.78;
+  }
+
+  .reasoning-preview {
+    margin: 2px 0 4px 18px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: calc(12.5px * var(--text-scale, 1));
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.82;
+  }
+
   .chevron {
     display: grid;
     place-items: center;
@@ -115,7 +157,7 @@
     overscroll-behavior: contain;
     padding: 10px 0 10px 18px;
     color: var(--muted);
-    font-size: 13px;
+    font-size: calc(13px * var(--text-scale, 1));
     line-height: 1.6;
     mask-image: linear-gradient(
       to bottom,
@@ -143,7 +185,7 @@
     max-width: none;
     background: transparent;
     color: var(--muted);
-    font-size: 13px;
+    font-size: calc(13px * var(--text-scale, 1));
     line-height: 1.6;
   }
 
@@ -159,7 +201,7 @@
   .viewport :global(.markdown h6) {
     margin: 12px 0 6px;
     color: var(--text-2);
-    font-size: 14px;
+    font-size: calc(14px * var(--text-scale, 1));
     line-height: 1.3;
   }
 
@@ -171,7 +213,7 @@
     padding: 1px 4px;
     background: rgba(240, 239, 237, 0.06);
     color: var(--text-2);
-    font-size: 12px;
+    font-size: 0.92em;
   }
 
   .viewport :global(.markdown pre) {
@@ -180,7 +222,7 @@
   }
 
   .viewport :global(.markdown pre code) {
-    font-size: 12px;
+    font-size: calc(var(--code-font-size, 13px) - 1px);
   }
 
   .viewport :global(.markdown .code-block) {

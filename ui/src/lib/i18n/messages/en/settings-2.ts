@@ -45,23 +45,11 @@ export default {
   "The agent receives shortened output. The full result is saved in the tool log.":
     "The agent receives shortened output. The full result is saved in the tool log.",
   Enabled: "Enabled",
-  "Check paths, secrets, and network access before execution.":
-    "Check paths, secrets, and network access before execution.",
-  "Sandbox enabled": "Sandbox enabled",
-  "Allow network access": "Allow network access",
-  "Access to websites and external services.": "Access to websites and external services.",
-  "Network allowNetwork": "Network allowNetwork",
-  "Blocked paths": "Blocked paths",
-  "Blocked read paths readDenyPrefixes": "Blocked read paths readDenyPrefixes",
-  "Blocked write paths writeDenyPrefixes": "Blocked write paths writeDenyPrefixes",
   "One prefix per line. Use absolute paths or paths relative to the project root.":
     "One prefix per line. Use absolute paths or paths relative to the project root.",
   Environment: "Environment",
-  "Environment variables envAllowlist": "Environment variables envAllowlist",
   "Only these variables are available to commands and extensions. Provider keys are not passed on.":
     "Only these variables are available to commands and extensions. Provider keys are not passed on.",
-  "Sandbox is not configured. Save settings to create a configuration file.":
-    "Sandbox is not configured. Save settings to create a configuration file.",
   unknown: "unknown",
   "Could not collect diagnostics. Try again.": "Could not collect diagnostics. Try again.",
   "Working directory": "Working directory",

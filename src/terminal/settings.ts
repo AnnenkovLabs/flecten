@@ -48,12 +48,33 @@ export interface TerminalSettingsInput {
 
 const ENV_ALLOWLIST = ["PATH", "HOME", "USER", "SHELL", "TERM", "LANG", "LC_ALL", "TMPDIR", "PWD"];
 
+const WINDOWS_ENV_ALLOWLIST = [
+  "SystemRoot",
+  "WINDIR",
+  "ComSpec",
+  "PATHEXT",
+  "TEMP",
+  "TMP",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "ProgramData",
+  "ProgramFiles",
+  "ProgramFiles(x86)",
+  "ProgramW6432",
+  "SystemDrive",
+  "USERNAME",
+  "PROCESSOR_ARCHITECTURE",
+  "NUMBER_OF_PROCESSORS",
+  "OS",
+];
+
 export function defaultTerminalEnvAllowlist(
   platform: NodeJS.Platform = process.platform,
 ): string[] {
-  return platform === "win32"
-    ? [...ENV_ALLOWLIST, "SystemRoot", "WINDIR", "ComSpec", "PATHEXT", "TEMP", "TMP", "USERPROFILE"]
-    : [...ENV_ALLOWLIST];
+  return platform === "win32" ? [...ENV_ALLOWLIST, ...WINDOWS_ENV_ALLOWLIST] : [...ENV_ALLOWLIST];
 }
 
 export function defaultTerminalShell(platform: NodeJS.Platform = process.platform): string {

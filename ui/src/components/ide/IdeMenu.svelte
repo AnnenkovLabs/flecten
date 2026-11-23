@@ -51,5 +51,5 @@
   .ide-menu-popover { position: fixed; margin: 2px 0 0; padding: 4px; width: min(320px, calc(100vw - 16px)); max-height: calc(100dvh - 130px); overflow: auto; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--raised); color: var(--text-2); box-shadow: 0 8px 24px #0005; } .ide-menu-popover button { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 30px; padding: 4px 8px; border-radius: 4px; font-size: 12px; text-align: start; } .ide-menu-popover button:hover { background: var(--raised-hover); } kbd { flex: none; font-size: 11px; color: var(--muted); }
   @media (max-width: 1100px) { nav > button { display: none; } nav > .compact-menu { display: grid; place-items: center; } }
 
-  @container ide-editor (max-width: 760px) { nav > button { display: none; } nav > .compact-menu { display: grid; place-items: center; } }
+  @container ide-editor (max-width: 900px) { nav > button { display: none; } nav > .compact-menu { display: grid; place-items: center; } }
 </style>

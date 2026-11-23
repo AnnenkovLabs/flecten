@@ -31,7 +31,7 @@ export const SkillFrontmatterSchema = z.object({
 
 export type SkillFrontmatter = z.infer<typeof SkillFrontmatterSchema>;
 
-export type SkillSource = "user" | "project";
+export type SkillSource = "builtin" | "user" | "project";
 export type SkillTrust = "trusted" | "untrusted";
 
 export interface Skill {

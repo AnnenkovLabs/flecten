@@ -70,6 +70,10 @@ export default {
   "Not saved": "未保存",
   "Saving…": "保存中…",
   user: "ユーザー",
+  "built-in": "組み込み",
+  "Built-in skills": "組み込みスキル",
+  "Plugin conversion and harness self-configuration guides.":
+    "プラグイン変換と Flecten 本体の設定ガイド。",
   allowed: "許可済み",
   "requires approval": "確認が必要",
   "shared session permissions": "セッション共通の権限",

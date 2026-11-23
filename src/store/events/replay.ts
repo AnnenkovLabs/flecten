@@ -110,7 +110,8 @@ export function replayMessages(envelopes: readonly ReplayEvent[]): ReplayResult 
         messages.push({
           role: "user",
           content: event.input ?? event.prompt,
-          ...(eligibleUserSource ? { memorySource: event.prompt } : {}),
+          ...(event.continuation ? { synthetic: true } : {}),
+          ...(eligibleUserSource && !event.continuation ? { memorySource: event.prompt } : {}),
           ...(event.attachments?.length ? { attachmentRefs: event.attachments } : {}),
         });
         break;

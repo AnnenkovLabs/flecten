@@ -45,23 +45,11 @@ export default {
   "The agent receives shortened output. The full result is saved in the tool log.":
     "Агент отримує скорочений вивід, повний результат зберігається в журналі інструмента.",
   Enabled: "Увімкнена",
-  "Check paths, secrets, and network access before execution.":
-    "Перевіряти шляхи, секрети та мережу перед виконанням.",
-  "Sandbox enabled": "Пісочниця увімкнена sandbox enabled",
-  "Allow network access": "Дозволити мережу",
-  "Access to websites and external services.": "Доступ до сайтів і зовнішніх сервісів.",
-  "Network allowNetwork": "Мережа allowNetwork",
-  "Blocked paths": "Заборонені шляхи",
-  "Blocked read paths readDenyPrefixes": "Заборонені шляхи читання readDenyPrefixes",
-  "Blocked write paths writeDenyPrefixes": "Заборонені шляхи запису writeDenyPrefixes",
   "One prefix per line. Use absolute paths or paths relative to the project root.":
     "Один префікс на рядок. Абсолютні шляхи або шляхи від кореня проєкту.",
   Environment: "Середовище",
-  "Environment variables envAllowlist": "Змінні середовища envAllowlist",
   "Only these variables are available to commands and extensions. Provider keys are not passed on.":
     "Лише ці змінні доступні командам і розширенням. Ключі провайдера не передаються.",
-  "Sandbox is not configured. Save settings to create a configuration file.":
-    "Пісочницю не налаштовано. Збережіть налаштування, щоб створити файл конфігурації.",
   unknown: "невідома",
   "Could not collect diagnostics. Try again.":
     "Не вдалося зібрати діагностичні дані. Спробуйте ще раз.",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { previewFile } from "./file-preview";
 import { listWorkspaceFiles } from "./workspace";
+import { isExcludedFromSearch } from "./workspace-ignore";
 
 export const SearchOptions = z.object({
   query: z.string().min(1).max(1000),
@@ -71,19 +72,21 @@ export async function searchWorkspace(
       limited = true;
       break;
     }
+    if (isExcludedFromSearch(path)) continue;
     if (options.include && !path.toLocaleLowerCase().includes(options.include.toLocaleLowerCase()))
       continue;
     const file = await previewFile(cwd, path).catch(() => null);
     if (!file || file.binary) continue;
     filesSearched += 1;
     if (file.truncated) limited = true;
-    for (const [index, text] of file.text.split("\n").entries()) {
+    for (const [lineIndex, text] of file.text.split("\n").entries()) {
       for (const match of literalMatches(text, options)) {
+        const snippetStart = Math.max(0, match.from - 60);
         matches.push({
           path,
-          line: index + 1,
+          line: lineIndex + 1,
           column: match.from + 1,
-          text: text.slice(Math.max(0, match.from - 80), match.to + 160),
+          text: text.slice(snippetStart, match.to + 140),
           length: match.to - match.from,
         });
         if (matches.length >= 500) {

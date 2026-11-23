@@ -1,18 +1,4 @@
-import {
-  copyLineDown,
-  deleteLine,
-  indentLess,
-  indentMore,
-  moveLineDown,
-  moveLineUp,
-  redo,
-  selectAll,
-  toggleComment,
-  undo,
-} from "@codemirror/commands";
-import { foldAll, unfoldAll } from "@codemirror/language";
-import { openSearchPanel, selectNextOccurrence } from "@codemirror/search";
-import type { EditorView } from "@codemirror/view";
+import type { editor as MonacoEditor } from "monaco-editor";
 
 export type EditorAction =
   | "undo"
@@ -31,25 +17,42 @@ export type EditorAction =
   | "unfold-all"
   | "next-match"
   | "focus";
-export function editorAction(view: EditorView, action: EditorAction): void {
-  const commands = {
-    undo,
-    redo,
-    find: openSearchPanel,
-    replace: openSearchPanel,
-    "select-all": selectAll,
-    comment: toggleComment,
-    "duplicate-line": copyLineDown,
-    "delete-line": deleteLine,
-    "move-up": moveLineUp,
-    "move-down": moveLineDown,
-    indent: indentMore,
-    outdent: indentLess,
-    "fold-all": foldAll,
-    "unfold-all": unfoldAll,
-    "next-match": selectNextOccurrence,
-    focus: () => true,
-  };
-  commands[action](view);
-  if (action !== "find" && action !== "replace") view.focus();
+
+const MONACO_ACTION: Partial<Record<EditorAction, string>> = {
+  find: "actions.find",
+  replace: "editor.action.startFindReplaceAction",
+  comment: "editor.action.commentLine",
+  "duplicate-line": "editor.action.copyLinesDownAction",
+  "delete-line": "editor.action.deleteLines",
+  "move-up": "editor.action.moveLinesUpAction",
+  "move-down": "editor.action.moveLinesDownAction",
+  indent: "editor.action.indentLines",
+  outdent: "editor.action.outdentLines",
+  "fold-all": "editor.foldAll",
+  "unfold-all": "editor.unfoldAll",
+  "next-match": "editor.action.addSelectionToNextFindMatch",
+};
+
+export function editorAction(
+  editor: MonacoEditor.IStandaloneCodeEditor,
+  action: EditorAction,
+): void {
+  if (action === "focus") {
+    editor.focus();
+    return;
+  }
+  if (action === "undo" || action === "redo") {
+    editor.trigger("ide", action, null);
+    editor.focus();
+    return;
+  }
+  if (action === "select-all") {
+    const model = editor.getModel();
+    if (model) editor.setSelection(model.getFullModelRange());
+    editor.focus();
+    return;
+  }
+  const id = MONACO_ACTION[action];
+  if (id) void editor.getAction(id)?.run();
+  if (action !== "find" && action !== "replace") editor.focus();
 }

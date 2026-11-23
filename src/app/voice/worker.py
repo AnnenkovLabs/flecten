@@ -130,6 +130,12 @@ def main():
 
 
 if __name__ == "__main__":
+    for stream, err_mode in ((sys.stdout, "strict"), (sys.stderr, "replace")):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors=err_mode)
+            except Exception:
+                pass
     try:
         print(json.dumps(main(), ensure_ascii=False))
     except Exception as error:

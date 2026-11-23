@@ -26,10 +26,11 @@
   import { readPreference } from "../lib/preference-storage";
   import type { WorkerView } from "../lib/run/worker.svelte";
   import type { SummaryDestination } from "../lib/markdown/summary-navigation";
+  import type { TerminalStore } from "../lib/terminal/store.svelte";
   import type { AgentCheckpoint, AgentInfo, DiffFile, TabId, TerminalLine } from "../lib/types";
   import ChangesPane from "./ChangesPane.svelte";
   import HistoryPane from "./HistoryPane.svelte";
-  import TerminalPane from "./TerminalPane.svelte";
+  import TerminalWorkbench from "./terminal/TerminalWorkbench.svelte";
   import WorkerPane from "./WorkerPane.svelte";
 
   interface Props {
@@ -38,10 +39,12 @@
     split: boolean;
     files: DiffFile[];
     terminal: TerminalLine[];
+    terminals: TerminalStore;
     taskId: string;
     worker: WorkerView;
     onOpenChanges: () => void;
     onNavigateSummary: (destination: SummaryDestination) => void;
+    onOpenFile?: (path: string, line?: number) => void;
     checkpoints: AgentCheckpoint[];
     shellCheckpoints?: AgentInfo["shellCheckpoints"];
     onRestoreCheckpoint: (id: string, target: "before" | "after") => void;
@@ -54,10 +57,12 @@
     split,
     files,
     terminal,
+    terminals,
     taskId,
     worker,
     onOpenChanges,
     onNavigateSummary,
+    onOpenFile,
     checkpoints,
     shellCheckpoints,
     onRestoreCheckpoint,
@@ -282,7 +287,14 @@
       hidden={activeTab !== "terminal"}
       bind:this={terminalPane}
     >
-      <TerminalPane lines={terminal} />
+      {#if !hidden && activeTab === "terminal"}
+        <TerminalWorkbench
+          store={terminals}
+          visible={true}
+          commandLines={terminal}
+          onOpenFile={onOpenFile ? (path, line) => onOpenFile(path, line) : undefined}
+        />
+      {/if}
     </div>
     <div
       class="panel-pane worker-pane"

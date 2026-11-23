@@ -26,6 +26,10 @@ const storage = new DraftStorage(undefined, () =>
   ),
 );
 
+export function composerProject(): string {
+  return project;
+}
+
 export function composerTaskKey(task: string): string {
   return JSON.stringify([project, task]);
 }

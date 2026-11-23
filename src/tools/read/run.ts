@@ -7,7 +7,7 @@ import { truncateHead } from "../../util/truncate";
 import type { ToolContext } from "../types";
 import { type CodeSymbol, enclosingSymbolForLine, extractCodeSymbols } from "../util/code-symbols";
 import { detectEncoding, type Encoding, SAMPLE_BYTES, sampleFile } from "../util/encoding";
-import { displayPath, resolveToolPath } from "../util/paths";
+import { displayPath, resolveToolPath, windowsReservedPathError } from "../util/paths";
 import { runReadImage } from "./image";
 import { readLineSlice } from "./line-slice";
 import type { ReadArgs } from "./schema";
@@ -166,6 +166,8 @@ export async function runRead(
   },
 ): Promise<ToolResult> {
   if (context.signal?.aborted) return { ok: false, output: "", error: "Read aborted" };
+  const reserved = windowsReservedPathError(args.path);
+  if (reserved) return { ok: false, output: "", error: reserved };
   const path = resolveToolPath(context.cwd, args.path);
   let info: Stats;
   try {

@@ -201,4 +201,27 @@ describe("event journal", () => {
       expect(JSON.stringify(event)).toContain("[redacted");
     }
   });
+
+  test("compacts long reasoning streams on overflow without dropping structural events or start time", () => {
+    const journal = new EventJournal();
+    journal.stamp(started("s_long"));
+    journal.stamp({ type: "turn.started", sessionId: "s_long", turn: 1 });
+    const first = journal.stamp({ type: "reasoning.delta", sessionId: "s_long", text: "a " });
+    for (let index = 0; index < 20_010; index += 1) {
+      journal.stamp({ type: "reasoning.delta", sessionId: "s_long", text: "b " });
+    }
+    const replay = journal.replay("s_long");
+    expect(replay.events.some((event) => event.type === "turn.started")).toBe(true);
+    const reasoningEvents = replay.events.filter((event) => event.type === "reasoning.delta");
+    expect(reasoningEvents.length).toBeLessThan(100);
+    expect(reasoningEvents[0]?.timestamp).toBe(first.timestamp);
+    const done = journal.stamp({
+      type: "message.finished",
+      sessionId: "s_long",
+      text: "ok",
+      reasoning: "done",
+      toolCalls: [],
+    });
+    expect(done.reasoningStartedAt).toBe(first.timestamp);
+  });
 });

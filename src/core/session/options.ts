@@ -3,6 +3,7 @@ import type { PromptTextPart } from "../../context/prompt-budget";
 import type { ModelProvider } from "../../providers/types";
 import type { PermissionEngine } from "../../security/permissions";
 import type { SandboxPolicy } from "../../security/sandbox";
+import type { TerminalSession } from "../../terminal/session";
 import type { TerminalSettingsInput } from "../../terminal/settings";
 import type { ToolRegistry } from "../../tools/registry";
 import type { SubagentRunnerFactory } from "../../tools/task/run";
@@ -71,6 +72,25 @@ export interface SessionOptions {
   osSandbox?: OsSandboxContext | undefined;
   security?: ToolContext["security"];
   terminal?: TerminalSettingsInput;
+  /** Mirrors agent-created persistent PTY tabs to the workspace terminal hub. */
+  onTerminalLifecycle?: (
+    event:
+      | {
+          kind: "created";
+          sessionId: SessionId;
+          role?: "talker" | "worker";
+          id: string;
+          title?: string;
+          session: TerminalSession;
+          close: () => Promise<void>;
+        }
+      | {
+          kind: "closed";
+          sessionId: SessionId;
+          role?: "talker" | "worker";
+          id: string;
+        },
+  ) => void;
   memory?: SessionMemory;
   dictionary?: DictionaryPort;
   language?: LanguageOptions | undefined;

@@ -111,8 +111,9 @@ export async function runDelete(args: DeleteArgs, context: ToolContext): Promise
 
   try {
     context.signal.throwIfAborted();
-    if (info.isDirectory()) await rm(path, { recursive: true });
-    else await rm(path);
+    const retry = process.platform === "win32" ? { maxRetries: 5, retryDelay: 50 } : {};
+    if (info.isDirectory()) await rm(path, { recursive: true, ...retry });
+    else await rm(path, retry);
   } catch (error) {
     return { ok: false, output: "", error: message(error) };
   }

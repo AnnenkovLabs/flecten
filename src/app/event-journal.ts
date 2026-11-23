@@ -35,6 +35,49 @@ function streamScope(event: Event): string {
   return event.sessionId ?? "system";
 }
 
+function streamGroupKey(event: StampedEvent): string | undefined {
+  const leaf = leafEvent(event);
+  if (!STREAM_EVENTS.has(leaf.type)) return undefined;
+  return `${streamScope(event)}:${leaf.type}:${leaf.type === "tool_call.progress" ? leaf.index : ""}`;
+}
+
+function streamTextOf(event: Event): string {
+  const leaf = leafEvent(event);
+  if (leaf.type === "message.delta" || leaf.type === "reasoning.delta") return leaf.text;
+  if (leaf.type === "tool_call.progress") return leaf.delta ?? "";
+  return "";
+}
+
+function withStreamText(event: Event, text: string): Event {
+  if (event.type === "worker.event")
+    return { ...event, event: withStreamText(event.event, text) as typeof event.event };
+  if (event.type === "subagent.event")
+    return { ...event, event: withStreamText(event.event, text) as typeof event.event };
+  if (event.type === "message.delta" || event.type === "reasoning.delta") return { ...event, text };
+  if (event.type === "tool_call.progress") return { ...event, delta: text };
+  return event;
+}
+
+/** Merges adjacent stream deltas in place so long reasoning turns never evict structural events. */
+function compactStreamEvents(events: StampedEvent[]): StampedEvent[] {
+  const compacted: StampedEvent[] = [];
+  for (const entry of events) {
+    const previous = compacted[compacted.length - 1];
+    const key = streamGroupKey(entry);
+    if (previous && key !== undefined && streamGroupKey(previous) === key) {
+      const merged = withStreamText(entry, streamTextOf(previous) + streamTextOf(entry));
+      compacted[compacted.length - 1] = {
+        ...merged,
+        seq: entry.seq,
+        timestamp: previous.timestamp,
+      } as StampedEvent;
+      continue;
+    }
+    compacted.push(entry);
+  }
+  return compacted;
+}
+
 interface RunLog {
   events: StampedEvent[];
   running: boolean;
@@ -75,7 +118,7 @@ export class EventJournal {
         const text = entry.stream.finish();
         this.#streams.delete(key);
         if (text && leaf.type !== "message.reset" && leaf.type !== "session.started")
-          flushed.push(this.#record(this.#withText(entry.event, text)));
+          flushed.push(this.#record(withStreamText(entry.event, text)));
       }
     }
     flushed.push(this.stamp(event));
@@ -94,20 +137,9 @@ export class EventJournal {
       const text =
         leaf.type === "tool_call.progress" ? (leaf.delta ?? "") : "text" in leaf ? leaf.text : "";
       entry.event = event;
-      return this.#record(this.#withText(event, entry.stream.push(text)));
+      return this.#record(withStreamText(event, entry.stream.push(text)));
     }
     return this.#record(event);
-  }
-
-  #withText(event: Event, text: string): Event {
-    if (event.type === "worker.event")
-      return { ...event, event: this.#withText(event.event, text) as typeof event.event };
-    if (event.type === "subagent.event")
-      return { ...event, event: this.#withText(event.event, text) as typeof event.event };
-    if (event.type === "message.delta" || event.type === "reasoning.delta")
-      return { ...event, text };
-    if (event.type === "tool_call.progress") return { ...event, delta: text };
-    return event;
   }
 
   #record(event: Event): StampedEvent {
@@ -165,8 +197,11 @@ export class EventJournal {
     }
     run.events.push(stamped);
     if (run.events.length > MAX_EVENTS_PER_RUN) {
-      // ponytail: a run with more than 20k structural events keeps its newest ones; the disk log has all of them.
-      run.events.splice(1, run.events.length - MAX_EVENTS_PER_RUN);
+      run.events = compactStreamEvents(run.events);
+      if (run.events.length > MAX_EVENTS_PER_RUN) {
+        // ponytail: a run with more than 20k structural events keeps its newest ones; the disk log has all of them.
+        run.events.splice(1, run.events.length - MAX_EVENTS_PER_RUN);
+      }
     }
     return stamped;
   }

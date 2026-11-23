@@ -88,4 +88,28 @@ describe("tool input repair", () => {
     expect(result.correction).toContain("Received fields");
     expect(result.correction).not.toContain("ZodError");
   });
+
+  test("repairs cross-harness grep parameter aliases without failing validation", () => {
+    const result = repairToolInput(tool("grep"), {
+      query: "verifyToken",
+      file_path: "src",
+      file_glob: "*.ts",
+      files_with_matches: true,
+      case_sensitive: false,
+      context_lines: 2,
+      head_limit: 50,
+      multi_line: true,
+    });
+    expect(result.correction).toBeUndefined();
+    expect(result.input).toMatchObject({
+      pattern: "verifyToken",
+      path: "src",
+      glob: "*.ts",
+      filesWithMatches: true,
+      caseSensitive: false,
+      context: 2,
+      maxResults: 50,
+      multiline: true,
+    });
+  });
 });

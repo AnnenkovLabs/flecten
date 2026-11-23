@@ -3,7 +3,7 @@ import { z } from "zod";
 export const globSpec = {
   name: "glob",
   description:
-    "Discover the project with mode=entries first: lists immediate files and directories without recursion. mode=files searches a scoped path by pattern, respects .gitignore, and returns a sorted page with nextOffset. Patterns without a slash match at any depth. Generated dependencies and caches are excluded unless includeGenerated=true; internal metadata stays excluded. Use docs and source directories from the overview before a recursive search. Use grep for contents and read for a result.",
+    "Find project files and directories backed by ripgrep (prefer over bash/terminal find or ls). Discover the project with mode=entries first to list immediate children without recursion; mode=files searches a scoped path by pattern, respects .gitignore, and returns a sorted page with nextOffset. Patterns without a slash match at any depth. Generated dependencies and caches are excluded unless includeGenerated=true; internal metadata stays excluded. Runs in parallel with grep and read. Use grep for contents and read for a result.",
   schema: z
     .object({
       pattern: z.string().min(1).default("*").describe("Glob pattern, for example **/*.ts"),

@@ -4,12 +4,16 @@ import { setTimeout as delay } from "node:timers/promises";
 import { durableMkdir, syncDirectory } from "./durable";
 
 /** Windows readers and antivirus can briefly deny replacement; keep the old file intact. */
-async function replaceFile(temp: string, path: string, signal?: AbortSignal): Promise<void> {
+export async function renameWithRetry(
+  source: string,
+  target: string,
+  signal?: AbortSignal,
+): Promise<void> {
   const deadline = Date.now() + 1000;
   for (;;) {
     signal?.throwIfAborted();
     try {
-      await rename(temp, path);
+      await rename(source, target);
       return;
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
@@ -51,7 +55,7 @@ export async function atomicWrite(
       await handle.close();
     }
     signal?.throwIfAborted();
-    await replaceFile(temp, path, signal);
+    await renameWithRetry(temp, path, signal);
     await syncDirectory(directory);
   } catch (error) {
     await rm(temp, { force: true }).catch(() => undefined);

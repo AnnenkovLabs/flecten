@@ -12,6 +12,7 @@ import {
   symlink,
 } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { type ContentScope, rebuildable } from "./content";
 import { forEachConcurrent } from "./parallel";
@@ -113,6 +114,25 @@ export async function readBytes(path: string): Promise<Buffer> {
   }
 }
 
+async function renameWithWindowsRetry(source: string, target: string): Promise<void> {
+  const deadline = Date.now() + 1000;
+  for (;;) {
+    try {
+      await rename(source, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (
+        process.platform !== "win32" ||
+        !["EPERM", "EACCES", "EBUSY"].includes(code ?? "") ||
+        Date.now() >= deadline
+      )
+        throw error;
+      await delay(20);
+    }
+  }
+}
+
 export async function durableWrite(path: string, bytes: Uint8Array | string): Promise<void> {
   await ensureDirectory(dirname(path));
   const temp = `${path}.${randomUUID()}.tmp`;
@@ -124,7 +144,7 @@ export async function durableWrite(path: string, bytes: Uint8Array | string): Pr
     } finally {
       await handle.close();
     }
-    await rename(temp, path);
+    await renameWithWindowsRetry(temp, path);
     await syncDirectory(dirname(path));
   } catch (error) {
     await rm(temp, { force: true }).catch(() => undefined);
@@ -263,7 +283,7 @@ export async function finishDirectories(root: string, entries: readonly Entry[])
 }
 
 export async function durableRename(source: string, target: string): Promise<void> {
-  await rename(source, target);
+  await renameWithWindowsRetry(source, target);
   // Persist the destination name before allowing the source name's removal to become durable.
   await syncDirectory(dirname(target));
   if (dirname(source) !== dirname(target)) await syncDirectory(dirname(source));

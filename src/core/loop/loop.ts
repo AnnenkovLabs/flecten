@@ -75,6 +75,7 @@ export async function runLoop(prompt: string, options: LoopOptions): Promise<Loo
   messages.push({
     role: "user",
     content: prompt,
+    ...(options.syntheticPrompt ? { synthetic: true } : {}),
     ...(options.userSource === undefined ? {} : { memorySource: options.userSource }),
     ...(options.language
       ? { workingLanguage: "en" as const, sourceLanguage: options.language.language }

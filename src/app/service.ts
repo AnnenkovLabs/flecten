@@ -7,7 +7,6 @@ import { discoverProvider } from "../providers/discovery";
 import { inspectProviderGateway } from "../providers/gateway-detection";
 import { PermissionEngine } from "../security/permissions";
 import type { PermissionRule } from "../security/types";
-import { discoverSkills } from "../skills/discover";
 import type { SkillActivations } from "../skills/tool";
 import { loadSessionMedia, saveSessionMedia } from "../store/attachments";
 import { sessionPaths } from "../store/paths";
@@ -19,8 +18,10 @@ import { projectDictionary } from "./dictionary";
 import { extensionRuntime } from "./extension-runtime";
 import {
   type AppExtensions,
+  activeSkills,
   createExtensions,
   deferredExtensions,
+  discoverAppSkills,
   registryFor,
   withSkills,
 } from "./extensions";
@@ -81,16 +82,15 @@ export async function createAppService(
   await memory.port.list().catch(() => undefined);
   const dictionary = await projectDictionary(cwd, memory.port, () => configSecrets(config));
 
-  const skills = await discoverSkills(cwd, {
-    projectRoot,
-    sources: config.skills?.sources,
-    trust: config.skills?.trust,
-  });
+  const skills = await discoverAppSkills(cwd, config, projectRoot);
   const trustRequired = projectRoot !== null;
   let trustState = projectTrust(cwd, projectRoot);
   let trusted = trustState === "trusted";
   const skillActivations: SkillActivations = new Map();
-  let extensions: AppExtensions = { ...deferredExtensions(skills), skillActivations };
+  let extensions: AppExtensions = withSkills(
+    { ...deferredExtensions(skills), skillActivations },
+    activeSkills(skills, trusted),
+  );
   let extensionRefresh: Promise<void> = Promise.resolve();
   const extensionControl = extensionRuntime(cwd, () => extensions, refreshExtensions);
   if (trusted)
@@ -204,12 +204,8 @@ export async function createAppService(
       );
       mcpConfiguration = nextMcp;
     }
-    const discovery = await discoverSkills(cwd, {
-      projectRoot,
-      sources: config.skills?.sources,
-      trust: config.skills?.trust,
-    });
-    extensions = withSkills(extensions, discovery, trusted);
+    const discovery = await discoverAppSkills(cwd, config, projectRoot);
+    extensions = withSkills(extensions, activeSkills(discovery, trusted));
     tools = registryFor(() => extensions, config, modules.runtime.tool);
     subagents = subagentsFor();
     subagentToolCatalog(tools, subagents);
@@ -246,6 +242,8 @@ export async function createAppService(
       osSandbox,
       security: () => ({ sandbox, osSandbox }),
       terminal: terminalSettings(config),
+      onTerminalLifecycle: (event) =>
+        ideTerminal.attachAgentLifecycle(event, configSecrets(config)),
       shellCheckpoints: shell.service,
       memory: memory.port,
       dictionary: { list: async () => (await dictionary.list()).entries },

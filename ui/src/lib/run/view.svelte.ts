@@ -7,23 +7,25 @@ import {
 import type { QueuedMessage } from "../composer/types";
 import { ContextMeter, compactionMeta, contextWarning } from "../context-meter.svelte";
 import type { MessageKey } from "../i18n/catalogs";
-import { i18n, t } from "../i18n.svelte";
-import { formatModelName } from "../model-name";
+import { t } from "../i18n.svelte";
 import { clearRetry, setRetry } from "../retry-status.svelte";
-import { fallbackReason, retryLabel } from "../run-errors";
+import { retryLabel } from "../run-errors";
 import { nextId, nowIso } from "../run-helpers";
 import type { Phase } from "../run-machine";
 import { toast } from "../toast.svelte";
 import type { AgentBudget, AgentEvent, AgentInfo, AgentJob, AgentRunResult } from "../types";
 import {
   budgetNotice,
+  fallbackNotice,
   interruptedNotice,
   interruptedResult,
   jobNotice,
   resumedNotice,
+  syncThreadApprovals,
 } from "./notices";
 import { SubagentsView } from "./subagents.svelte";
-import { hasCheckpoint as hasWorkerCheckpoint, ThreadView } from "./thread.svelte";
+import { ThreadView } from "./thread.svelte";
+import { hasCheckpoint as hasWorkerCheckpoint } from "./thread-artifacts";
 import { conversationUsage, emptyTokenUsage, tokenUsageEvent } from "./token-usage";
 import { TwinView } from "./twin-view.svelte";
 import { WorkerView } from "./worker.svelte";
@@ -62,8 +64,8 @@ export class TaskView {
   readonly subagents = new SubagentsView();
   lastPrompt = "";
   readonly #hooks: ViewHooks;
-  /** The run on screen was sent from this window: its message is already in the thread. */
-  #localStart = false;
+  /** The run on screen was sent from this window: its state is already projected. */
+  #localStart: "message" | "continuation" | null = null;
   #retiredEpochs = new Set<string>();
   generation = 0;
   constructor(hooks: ViewHooks) {
@@ -123,21 +125,27 @@ export class TaskView {
     this.context.reset();
     this.#usage = emptyTokenUsage();
     this.lastPrompt = "";
-    this.#localStart = false;
+    this.#localStart = null;
   }
   begin(prompt: string): void {
     this.thread.beginRun(prompt, nowIso());
     this.lastPrompt = prompt;
-    this.#localStart = true;
+    this.#localStart = "message";
     this.pendingSend = true;
     this.live = true;
     this.liveLabel = "Thinking";
     this.title ||= prompt.split("\n")[0]?.slice(0, 72) ?? "";
   }
+  beginContinuation(): void {
+    this.thread.continueRun(Date.now(), true);
+    this.#localStart = "continuation";
+    this.pendingSend = true;
+    this.live = true;
+    this.liveLabel = "Thinking";
+  }
   /** A run that never reached the core, or a core that refused to start it. */
   failed(text: string, code: string): void {
-    if (this.#localStart && this.thread.items.at(-1)?.kind === "message") this.thread.items.pop();
-    this.#localStart = false;
+    this.#rollbackLocal();
     this.pendingSend = false;
     this.live = false;
     this.liveLabel = "Error";
@@ -192,26 +200,7 @@ export class TaskView {
         ...(item.contexts ? { contexts: item.contexts } : {}),
       }));
     this.#jobs = state.jobs;
-    const waiting = new Map(state.approvals.map((approval) => [approval.id, approval]));
-    const resolutions = new Map(
-      (state.approvalResolutions ?? []).map((entry) => [entry.id, entry]),
-    );
-    for (const item of this.thread.items) {
-      if (item.kind !== "approval" || item.owner === "worker") continue;
-      if (waiting.delete(item.approval.id)) continue;
-      const resolved = resolutions.get(item.approval.id);
-      item.state = resolved ? resolved.choice : item.state === "pending" ? "deny" : item.state;
-      if (resolved) item.by = resolved.by;
-      else if (item.state === "deny" && !item.by) item.by = "aborted";
-    }
-    for (const approval of waiting.values())
-      this.thread.push({
-        kind: "approval",
-        id: nextId("apr"),
-        sessionId: state.sessionId,
-        approval,
-        state: "pending",
-      });
+    syncThreadApprovals(this.thread.items, state, (item) => this.thread.push(item));
     this.live = state.running;
     if (state.approvals.length > 0) this.liveLabel = "Awaiting approval";
   }
@@ -231,13 +220,8 @@ export class TaskView {
 
   error(event: ErrorEvent): void {
     if (event.sessionId) {
-      if (
-        this.#localStart &&
-        event.code === "run_failed" &&
-        this.thread.items.at(-1)?.kind === "message"
-      )
-        this.thread.items.pop();
-      this.#localStart = false;
+      if (event.code === "run_failed") this.#rollbackLocal();
+      this.#localStart = null;
       this.live = false;
       this.liveLabel = "Error";
       this.thread.pendingCalls = [];
@@ -283,6 +267,17 @@ export class TaskView {
           this.subagents.apply(event.event, event);
           this.#syncSubagents();
           return;
+        }
+        if (
+          event.event.type === "session.started" &&
+          this.#localStart === "continuation" &&
+          !restoring
+        ) {
+          this.#localStart = null;
+          this.pendingSend = false;
+          this.thread.abortContinuation();
+          this.thread.settleNotices();
+          this.live = this.state?.running ?? false;
         }
         this.worker.apply(event);
         this.#syncSubagents();
@@ -370,21 +365,9 @@ export class TaskView {
       case "input.translated":
         return;
       case "model.fallback": {
-        const name = formatModelName(event.model);
-        const why = fallbackReason(event.reason);
-        const details = t("{0}{1}: request sent to {2}, model {3}.", [
-          why.charAt(0).toLocaleUpperCase(i18n.locale),
-          why.slice(1),
-          event.provider,
-          event.model,
-        ]);
-        this.thread.note(
-          "refresh",
-          t("Fallback model {0} responded", [name]),
-          event.provider,
-          details,
-        );
-        if (!restoring) toast.show(t("Fallback model {0} is responding: {1}", [name, why]));
+        const notice = fallbackNotice(event);
+        this.thread.note("refresh", notice.label, notice.meta, notice.details);
+        if (!restoring) toast.show(notice.toast);
         return;
       }
       case "provider.retry":
@@ -464,11 +447,12 @@ export class TaskView {
   #started(event: Extract<SessionEvent, { type: "session.started" }>): void {
     this.isTalker = event.role === "talker";
     const prompt = event.prompt ?? "";
-    const local = this.#localStart && !event.queueId && !this.thread.restoring;
-    this.#localStart = false;
+    const local = this.#localStart !== null && !event.queueId && !this.thread.restoring;
+    this.#localStart = null;
     if (!event.internal) this.worker.settleContinuation();
     this.thread.settleNotices();
     if (local) this.thread.startClock(event.timestamp);
+    else if (event.continuation) this.thread.continueRun(event.timestamp);
     else if (event.resumed || event.internal) {
       this.thread.beginRun(null, undefined, event.timestamp);
       if (event.resumed) this.thread.push(resumedNotice());
@@ -490,6 +474,12 @@ export class TaskView {
     if (result.stopReason === "budget") this.thread.push(budgetNotice(result));
     this.live = false;
     this.liveLabel = "Done";
+  }
+  #rollbackLocal(): void {
+    if (this.#localStart === "message" && this.thread.items.at(-1)?.kind === "message")
+      this.thread.items.pop();
+    else if (this.#localStart === "continuation") this.thread.abortContinuation();
+    this.#localStart = null;
   }
   #syncSubagents(): void {
     if (this.thread.restoring) return;

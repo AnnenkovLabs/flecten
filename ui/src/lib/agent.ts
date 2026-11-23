@@ -162,8 +162,11 @@ export function doneData(result: AgentToolResult | undefined): DoneData | undefi
 }
 
 export function baseName(path: string): string {
-  const parts = path.split("/");
-  return parts.at(-1) ?? path;
+  const normalized = path.replaceAll("\\", "/");
+  const trimmed =
+    normalized.length > 1 && normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
+  const slash = trimmed.lastIndexOf("/");
+  return slash >= 0 ? trimmed.slice(slash + 1) : trimmed;
 }
 
 /** Tools whose `path` names one project file the card can open. */

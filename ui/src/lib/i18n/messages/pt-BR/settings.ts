@@ -1,9 +1,31 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "Interface Scale": "Escala da interface",
-  "Resize text, controls, and the chat column. Changes apply immediately.":
-    "Redimensiona o texto, os controles e a coluna do chat. As alterações são aplicadas imediatamente.",
-  "Reset to 100%": "Redefinir para 100%",
+  Appearance: "Aparência",
+  "Reset all": "Redefinir tudo",
+  "Adjust window zoom, reading sizes, and workspace typography. Changes apply immediately.":
+    "Ajuste o zoom da janela, os tamanhos de leitura e a tipografia do espaço de trabalho. As alterações são aplicadas imediatamente.",
+  Interface: "Interface",
+  "Interface scale": "Escala da interface",
+  "Resize the entire window, including controls, menus, and layout.":
+    "Redimensiona toda a janela, incluindo controles, menus e layout.",
+  "Chat and summaries": "Chat e resumos",
+  "Text scale": "Escala do texto",
+  "Scale messages, Markdown replies, reasoning, and the composer input.":
+    "Ajusta o tamanho de mensagens, respostas em Markdown, raciocínio e campo de entrada.",
+  "HTML summary scale": "Escala de resumos HTML",
+  "Scale interactive HTML summaries, tables, and diagrams in replies.":
+    "Ajusta a escala de resumos HTML interativos, tabelas e diagramas nas respostas.",
+  "Chat width": "Largura do chat",
+  "Maximum width of the conversation column and composer.":
+    "Largura máxima da coluna da conversa e do campo de entrada.",
+  "Code and terminal": "Código e terminal",
+  "Code text size": "Tamanho do texto do código",
+  "Font size for code blocks, diffs, file previews, and the IDE editor.":
+    "Tamanho da fonte para blocos de código, diffs, visualização de arquivos e editor IDE.",
+  "Terminal text size": "Tamanho do texto do terminal",
+  "Font size for the integrated terminal.": "Tamanho da fonte do terminal integrado.",
+  "Reset to {0}": ["Redefinir para ", 0],
+  "Reset {0} to {1}": ["Redefinir ", 0, " para ", 1],
   none: "não",
   "not visible": "não visível",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [
@@ -57,7 +79,10 @@ export default {
   "Lines to read": "Leitura de linhas",
   "The response limit must not exceed the context window.":
     "O limite de resposta não pode exceder a janela de contexto.",
-  "Specify a reasoning budget.": "Informe o orçamento de raciocínio.",
+  "Saved. Invalid model settings were not applied: {0}": [
+    "Salvo. Configurações inválidas de modelos não foram aplicadas: ",
+    0,
+  ],
   "The reasoning budget must be less than the response limit.":
     "O orçamento de raciocínio deve ser menor que o limite de resposta.",
   "Only http and https are supported.": "Apenas http e https são aceitos.",

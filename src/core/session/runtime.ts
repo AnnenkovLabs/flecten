@@ -16,6 +16,7 @@ import type { SessionOptions } from "./options";
 export interface RunExtras {
   queueId?: string;
   resumed?: boolean;
+  continuation?: boolean;
   internal?: boolean;
   actor?: "user" | "twin";
   summaryWake?: true;

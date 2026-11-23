@@ -4,6 +4,7 @@
   import { countLabel } from "../lib/format";
   import { expandable } from "../lib/motion";
   import { groupActions } from "../lib/run/action-groups";
+  import { reasoningPreviewLine } from "../lib/run/worker-mirrors";
   import type { RunSummary } from "../lib/types";
   import FileChangeChip from "./FileChangeChip.svelte";
   import Icon from "./Icon.svelte";
@@ -35,6 +36,14 @@
     return () => clearInterval(timer);
   });
   const latest = $derived(summary.list.at(-1));
+  const liveReasoning = $derived(
+    summary.live
+      ? summary.turns.findLast((turn) => turn.reasoningStreaming === true && turn.reasoning.length > 0)
+      : undefined,
+  );
+  const liveReasoningLine = $derived(
+    liveReasoning ? reasoningPreviewLine(liveReasoning.reasoning) : "",
+  );
   const preview = $derived(summary.list.filter((action) => (action.tool === "task" && action.running) || action.id === latest?.id));
   const additions = $derived(summary.files.reduce((sum, file) => sum + file.add, 0));
   const deletions = $derived(summary.files.reduce((sum, file) => sum + (file.del ?? 0), 0));
@@ -83,9 +92,16 @@
     </span>
   </button>
 
-  {#if summary.live && !expanded && latest}
+  {#if summary.live && !expanded && (latest || liveReasoningLine)}
     <div class="run-preview">
-      {#each preview as action (action.id)}<RunActionRow {action} />{/each}
+      {#if liveReasoningLine && !latest?.running}
+        <div class="run-thinking-preview">
+          <span class="run-thinking-label">{t("Thinking")}</span>
+          <span class="run-thinking-text">{liveReasoningLine}</span>
+        </div>
+      {:else}
+        {#each preview as action (action.id)}<RunActionRow {action} />{/each}
+      {/if}
     </div>
   {/if}
 
@@ -98,6 +114,7 @@
             <ReasoningBlock
               text={turn.reasoning}
               streaming={turn.reasoningStreaming ?? false}
+              startedAt={turn.reasoningStartedAt}
               reasoningMs={turn.reasoningMs}
             />
           {/if}
@@ -261,6 +278,18 @@
   }
 
   .run-preview { margin-left: 22px; }
+  .run-thinking-preview {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    padding: 4px 0;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .run-thinking-label { flex: none; color: var(--text-2); }
+  .run-thinking-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .run-files { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding-inline: 7px; border-radius: 6px; color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
   .run-files:hover { background: var(--raised); }
   .run-text {

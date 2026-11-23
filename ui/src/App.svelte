@@ -36,10 +36,13 @@
   import { twinPowerContext } from "./lib/twin/context";
   import { readPreference } from "./lib/preference-storage";
   import { revealWhenShown } from "./lib/motion";
+  import { conversationLiveState } from "./lib/run/worker-mirrors";
+  import { isTerminalFocused } from "./lib/terminal/xterm-config";
 
   const run = new RunStore();
   setContext(twinPowerContext, () => run.twin.power);
   const harness = moduleHarness(run);
+  const conversationLive = $derived(conversationLiveState(run.view));
   const composer = $derived({
     context: run.contextView,
     commands: run.commands,
@@ -105,13 +108,8 @@
     else sidebarHidden = !sidebarHidden;
   }
 
-  function openPanel(tab: TabId): void {
-    workspace.select(tab);
-  }
-
-  function openChanges(): void {
-    openPanel("changes");
-  }
+  const openPanel = (tab: TabId): void => workspace.select(tab);
+  const openChanges = (): void => openPanel("changes");
 
   function navigateSummary(destination: SummaryDestination): void {
     switch (destination.kind) {
@@ -203,7 +201,8 @@
         void searchThread(args);
         break;
       case "continue":
-        run.submit(`/continue${args ? ` ${args}` : ""}`, run.sendMode, []);
+        if (!args.trim() && !run.busy) run.continue();
+        else run.submit(`/continue${args ? ` ${args}` : ""}`, run.sendMode, []);
         break;
       default:
         runCustomCommand(name, args);
@@ -241,6 +240,7 @@
 
   function onKeydown(event: KeyboardEvent): void {
     if (run.migration.snapshot) return;
+    if (isTerminalFocused(event.target)) return;
     if (event.key === "Escape") {
       if (event.defaultPrevented || mode === "ide" || document.querySelector("dialog[open], :popover-open")) return;
       if (searching) {
@@ -366,9 +366,10 @@
       onContinue={() => run.controls.continue()}
       items={run.history.items}
       historyDisabled={run.history.blocked}
-      live={run.view.live}
-      liveLabel={run.view.liveLabel}
-      pendingCalls={run.view.thread.pendingCalls}
+      live={conversationLive.live}
+      liveLabel={conversationLive.liveLabel}
+      retryUntil={conversationLive.retryUntil}
+      pendingCalls={conversationLive.pendingCalls}
       busy={run.busy}
       isTalker={run.view.isTalker}
       {focusToken}
@@ -409,17 +410,12 @@
     {/if}
     </div>
     <InspectorPanel
-      hidden={!showPanel}
-      activeTab={workspace.panel}
-      {split}
-      files={run.view.thread.changeFiles}
-      terminal={run.view.thread.terminalLines}
-      taskId={run.activeTask}
-      worker={run.view.worker}
-      onOpenChanges={openChanges}
-      onNavigateSummary={navigateSummary}
-      checkpoints={run.checkpoints.list}
-      shellCheckpoints={run.info?.shellCheckpoints}
+      hidden={!showPanel} activeTab={workspace.panel} {split}
+      files={run.view.thread.changeFiles} terminal={run.view.thread.terminalLines} terminals={run.terminals}
+      taskId={run.activeTask} worker={run.view.worker}
+      onOpenChanges={openChanges} onNavigateSummary={navigateSummary}
+      onOpenFile={(path, line) => void fileViewer.open(path, line)}
+      checkpoints={run.checkpoints.list} shellCheckpoints={run.info?.shellCheckpoints}
       onRestoreCheckpoint={(id, target) => void run.checkpoints.restore(id, target)}
       onRefreshCheckpoints={() => void run.checkpoints.refresh()}
     />

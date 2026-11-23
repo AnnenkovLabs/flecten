@@ -45,23 +45,11 @@ export default {
   "The agent receives shortened output. The full result is saved in the tool log.":
     "El agente recibe una salida abreviada. El resultado completo se guarda en el registro de la herramienta.",
   Enabled: "Activado",
-  "Check paths, secrets, and network access before execution.":
-    "Comprobar las rutas, los secretos y la red antes de ejecutar.",
-  "Sandbox enabled": "Sandbox activado enabled",
-  "Allow network access": "Permitir acceso a la red",
-  "Access to websites and external services.": "Acceso a sitios web y servicios externos.",
-  "Network allowNetwork": "Red allowNetwork",
-  "Blocked paths": "Rutas bloqueadas",
-  "Blocked read paths readDenyPrefixes": "Rutas con lectura bloqueada readDenyPrefixes",
-  "Blocked write paths writeDenyPrefixes": "Rutas con escritura bloqueada writeDenyPrefixes",
   "One prefix per line. Use absolute paths or paths relative to the project root.":
     "Un prefijo por línea. Rutas absolutas o relativas a la raíz del proyecto.",
   Environment: "Entorno",
-  "Environment variables envAllowlist": "Variables de entorno envAllowlist",
   "Only these variables are available to commands and extensions. Provider keys are not passed on.":
     "Solo estas variables están disponibles para los comandos y las extensiones. No se transmiten las claves del proveedor.",
-  "Sandbox is not configured. Save settings to create a configuration file.":
-    "El entorno aislado no está configurado. Guarda los ajustes para crear el archivo de configuración.",
   unknown: "desconocida",
   "Could not collect diagnostics. Try again.":
     "No se pudieron recopilar los datos de diagnóstico. Inténtalo de nuevo.",

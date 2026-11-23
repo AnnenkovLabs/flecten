@@ -6,7 +6,11 @@ import type { PermissionRequest, PermissionRule } from "./types";
 
 export function permissionPath(path: string, cwd: string): string {
   const expanded =
-    path === "~" ? homedir() : path.startsWith("~/") ? resolve(homedir(), path.slice(2)) : path;
+    path === "~"
+      ? homedir()
+      : path.startsWith("~/") || path.startsWith("~\\")
+        ? resolve(homedir(), path.slice(2))
+        : path;
   const absolute = resolve(cwd, expanded);
   return process.platform === "win32" ? absolute.split("\\").join("/").toLowerCase() : absolute;
 }

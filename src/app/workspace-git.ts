@@ -15,13 +15,22 @@ interface GitEntry {
   worktree: string;
 }
 async function git(cwd: string, args: string[], allowFailure = false): Promise<string> {
-  const process = Bun.spawn(["git", "--no-optional-locks", "--literal-pathspecs", ...args], {
-    cwd,
-    env: { ...globalThis.process.env, GIT_TERMINAL_PROMPT: "0" },
-    stdout: "pipe",
-    stderr: "pipe",
-    stdin: "ignore",
-  });
+  let process: Bun.Subprocess<"ignore", "pipe", "pipe">;
+  try {
+    process = Bun.spawn(["git", "--no-optional-locks", "--literal-pathspecs", ...args], {
+      cwd,
+      env: { ...globalThis.process.env, GIT_TERMINAL_PROMPT: "0" },
+      stdout: "pipe",
+      stderr: "pipe",
+      stdin: "ignore",
+    });
+  } catch (error) {
+    if (allowFailure) return "";
+    throw new Error(
+      redact(error instanceof Error ? error.message : String(error)) ||
+        "Git is not available. Install Git to use Source Control.",
+    );
+  }
   const timer = setTimeout(() => process.kill(), 15_000);
   try {
     const [stdout, stderr, code] = await Promise.all([

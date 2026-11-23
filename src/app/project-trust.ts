@@ -4,6 +4,7 @@ import {
   canonicalProjectPath,
   type ProjectTrust,
   readProjectIndex,
+  sameProjectPath,
   setProjectTrust,
 } from "../../shared/project-index.cjs";
 import { configPath } from "../config/load";
@@ -17,8 +18,9 @@ export function projectTrust(cwd: string, projectRoot: string | null): ProjectTr
   if (projectRoot === null) return "trusted";
   const path = canonicalProjectPath(projectRoot);
   return (
-    readProjectIndex(profileDirectory(cwd)).projects.find((project) => project.path === path)
-      ?.trust ?? "unknown"
+    readProjectIndex(profileDirectory(cwd)).projects.find((project) =>
+      sameProjectPath(project.path, path),
+    )?.trust ?? "unknown"
   );
 }
 

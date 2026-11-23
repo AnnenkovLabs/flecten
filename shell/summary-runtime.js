@@ -37,7 +37,18 @@
     scheduled = true;
     requestAnimationFrame(() => {
       scheduled = false;
-      const height = Math.ceil(document.documentElement.scrollHeight);
+      const rectHeight =
+        root.childNodes.length === 0
+          ? 0
+          : Math.max(
+              document.body.getBoundingClientRect().height,
+              root.getBoundingClientRect().height,
+            );
+      const height = Math.ceil(
+        rectHeight > 0 || root.childNodes.length === 0
+          ? rectHeight
+          : document.documentElement.scrollHeight,
+      );
       if (height === lastHeight) return;
       lastHeight = height;
       post({ kind: "height", height });
@@ -136,6 +147,11 @@
     event.preventDefault();
     const target = tabs[next];
     if (target) activateTab(container, target, true);
+  };
+  const applyScale = (value) => {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0.5 || value > 2) return;
+    root.style.setProperty("--summary-scale", String(value));
+    report();
   };
   const configure = (css) => {
     let style = document.getElementById("summary-theme");
@@ -249,7 +265,12 @@
     if (!data || data.type !== TYPE || data.version !== VERSION) return;
     if (data.kind === "config") {
       interactions.attach(event.ports[0]);
+      if (data.scale !== undefined) applyScale(data.scale);
       configure(data.css);
+      return;
+    }
+    if (data.kind === "scale") {
+      applyScale(data.scale);
       return;
     }
     if (data.kind === "reset") {
@@ -275,7 +296,9 @@
     if (event.target instanceof Element && globalThis.summaryKit?.input(event.target)) report();
   });
   if (typeof ResizeObserver === "function") {
-    new ResizeObserver(report).observe(document.documentElement);
+    const observer = new ResizeObserver(report);
+    observer.observe(document.documentElement);
+    observer.observe(root);
   }
   addEventListener("load", () => {
     report();

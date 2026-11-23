@@ -5,15 +5,14 @@ import {
   accessModeDescription,
   accessModeLabel,
   actionLabel,
-  approvalAgeLabel,
   approvalScopePaths,
   approvalSessionLabel,
   buildPolicy,
   isApprovalExpired,
   POLICY_ACTIONS,
+  policyOptionsFor,
   reviewedApprovalIds,
   sortApprovals,
-  validatePolicy,
 } from "../../ui/src/lib/permissions";
 
 const NOW = 1_700_000_000_000;
@@ -30,13 +29,14 @@ function approval(id: string, requestedAt: number): ApprovalView {
 }
 
 describe("policy maps", () => {
-  test("fills every action", () => {
-    const policy = buildPolicy({ read: "allow", shell: "deny" });
+  test("fills every action including destructive", () => {
+    const policy = buildPolicy({ read: "allow", shell: "deny", destructive: "ask" });
     expect(Object.keys(policy).sort()).toEqual([...POLICY_ACTIONS].sort());
     expect(policy.read).toBe("allow");
     expect(policy.shell).toBe("deny");
     expect(policy.write).toBe("ask");
     expect(policy.external_path).toBe("ask");
+    expect(policy.destructive).toBe("ask");
   });
 
   test("uses the requested fallback for missing actions", () => {
@@ -44,6 +44,21 @@ describe("policy maps", () => {
     expect(policy.read).toBe("deny");
     expect(policy.write).toBe("auto");
     expect(policy.network).toBe("auto");
+  });
+
+  test("offers Deny, Ask, Allow normally and exposes legacy Auto only when active", () => {
+    expect(policyOptionsFor("ask").map((option) => option.value)).toEqual(["deny", "ask", "allow"]);
+    expect(policyOptionsFor("allow").map((option) => option.value)).toEqual([
+      "deny",
+      "ask",
+      "allow",
+    ]);
+    expect(policyOptionsFor("auto").map((option) => option.value)).toEqual([
+      "deny",
+      "auto",
+      "ask",
+      "allow",
+    ]);
   });
 });
 
@@ -87,51 +102,15 @@ describe("action metadata", () => {
     }
   });
 
-  test("explains the risk of shell, network and external paths", () => {
-    for (const action of ["shell", "network", "external_path"] as const) {
-      expect(ACTION_META[action].risk?.length).toBeGreaterThan(0);
-    }
-    expect(ACTION_META.read.risk).toBeUndefined();
-  });
-
-  test("maps known actions to Russian labels", () => {
+  test("maps known actions to localized labels", () => {
     expect(actionLabel("shell")).toBe(ACTION_META.shell.label);
+    expect(actionLabel("destructive")).toBe(ACTION_META.destructive.label);
     expect(actionLabel("custom_tool")).toBe("custom_tool");
   });
 });
 
-describe("policy validation", () => {
-  test("accepts a partial map and fills it separately", () => {
-    expect(validatePolicy({ read: "auto", shell: "ask" })).toEqual([]);
-    expect(validatePolicy({})).toEqual([]);
-  });
-
-  test("names unknown actions and invalid policies", () => {
-    const errors = validatePolicy({ read: "sometimes", robot: "allow" });
-    expect(errors).toHaveLength(2);
-    expect(errors.join(" ")).toContain("read");
-    expect(errors.join(" ")).toContain("sometimes");
-    expect(errors.join(" ")).toContain("robot");
-  });
-
-  test("rejects values that are not objects", () => {
-    expect(validatePolicy(null)).toHaveLength(1);
-    expect(validatePolicy([])).toHaveLength(1);
-    expect(validatePolicy("read")).toHaveLength(1);
-  });
-});
-
 describe("approval queue helpers", () => {
-  test("labels age in compact Russian units", () => {
-    expect(approvalAgeLabel(NOW - 1_000, NOW)).toBe("только что");
-    expect(approvalAgeLabel(NOW - 12_000, NOW)).toBe("12 с");
-    expect(approvalAgeLabel(NOW - 125_000, NOW)).toBe("2 мин");
-    expect(approvalAgeLabel(NOW - 7_200_000, NOW)).toBe("2 ч");
-    expect(approvalAgeLabel(NOW - 172_800_000, NOW)).toBe("2 д");
-  });
-
   test("clamps future timestamps", () => {
-    expect(approvalAgeLabel(NOW + 5_000, NOW)).toBe("только что");
     expect(isApprovalExpired(NOW + 5_000, NOW)).toBe(false);
   });
 

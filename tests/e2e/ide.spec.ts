@@ -44,15 +44,22 @@ async function resize(
 }
 
 async function replaceEditor(page: Page, text: string): Promise<void> {
-  await page.locator(".ide .cm-content:visible").click();
+  const viewLines = page.locator(".ide .monaco-editor:visible .view-lines");
+  await viewLines.click();
   await page.keyboard.press("ControlOrMeta+a");
-  await page.keyboard.insertText(text);
+  await page.evaluate((value) => {
+    const data = new DataTransfer();
+    data.setData("text/plain", value);
+    document.activeElement?.dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+    );
+  }, text);
+  await expect(viewLines).toHaveText(text.trim());
 }
 
 async function checkGeometry(page: Page): Promise<void> {
   const geometry = await page.evaluate(() => {
     const main = document.querySelector(".ide-main")?.getBoundingClientRect();
-    const island = document.querySelector(".agent-island")?.getBoundingClientRect();
     const editor = document.querySelector(".editor-surface")?.getBoundingClientRect();
     const left = document.querySelector(".ide-changes");
     const panel = left?.checkVisibility() ? left.getBoundingClientRect() : null;
@@ -61,7 +68,6 @@ async function checkGeometry(page: Page): Promise<void> {
       overflow: document.documentElement.scrollWidth - window.innerWidth,
       verticalOverflow: document.documentElement.scrollHeight - window.innerHeight,
       main: main && { left: main.left, right: main.right, width: main.width },
-      island: island && { left: island.left, right: island.right, bottom: island.bottom },
       editor: editor && { left: editor.left, right: editor.right, width: editor.width },
       panel: panel && { left: panel.left, right: panel.right, width: panel.width },
       agent: agent && { left: agent.left, right: agent.right, width: agent.width },
@@ -72,9 +78,6 @@ async function checkGeometry(page: Page): Promise<void> {
   expect(geometry.verticalOverflow).toBeLessThanOrEqual(1);
   expect(geometry.main?.width).toBeGreaterThan(400);
   expect(geometry.editor?.width).toBeGreaterThan(400);
-  expect(geometry.island?.left).toBeGreaterThanOrEqual(geometry.main?.left ?? 0);
-  expect(geometry.island?.right).toBeLessThanOrEqual((geometry.main?.right ?? 0) + 1);
-  expect(geometry.island?.bottom).toBeLessThanOrEqual(geometry.viewport.height);
   if (geometry.panel) {
     expect(geometry.panel.width).toBeGreaterThanOrEqual(180);
     expect(geometry.panel.right).toBeLessThanOrEqual(geometry.viewport.width + 1);
@@ -160,7 +163,7 @@ test("IDE edits real files safely, preserves work between modes and reviews agen
     await expect(page.getByRole("complementary", { name: "Файлы проекта" })).toBeVisible();
     await page.locator('.explorer .entry[data-tooltip="src"]').click();
     await page.locator('.explorer .entry[data-tooltip="src/main.ts"]').click();
-    const editor = page.locator(".ide .cm-content:visible");
+    const editor = page.locator(".ide .monaco-editor:visible .view-lines");
     await expect(editor).toHaveText(SOURCE.trim());
     await replaceEditor(page, EDITED);
     await expect(page.locator(".editor-tabs .dirty")).toHaveCount(1);
@@ -224,7 +227,7 @@ test("IDE edits real files safely, preserves work between modes and reviews agen
     await expect(agentSidebar).toBeVisible();
     await page.getByRole("button", { name: "Скрыть агента", exact: true }).click();
     await expect(agentSidebar).toBeHidden();
-    await page.locator(".island-toggle").click();
+    await page.locator(".agent-trigger").click();
     await expect(agentSidebar).toBeVisible();
     const sidebarPrompt = page.locator(".agent-sidebar #prompt");
     await expect(sidebarPrompt).toHaveText(draft);

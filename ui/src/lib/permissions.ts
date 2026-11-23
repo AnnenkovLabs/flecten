@@ -10,6 +10,7 @@ export const POLICY_ACTIONS = [
   "mcp",
   "skill",
   "external_path",
+  "destructive",
 ] as const;
 
 export type PolicyAction = (typeof POLICY_ACTIONS)[number];
@@ -39,7 +40,6 @@ export interface ActionMeta {
   label: string;
   description: string;
   icon: IconName;
-  risk?: string;
 }
 
 export interface PolicyOption {
@@ -89,6 +89,15 @@ export const POLICY_OPTIONS: readonly PolicyOption[] = [
   },
 ];
 
+export const STANDARD_POLICY_OPTIONS: readonly PolicyOption[] = POLICY_OPTIONS.filter(
+  (option) => option.value !== "auto",
+);
+
+/** Show legacy Auto only when already configured, keeping normal rows to Deny / Ask / Allow. */
+export function policyOptionsFor(value: Policy): readonly PolicyOption[] {
+  return value === "auto" ? POLICY_OPTIONS : STANDARD_POLICY_OPTIONS;
+}
+
 export const ACTION_META: Record<PolicyAction, ActionMeta> = {
   read: {
     action: "read",
@@ -119,9 +128,6 @@ export const ACTION_META: Record<PolicyAction, ActionMeta> = {
       return t("Shell commands and child processes.");
     },
     icon: "terminal",
-    get risk() {
-      return t("Commands can change files outside the project and send data out.");
-    },
   },
   network: {
     action: "network",
@@ -132,11 +138,6 @@ export const ACTION_META: Record<PolicyAction, ActionMeta> = {
       return t("External addresses, downloads, and web requests.");
     },
     icon: "refresh",
-    get risk() {
-      return t(
-        "Requests go to an external server. The address and request body leave your machine.",
-      );
-    },
   },
   mcp: {
     action: "mcp",
@@ -165,9 +166,16 @@ export const ACTION_META: Record<PolicyAction, ActionMeta> = {
       return t("Files outside the working folder.");
     },
     icon: "folder",
-    get risk() {
-      return t("Paths may lead outside the working folder, including to system files and secrets.");
+  },
+  destructive: {
+    action: "destructive",
+    get label() {
+      return t("Destructive actions");
     },
+    get description() {
+      return t("Irreversible operations like force push or deleting outside the project.");
+    },
+    icon: "trash",
   },
 };
 
@@ -218,15 +226,6 @@ export function buildPolicy(
   return policy;
 }
 
-export function approvalAgeLabel(requestedAt: number, now: number = Date.now()): string {
-  const elapsed = Math.max(0, now - requestedAt);
-  if (elapsed < 5_000) return t("just now");
-  if (elapsed < 60_000) return t("{0} sec", [Math.floor(elapsed / 1_000)]);
-  if (elapsed < 3_600_000) return t("{0} min", [Math.floor(elapsed / 60_000)]);
-  if (elapsed < 86_400_000) return t("{0} hr", [Math.floor(elapsed / 3_600_000)]);
-  return t("{0} d", [Math.floor(elapsed / 86_400_000)]);
-}
-
 export function isApprovalExpired(
   expiresAt: number | undefined,
   now: number = Date.now(),
@@ -251,23 +250,6 @@ export function sortApprovals(approvals: readonly ApprovalView[]): ApprovalView[
     if (left.id === right.id) return 0;
     return left.id < right.id ? -1 : 1;
   });
-}
-
-export function validatePolicy(value: unknown): string[] {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return [t("Policies must be an object.")];
-  }
-  const errors: string[] = [];
-  for (const [action, policy] of Object.entries(value)) {
-    if (!isPolicyAction(action)) {
-      errors.push(t("Unknown action: {0}.", [action]));
-      continue;
-    }
-    if (!isPolicy(policy)) {
-      errors.push(t("Unknown policy for action {0}: {1}.", [action, String(policy)]));
-    }
-  }
-  return errors;
 }
 
 export function actionLabel(action: string): string {
@@ -295,14 +277,6 @@ export function approvalActionTitle(action: string): string {
   }
 }
 
-function isPolicyAction(value: string): value is PolicyAction {
-  return (POLICY_ACTIONS as readonly string[]).includes(value);
-}
-
-function isPolicy(value: unknown): value is Policy {
-  return typeof value === "string" && POLICY_OPTIONS.some((option) => option.value === value);
-}
-
 export interface SavedPermissionRule {
   checkpoint?: boolean;
   action: string;
@@ -314,4 +288,8 @@ export interface SavedPermissionRule {
   target?: string;
   cwd?: string;
   note?: string;
+}
+
+function isPolicyAction(value: string): value is PolicyAction {
+  return (POLICY_ACTIONS as readonly string[]).includes(value);
 }

@@ -87,7 +87,7 @@ One file, one responsibility. Soft limit: 300 lines; hard limit: 500 lines. Dire
 | `ui/src/App.svelte` | Top-level screen composition and global keyboard shortcuts |
 | `ui/src/components/ProjectNavigation.svelte`, `ProjectTrust.svelte`, `ProjectGroup.svelte`, `ui/src/lib/run/projects.svelte.ts` | Sidebar project/session tree, folder context menu, and workspace trust prompt |
 | `ui/src/app.css` | Single source of design tokens, font declarations, and base styles |
-| `ui/src/lib/interface-scale.svelte.ts`, `components/settings/InterfaceScale.svelte` | Window-persisted 75-125% interface zoom applied via native `webFrame` across layout, thread, and composer |
+| `ui/src/lib/interface-scale.svelte.ts`, `ui/src/lib/appearance.svelte.ts`, `components/settings/AppearanceSettings.svelte`, `ScaleSlider.svelte` | Window-persisted interface zoom (75-125% via `webFrame`), reading text scale, HTML summary scale, chat width, and code/terminal font sizes |
 | `ui/src/controls.css` | Shared button, input, and toggle primitives across surfaces |
 | `ui/src/custom-controls.css`, `ui/src/components/controls/`, `ui/src/lib/tooltip.ts` | Custom checkbox, slider, progress, keyboard-accessible select/combobox, and `data-tooltip` floating layer |
 | `ui/src/lib/modal.ts`, `clipboard.svelte.ts` | Unified modal focus/escape lifecycle and confirmed clipboard copy |
@@ -105,9 +105,9 @@ One file, one responsibility. Soft limit: 300 lines; hard limit: 500 lines. Dire
 | `ui/src/lib/thread-*` | Virtualized thread windowing, height measurement, and scroll-anchor preservation |
 | `ui/src/components/` | Svelte 5 components driven strictly by props and `ui/src/lib` stores |
 | `ui/src/components/settings/` | Settings sections: providers, trust, MCP, hooks, skills, modules, and diagnostics |
-| `ui/src/components/permissions/`, `settings/PermissionsSettings.svelte`, `settings/SandboxSettings.svelte` | Unified Access view: modes, external-path prompts, saved rules, human checkpoints, and OS sandbox settings |
+| `ui/src/components/permissions/`, `settings/PermissionsSettings.svelte`, `settings/SandboxSettings.svelte` | Unified Access view: modes, saved rules, action permissions, and OS sandbox settings |
 | `ui/src/components/ApprovalDock.svelte`, `ApprovalCard.svelte` | Pending approval dock above chat and IDE composers with action buttons and persisted history receipts |
-| `ui/src/components/ide/` | File tree, CodeMirror editor, and diff views |
+| `ui/src/components/ide/` | File tree, Monaco editor, and diff views |
 
 `shared/session-state.ts` defines the shared schema for lifecycle snapshots across backend and renderer.
 

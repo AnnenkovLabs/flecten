@@ -41,23 +41,11 @@ export default {
   "The agent receives shortened output. The full result is saved in the tool log.":
     "エージェントには短縮した出力を渡し、結果全体はツールのログに保存します。",
   Enabled: "有効",
-  "Check paths, secrets, and network access before execution.":
-    "実行前にパス、シークレット、ネットワークを確認します。",
-  "Sandbox enabled": "サンドボックス有効 sandbox enabled",
-  "Allow network access": "ネットワークを許可",
-  "Access to websites and external services.": "ウェブサイトや外部サービスへのアクセス。",
-  "Network allowNetwork": "ネットワーク allowNetwork",
-  "Blocked paths": "アクセス禁止パス",
-  "Blocked read paths readDenyPrefixes": "読み取り禁止パス readDenyPrefixes",
-  "Blocked write paths writeDenyPrefixes": "書き込み禁止パス writeDenyPrefixes",
   "One prefix per line. Use absolute paths or paths relative to the project root.":
     "1行に1つのプレフィックスを入力します。絶対パスまたはプロジェクトルートからの相対パスを指定できます。",
   Environment: "環境",
-  "Environment variables envAllowlist": "環境変数 envAllowlist",
   "Only these variables are available to commands and extensions. Provider keys are not passed on.":
     "コマンドと拡張機能が利用できるのは、これらの変数のみです。プロバイダーのキーは渡されません。",
-  "Sandbox is not configured. Save settings to create a configuration file.":
-    "サンドボックスが未設定です。設定を保存すると設定ファイルが作成されます。",
   unknown: "不明",
   "Could not collect diagnostics. Try again.":
     "診断情報を収集できませんでした。もう一度お試しください。",

@@ -18,6 +18,8 @@ afterEach(async () => {
 describe("skill source settings", () => {
   test("validates source ids and keeps UI ids aligned with the config", () => {
     expect(SkillsConfigSchema.parse({}).sources).toEqual([...SKILL_SOURCES]);
+    expect(SkillsConfigSchema.parse({ builtin: false }).builtin).toBe(false);
+    expect(defaultConfig().skills?.builtin).toBe(true);
     expect(SKILL_SOURCE_OPTIONS.map((source) => source.id)).toEqual([...SKILL_SOURCES]);
     expect(HarnessConfigSchema.safeParse({ skills: { sources: ["unknown"] } }).success).toBe(false);
     expect(HarnessConfigSchema.safeParse({ skills: { sources: false } }).success).toBe(false);
@@ -44,7 +46,7 @@ describe("skill source settings", () => {
     }
     const config = defaultConfig();
     config.catalog.autoRefresh = false;
-    config.skills = { sources: ["project-claude", "project-agents"] };
+    config.skills = { sources: ["project-claude", "project-agents"], builtin: false };
     await writeFile(join(cwd, "flecten.config.json"), JSON.stringify(config));
     const service = await createAppService(cwd);
     try {
@@ -52,7 +54,7 @@ describe("skill source settings", () => {
       expect(service.info().skills.names).toEqual(["agents-only", "claude-only"]);
       const before = service.info().system.hash;
       const draft = service.settings().config;
-      draft.skills = { sources: ["project-agents"] };
+      draft.skills = { sources: ["project-agents"], builtin: false };
       const saved = await service.saveSettings({ config: draft });
       expect(saved.skills.names).toEqual(["agents-only"]);
       expect(saved.system.hash).not.toBe(before);
@@ -71,13 +73,13 @@ describe("skill source settings", () => {
         await reopened.dispose();
       }
       const empty = service.settings().config;
-      empty.skills = { sources: [] };
+      empty.skills = { sources: [], builtin: false };
       expect((await service.saveSettings({ config: empty })).skills.names).toEqual([]);
       expect((await service.listCommands()).filter((entry) => entry.source === "skill")).toEqual(
         [],
       );
       const restored = service.settings().config;
-      restored.skills = { sources: ["project-claude"] };
+      restored.skills = { sources: ["project-claude"], builtin: false };
       expect((await service.saveSettings({ config: restored })).skills.names).toEqual([
         "claude-only",
       ]);

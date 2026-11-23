@@ -7,10 +7,7 @@ export default {
   Deny: "Bloquear",
   "Always block.": "Sempre bloquear.",
   Auto: "Automático",
-  "Allow safe actions and ask about the rest.":
-    "Executar ações seguras e pedir confirmação para as demais.",
   Ask: "Perguntar",
-  "Ask before every call.": "Pedir confirmação antes de cada chamada.",
   Allow: "Permitir",
   "Allow without asking.": "Executar sem pedir confirmação.",
   Read: "Leitura",
@@ -20,40 +17,21 @@ export default {
   "Create, edit, and delete files.": "Criação, alteração e exclusão de arquivos.",
   Terminal: "Terminal",
   "Shell commands and child processes.": "Comandos do shell e processos filhos.",
-  "Commands can change files outside the project and send data out.":
-    "O comando pode alterar arquivos fora do projeto e enviar dados para fora do computador.",
   Network: "Rede",
   "External addresses, downloads, and web requests.":
     "Endereços externos, downloads e solicitações da web.",
-  "Requests go to an external server. The address and request body leave your machine.":
-    "A solicitação é enviada a um servidor externo. O endereço e o corpo da solicitação saem do computador.",
   "Tools from connected MCP servers.": "Ferramentas dos servidores MCP conectados.",
   Skills: "Habilidades",
   "Activate skills and read their resources.":
     "Ativação de habilidades e leitura de seus recursos.",
   "External paths": "Caminhos externos",
   "Files outside the working folder.": "Arquivos fora da pasta de trabalho.",
-  "Paths may lead outside the working folder, including to system files and secrets.":
-    "O caminho pode apontar para fora da pasta de trabalho, incluindo arquivos do sistema e segredos.",
   "Read-only": "Somente leitura",
-  "Reads the project and skills. Writing, shell commands, and external paths are blocked. Network and MCP access require approval.":
-    "Permite ler o projeto e as habilidades. Escrita, shell e caminhos externos são bloqueados. Rede e MCP pedem confirmação.",
-  "Working folder": "Pasta de trabalho",
-  "Writes within the project. Shell commands, network, MCP, and external paths require approval.":
-    "Permite escrever dentro do projeto. Shell, rede, MCP e caminhos externos pedem confirmação.",
   "Full access": "Acesso total",
-  "Allows all actions without asking. Use only in a trusted project.":
-    "Permite todas as ações sem pedir confirmação. Use apenas em um projeto confiável.",
-  "These settings don't match any preset. Check each row before saving.":
-    "Combinação personalizada de regras.",
-  "just now": "agora mesmo",
   "{0} sec": [0, " s"],
   "{0} min": [0, " min"],
   "{0} hr": [0, " h"],
   "{0} d": [0, " d"],
-  "Policies must be an object.": "Formato de política de permissões inválido.",
-  "Unknown action: {0}.": ["Ação desconhecida: ", 0, "."],
-  "Unknown policy for action {0}: {1}.": ["Política desconhecida para a ação ", 0, ": ", 1, "."],
   "Opening a browser is available in the desktop app": "Abrir links requer o aplicativo desktop",
   "the core returned no file": "conteúdo do arquivo indisponível",
   model: "modelo",

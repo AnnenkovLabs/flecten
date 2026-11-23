@@ -1,5 +1,7 @@
 <script lang="ts">
   import { t } from "../../lib/i18n.svelte";
+  import { fileIcon } from "../../lib/ide/editor";
+  import { highlightSnippet } from "../../lib/ide/quick-search";
   import type { IdeSearch, SearchMatch } from "../../lib/ide/search.svelte";
   import ReplacePreview from "./ReplacePreview.svelte";
   import Icon from "../Icon.svelte";
@@ -25,8 +27,11 @@
     {#if search.error}<p role="alert">{search.error}</p>{/if}
     {#if search.result?.limited}<p>{t("Only some results are shown. Refine the search text or partial path.")}</p>{/if}
     {#each groups as [path, matches] (path)}
-      <details open><summary data-tooltip={path}><Icon name="file" size={14} /><span>{path}</span><small>{matches.length}</small></summary>
-        {#each matches as match, index (index)}<button type="button" data-tooltip={`${path}:${match.line}:${match.column}\n${match.text}`} onclick={() => onOpen(match)}><span class="line-number">{match.line}</span><span class="match-text">{match.text}</span></button>{/each}
+      <details open><summary data-tooltip={path}><span style:color={fileIcon(path).color} style="display:inline-flex;flex:none"><Icon name="file" size={14} /></span><span>{path}</span><small>{matches.length}</small></summary>
+        {#each matches as match, index (index)}
+          {@const snippet = highlightSnippet(match.text, search.query)}
+          <button type="button" data-tooltip={`${path}:${match.line}:${match.column}\n${match.text}`} onclick={() => onOpen(match)}><span class="line-number">{match.line}</span><span class="match-text">{snippet.before}{#if snippet.match}<mark>{snippet.match}</mark>{/if}{snippet.after}</span></button>
+        {/each}
       </details>
     {/each}
     {#if search.result && !search.result.matches.length}<p>{t("No matches. Change the search text or remove the path filter.")}</p>{/if}
@@ -41,5 +46,5 @@
   .search-input { display: flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg); } .search-input input { border: 0; flex: 1; width: 0; } .search-input button { flex: none; width: 28px; height: 28px; font-size: 12px; color: var(--muted); } .search-input button[aria-pressed="true"] { background: var(--raised-hover); color: var(--text); box-shadow: inset 0 -2px var(--primary); }
   .search-submit { display: flex; align-items: center; gap: 8px; min-height: 30px; margin-top: 4px; padding-inline: 8px; background: var(--raised); border-radius: 4px; color: var(--text-2); } kbd { margin-inline-start: auto; color: var(--muted); font-size: 11px; } .search-summary { padding: 4px 12px 12px; font-size: 12px; color: var(--muted); }
   .search-results { overflow: auto; min-height: 0; flex: 1; } summary { display: flex; align-items: center; gap: 6px; min-height: 30px; padding-inline: 12px; cursor: pointer; color: var(--text-2); } summary span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } small { font-size: 11px; color: var(--muted); }
-  .search-results button { display: flex; width: 100%; min-height: 28px; gap: 10px; padding: 4px 12px 4px 24px; font-family: var(--mono); font-size: 12px; text-align: start; color: var(--text-2); } .search-results button:hover, summary:hover { background: var(--surface); } .line-number { color: var(--muted); flex: none; } .match-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } p { padding: 8px 12px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  .search-results button { display: flex; width: 100%; min-height: 26px; gap: 10px; padding: 3px 12px 3px 22px; font-family: var(--mono); font-size: 12px; text-align: start; color: var(--text-2); } .search-results button:hover, summary:hover { background: var(--surface); } .line-number { color: var(--muted); flex: none; } .match-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .match-text mark { background: color-mix(in srgb, var(--primary) 30%, transparent); color: var(--text); border-radius: 2px; } p { padding: 8px 12px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 </style>

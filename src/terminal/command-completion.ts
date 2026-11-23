@@ -7,15 +7,19 @@ export interface CommandCompletion {
   exitCode: number;
 }
 
+function crlfCommand(command: string): string {
+  return command.replaceAll("\r\n", "\n").replaceAll("\n", "\r\n");
+}
+
 export function commandWithCompletion(command: string, shell: string, marker: string): string {
   switch (shellName(shell).toLowerCase()) {
     case "cmd":
-      return `${command}\r\necho ${marker}%errorlevel%:\r\n`;
+      return `${crlfCommand(command)}\r\necho ${marker}%errorlevel%:\r\n`;
     case "powershell":
     case "pwsh":
       // PowerShell -Command reports the last pipeline's success as 0/1.
       // LASTEXITCODE is sticky across cmdlets and cannot represent that status.
-      return `${command}\r\n$__liquidCode = if ($?) { 0 } else { 1 }; Write-Output ("${marker}" + $__liquidCode + ":")\r\n`;
+      return `${crlfCommand(command)}\r\n$__liquidCode = if ($?) { 0 } else { 1 }; Write-Output ("${marker}" + $__liquidCode + ":")\r\n`;
     default:
       return `${command}\nprintf '\\n${marker}%s\\n' "$?"\n`;
   }

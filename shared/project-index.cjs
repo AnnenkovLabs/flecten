@@ -33,6 +33,35 @@ function canonicalProjectPath(path) {
   return canonical;
 }
 
+function sameProjectPath(left, right, platform = process.platform) {
+  if (left === right) return true;
+  if (typeof left !== "string" || typeof right !== "string") return false;
+  if (platform !== "win32") return false;
+  const normalize = (value) => {
+    const slashed = value.split("\\").join("/").toLowerCase();
+    return slashed.length > 3 && slashed.endsWith("/") ? slashed.slice(0, -1) : slashed;
+  };
+  return normalize(left) === normalize(right);
+}
+
+function replaceIndexFile(temp, target) {
+  const deadline = Date.now() + 1000;
+  for (;;) {
+    try {
+      renameSync(temp, target);
+      return;
+    } catch (error) {
+      if (
+        process.platform !== "win32" ||
+        !["EPERM", "EACCES", "EBUSY"].includes(error.code) ||
+        Date.now() >= deadline
+      )
+        throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+    }
+  }
+}
+
 function readProjectIndex(profile) {
   try {
     return indexSchema.parse(JSON.parse(readFileSync(join(profile, "projects.json"), "utf8")));
@@ -52,7 +81,7 @@ function saveProjectIndex(profile, index) {
   try {
     writeFileSync(temp, `${JSON.stringify(parsed, null, 2)}\n`, { mode: 0o600, flag: "wx" });
     syncPath(temp, false);
-    renameSync(temp, path);
+    replaceIndexFile(temp, path);
     syncPath(profile, true);
   } catch (error) {
     rmSync(temp, { force: true });
@@ -105,7 +134,7 @@ function syncPath(path, directory) {
 function selectProject(profile, path) {
   const index = readProjectIndex(profile);
   const canonical = path === null ? null : canonicalProjectPath(path);
-  if (canonical && !index.projects.some((project) => project.path === canonical)) {
+  if (canonical && !index.projects.some((project) => sameProjectPath(project.path, canonical))) {
     index.projects.push({
       path: canonical,
       name: basename(canonical) || canonical,
@@ -118,8 +147,8 @@ function selectProject(profile, path) {
 
 function removeProject(profile, path) {
   const index = readProjectIndex(profile);
-  index.projects = index.projects.filter((project) => project.path !== path);
-  if (index.selected === path) index.selected = null;
+  index.projects = index.projects.filter((project) => !sameProjectPath(project.path, path));
+  if (sameProjectPath(index.selected, path)) index.selected = null;
   return saveProjectIndex(profile, index);
 }
 
@@ -127,7 +156,7 @@ function setProjectTrust(profile, path, trust) {
   const decision = projectSchema.shape.trust.parse(trust);
   const canonical = canonicalProjectPath(path);
   const index = readProjectIndex(profile);
-  const project = index.projects.find((item) => item.path === canonical);
+  const project = index.projects.find((item) => sameProjectPath(item.path, canonical));
   if (project) project.trust = decision;
   else
     index.projects.push({
@@ -140,6 +169,7 @@ function setProjectTrust(profile, path, trust) {
 
 module.exports = {
   canonicalProjectPath,
+  sameProjectPath,
   readProjectIndex,
   selectProject,
   removeProject,

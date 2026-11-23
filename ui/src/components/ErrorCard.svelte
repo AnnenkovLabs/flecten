@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from "../lib/i18n.svelte";
+  import { continueTask } from "../lib/run/intents";
   import { canContinue, errorReason } from "../lib/run-errors";
   import type { ErrorItem } from "../lib/run-errors";
   import Icon from "./Icon.svelte";
@@ -18,7 +19,7 @@
     </details>
     {#if onRepeat}
     {#if canContinue(item)}
-      <button class="error-retry" type="button" onclick={() => onRepeat("/continue")}>
+      <button class="error-retry" type="button" onclick={continueTask}>
         <Icon name="chevron-right" size={14} /> {t("Continue")} </button>
     {:else}
       <button class="error-retry" type="button" onclick={() => onRepeat()}>

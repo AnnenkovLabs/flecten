@@ -344,7 +344,10 @@ function appHandlers(
       replacement: await replaceWorkspace(app.info().cwd, command),
     }),
     "files.git": async (command) => ({ git: await workspaceGit(app.info().cwd, command) }),
-    "ide.terminal": async (command) => ({ terminal: await app.ideTerminal.command(command) }),
+    "ide.terminal": async (command) => {
+      const terminal = await app.ideTerminal.command(command);
+      return command.noReply === true ? undefined : { terminal };
+    },
     "files.read": async (command) => ({
       file: await previewFile(app.info().cwd, required(command, "path", "path is required")),
     }),

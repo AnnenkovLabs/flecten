@@ -3,6 +3,7 @@ import type { IconName } from "../icons";
 
 export type SettingsSectionId =
   | "general"
+  | "appearance"
   | "models"
   | "providers"
   | "permissions"
@@ -40,8 +41,24 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
         t("Concurrent tasks"),
         "maxConcurrent",
         t("Interface language"),
-        t("Interface Scale"),
         t("English 简体中文 Português Español 日本語 Українська Русский"),
+      ];
+    },
+  },
+  {
+    id: "appearance",
+    get label() {
+      return t("Appearance");
+    },
+    icon: "appearance",
+    get fields() {
+      return [
+        t("Interface scale"),
+        t("Text scale"),
+        t("HTML summary scale"),
+        t("Chat width"),
+        t("Code text size"),
+        t("Terminal text size"),
       ];
     },
   },
@@ -85,11 +102,10 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
         t("Agent"),
         t("Confirm changes"),
         t("Full access"),
-        t("Rules"),
-        t("Policies"),
+        t("Saved rules"),
+        t("Action permissions"),
+        t("Destructive actions"),
         t("Approvals"),
-        t("Allow all"),
-        t("Deny all"),
         t("Sandbox"),
         t("Process isolation"),
         t("Network"),

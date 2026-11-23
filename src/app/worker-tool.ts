@@ -16,9 +16,25 @@ const WorkerRequestSchema = z.discriminatedUnion("operation", [
 const WorkerParametersSchema = z
   .object({
     operation: z.enum(["start", "steer", "resume", "status", "stop"]),
-    task: z.string().min(1).max(60_000).optional(),
-    assignment: WorkerAssignmentSchema.optional(),
-    message: z.string().min(1).max(30_000).optional(),
+    task: z
+      .string()
+      .min(1)
+      .max(60_000)
+      .optional()
+      .describe(
+        "Self-contained English brief focused on taste, user intent, and the real end result (what to produce and how it should look, read, or behave). Omit verification checklists or test commands unless the user explicitly requested them.",
+      ),
+    assignment: WorkerAssignmentSchema.optional().describe(
+      "Structured assignment when distinct deliverables or step/source boundaries add clarity. Frame expectedOutputs and acceptanceCriteria around the real result and user taste rather than check rituals.",
+    ),
+    message: z
+      .string()
+      .min(1)
+      .max(30_000)
+      .optional()
+      .describe(
+        "Steer direction for a running Worker focused on updated intent, taste, or output changes rather than check checklists.",
+      ),
   })
   .strict();
 const CriterionParametersSchema = z
@@ -50,7 +66,7 @@ export function workerTool(
   return defineTool({
     name: "worker",
     description:
-      "Start an independent persistent Worker with a dense compiled brief (`task`, after translating user slang through dictionary and memory) or structured `assignment`, steer it, resume it, inspect its status, or stop it immediately. Start returns immediately; live updates arrive automatically. Only one task can run at a time.",
+      "Start an independent persistent Worker with a dense compiled brief (`task`, focused on taste, user intent and the real deliverable after resolving slang through dictionary and memory) or structured `assignment`, steer it, resume it, inspect its status, or stop it immediately. Focus briefs and steers on the desired output and taste rather than verification checklists or test commands unless the user explicitly asked for them. Start returns immediately; live updates arrive automatically. Only one task can run at a time.",
     schema: WorkerRequestSchema,
     parametersSchema: WorkerParametersSchema,
     mutating: true,

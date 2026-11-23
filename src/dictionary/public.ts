@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import {
@@ -16,6 +16,7 @@ import cssPlatform from "./data/css-platform.json";
 import design from "./data/design.json";
 import developerTools from "./data/developer-tools.json";
 import infrastructure from "./data/infrastructure.json";
+import internetCulture from "./data/internet-culture.json";
 import mcpEcosystem from "./data/mcp-ecosystem.json";
 import mobilePlatforms from "./data/mobile-platforms.json";
 import productBusiness from "./data/product-business.json";
@@ -57,6 +58,7 @@ const bundledCategories = validateCategories(
     cssPlatform,
     developerTools,
     infrastructure,
+    internetCulture,
     mcpEcosystem,
     mobilePlatforms,
     productBusiness,
@@ -99,7 +101,7 @@ export class PublicDictionary {
     try {
       if ((await stat(this.#path)).size > CACHE_LIMIT)
         throw new Error("Dictionary cache exceeds 4 MiB");
-      const cached = CacheSchema.parse(await Bun.file(this.#path).json());
+      const cached = CacheSchema.parse(JSON.parse(await readFile(this.#path, "utf8")) as unknown);
       this.#categories = validateCategories(cached.categories);
       this.#syncedAt = cached.syncedAt;
       this.#error = undefined;

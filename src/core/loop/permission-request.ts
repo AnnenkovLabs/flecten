@@ -130,14 +130,15 @@ export async function permissionRequest(
   const bounded =
     ((native && known && (action === "read" || action === "write")) || tool.source === "skill") &&
     [...resources].every((path) => isInside(context.cwd, path, context.authorizedExternalPaths));
+  const humanOnly = Boolean(
+    context.providerProtection &&
+      (action !== "read" ||
+        tool.source === "mcp" ||
+        tool.source === "module" ||
+        tool.source === "skill"),
+  );
   const request: PermissionRequest = {
-    ...(context.providerProtection &&
-    (action !== "read" ||
-      tool.source === "mcp" ||
-      tool.source === "module" ||
-      tool.source === "skill")
-      ? { humanOnly: true }
-      : {}),
+    ...(humanOnly ? { humanOnly: true } : {}),
     action,
     tool: tool.name,
     cwd: executionCwd,

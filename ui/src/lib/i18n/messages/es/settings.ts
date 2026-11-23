@@ -1,9 +1,31 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "Interface Scale": "Escala de la interfaz",
-  "Resize text, controls, and the chat column. Changes apply immediately.":
-    "Ajusta el tamaño del texto, los controles y la columna del chat. Los cambios se aplican al instante.",
-  "Reset to 100%": "Restablecer al 100%",
+  Appearance: "Apariencia",
+  "Reset all": "Restablecer todo",
+  "Adjust window zoom, reading sizes, and workspace typography. Changes apply immediately.":
+    "Ajusta el zoom de la ventana, los tamaños de lectura y la tipografía del espacio de trabajo. Los cambios se aplican al instante.",
+  Interface: "Interfaz",
+  "Interface scale": "Escala de la interfaz",
+  "Resize the entire window, including controls, menus, and layout.":
+    "Escala toda la ventana, incluidos controles, menús y diseño.",
+  "Chat and summaries": "Chat y resúmenes",
+  "Text scale": "Escala del texto",
+  "Scale messages, Markdown replies, reasoning, and the composer input.":
+    "Ajusta el tamaño de los mensajes, respuestas en Markdown, razonamiento y el campo de entrada.",
+  "HTML summary scale": "Escala de resúmenes HTML",
+  "Scale interactive HTML summaries, tables, and diagrams in replies.":
+    "Ajusta la escala de los resúmenes HTML interactivos, tablas y diagramas en las respuestas.",
+  "Chat width": "Ancho del chat",
+  "Maximum width of the conversation column and composer.":
+    "Ancho máximo de la columna de conversación y del campo de entrada.",
+  "Code and terminal": "Código y terminal",
+  "Code text size": "Tamaño del texto de código",
+  "Font size for code blocks, diffs, file previews, and the IDE editor.":
+    "Tamaño de fuente para bloques de código, diferencias, vista previa de archivos y editor IDE.",
+  "Terminal text size": "Tamaño del texto de la terminal",
+  "Font size for the integrated terminal.": "Tamaño de fuente de la terminal integrada.",
+  "Reset to {0}": ["Restablecer a ", 0],
+  "Reset {0} to {1}": ["Restablecer ", 0, " a ", 1],
   none: "no",
   "not visible": "no visible",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [
@@ -58,7 +80,10 @@ export default {
   "Lines to read": "Lectura de líneas",
   "The response limit must not exceed the context window.":
     "El límite de respuesta no debe superar la ventana de contexto.",
-  "Specify a reasoning budget.": "Indica el presupuesto de razonamiento.",
+  "Saved. Invalid model settings were not applied: {0}": [
+    "Guardado. No se aplicaron los ajustes no válidos de los modelos: ",
+    0,
+  ],
   "The reasoning budget must be less than the response limit.":
     "El presupuesto de razonamiento debe ser menor que el límite de respuesta.",
   "Only http and https are supported.": "Solo se admiten http y https.",

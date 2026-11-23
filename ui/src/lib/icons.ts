@@ -22,6 +22,7 @@ import Key01Icon from "@hugeicons/core-free-icons/Key01Icon";
 import Layers01Icon from "@hugeicons/core-free-icons/Layers01Icon";
 import Mic01Icon from "@hugeicons/core-free-icons/Mic01Icon";
 import MoreHorizontalIcon from "@hugeicons/core-free-icons/MoreHorizontalIcon";
+import PaintBoardIcon from "@hugeicons/core-free-icons/PaintBoardIcon";
 import PanelLeftCloseIcon from "@hugeicons/core-free-icons/PanelLeftCloseIcon";
 import PanelLeftOpenIcon from "@hugeicons/core-free-icons/PanelLeftOpenIcon";
 import PanelRightCloseIcon from "@hugeicons/core-free-icons/PanelRightCloseIcon";
@@ -94,6 +95,7 @@ export const ICONS = {
   star: StarIcon,
   attachment: Attachment01Icon,
   layers: Layers01Icon,
+  appearance: PaintBoardIcon,
 } satisfies Record<string, IconSvgElement>;
 
 /** Icon names come from the map itself, so a new icon needs exactly one line. */

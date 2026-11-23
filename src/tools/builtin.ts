@@ -35,19 +35,19 @@ export function builtinTools(imageFocus = false): Tool[] {
   return [
     memoryTool,
     readTool(imageFocus),
-    defineTool({ ...writeSpec, mutating: true, execute: runWrite }),
-    defineTool({ ...editSpec, mutating: true, execute: runEdit }),
-    defineTool({ ...applyPatchSpec, mutating: true, execute: runApplyPatch }),
-    defineTool({ ...deleteSpec, mutating: true, execute: runDelete }),
-    defineTool({ ...moveSpec, mutating: true, execute: runMove }),
-    defineTool({ ...todoSpec, mutating: true, execute: runTodo }),
-    taskTool,
     defineTool({
       ...grepSpec,
       provenance: (args) => ({ source: "file", ref: args.path ?? "." }),
       execute: runGrep,
     }),
     defineTool({ ...globSpec, execute: runGlob }),
+    defineTool({ ...editSpec, mutating: true, execute: runEdit }),
+    defineTool({ ...applyPatchSpec, mutating: true, execute: runApplyPatch }),
+    defineTool({ ...writeSpec, mutating: true, execute: runWrite }),
+    defineTool({ ...deleteSpec, mutating: true, execute: runDelete }),
+    defineTool({ ...moveSpec, mutating: true, execute: runMove }),
+    defineTool({ ...todoSpec, mutating: true, execute: runTodo }),
+    taskTool,
     defineTool({ ...askSpec, execute: runAsk }),
     defineTool({
       ...webFetchSpec,
@@ -58,16 +58,6 @@ export function builtinTools(imageFocus = false): Tool[] {
       ...webSearchSpec,
       provenance: (args) => ({ source: "web", ref: args.query }),
       execute: runWebSearch,
-    }),
-    defineTool({
-      ...terminalSpec,
-      mutating: true,
-      timeoutMs: (args) => (args.op === "run" ? (args.timeoutMs ?? 600_000) + 10_000 : 30_000),
-      provenance: (args) => ({
-        source: "shell",
-        ...(args.command ? { ref: args.command } : { ref: `terminal ${args.id ?? "default"}` }),
-      }),
-      execute: runTerminalTool,
     }),
     defineTool({
       ...bashSpec,
@@ -81,6 +71,16 @@ export function builtinTools(imageFocus = false): Tool[] {
       timeoutMs: (args) => (args.timeoutMs ?? 600_000) + 10_000,
       provenance: (args) => ({ source: "shell", ref: `job ${args.id ?? args.op}` }),
       execute: runJobs,
+    }),
+    defineTool({
+      ...terminalSpec,
+      mutating: true,
+      timeoutMs: (args) => (args.op === "run" ? (args.timeoutMs ?? 600_000) + 10_000 : 30_000),
+      provenance: (args) => ({
+        source: "shell",
+        ...(args.command ? { ref: args.command } : { ref: `terminal ${args.id ?? "default"}` }),
+      }),
+      execute: runTerminalTool,
     }),
     {
       ...defineTool({ ...doneSpec, mutating: true, execute: runDone }),

@@ -26,4 +26,5 @@ export const SkillsConfigSchema = z.object({
     .array(SkillSourceIdSchema)
     .max(SKILL_SOURCES.length)
     .default([...SKILL_SOURCES]),
+  builtin: z.boolean().optional(),
 });

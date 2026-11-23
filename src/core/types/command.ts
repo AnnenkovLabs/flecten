@@ -18,6 +18,8 @@ export type Command =
       clientId?: string;
       /** The run continues an interrupted one. */
       resumed?: boolean;
+      /** The run continues the active work silently without adding a user message to the thread. */
+      continuation?: boolean;
       internal?: boolean;
       actor?: "user" | "twin";
       /** A summary event may wake the model to converse, without any tools. */

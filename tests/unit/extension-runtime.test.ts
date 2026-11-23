@@ -60,7 +60,7 @@ async function setup() {
   const config = defaultConfig();
   config.conversation = { enabled: false };
   config.catalog.autoRefresh = false;
-  config.skills = { sources: ["project-flecten"] };
+  config.skills = { sources: ["project-flecten"], builtin: false };
   config.mcp.servers = {
     docs: {
       ...McpHttpServerConfigSchema.parse({ url: server.url.href, timeoutMs: 1000 }),

@@ -2,9 +2,18 @@ import { expect, test } from "bun:test";
 import { SessionStateSchema } from "../../shared/session-state";
 import { WorkerReferences } from "../../src/app/worker-references";
 import type { Event } from "../../src/core/types";
+import { t } from "../../ui/src/lib/i18n.svelte";
 import { toolReferences } from "../../ui/src/lib/markdown/tool-references";
 import { type SessionEvent, TaskView } from "../../ui/src/lib/run/view.svelte";
-import { conversationItems, workerMirrors } from "../../ui/src/lib/run/worker-mirrors";
+import {
+  conversationItems,
+  conversationLiveState,
+  isTalkerThinking,
+  reasoningPreviewLine,
+  workerMirrors,
+  workerThoughtMirrors,
+} from "../../ui/src/lib/run/worker-mirrors";
+import { searchThread } from "../../ui/src/lib/ui-polish";
 
 const call = { id: "provider-id", name: "bash", args: { command: "bun test" } };
 const parent = "parent";
@@ -264,5 +273,187 @@ test("Talker messages keep their text and chronological position between Worker 
     expect(timeline.filter((item) => item.kind === "answer").every((item) => !item.streaming)).toBe(
       true,
     );
+  }
+});
+
+test("Worker reasoning mirrors into Conversation when Talker is not thinking and stays synchronized across replay", () => {
+  const start = Date.parse("2026-11-22T11:05:00.000Z");
+  const events: SessionEvent[] = [
+    {
+      type: "session.started",
+      sessionId: parent,
+      provider: "test",
+      model: "test",
+      role: "talker",
+      prompt: "Draw a pelican",
+      timestamp: start,
+    },
+    { type: "turn.started", sessionId: parent, turn: 1, timestamp: start + 100 },
+    {
+      type: "reasoning.delta",
+      sessionId: parent,
+      text: "Delegating to Worker",
+      timestamp: start + 200,
+    },
+    {
+      ...wrap({
+        type: "session.started",
+        sessionId: child,
+        provider: "test",
+        model: "test",
+        prompt: "Draw",
+      }),
+      timestamp: start + 300,
+    },
+    { ...wrap({ type: "turn.started", sessionId: child, turn: 1 }), timestamp: start + 400 },
+    {
+      ...wrap({
+        type: "reasoning.delta",
+        sessionId: child,
+        text: "Line 1\nPlanning wheel geometry",
+      }),
+      timestamp: start + 500,
+    },
+  ];
+  const view = new TaskView({ checkpointSaved() {} });
+  for (const event of events) view.apply(event);
+
+  const project = (task: TaskView) =>
+    conversationItems(
+      task.thread.items,
+      workerMirrors(task.thread.items),
+      workerThoughtMirrors(task.thread.items),
+      isTalkerThinking(task.thread.items),
+    );
+
+  // While Talker itself is streaming reasoning, live Worker reasoning yields to Talker.
+  expect(isTalkerThinking(view.thread.items)).toBe(true);
+  expect(project(view).filter((item) => item.kind === "worker-reasoning")).toHaveLength(0);
+
+  // Once Talker finishes thinking and goes idle, Worker's live reasoning and status appear in Conversation.
+  view.apply({
+    type: "message.finished",
+    sessionId: parent,
+    text: "Working on it.",
+    reasoning: "Delegating to Worker",
+    toolCalls: [],
+    timestamp: start + 1000,
+  });
+  view.apply({
+    type: "session.finished",
+    sessionId: parent,
+    result: {
+      sessionId: parent,
+      pass: false,
+      stopReason: "end",
+      summary: "Working on it.",
+      turns: 1,
+      usage: { input: 1, output: 1, cached: 0 },
+    },
+    timestamp: start + 1100,
+  });
+  expect(isTalkerThinking(view.thread.items)).toBe(false);
+  const mirroredLive = project(view).filter((item) => item.kind === "worker-reasoning");
+  expect(mirroredLive).toHaveLength(1);
+  const thoughtId = mirroredLive[0]?.kind === "worker-reasoning" ? mirroredLive[0].reference : "";
+  const thought = workerThoughtMirrors(view.thread.items).get(thoughtId);
+  expect(thought).toMatchObject({
+    text: "Line 1\nPlanning wheel geometry",
+    streaming: true,
+    startedAt: start + 500,
+  });
+  expect(reasoningPreviewLine(thought?.text ?? "")).toBe("Planning wheel geometry");
+  expect(
+    searchThread(
+      project(view),
+      "wheel geometry",
+      workerMirrors(view.thread.items),
+      workerThoughtMirrors(view.thread.items),
+    ),
+  ).toHaveLength(1);
+
+  const liveState = conversationLiveState(view);
+  expect(liveState.live).toBe(true);
+  expect(liveState.liveLabel).toBe(t("Thinking"));
+
+  // Streaming a tool call transitions the Worker thought out of streaming and surfaces pendingCalls in Conversation.
+  view.apply({
+    ...wrap({
+      type: "tool_call.progress",
+      sessionId: child,
+      index: 0,
+      name: "write",
+      delta: '{"path":"a.svg"}',
+    }),
+    timestamp: start + 5500,
+  });
+  expect(thought?.streaming).toBe(false);
+  expect(thought?.reasoningMs).toBe(5000);
+  expect(conversationLiveState(view).pendingCalls).toHaveLength(1);
+
+  // Finishing the Worker message and running a tool keeps reasoning chronologically before the tool call, live and after replay.
+  const finishWorker: SessionEvent = {
+    ...wrap({
+      type: "message.finished",
+      sessionId: child,
+      text: "",
+      reasoning: "Line 1\nPlanning wheel geometry",
+      toolCalls: [call],
+    }),
+    timestamp: start + 6500,
+    reasoningStartedAt: start + 500,
+  };
+  const startTool: SessionEvent = {
+    ...wrap({ type: "tool.started", sessionId: child, call }),
+    timestamp: start + 6600,
+  };
+  view.apply(finishWorker);
+  view.apply(startTool);
+  expect(thought?.reasoningMs).toBe(6000);
+
+  const restored = new TaskView({ checkpointSaved() {} });
+  const [talkerStarted, , , workerStarted, workerTurnStarted] = events;
+  if (!talkerStarted || !workerStarted || !workerTurnStarted) throw new Error("missing fixture");
+  restored.restore([
+    talkerStarted,
+    {
+      type: "message.finished",
+      sessionId: parent,
+      text: "Working on it.",
+      reasoning: "Delegating to Worker",
+      toolCalls: [],
+      timestamp: start + 1000,
+    },
+    {
+      type: "session.finished",
+      sessionId: parent,
+      result: {
+        sessionId: parent,
+        pass: false,
+        stopReason: "end",
+        summary: "Working on it.",
+        turns: 1,
+        usage: { input: 1, output: 1, cached: 0 },
+      },
+      timestamp: start + 1100,
+    },
+    workerStarted,
+    workerTurnStarted,
+    finishWorker,
+    startTool,
+  ]);
+
+  for (const target of [view, restored]) {
+    const timeline = project(target);
+    const kinds = timeline
+      .filter((item) => item.kind === "worker-reasoning" || item.kind === "worker-tool")
+      .map((item) => item.kind);
+    expect(kinds).toEqual(["worker-reasoning", "worker-tool"]);
+    const restoredThought = [...workerThoughtMirrors(target.thread.items).values()][0];
+    expect(restoredThought).toMatchObject({
+      text: "Line 1\nPlanning wheel geometry",
+      streaming: false,
+      reasoningMs: 6000,
+    });
   }
 });

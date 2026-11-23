@@ -41,22 +41,11 @@ export default {
   "The agent receives shortened output. The full result is saved in the tool log.":
     "AI 助手会收到精简后的输出，完整结果保存在工具日志中。",
   Enabled: "已启用",
-  "Check paths, secrets, and network access before execution.": "执行前检查路径、敏感信息和网络。",
-  "Sandbox enabled": "沙盒已启用 sandbox enabled",
-  "Allow network access": "允许联网",
-  "Access to websites and external services.": "访问网站和外部服务。",
-  "Network allowNetwork": "网络 allowNetwork",
-  "Blocked paths": "禁止访问的路径",
-  "Blocked read paths readDenyPrefixes": "禁止读取的路径 readDenyPrefixes",
-  "Blocked write paths writeDenyPrefixes": "禁止写入的路径 writeDenyPrefixes",
   "One prefix per line. Use absolute paths or paths relative to the project root.":
     "每行一个路径前缀，可使用绝对路径或相对于项目根目录的路径。",
   Environment: "环境",
-  "Environment variables envAllowlist": "环境变量 envAllowlist",
   "Only these variables are available to commands and extensions. Provider keys are not passed on.":
     "命令和扩展只能访问这些变量。不会传递服务商密钥。",
-  "Sandbox is not configured. Save settings to create a configuration file.":
-    "尚未配置沙盒。保存设置以创建配置文件。",
   unknown: "未知",
   "Could not collect diagnostics. Try again.": "无法收集诊断信息，请重试。",
   "Working directory": "工作目录",

@@ -11,10 +11,13 @@ for (const key of [
 ]) {
   if (env[key] === "") delete env[key];
 }
-const child = Bun.spawn(["bunx", "--no-install", "electron-builder", ...process.argv.slice(2)], {
-  env,
-  stdin: "inherit",
-  stdout: "inherit",
-  stderr: "inherit",
-});
+const child = Bun.spawn(
+  [process.execPath, "x", "--no-install", "electron-builder", ...process.argv.slice(2)],
+  {
+    env,
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  },
+);
 process.exitCode = await child.exited;

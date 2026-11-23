@@ -2,10 +2,17 @@ import { describe, expect, test } from "bun:test";
 import { providerView } from "../../src/app/provider-state";
 import { defaultConfig } from "../../src/config/defaults";
 import { ProviderConfigSchema } from "../../src/config/schema";
+import { openAiModel } from "../../src/providers/discovery-models";
 import { resolveApiKey } from "../../src/providers/registry";
 import { elicitationContent, elicitationFields } from "../../ui/src/lib/settings/elicitation";
 import { refreshedDraftModels } from "../../ui/src/lib/settings/provider-draft";
-import { modelIssues, settingsIssue } from "../../ui/src/lib/settings/validation";
+import {
+  firstModelIssue,
+  modelIssues,
+  prepareSettingsForSave,
+  settingsIssue,
+} from "../../ui/src/lib/settings/validation";
+import { clone } from "../../ui/src/lib/settings-utils";
 import type { HarnessSettings } from "../../ui/src/lib/types";
 
 describe("remaining settings paths", () => {
@@ -34,18 +41,49 @@ describe("remaining settings paths", () => {
     expect(fresh.kept.name).toBe("Original");
   });
 
-  test("cross-field model validation blocks Save before the backend rejects it", () => {
-    const config = defaultConfig() as unknown as HarnessSettings;
+  test("model validation reports issues without blocking Save for the rest of settings", () => {
+    const baseline = defaultConfig() as unknown as HarnessSettings;
+    const baselineProvider = baseline.providers[baseline.provider];
+    if (!baselineProvider) throw new Error("default provider is missing");
+    baselineProvider.models[baseline.model] = { name: "Original", context: 64000, output: 8192 };
+    const config = clone(baseline);
     const provider = config.providers[config.provider];
     if (!provider) throw new Error("default provider is missing");
-    provider.models[config.model] = { context: 1000, output: 1001 };
-    expect(settingsIssue(config)).toContain("Лимит ответа");
-    provider.models[config.model] = { context: 1000, output: 1000 };
-    expect(ProviderConfigSchema.safeParse(provider).success).toBe(true);
+
+    // Automatic token budget mode without an explicit budget is valid.
+    expect(modelIssues({ reasoningMode: "budget" })).toEqual({});
+    expect(
+      openAiModel({ id: "qwen-3.7-max", reasoning_options: [{ type: "budget_tokens", min: -1 }] }),
+    ).not.toHaveProperty("reasoningBudget");
+
+    // Cleared number inputs (null) are treated as empty rather than invalid.
+    expect(modelIssues({ context: null as unknown as number })).toEqual({});
+
+    // A broken model surfaces in modelIssues/firstModelIssue, but does not block settingsIssue.
+    provider.models[config.model] = { name: "Broken", context: 1000, output: 1001 };
+    provider.models["new-broken"] = { name: "New Broken", context: 1000, output: 2000 };
+    provider.models["good-model"] = { name: "Good", context: 10000, output: 2000 };
     expect(settingsIssue(config)).toBe("");
+    expect(firstModelIssue(config)).toContain("Broken");
+
+    const prepared = prepareSettingsForSave(config, baseline);
+    expect(prepared.skippedModels).toHaveLength(2);
+    const preparedProvider = prepared.config.providers[config.provider];
+    if (!preparedProvider) throw new Error("prepared provider is missing");
+    expect(ProviderConfigSchema.safeParse(preparedProvider).success).toBe(true);
+    expect(preparedProvider.models[config.model]).toEqual(
+      baseline.providers[config.provider]?.models[config.model],
+    );
+    expect(preparedProvider.models["new-broken"]).toEqual({ name: "New Broken", context: 1000 });
+    expect(preparedProvider.models["good-model"]).toEqual({
+      name: "Good",
+      context: 10000,
+      output: 2000,
+    });
+
     expect(
       modelIssues({ output: 1000, reasoningMode: "budget", reasoningBudget: 1001 }).reasoningBudget,
-    ).toContain("меньше");
+    ).toBeTruthy();
     expect(
       modelIssues({ context: 10000, output: 1000, reasoningMode: "budget", reasoningBudget: 500 }),
     ).toEqual({});

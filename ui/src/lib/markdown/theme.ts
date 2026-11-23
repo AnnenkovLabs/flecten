@@ -3,9 +3,10 @@ export const themeCss = `
 .markdown {
   min-width: 0;
   max-width: 65ch;
+  max-width: calc(65ch + max(0px, var(--content-w, 780px) - 780px));
   background: var(--bg);
   color: var(--text-body);
-  font: 400 16px/1.65 var(--font, "Manrope", system-ui, sans-serif);
+  font: 400 calc(16px * var(--text-scale, 1))/1.65 var(--font, "Manrope", system-ui, sans-serif);
   overflow-wrap: anywhere;
   text-wrap: pretty;
   -webkit-font-smoothing: antialiased;
@@ -24,10 +25,10 @@ export const themeCss = `
   line-height: 1.2;
   text-wrap: balance;
 }
-.markdown h1 { font-size: 24px; letter-spacing: -0.02em; }
-.markdown h2 { font-size: 20px; letter-spacing: -0.01em; }
-.markdown h3 { font-size: 18px; }
-.markdown h4, .markdown h5, .markdown h6 { font-size: 16px; }
+.markdown h1 { font-size: calc(24px * var(--text-scale, 1)); letter-spacing: -0.02em; }
+.markdown h2 { font-size: calc(20px * var(--text-scale, 1)); letter-spacing: -0.01em; }
+.markdown h3 { font-size: calc(18px * var(--text-scale, 1)); }
+.markdown h4, .markdown h5, .markdown h6 { font-size: calc(16px * var(--text-scale, 1)); }
 
 .markdown ul, .markdown ol { padding-left: 1.4em; }
 .markdown li + li { margin-top: var(--space-1); }
@@ -75,7 +76,7 @@ export const themeCss = `
   background: var(--surface);
   line-height: 1.5;
 }
-.markdown pre code { padding: 0; background: none; font-size: 13px; white-space: pre; }
+.markdown pre code { padding: 0; background: none; font-size: var(--code-font-size, 13px); white-space: pre; }
 
 .markdown .code-block {
   min-width: 0;
@@ -179,7 +180,7 @@ export const themeCss = `
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   background: var(--surface);
-  font-size: 14px;
+  font-size: calc(14px * var(--text-scale, 1));
   line-height: 1.5;
 }
 .markdown .infobox > :last-child { margin-bottom: 0; }

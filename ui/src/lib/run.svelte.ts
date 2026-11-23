@@ -26,6 +26,7 @@ import { RunControls } from "./run/controls.svelte";
 import { listenIntents } from "./run/intents";
 import { MessageHistory } from "./run/message-history.svelte";
 import { type ModelHost, RunModels } from "./run/model";
+import { interruptedToast, threadError } from "./run/notices";
 import { Projects } from "./run/projects.svelte";
 import { Reconnect } from "./run/reconnect";
 import { finishedSessions, startedSessions } from "./run/sessions";
@@ -33,9 +34,10 @@ import { StorageMigration } from "./run/storage-migration.svelte";
 import { TaskCommands } from "./run/task-commands";
 import { type SessionEvent, TaskView } from "./run/view.svelte";
 import { errorMessage as message } from "./run-errors";
-import { nextId, nowIso, storedReasoning, uniqueId } from "./run-helpers";
+import { storedReasoning, uniqueId } from "./run-helpers";
 import { listenTaskEvents, refreshTasks, type TaskHost } from "./run-tasks";
 import { extensions } from "./settings/extensions.svelte";
+import { TerminalStore } from "./terminal/store.svelte";
 import { toast } from "./toast.svelte";
 import { TwinStore } from "./twin.svelte";
 import type {
@@ -57,6 +59,7 @@ export class RunStore implements TaskHost, ModelHost {
   readonly twin = new TwinStore();
   readonly modules = new ModuleStore(() => this.#sessionId);
   readonly ide = new IdeWorkspace();
+  readonly terminals = new TerminalStore();
   info = $state<AgentInfo | null>(null);
   connection = $state<"connecting" | "ready" | "offline">("connecting");
   commands = $state<CustomCommandInfo[]>([]);
@@ -90,7 +93,7 @@ export class RunStore implements TaskHost, ModelHost {
     this.view,
     () => this.#sessionId,
     () => this.connection === "ready",
-    (prompt) => this.start(prompt),
+    () => this.continue(),
   );
   readonly task = new TaskCommands(this.view, () => this.#sessionId);
   readonly checkpoints = new Checkpoints({
@@ -155,9 +158,7 @@ export class RunStore implements TaskHost, ModelHost {
     });
     const stopModules = this.modules.watch(() => this.connection === "ready");
     const stopDrafts = listenComposerDrafts();
-    if (!sendAgent({ type: "hello" })) {
-      this.connection = "offline";
-    }
+    if (!sendAgent({ type: "hello" })) this.connection = "offline";
     return () => {
       stopTasks();
       stopIntents();
@@ -189,6 +190,9 @@ export class RunStore implements TaskHost, ModelHost {
         return;
       case "status":
         this.#status(event);
+        return;
+      case "terminal.event":
+        this.terminals.handle(event.event);
         return;
       case "error":
         if (event.code === "project_locked") this.#reconnect.hold();
@@ -234,11 +238,18 @@ export class RunStore implements TaskHost, ModelHost {
       .catch((error: unknown) => toast.error(t("Message was not queued: {0}", [message(error)])));
     return true;
   }
-  start(text: string, attachments: string[] = [], contexts: ContextReference[] = []): boolean {
+  continue = (): boolean => this.start("/continue", [], [], true);
+  start(
+    text: string,
+    attachments: string[] = [],
+    contexts: ContextReference[] = [],
+    continuation = false,
+  ): boolean {
     if (this.busy || this.migration.snapshot) return false;
     const sessionId = this.ensureSession();
-    this.view.begin(text);
-    this.sessions = startedSessions(this.sessions, sessionId, text);
+    if (continuation) this.view.beginContinuation();
+    else this.view.begin(text);
+    this.sessions = startedSessions(this.sessions, sessionId, continuation ? "" : text);
     const project = this.#projectSequence;
     const dispatch = (): boolean => {
       if (project !== this.#projectSequence) return false;
@@ -248,6 +259,7 @@ export class RunStore implements TaskHost, ModelHost {
         prompt: text,
         sessionId,
         clientId: uniqueId("c"),
+        ...(continuation ? { continuation: true } : {}),
         ...(reasoning === "auto" ? {} : { reasoning }),
         ...(attachments.length > 0 ? { attachments } : {}),
         ...(contexts.length > 0 ? { contexts } : {}),
@@ -376,9 +388,14 @@ export class RunStore implements TaskHost, ModelHost {
   #sessionEvent(event: SessionEvent): void {
     this.activity.apply(event);
     if (event.type === "model.selected") this.#models.selected(event);
-    const userStart = event.type === "session.started" && !event.internal;
-    if (userStart)
-      this.sessions = startedSessions(this.sessions, event.sessionId, event.prompt ?? "");
+    const isStart = event.type === "session.started" && !event.internal;
+    const userStart = isStart && !event.resumed && !event.continuation;
+    if (isStart)
+      this.sessions = startedSessions(
+        this.sessions,
+        event.sessionId,
+        userStart ? (event.prompt ?? "") : "",
+      );
     else if (event.type === "session.finished")
       this.sessions = finishedSessions(this.sessions, event.sessionId, event.result.stopReason);
     if (
@@ -408,13 +425,7 @@ export class RunStore implements TaskHost, ModelHost {
     if (event.sessionId === this.#sessionId) this.view.attach(event);
     if (event.configError && !this.#configErrorShown) {
       this.#configErrorShown = true;
-      this.view.thread.push({
-        kind: "error",
-        id: nextId("err"),
-        text: event.configError,
-        code: "config",
-        at: nowIso(),
-      });
+      this.view.thread.push(threadError(event.configError, "config"));
     }
     if (this.#reconnect.ready()) {
       if (this.#sessionId) void this.#open(this.#sessionId);
@@ -445,13 +456,12 @@ export class RunStore implements TaskHost, ModelHost {
       if (!sendAgent({ type: "hello" })) this.connection = "offline";
     });
     if (!scheduled && !this.migration.snapshot) {
-      this.view.thread.push({
-        kind: "error",
-        id: nextId("err"),
-        text: reason ?? t("The core cannot start. Check Settings and restart the app."),
-        code: "agent_exit",
-        at: nowIso(),
-      });
+      this.view.thread.push(
+        threadError(
+          reason ?? t("The core cannot start. Check Settings and restart the app."),
+          "agent_exit",
+        ),
+      );
       return;
     }
     if (first) {
@@ -465,6 +475,7 @@ export class RunStore implements TaskHost, ModelHost {
     this.dictionary.reset();
     this.twin.reset();
     this.ide.reset();
+    this.terminals.reset();
     this.#loadSequence += 1;
     this.#buffer = null;
     this.#attached = false;
@@ -481,15 +492,9 @@ export class RunStore implements TaskHost, ModelHost {
   #interrupted(interrupted: string[], resumed: string[]): void {
     this.activity.markInterrupted(interrupted, resumed);
     void this.refreshSessions();
-    const waiting = interrupted.length - resumed.length;
-    if (resumed.length > 0) {
-      const rest = waiting > 0 ? t(", waiting for you: {0}", [waiting]) : "";
-      toast.show(t("Resuming interrupted tasks: {0}{1}", [resumed.length, rest]));
-    } else {
-      toast.error(
-        t("Interrupted tasks: {0}. Open a task and click Continue", [interrupted.length]),
-      );
-    }
+    const notice = interruptedToast(interrupted.length, resumed.length);
+    if (notice.kind === "show") toast.show(notice.text);
+    else toast.error(notice.text);
     if (this.#sessionId && interrupted.includes(this.#sessionId)) void this.#open(this.#sessionId);
   }
 }

@@ -1,9 +1,31 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "Interface Scale": "Масштаб интерфейса",
-  "Resize text, controls, and the chat column. Changes apply immediately.":
-    "Изменяет размер текста, элементов управления и колонки чата. Применяется сразу.",
-  "Reset to 100%": "Сбросить до 100%",
+  Appearance: "Внешний вид",
+  "Reset all": "Сбросить всё",
+  "Adjust window zoom, reading sizes, and workspace typography. Changes apply immediately.":
+    "Настройка масштаба окна, размера текста и рабочего пространства. Изменения применяются сразу.",
+  Interface: "Интерфейс",
+  "Interface scale": "Масштаб интерфейса",
+  "Resize the entire window, including controls, menus, and layout.":
+    "Масштабирует всё окно: элементы управления, меню и разметку.",
+  "Chat and summaries": "Чат и саммари",
+  "Text scale": "Масштаб текста",
+  "Scale messages, Markdown replies, reasoning, and the composer input.":
+    "Размер сообщений, Markdown-ответов, рассуждений и поля ввода.",
+  "HTML summary scale": "Масштаб HTML-саммари",
+  "Scale interactive HTML summaries, tables, and diagrams in replies.":
+    "Масштаб интерактивных HTML-саммари, таблиц и диаграмм в ответах.",
+  "Chat width": "Ширина чата",
+  "Maximum width of the conversation column and composer.":
+    "Максимальная ширина колонки переписки и поля ввода.",
+  "Code and terminal": "Код и терминал",
+  "Code text size": "Размер текста кода",
+  "Font size for code blocks, diffs, file previews, and the IDE editor.":
+    "Размер шрифта для блоков кода, диффов, просмотра файлов и редактора IDE.",
+  "Terminal text size": "Размер текста терминала",
+  "Font size for the integrated terminal.": "Размер шрифта во встроенном терминале.",
+  "Reset to {0}": ["Сбросить до ", 0],
+  "Reset {0} to {1}": ["Сбросить «", 0, "» до ", 1],
   none: "нет",
   "not visible": "не виден",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [
@@ -57,7 +79,10 @@ export default {
   "Lines to read": "Чтение строк",
   "The response limit must not exceed the context window.":
     "Лимит ответа не должен превышать окно контекста.",
-  "Specify a reasoning budget.": "Укажите бюджет рассуждений.",
+  "Saved. Invalid model settings were not applied: {0}": [
+    "Сохранено. Некорректные настройки моделей не применены: ",
+    0,
+  ],
   "The reasoning budget must be less than the response limit.":
     "Бюджет рассуждений должен быть меньше лимита ответа.",
   "Only http and https are supported.": "Поддерживаются только http и https.",

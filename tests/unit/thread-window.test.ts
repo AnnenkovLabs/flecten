@@ -90,4 +90,32 @@ describe("thread window", () => {
     window.setRows(rows(30));
     expect(window.range(2000, 640)).toEqual({ start: 0, end: 30, before: 0, after: 0 });
   });
+
+  test("compensating by the height delta of rows above first keeps the visible row stable", () => {
+    const window = new ThreadWindow();
+    window.setRows(rows(120));
+    const top = window.offset(80) + 25;
+    const first = window.indexAt(top);
+    expect(first).toBe(80);
+    expect(window.indexOf("message-75")).toBe(75);
+    expect(window.heightOf("message-75")).toBe(160);
+
+    let deltaAbove = 0;
+    for (const [id, height] of [
+      ["message-74", 460],
+      ["message-75", 48],
+      ["message-82", 900],
+    ] as const) {
+      const index = window.indexOf(id);
+      const previous = window.heightOf(id);
+      if (window.measure(id, height) && index !== undefined && index < first) {
+        deltaAbove += window.heightOf(id) - previous;
+      }
+    }
+
+    expect(deltaAbove).toBe(300 - 112);
+    const compensatedTop = top + deltaAbove;
+    expect(window.indexAt(compensatedTop)).toBe(80);
+    expect(compensatedTop - window.offset(80)).toBe(25);
+  });
 });

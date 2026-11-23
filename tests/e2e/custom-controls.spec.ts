@@ -64,20 +64,20 @@ test("custom settings controls support keyboard, dismissal and saved values", as
     await expect(page.getByRole("option").first()).toBeFocused();
     await page.keyboard.press("Escape");
 
-    const scale = dialog.getByRole("slider", { name: "Interface Scale", exact: true });
+    await dialog.getByRole("button", { name: "Appearance", exact: true }).click();
+    const scale = dialog.getByRole("slider", { name: "Interface scale", exact: true });
     await expect(scale).toHaveCSS("appearance", "none");
     await scale.focus();
     await scale.press("ArrowRight");
     await expect(scale).toHaveAttribute("aria-valuetext", "105%");
-    await dialog.getByRole("button", { name: "Reset to 100%", exact: true }).click();
+    await dialog
+      .getByRole("button", { name: "Reset Interface scale to 100%", exact: true })
+      .click();
     await expect(scale).toHaveAttribute("aria-valuetext", "100%");
 
     await dialog.getByRole("button", { name: "Access", exact: true }).click();
     await dialog.getByText("Advanced access settings", { exact: true }).click();
-    const source = dialog
-      .getByRole("group", { name: "Require manual approval", exact: true })
-      .getByRole("checkbox")
-      .first();
+    const source = dialog.getByRole("checkbox").first();
     await expect(source).toHaveCSS("appearance", "none");
     const wasChecked = await source.isChecked();
     await source.focus();

@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, readlinkSync } from "node:fs";
+import { win32 } from "node:path";
 import { oneLine } from "../util/text";
 import { nativeProcesses, nativeProcessUsage } from "./native-processes";
 import { releaseProcessScope, scopeMembers } from "./process-scope";
@@ -94,8 +95,10 @@ export function processTreeIds(
 
 export function killProcessTree(rootPid: number, signal: NodeJS.Signals, isolated: boolean): void {
   if (process.platform === "win32") {
+    const root = process.env.SystemRoot ?? process.env.WINDIR;
+    const taskkill = root ? win32.join(root, "System32", "taskkill.exe") : "taskkill.exe";
     Bun.spawnSync(
-      ["taskkill", "/PID", String(rootPid), "/T", ...(signal === "SIGKILL" ? ["/F"] : [])],
+      [taskkill, "/PID", String(rootPid), "/T", ...(signal === "SIGKILL" ? ["/F"] : [])],
       { stdout: "ignore", stderr: "ignore", timeout: 2000 },
     );
     if (signal === "SIGKILL") releaseProcessScope(rootPid);

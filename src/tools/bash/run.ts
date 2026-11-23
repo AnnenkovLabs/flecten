@@ -19,13 +19,13 @@ import {
   defaultTerminalShell,
   type TerminalResourceLimits,
 } from "../../terminal/settings";
-import { shellCommand } from "../../terminal/shell";
+import { resolveShell, shellCommand } from "../../terminal/shell";
 import { isObject } from "../../util/json";
 import { seconds } from "../jobs/view";
 import { withShellCheckpoint } from "../shell-checkpoint";
 import type { OsSandboxContext, ToolContext } from "../types";
 import { resolveToolPath } from "../util/paths";
-import { prepareScratch } from "../util/scratch";
+import { prepareScratch, scratchEnvironment } from "../util/scratch";
 import { startBackgroundBash } from "./background";
 import { verifyOutputs } from "./outputs";
 import type { BashArgs } from "./schema";
@@ -292,7 +292,8 @@ export async function runBash(
   }
 
   const setsid = process.platform === "win32" ? null : Bun.which("setsid");
-  const shell = context.terminals?.settings.shell ?? defaultTerminalShell();
+  const requestedShell = context.terminals?.settings.shell ?? defaultTerminalShell();
+  const shell = resolveShell(requestedShell) ?? requestedShell;
   const execution = shellCommand(shell, args.command);
   const started = performance.now();
   const scope = createProcessScope();
@@ -306,9 +307,7 @@ export async function runBash(
       cwd,
       env: {
         ...(context.env ?? process.env),
-        ...(context.scratchDir
-          ? { TMPDIR: context.scratchDir, FLECTEN_SCRATCH: context.scratchDir }
-          : {}),
+        ...scratchEnvironment(context.scratchDir),
         LIQUID: "1",
         FLECTEN: "1",
         ...scope.environment,

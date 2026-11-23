@@ -90,6 +90,8 @@
   --sidebar-w: clamp(270px, 18vw, 300px);
   --panel-w: clamp(500px, 35vw, 700px);
   --content-w: 780px;
+  --text-scale: 1;
+  --code-font-size: 13px;
 }
 
 @media (pointer: coarse) {

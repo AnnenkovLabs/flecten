@@ -303,7 +303,7 @@
     min-width: 100%;
     min-height: 21px;
     font-family: var(--mono);
-    font-size: 12.5px;
+    font-size: calc(var(--code-font-size, 13px) - 0.5px);
     line-height: 1.7;
     tab-size: 2;
   }

@@ -2,13 +2,18 @@
   import type { SummaryInteraction } from "../../../shared/summary-interaction";
   import { t } from "../lib/i18n.svelte";
   import { type Snippet, onDestroy, onMount, tick, untrack } from "svelte";
-  import { restoredThreadTop, saveThreadPosition, threadPosition } from "../lib/thread-position";
+  import {
+    isInnerScrollable,
+    restoredThreadTop,
+    saveThreadPosition,
+    threadPosition,
+  } from "../lib/thread-position";
   import { ownsThreadShortcut } from "../lib/thread-shortcuts";
   import { ThreadViewport } from "../lib/thread-viewport.svelte";
   import { threadRowKeys } from "../lib/thread-window";
   import type { PendingToolCall, ThreadItem } from "../lib/types";
   import { focusComposer, searchThread } from "../lib/ui-polish";
-  import { conversationItems, workerMirrors } from "../lib/run/worker-mirrors";
+  import { conversationItems, isTalkerThinking, workerMirrors, workerThoughtMirrors } from "../lib/run/worker-mirrors";
   import RunActionRow from "./RunActionRow.svelte";
   import Answer from "./Answer.svelte";
   import { copyText } from "../lib/clipboard.svelte";
@@ -19,6 +24,7 @@
   import Icon from "./Icon.svelte";
   import LiveRun from "./LiveRun.svelte";
   import NoticeCard from "./NoticeCard.svelte";
+  import ReasoningBlock from "./ReasoningBlock.svelte";
   import RunGroup from "./RunGroup.svelte";
   import ThreadSearch from "./ThreadSearch.svelte";
   import ToolCallProgress from "./ToolCallProgress.svelte";
@@ -61,7 +67,13 @@
   let threadHeader: HTMLDivElement;
   let focusToken = $state(0);
   const toolMirrors = $derived(workerMirrors(entries));
-  const items = $derived(conversationItems(entries, toolMirrors).filter(item => item.kind !== "approval" || item.state !== "pending"));
+  const thoughtMirrors = $derived(workerThoughtMirrors(entries));
+  const talkerThinking = $derived(isTalkerThinking(entries));
+  const items = $derived(
+    conversationItems(entries, toolMirrors, thoughtMirrors, talkerThinking).filter(
+      (item) => item.kind !== "approval" || item.state !== "pending",
+    ),
+  );
   let now = $state(Date.now());
   let atBottom = $state(true);
   let unread = $state(0);
@@ -69,6 +81,7 @@
   let currentTask = "";
   let restoring = false;
   let lastTop = 0;
+  let anchorTimer: ReturnType<typeof setTimeout> | undefined;
   let searchOpen = $state(false);
   let query = $state("");
   let searchIndex = $state(0);
@@ -81,31 +94,19 @@
       .map((item) => {
         if (item.kind === "answer") return item.text.length;
         if (item.kind === "worker-tool") return toolMirrors.get(item.reference)?.detail?.output?.length ?? 0;
+        if (item.kind === "worker-reasoning") return thoughtMirrors.get(item.reference)?.text.length ?? 0;
         if (item.kind === "run") {
-          const reasoning = item.summary.turns.reduce(
-            (total, turn) => total + turn.reasoning.length,
-            0,
-          );
+          const reasoning = item.summary.turns.reduce((total, turn) => total + turn.reasoning.length, 0);
           return item.summary.list.length + reasoning;
         }
         return 0;
       })
       .join(","),
   );
-  const reasoningLive = $derived(
-    items.some(
-      (item) =>
-        item.kind === "run" &&
-        item.summary.turns.some((turn) => turn.reasoningStreaming === true),
-    ),
-  );
   const messageCount = $derived(
-    items.reduce(
-      (total, item) => total + (item.kind === "message" || item.kind === "answer" ? 1 : 0),
-      0,
-    ),
+    items.reduce((total, item) => total + (item.kind === "message" || item.kind === "answer" ? 1 : 0), 0),
   );
-  const hits = $derived(searchThread(items, query, toolMirrors));
+  const hits = $derived(searchThread(items, query, toolMirrors, thoughtMirrors));
   const hitIds = $derived(new Set(hits.map((hit) => hit.id)));
   const activeId = $derived(hits[searchIndex]?.id ?? "");
   const jumpLabel = $derived(
@@ -115,10 +116,15 @@
     if (!scroller) return 0;
     return scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
   }
-  function followEnd(afterRender = false): void {
+  function releaseFollow(): void {
+    if (!atBottom) return;
+    atBottom = false;
+    seenMessages = messageCount;
+  }
+  function followEnd(): void {
     if (!scroller || scroller.clientHeight === 0) return;
-    // A resize can run before the browser delivers the user's queued scroll event.
-    if (!afterRender && releaseFollowOnScrollUp()) {
+    // A resize or render can run before the browser delivers the user's queued scroll event.
+    if (releaseFollowOnScrollUp()) {
       onScroll();
       return;
     }
@@ -128,51 +134,48 @@
   }
   function releaseFollowOnScrollUp(): boolean {
     if (scroller.scrollTop >= lastTop - 1 || distanceToEnd() <= 1) return false;
-    if (atBottom) {
-      atBottom = false;
-      seenMessages = messageCount;
-    }
+    releaseFollow();
     return true;
   }
   function onScroll(): void {
     viewport.scroll();
     if (restoring || taskId !== currentTask || scroller.clientHeight === 0) return;
     const movedDown = scroller.scrollTop > lastTop + 1;
-    const movedUp = viewport.adjusting ? false : releaseFollowOnScrollUp();
+    const movedUp = releaseFollowOnScrollUp();
     lastTop = scroller.scrollTop;
-    if (!movedUp && viewport.adjusting) return;
     const distance = distanceToEnd();
     if (!movedUp && (distance <= 1 || (movedDown && distance <= NEAR_BOTTOM))) {
       atBottom = true;
       unread = 0;
       seenMessages = messageCount;
     }
-    rememberPosition();
+    rememberPosition(false);
+    clearTimeout(anchorTimer);
+    if (!atBottom) anchorTimer = setTimeout(() => rememberPosition(true), 150);
   }
-  function rememberPosition(): void {
+  function rememberPosition(withAnchor = true): void {
     if (!currentTask) return;
-    // Search and focus can move the viewport before its queued scroll event arrives.
-    if (scroller?.isConnected) {
+    if (withAnchor && scroller?.isConnected) {
       viewport.scroll();
       lastTop = scroller.scrollTop;
     }
-    const anchor = viewport.anchor();
+    const anchor = withAnchor && !atBottom ? viewport.anchor() : undefined;
     saveThreadPosition(currentTask, {
-      // Children can be removed before onDestroy. Keep the last visible offset, not detached DOM geometry.
       top: lastTop,
       atEnd: atBottom,
       seenMessages,
-      ...(!atBottom && anchor ? { anchor } : {}),
+      ...(anchor ? { anchor } : {}),
     });
   }
   function jumpToBottom(): void {
     atBottom = true;
     unread = 0;
     seenMessages = messageCount;
-    rememberPosition();
+    rememberPosition(false);
     if (!scroller) return;
     const reduce = globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    scroller.scrollTo({ top: scroller.scrollHeight, behavior: reduce ? "auto" : "smooth" });
+    const instant = reduce || distanceToEnd() > scroller.clientHeight * 4;
+    scroller.scrollTo({ top: scroller.scrollHeight, behavior: instant ? "auto" : "smooth" });
   }
   function openSearch(): void {
     if (searchOpen) focusToken += 1;
@@ -208,6 +211,7 @@
     restoring = true;
     void tick().then(() => {
       if (currentTask !== nextTask || !scroller) return;
+      viewport.refreshInset();
       const anchored = saved?.anchor && !saved.atEnd ? viewport.restore(saved.anchor) : undefined;
       scroller.scrollTop = anchored ?? restoredThreadTop(saved, scroller.scrollHeight, scroller.clientHeight);
       viewport.scroll();
@@ -237,21 +241,32 @@
     unread = Math.max(0, messageCount - seenMessages);
   });
   $effect(() => {
-    const { start, end, before, after } = window;
-    void [start, end, before, after];
-    const frame = requestAnimationFrame(() => {
-      if (!restoring && atBottom && !searchOpen) followEnd(true);
-    });
-    return () => cancelAnimationFrame(frame);
+    const { start, end } = window;
+    void [start, end];
+    untrack(() => viewport.syncAfterRender());
   });
 
   $effect(() => {
     const element = scroller;
-    if (!element) return;
-    if (!threadInner) return;
-    return viewport.attach(element, threadInner, () => atBottom && !searchOpen, () => {
-      if (!restoring && atBottom && !searchOpen) followEnd();
-    }, threadHeader);
+    if (!element || !threadInner) return;
+    const onWheel = (event: WheelEvent): void => {
+      if (event.deltaY < 0 && element.scrollHeight > element.clientHeight + 1 && !isInnerScrollable(element, event.target, event.deltaY)) {
+        releaseFollow();
+      }
+    };
+    element.addEventListener("wheel", onWheel, { passive: true });
+    const detach = viewport.attach(
+      element,
+      threadInner,
+      () => atBottom && !searchOpen,
+      () => { if (!restoring && atBottom && !searchOpen) followEnd(); },
+      (top) => { lastTop = top; },
+      threadHeader,
+    );
+    return () => {
+      element.removeEventListener("wheel", onWheel);
+      detach();
+    };
   });
 
   $effect(() => {
@@ -268,7 +283,10 @@
       viewport.scroll();
     });
   });
-  onDestroy(rememberPosition);
+  onDestroy(() => {
+    clearTimeout(anchorTimer);
+    rememberPosition(true);
+  });
 
   onMount(() => {
     const timer = setInterval(() => (now = Date.now()), 30_000);
@@ -336,6 +354,9 @@
         {:else if item.kind === "worker-tool"}
           {@const action = toolMirrors.get(item.reference)}
           {#if action}<div class="tool-mirror" data-tool-reference={item.reference}><RunActionRow {action} /></div>{/if}
+        {:else if item.kind === "worker-reasoning"}
+          {@const thought = thoughtMirrors.get(item.reference)}
+          {#if thought}<div class="reasoning-mirror" data-reasoning-reference={item.reference}><ReasoningBlock text={thought.text} streaming={thought.streaming} startedAt={thought.startedAt} reasoningMs={thought.reasoningMs} livePreview={true} /></div>{/if}
         {:else if item.kind === "answer"}
           {#if item.text || item.summaryHtml !== undefined}
             {@const parentRun = items[window.start + index - 1]}
@@ -377,7 +398,7 @@
     {#if window.after > 0}<div class="thread-spacer" aria-hidden="true" style:height={`${window.after}px`}></div>{/if}
 
     {#if live}
-      <LiveRun label={liveLabel} glow={!reasoningLive} {retryUntil} />
+      <LiveRun label={liveLabel} {retryUntil} />
       {#if pendingCalls.length > 0}
         <ToolCallProgress calls={pendingCalls} />
       {/if}
@@ -406,33 +427,14 @@
     overflow-anchor: none;
     scroll-padding-top: 72px;
   }
-
-  .thread-inner {
-    max-width: var(--content-w);
-    margin: 0 auto;
-    padding: 32px 28px 48px;
-  }
-
-  .thread-item {
-    display: flow-root;
-    border-radius: 12px;
-  }
-
+  .thread-inner { max-width: var(--content-w); margin: 0 auto; padding: 32px 28px 48px; }
+  .thread-item { display: flow-root; border-radius: 12px; }
   .thread-slot { display: flow-root; }
   .thread-header { display: flow-root; }
   .thread-slot.is-user { padding-top: 40px; }
   .thread-spacer { pointer-events: none; }
-
-  .thread-item.is-search-hit {
-    outline: 1px solid var(--line-strong);
-    outline-offset: 6px;
-  }
-
-  .thread-item.is-search-active {
-    background: rgba(240, 239, 237, 0.04);
-    outline-color: rgba(240, 239, 237, 0.32);
-  }
-
+  .thread-item.is-search-hit { outline: 1px solid var(--line-strong); outline-offset: 6px; }
+  .thread-item.is-search-active { background: rgba(240, 239, 237, 0.04); outline-color: rgba(240, 239, 237, 0.32); }
   .jump-wrap {
     position: sticky;
     bottom: 16px;
@@ -443,7 +445,6 @@
     height: 0;
     pointer-events: none;
   }
-
   .jump {
     display: inline-flex;
     align-items: center;
@@ -452,25 +453,14 @@
     padding: 0 14px;
     border-radius: 999px;
     background: var(--raised);
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.07),
-      0 8px 24px rgba(0, 0, 0, 0.35),
-      inset 0 1px 0 rgba(240, 239, 237, 0.06);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(240, 239, 237, 0.06);
     color: var(--text-2);
     font-size: 12.5px;
     pointer-events: auto;
-    transition:
-      background 220ms var(--ease),
-      color 220ms var(--ease);
+    transition: background 220ms var(--ease), color 220ms var(--ease);
   }
-
   .jump-wrap.is-reviewing { justify-content: flex-end; padding-right: 20px; }
-
-  .jump:hover {
-    background: var(--raised-hover);
-    color: var(--text);
-  }
-
+  .jump:hover { background: var(--raised-hover); color: var(--text); }
   .jump-count {
     display: grid;
     place-items: center;
@@ -483,18 +473,7 @@
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
-
-  .thread-inner :global(a) {
-    overflow-wrap: anywhere;
-  }
-
-  .thread-inner :global(.msg.user .bubble) {
-    overflow-wrap: anywhere;
-  }
-
-  @media (max-width: 1220px) {
-    .thread-inner {
-      padding: 28px 22px 46px;
-    }
-  }
+  .thread-inner :global(a),
+  .thread-inner :global(.msg.user .bubble) { overflow-wrap: anywhere; }
+  @media (max-width: 1220px) { .thread-inner { padding: 28px 22px 46px; } }
 </style>

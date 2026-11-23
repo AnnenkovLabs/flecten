@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatDuration } from "../lib/agent";
   import { retryStatus } from "../lib/retry-status.svelte";
   import { retryMeta } from "../lib/run-errors";
   import LiveGlow from "./LiveGlow.svelte";
@@ -11,11 +12,18 @@
 
   let { label, glow = true, retryUntil }: Props = $props();
   const until = $derived(retryUntil ?? retryStatus.until);
+  let stepStartedAt = $state(Date.now());
   let now = $state(Date.now());
 
-  // A request waiting for its retry shows a live countdown instead of a frozen number.
   $effect(() => {
-    if (until === 0) return;
+    label;
+    const started = Date.now();
+    stepStartedAt = started;
+    now = started;
+  });
+
+  // Live steps and retry waits tick every second instead of showing a frozen status.
+  $effect(() => {
     now = Date.now();
     const timer = setInterval(() => {
       now = Date.now();
@@ -24,6 +32,10 @@
   });
 
   const countdown = $derived(until > 0 ? retryMeta(until, now) : "");
+  const elapsed = $derived(
+    !countdown && now - stepStartedAt >= 2_000 ? formatDuration(now - stepStartedAt) : "",
+  );
+  const meta = $derived(countdown || elapsed);
 </script>
 
 <div class="live-run" role="status">
@@ -35,8 +47,8 @@
     <span class="live-dot-satellite"></span>
   </span>
   <span>{label}</span>
-  {#if countdown}
-    <span class="live-meta">{countdown}</span>
+  {#if meta}
+    <span class="live-meta">{meta}</span>
   {/if}
 </div>
 

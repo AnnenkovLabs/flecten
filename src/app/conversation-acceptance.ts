@@ -24,8 +24,8 @@ export class ConversationAcceptance {
 
   restore(events: readonly Event[]): void {
     for (const event of events) {
-      if (event.type === "session.started" && !event.internal) this.human(event.prompt);
-      if (event.type === "steer.applied") this.human(event.text);
+      if (event.type === "session.started") this.humanStart(event);
+      if (event.type === "steer.applied" && event.actor !== "twin") this.human(event.text);
       if (event.type === "worker.acceptance") {
         if (this.state?.taskId !== event.acceptance.taskId) this.#results.clear();
         this.state = WorkerAcceptanceSchema.parse(event.acceptance);
@@ -34,6 +34,17 @@ export class ConversationAcceptance {
     if (this.state && ["running", "reviewing"].includes(this.state.phase)) {
       this.state = { ...this.state, phase: "unconfirmed" };
     }
+  }
+
+  humanStart(source: {
+    prompt: string;
+    internal?: boolean;
+    resumed?: boolean;
+    continuation?: boolean;
+    actor?: "user" | "twin";
+  }): void {
+    if (!source.internal && !source.resumed && !source.continuation && source.actor !== "twin")
+      this.human(source.prompt);
   }
 
   human(text: string): void {
@@ -51,7 +62,7 @@ export class ConversationAcceptance {
         {
           id: "result",
           description:
-            "Fulfil the original task and report results, verification and remaining work.",
+            "Deliver the requested result matching the user's intent and taste, and report what was produced and any remaining work.",
           evidenceRequirement: "model_assertion" as const,
         },
       ],

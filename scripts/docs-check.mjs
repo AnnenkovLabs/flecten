@@ -253,8 +253,9 @@ async function run() {
   const sandboxDefaults = configModule.SandboxConfigSchema.parse({});
   expect(
     "sandbox defaults",
-    sandboxDefaults.enabled === true && sandboxDefaults.allowNetwork === true,
-    `${SECURITY_DOC}: Agent mode must isolate processes and allow network by default`,
+    sandboxDefaults.enabled === (process.platform !== "win32") &&
+      sandboxDefaults.allowNetwork === true,
+    `${SECURITY_DOC}: Agent mode must isolate processes where supported and allow network by default`,
   );
 
   const permissions = configModule.PermissionsConfigSchema.parse({});

@@ -122,7 +122,7 @@ When translation is enabled, `session.started.prompt` keeps the user's original 
 | `mcp.elicitation.respond` | no | `id`, `response` | `answered`: validates and submits server elicitation form response |
 | `hello` | no | none | no `response`; sidecar emits `status` |
 | `status` | optional | `sessionId?` | with `sessionId`: session `state` and `info`; followed by global `status` |
-| `run` | yes | `prompt`, `reasoning?`, `sessionId?`, `clientId?`, `attachments?`, `contexts?`, `resumed?` | no `response`; streams task events |
+| `run` | yes | `prompt`, `reasoning?`, `sessionId?`, `clientId?`, `attachments?`, `contexts?`, `resumed?`, `continuation?` | no `response`; streams task events |
 | `summary.interaction` | yes | `sessionId`, `summaryId`, `interaction` (delivery policy, named value, or trigger) | no `response`; delivers interaction payload into the same chat per policy |
 | `stop` | yes | `sessionId?`, `mode?: graceful / force`, `target?: worker` | `result`, `state`; run concludes with `session.finished` |
 | `steer` | yes | `text`, `attachments?`, `contexts?`, `id?` | `result`; injects message into active run (`steer.applied`) |
@@ -178,7 +178,7 @@ When translation is enabled, `session.started.prompt` keeps the user's original 
 | `files.search` | no | `query`, `caseSensitive`, `wholeWord`, `include` | `search`: workspace search matches |
 | `files.replace` | no | search and replacement parameters | `replacement`: verified workspace replacement result |
 | `files.git` | no | `action`, `path?`, `staged?`, `message?` | `git`: repository status or operation result |
-| `ide.terminal` | no | `action`, `data?`, `cursor?`, `cols?`, `rows?` | `terminal`: dedicated user IDE PTY |
+| `ide.terminal` | no | `action`, `id?`, `shell?`, `cwd?`, `title?`, `data?`, `cursor?`, `cols?`, `rows?`, `noReply?` | `terminal`: multi-tab native user PTYs and live agent PTY tabs |
 | `files.read` | no | `path` | `file`: `path`, `size`, `text`, `truncated`, `binary`, `hash?`, `readOnlyReason?` |
 | `files.write` | no | `path`, `text`, `expectedHash` | updated `file` snapshot |
 | `commands.list` | no | none | `commands` |
@@ -193,7 +193,8 @@ Field semantics:
 - `target`: `before` (default pre-turn state) or `after`. `force` overwrites files modified manually since the checkpoint; `includeProtected` includes protected paths.
 - `protocol`: `openai-chat`, `openai-responses`, `anthropic-messages`, or `gemini`.
 - `clientId` correlates a pre-session `run_failed` error back to an unsaved UI draft.
-- `resumed` marks a run continuing an interrupted task.
+- `resumed` marks a run continuing an interrupted task after a crash or restart.
+- `continuation` marks a user-triggered Continue run that resumes the active work silently without adding a user message to the thread.
 
 ```json
 { "type": "run", "prompt": "Build a landing page", "reasoning": "medium" }
@@ -211,7 +212,7 @@ Field semantics:
 
 | Event | Payload |
 |---|---|
-| `session.started` | `prompt`, `provider`, `model`, `input?`, `attachments?` (validated metadata references), `reasoning?`, `system?`, `queueId?`, `resumed?`, `budget?` |
+| `session.started` | `prompt`, `provider`, `model`, `input?`, `attachments?` (validated metadata references), `reasoning?`, `system?`, `queueId?`, `resumed?`, `continuation?`, `budget?` |
 | `session.state` | `sessionId`, `state`: canonical phase, epoch/revision, queue, approvals, and jobs |
 | `turn.started` | `turn` |
 | `message.started` | none; anchors the chronological slot of the first assistant text chunk |
@@ -278,6 +279,7 @@ These messages originate from the sidecar wrapper (`src/app/server.ts`) or Elect
 | `status` | sidecar | workspace, Git branch, user, default provider/model, context window, providers list, skills, MCP, sandbox, `accessMode`, prompt info, shell snapshots, `configError?`, `sessions` |
 | `response` | sidecar and shell | `requestId`, `ok`, response payload fields or `error` |
 | `sessions.interrupted` | sidecar | `interrupted`, `resumed` |
+| `terminal.event` | sidecar | `event`: live push stream of terminal tab lists, PTY chunks, exits, and errors |
 | `agent.exit` | shell | `code`, `signal?`, `message?` |
 | `project.changed` | shell | `cwd` |
 | `projects.changed` | shell | workspace list changed; refresh via `projects.list` |

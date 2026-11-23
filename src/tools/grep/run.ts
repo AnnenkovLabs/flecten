@@ -102,6 +102,7 @@ async function runGrepFallbackFile(
   if (indices.length === 0) {
     if (
       bm25State &&
+      !args.literal &&
       !args.filesWithMatches &&
       !args.count &&
       blocks.length === 0 &&
@@ -193,7 +194,8 @@ async function searchFallback(
   const output: string[] = [];
   const blocks: GrepBlock[] = [];
   const queryTerms = tokenizeIdentifierTerms(args.pattern);
-  const bm25State = queryTerms.length >= 2 ? { queryTerms, blocks: [] as GrepBlock[] } : undefined;
+  const bm25State =
+    !args.literal && queryTerms.length >= 2 ? { queryTerms, blocks: [] as GrepBlock[] } : undefined;
   let truncated = false;
 
   const accept = async (relative: string): Promise<boolean> => {
@@ -263,6 +265,7 @@ async function searchFallback(
     }
   }
 
+  const usedBm25 = blocks.length === 0 && (bm25State?.blocks.length ?? 0) > 0;
   const candidateBlocks = blocks.length > 0 ? blocks : (bm25State?.blocks ?? []);
 
   if (!filesWithMatches && !count && candidateBlocks.length > 0) {
@@ -272,7 +275,7 @@ async function searchFallback(
       const b = ranked[i];
       if (!b || fileLinesCache.has(b.path)) continue;
       try {
-        const fullPath = join(context.cwd, b.path);
+        const fullPath = resolveToolPath(context.cwd, b.path);
         const text = await Bun.file(fullPath).text();
         const lines = text
           .split("\n")
@@ -299,6 +302,9 @@ async function searchFallback(
   const parts: string[] = [];
   if (output.length === 0) parts.push("No matches found");
   else parts.push(output.join("\n"));
+  if (usedBm25 && output.length > 0) {
+    parts.push("[No exact regex matches; showing BM25 identifier matches]");
+  }
   if (truncated) {
     const unit = filesWithMatches || count ? "files" : "matches";
     parts.push(`[${limit} ${unit} limit reached; refine the pattern]`);
@@ -319,23 +325,70 @@ async function searchFallback(
   };
 }
 
+function matchLiteralLines(
+  lines: readonly string[],
+  needle: string,
+  caseSensitive: boolean,
+  multiline: boolean,
+): number[] {
+  if (!multiline) {
+    const indices: number[] = [];
+    for (const [index, line] of lines.entries()) {
+      if ((caseSensitive ? line : line.toLowerCase()).includes(needle)) indices.push(index);
+    }
+    return indices;
+  }
+  if (lines.length === 0 || needle.length === 0) return [];
+  const hayLines = caseSensitive ? lines : lines.map((line) => line.toLowerCase());
+  const joined = hayLines.join("\n");
+  const starts: number[] = new Array(hayLines.length);
+  let offset = 0;
+  for (let i = 0; i < hayLines.length; i += 1) {
+    starts[i] = offset;
+    offset += (hayLines[i]?.length ?? 0) + 1;
+  }
+  const lineFor = (pos: number): number => {
+    let lo = 0;
+    let hi = starts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if ((starts[mid] ?? 0) <= pos) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo;
+  };
+  const hit = new Set<number>();
+  let fromPos = joined.indexOf(needle, 0);
+  while (fromPos >= 0) {
+    const from = lineFor(fromPos);
+    const to = lineFor(fromPos + needle.length - 1);
+    for (let i = from; i <= to; i += 1) hit.add(i);
+    fromPos = joined.indexOf(needle, fromPos + needle.length);
+  }
+  return [...hit].sort((a, b) => a - b);
+}
+
 export async function runGrepFallback(args: GrepArgs, context: SearchContext): Promise<ToolResult> {
   const signal = AbortSignal.any([context.signal, AbortSignal.timeout(10_000)]);
   const matcher = args.literal
     ? undefined
-    : createLineMatcher(args.pattern, args.caseSensitive !== false, signal);
+    : createLineMatcher(
+        args.pattern,
+        args.caseSensitive !== false,
+        signal,
+        args.multiline === true,
+      );
   const needle = args.caseSensitive === false ? args.pattern.toLowerCase() : args.pattern;
   try {
     await matcher?.ready;
     return await searchFallback(args, { ...context, signal }, async (lines) => {
       if (matcher) return matcher.match(lines);
-      const indices: number[] = [];
-      for (const [index, line] of lines.entries()) {
-        if ((args.caseSensitive === false ? line.toLowerCase() : line).includes(needle)) {
-          indices.push(index);
-        }
-      }
-      return indices;
+      return matchLiteralLines(
+        lines,
+        needle,
+        args.caseSensitive !== false,
+        args.multiline === true,
+      );
     });
   } catch (error) {
     return {
@@ -388,7 +441,7 @@ export async function runGrep(args: GrepArgs, context: SearchContext): Promise<T
       context.reads,
       verifyPath,
     );
-    if (res.ok && res.output === "No matches found") {
+    if (!args.literal && res.ok && res.output === "No matches found") {
       const queryTerms = tokenizeIdentifierTerms(args.pattern);
       if (queryTerms.length >= 2) {
         const fastBm25 = await runRipgrepBm25Fallback(

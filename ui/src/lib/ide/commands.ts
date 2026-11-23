@@ -24,8 +24,10 @@ export type CommandId =
   | "toggle-files"
   | "toggle-agent"
   | "toggle-terminal"
+  | "new-terminal"
   | "split"
   | "wrap"
+  | "minimap"
   | "font-up"
   | "font-down"
   | "font-reset";
@@ -219,6 +221,12 @@ export function ideCommands(): IdeCommand[] {
       shortcut: "Alt+Z",
     },
     {
+      id: "minimap",
+      label: t("Toggle minimap"),
+      group: t("View"),
+      shortcut: "",
+    },
+    {
       id: "font-up",
       label: t("Increase editor font size"),
       group: t("View"),
@@ -284,6 +292,12 @@ export function ideCommands(): IdeCommand[] {
       group: t("Terminal"),
       shortcut: `${mod}+\u0060`,
     },
+    {
+      id: "new-terminal",
+      label: t("New terminal"),
+      group: t("Terminal"),
+      shortcut: `${mod}+Shift+\u0060`,
+    },
   ];
 }
 
@@ -302,6 +316,7 @@ export function commandShortcut(event: KeyboardEvent): CommandId | null {
       KeyF: "search-project",
       KeyS: "save-all",
       KeyT: "reopen",
+      Backquote: "new-terminal",
       Tab: "previous-tab",
     };
     return shifted[event.code] ?? null;

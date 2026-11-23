@@ -78,7 +78,7 @@ test("a real parallel model batch installs skill restrictions before shell execu
       models: { test: { context: 65536, output: 1024, tools: true, reasoning: false } },
     }),
   };
-  config.skills = { sources: ["project-flecten"] };
+  config.skills = { sources: ["project-flecten"], builtin: false };
   config.catalog.autoRefresh = false;
   config.loop.parallelTools = true;
   config.sandbox = { ...config.sandbox, enabled: false } as typeof config.sandbox;

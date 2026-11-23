@@ -141,6 +141,7 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     system: z.unknown().optional(),
     queueId: z.string().optional(),
     resumed: z.boolean().optional(),
+    continuation: z.boolean().optional(),
     internal: z.boolean().optional(),
     actor: z.enum(["user", "twin"]).optional(),
     budget: z.unknown().optional(),

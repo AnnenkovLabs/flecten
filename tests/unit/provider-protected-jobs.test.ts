@@ -85,7 +85,9 @@ describe("protected background jobs", () => {
     expect(vault.restore(completed.command)).toBe(`${command} ${commandSecret}`);
     for (const token of tokens) expect(JSON.stringify(events)).not.toContain(token);
     expect(events.map((event) => event.type)).toEqual(["job.started", "job.completed"]);
-    expect(events.at(-1)?.job.log).toBe(completed.log);
+    const last = events.at(-1);
+    expect(last?.type).toBe("job.completed");
+    if (last?.type === "job.completed") expect(last.job.log).toBe(completed.log);
   });
 
   test("withholds a truncated token tail", async () => {

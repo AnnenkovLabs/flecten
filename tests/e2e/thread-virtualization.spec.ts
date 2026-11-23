@@ -155,6 +155,29 @@ test("long threads mount a bounded window while search, task restoration and fol
     const stop = h.page.getByRole("button", { name: "Остановка", exact: true });
     await expect(stop).toBeHidden({ timeout: 3000 });
     await expect.poll(() => h.page.locator(".thread-item").count()).toBeLessThanOrEqual(80);
+
+    // Continuous upward wheel scrolling through newly mounted variable-height rows must progress
+    // smoothly upward without snapping back toward the bottom.
+    const scroller = h.page.locator(".thread");
+    await scroller.hover();
+    const initialAnchor = await anchor(h.page);
+    const initialIndex = Number(initialAnchor.id.split(":")[1]);
+    let previousIndex = initialIndex;
+    for (let step = 0; step < 12; step += 1) {
+      await h.page.mouse.wheel(0, -320);
+      await h.page.waitForTimeout(40);
+      const current = await anchor(h.page);
+      const currentIndex = Number(current.id.split(":")[1]);
+      expect(currentIndex).toBeLessThanOrEqual(previousIndex + 1);
+      previousIndex = Math.min(previousIndex, currentIndex);
+    }
+    expect(previousIndex).toBeLessThan(initialIndex - 3);
+    const settledAnchor = await anchor(h.page);
+    await h.page.waitForTimeout(200);
+    const afterWaitAnchor = await anchor(h.page);
+    expect(afterWaitAnchor.id).toBe(settledAnchor.id);
+    expect(Math.abs(afterWaitAnchor.top - settledAnchor.top)).toBeLessThan(4);
+
     expect(h.consoleErrors).toEqual([]);
   } finally {
     await h.close();

@@ -6,6 +6,11 @@ import {
 } from "../security/os-sandbox";
 import { createProcessScope } from "./process-scope";
 import { killProcessTree } from "./process-tree";
+import {
+  buildInteractiveEnvironment,
+  detectDefaultUserShell,
+  interactiveShellArgs,
+} from "./profiles";
 import { ResourceMonitor, withResourceLimits } from "./resources";
 import { defaultTerminalShell, type TerminalResourceLimits } from "./settings";
 import { buildEnvironment, resolveShell, shellArgs } from "./shell";
@@ -168,7 +173,9 @@ export class TerminalSession {
     this.ansi = options.ansi ?? true;
     this.limits = options.limits ?? null;
 
-    const requestedShell = options.shell ?? defaultTerminalShell();
+    const interactive = options.interactive === true;
+    const requestedShell =
+      options.shell ?? (interactive ? detectDefaultUserShell() : defaultTerminalShell());
     const shell = resolveShell(requestedShell);
     if (shell === null) {
       this.error = `Shell not found: ${requestedShell}`;
@@ -177,11 +184,21 @@ export class TerminalSession {
     }
     this.resolvedShell = shell;
 
-    const env = buildEnvironment(this.cwd, shell, options.env, options.envAllowlist);
+    const env = interactive
+      ? buildInteractiveEnvironment(this.cwd, shell, options.env)
+      : buildEnvironment(this.cwd, shell, options.env, options.envAllowlist);
     const setsid = process.platform === "win32" ? null : Bun.which("setsid");
-    const shellArguments = shellArgs(shell);
-    const commandShell = setsid ?? shell;
-    const commandArgs = setsid !== null ? [shell, ...shellArguments] : shellArguments;
+    const shellArguments = interactive ? interactiveShellArgs(shell) : shellArgs(shell);
+    // On Linux, `setsid -c -w` attaches the PTY as controlling terminal (TIOCSCTTY) so
+    // interactive shells (fish, zsh, bash) have full job control and Ctrl+C handling.
+    const interactiveLinuxSetsid = interactive && process.platform === "linux" && setsid !== null;
+    const useSetsid = interactiveLinuxSetsid || (!interactive && setsid !== null);
+    const commandShell = useSetsid && setsid !== null ? setsid : shell;
+    const commandArgs = interactiveLinuxSetsid
+      ? ["-c", "-w", shell, ...shellArguments]
+      : useSetsid
+        ? [shell, ...shellArguments]
+        : shellArguments;
     let command = [commandShell, ...commandArgs];
     const sandbox = options.sandbox;
     if (sandbox?.enabled) {
@@ -199,7 +216,7 @@ export class TerminalSession {
       }
       command = wrapped.command;
     }
-    if (this.limits !== null) command = withResourceLimits(command, this.limits);
+    if (!interactive && this.limits !== null) command = withResourceLimits(command, this.limits);
 
     const scope = createProcessScope();
     try {
@@ -215,15 +232,18 @@ export class TerminalSession {
         cwd: this.cwd,
         env: { ...env, ...scope.environment },
         terminal: pty,
+        ...(interactive && !interactiveLinuxSetsid && process.platform !== "win32"
+          ? { detached: true }
+          : {}),
       });
       this.proc = proc;
       scope.attach(proc.pid);
-      this.isolated = setsid !== null;
+      this.isolated = interactive ? process.platform !== "win32" : useSetsid;
       this.running = true;
       void proc.exited
         .then((code) => this.finish(code))
         .catch((cause: unknown) => this.fail(cause));
-      if (this.limits !== null) {
+      if (!interactive && this.limits !== null) {
         this.resourceMonitor = new ResourceMonitor(
           () => ({ pid: this.proc?.pid ?? null, isolated: this.isolated }),
           this.limits,

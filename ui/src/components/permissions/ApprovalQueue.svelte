@@ -59,7 +59,6 @@
       </div>
     </div>
   {/if}
-  {#if count === 0}<p class="perm-empty">{t("No pending approvals.")}</p>{/if}
   <ul class="perm-approval-list">
     {#each pending as item (item.id)}
       <li class="perm-approval" aria-busy={busy.includes(item.id)}>

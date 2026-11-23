@@ -14,7 +14,7 @@ Talker acts as a semantic compiler (resolving user slang, shorthand, and implici
 
 | Operation | Argument | Behavior |
 |---|---|---|
-| `start` | `task` or `assignment` | Launches an asynchronous Worker run with a dense compiled English brief (`task`) or structured `assignment` and returns control to Talker immediately while preserving the latest raw user quote in `userConstraints`. |
+| `start` | `task` or `assignment` | Launches an asynchronous Worker run with a dense compiled English brief (`task`, focused on taste, user intent, and the real end result rather than verification checklists) or structured `assignment` and returns control to Talker immediately while preserving the latest raw user quote in `userConstraints`. |
 | `steer` | `message` | Delivers updated guidance at Worker's next safe turn boundary without interrupting an in-flight command. |
 | `resume` | none | Resumes an unfinished assignment with preserved criteria and blockers after re-checking workspace state. |
 | `status` | none | Returns current Worker phase and latest result summary without dumping raw logs. |

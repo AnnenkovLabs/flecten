@@ -1,9 +1,30 @@
 // Plain interface copy. Keep runtime values as numeric parts.
 export default {
-  "Interface Scale": "インターフェースの倍率",
-  "Resize text, controls, and the chat column. Changes apply immediately.":
-    "文字、操作ボタン、チャット欄の大きさを変更します。変更はすぐに反映されます。",
-  "Reset to 100%": "100% に戻す",
+  Appearance: "外観",
+  "Reset all": "すべてリセット",
+  "Adjust window zoom, reading sizes, and workspace typography. Changes apply immediately.":
+    "ウィンドウの倍率、本文サイズ、ワークスペースの文字サイズを調整します。変更はすぐに反映されます。",
+  Interface: "インターフェース",
+  "Interface scale": "インターフェースの倍率",
+  "Resize the entire window, including controls, menus, and layout.":
+    "操作ボタン、メニュー、レイアウトを含むウィンドウ全体を拡大・縮小します。",
+  "Chat and summaries": "チャットとサマリー",
+  "Text scale": "テキストの倍率",
+  "Scale messages, Markdown replies, reasoning, and the composer input.":
+    "メッセージ、Markdown の回答、推論、入力欄の文字サイズを調整します。",
+  "HTML summary scale": "HTML サマリーの倍率",
+  "Scale interactive HTML summaries, tables, and diagrams in replies.":
+    "回答内のインタラクティブな HTML サマリー、表、図の倍率を調整します。",
+  "Chat width": "チャット欄の幅",
+  "Maximum width of the conversation column and composer.": "会話欄と入力欄の最大幅を調整します。",
+  "Code and terminal": "コードとターミナル",
+  "Code text size": "コードの文字サイズ",
+  "Font size for code blocks, diffs, file previews, and the IDE editor.":
+    "コードブロック、差分、ファイルプレビュー、IDE エディターの文字サイズです。",
+  "Terminal text size": "ターミナルの文字サイズ",
+  "Font size for the integrated terminal.": "統合ターミナルの文字サイズです。",
+  "Reset to {0}": [0, " に戻す"],
+  "Reset {0} to {1}": [0, " を ", 1, " に戻す"],
   none: "なし",
   "not visible": "見つかりません",
   "Updated: {0}, +{1}, −{2}; checks: text {3}, tools {4}, reasoning {5}": [
@@ -58,7 +79,10 @@ export default {
   "Lines to read": "読み取り行数",
   "The response limit must not exceed the context window.":
     "回答の上限はコンテキストウィンドウのサイズ以下にしてください。",
-  "Specify a reasoning budget.": "推論の予算を指定してください。",
+  "Saved. Invalid model settings were not applied: {0}": [
+    "保存しました。無効なモデル設定は適用されませんでした: ",
+    0,
+  ],
   "The reasoning budget must be less than the response limit.":
     "推論の予算は回答の上限より小さくしてください。",
   "Only http and https are supported.": "http と https のみに対応しています。",

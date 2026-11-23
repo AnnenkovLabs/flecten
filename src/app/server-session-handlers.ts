@@ -187,6 +187,7 @@ export function sessionHandlers(
           ...(sessionId ? { sessionId } : {}),
           ...(clientId ? { clientId } : {}),
           ...(flag(input, "resumed") ? { resumed: true } : {}),
+          ...(flag(input, "continuation") ? { continuation: true } : {}),
           ...(attachments.length > 0 ? { attachments } : {}),
           ...(contexts.length > 0 ? { contexts } : {}),
         })

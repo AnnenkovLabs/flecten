@@ -48,19 +48,28 @@ function setup() {
     },
   } as unknown as Window & typeof globalThis;
   let online = true;
-  const prompts: string[] = [];
+  let continuations = 0;
   const control = new RunControls(
     view,
     () => "task",
     () => online,
-    (prompt) => {
-      prompts.push(prompt);
-      view.begin(prompt);
+    () => {
+      continuations += 1;
+      view.beginContinuation();
       return true;
     },
   );
   controls.push(control);
-  return { view, state, commands, prompts, control, offline: () => (online = false) };
+  return {
+    view,
+    state,
+    commands,
+    get continuations() {
+      return continuations;
+    },
+    control,
+    offline: () => (online = false),
+  };
 }
 
 test("stop protects the force-stop transition, then permits force stop", async () => {
@@ -78,7 +87,8 @@ test("stop protects the force-stop transition, then permits force stop", async (
 });
 
 test("stop-to-continue and continue-to-stop share one cooldown", async () => {
-  const { view, state, control, commands, prompts } = setup();
+  const ctx = setup();
+  const { view, state, control, commands } = ctx;
   control.stop();
   view.applyState({ ...state, revision: 2, running: false, phase: "stopped" });
   expect(control.canContinue).toBe(true);
@@ -87,7 +97,8 @@ test("stop-to-continue and continue-to-stop share one cooldown", async () => {
   expect(control.continue()).toBe(true);
   expect(control.continue()).toBe(false);
   control.stop();
-  expect(prompts).toEqual(["/continue"]);
+  expect(ctx.continuations).toBe(1);
+  expect(view.thread.items.filter((item) => item.kind === "message")).toHaveLength(0);
   expect(commands).toHaveLength(1);
   expect(control.canContinue).toBe(false);
   await Bun.sleep(RUN_CONTROL_COOLDOWN_MS + 20);
@@ -96,11 +107,12 @@ test("stop-to-continue and continue-to-stop share one cooldown", async () => {
 });
 
 test("recovered task can continue only when the core is available", () => {
-  const { view, state, control, prompts, offline } = setup();
+  const ctx = setup();
+  const { view, state, control, offline } = ctx;
   view.applyState({ ...state, revision: 2, running: false, phase: "stopped", interrupted: true });
   expect(control.canContinue).toBe(true);
   offline();
   expect(control.canContinue).toBe(false);
   expect(control.continue()).toBe(false);
-  expect(prompts).toEqual([]);
+  expect(ctx.continuations).toBe(0);
 });

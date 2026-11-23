@@ -1,4 +1,4 @@
-import { link, rm } from "node:fs/promises";
+import { link, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { ModuleIdSchema } from "../../shared/modules";
@@ -25,10 +25,11 @@ function statePath(cwd: string, sessionId: string): string {
   return join(cwd, ".flecten", "sessions", sessionId, "modules.json");
 }
 async function savedModuleState(cwd: string, sessionId: string): Promise<string[] | undefined> {
+  const path = statePath(cwd, sessionId);
   try {
-    const file = Bun.file(statePath(cwd, sessionId));
-    if (file.size > 16_000) throw new Error("Module session state exceeds 16 KB");
-    return State.parse(await file.json()).requested;
+    const info = await stat(path);
+    if (info.size > 16_000) throw new Error("Module session state exceeds 16 KB");
+    return State.parse(JSON.parse(await readFile(path, "utf8")) as unknown).requested;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     return undefined;

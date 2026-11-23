@@ -13,7 +13,8 @@
   import { VoiceInput } from "../lib/composer/voice-input.svelte";
   import type { ContextView } from "../lib/context-meter.svelte";
   import { describeDroppedFiles } from "../lib/desktop";
-  import { clearComposerDraft, composerDrafts, writeComposerAttachments, writeComposerDraft } from "../lib/composer/drafts.svelte";
+  import { clearComposerDraft, composerDrafts, composerProject, writeComposerAttachments, writeComposerDraft } from "../lib/composer/drafts.svelte";
+  import { mergePromptHistory, PromptHistoryNavigator, readPromptHistory, recordPromptHistory } from "../lib/composer/prompt-history";
   import { toast } from "../lib/toast.svelte";
   import type { ProviderInfo, ReasoningChoice } from "../lib/types";
   import type { ComposerEdit } from "../lib/message-types";
@@ -52,6 +53,7 @@
     files: string[];
     contexts?: MentionItem[];
     commands?: readonly SkillCommand[];
+    historyPrompts?: readonly string[] | undefined;
     onRequestFiles: () => void;
     onPickAttachments: () => Promise<PickedFile[]>;
     onPasteImage: () => Promise<PickedFile | null>;
@@ -72,43 +74,12 @@
   }
 
   let {
-    running,
-    isTalker,
-    stopping = false,
-    canContinue,
-    controlCooldown,
-    onContinue,
-    focusToken,
-    layout = "dock",
-    placeholder = t("Message the agent…"),
-    context,
-    providers,
-    provider,
-    model,
-    reasoning,
-    variant,
-    queued,
-    sendMode,
-    files,
-    contexts = [],
-    commands = [],
-    onRequestFiles,
-    onPickAttachments,
-    onPasteImage,
-    onCommand,
-    onCompact,
-    onModelSelect,
-    onReasoningChange,
-    onVariantChange,
-    onSend,
-    onQueueEdit,
-    onQueueRemove,
-    onSendModeChange,
-    onStop,
-    editing = null,
-    editBlocked = false,
-    onCancelEdit,
-    onSaveEdit,
+    running, isTalker, stopping = false, canContinue, controlCooldown, onContinue, focusToken,
+    layout = "dock", placeholder = t("Message the agent…"), context, providers, provider, model,
+    reasoning, variant, queued, sendMode, files, contexts = [], commands = [], historyPrompts = [],
+    onRequestFiles, onPickAttachments, onPasteImage, onCommand, onCompact, onModelSelect,
+    onReasoningChange, onVariantChange, onSend, onQueueEdit, onQueueRemove, onSendModeChange,
+    onStop, editing = null, editBlocked = false, onCancelEdit, onSaveEdit,
   }: Props = $props();
 
   let text = $state("");
@@ -125,7 +96,14 @@
   let insertedContext = 0;
   let savingEdit = $state(false);
   let editError = $state(false);
+  let historyVersion = $state(0);
+  const historyNav = new PromptHistoryNavigator();
   const activeDraft = $derived(editing?.key ?? composerDrafts.task);
+  const historyEntries = $derived.by(() => {
+    void historyVersion;
+    void draftTask;
+    return mergePromptHistory(readPromptHistory(composerProject()), historyPrompts);
+  });
   const voice = $derived(new VoiceInput({
     text: () => text,
     caret: () => editor?.hasFocus() ? editor.caret() : null,
@@ -194,6 +172,8 @@
     closeMention();
     slashOpen = false;
     editError = false;
+    historyNav.reset();
+    editor?.cancelRoll();
     if (editing) void tick().then(() => editor?.focus());
   });
 
@@ -278,7 +258,10 @@
       if (!paths.includes(path)) paths.push(path);
     }
     if (onSend(text, mode, paths, mentions.flatMap((mention) => mention.context ? [mention.context] : [])) === false) return;
+    if (text.trim().length > 0) { recordPromptHistory(composerProject(), { text, mentions }); historyVersion += 1; }
     if (running && !isTalker) onSendModeChange(mode);
+    historyNav.reset();
+    editor?.cancelRoll();
     text = "";
     mentions = [];
     // Clear the saved draft now: the hero composer unmounts before its draft effect would run.
@@ -315,6 +298,7 @@
   }
 
   function updateComposerHints(): void {
+    historyNav.reset();
     // Publish before navigation or teardown can replace the controlled editor.
     if (activeDraft === draftTask) writeComposerDraft(text, mentions, draftTask);
     if (!editing && text.startsWith("/") && !text.includes("\n")) {
@@ -324,6 +308,32 @@
     }
     slashOpen = false;
     updateMention();
+  }
+
+  function updateSelectionHints(): void {
+    if (!slashOpen) updateMention();
+  }
+
+  function stepHistory(event: KeyboardEvent): boolean {
+    if (event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return false;
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      if (historyNav.pinned && (event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "Home" || event.key === "End")) historyNav.unpin();
+      return false;
+    }
+    if (editing || voice.active || mentionOpen || slashOpen || !editor) return false;
+    const direction = event.key === "ArrowUp" ? "up" : "down";
+    if (!historyNav.canStep(direction, historyEntries, editor.isAtBoundary(direction))) {
+      if (historyNav.pinned) historyNav.unpin();
+      return false;
+    }
+    const next = historyNav.step(direction, historyEntries, { text, mentions });
+    if (!next) return false;
+    event.preventDefault();
+    slashOpen = false;
+    closeMention();
+    editor.replaceWithRoll(next.snapshot.text, next.snapshot.mentions, next.direction);
+    if (activeDraft === draftTask) writeComposerDraft(text, mentions, draftTask);
+    return true;
   }
 
   function selectSlash(command: { name: string }, args: string): void {
@@ -391,6 +401,7 @@
       if (!event.repeat) onStop();
       return;
     }
+    if (stepHistory(event)) return;
     if (event.key !== "Enter" || event.shiftKey || event.altKey) return;
     if (providers.length === 0) {
       event.preventDefault();
@@ -454,6 +465,8 @@
         {placeholder}
         menu={mentionOpen ? "mention" : slashOpen ? "slash" : undefined}
         oninput={updateComposerHints}
+        onselection={updateSelectionHints}
+        oninteract={() => historyNav.unpin()}
         onkeydown={onKeydown}
         onpaste={(event) => void onPaste(event).catch((error) => toast.error(error instanceof Error ? error.message : String(error)))}
         ondragover={onDragOver}
@@ -462,38 +475,17 @@
       />
     {/key}
     <ComposerBar
-      editing={Boolean(editing)}
-      editPending={savingEdit}
-      {running}
-      {isTalker}
-      {stopping}
-      {canContinue}
-      {controlCooldown}
-      {onContinue}
+      editing={Boolean(editing)} editPending={savingEdit} {running} {isTalker} {stopping}
+      {canContinue} {controlCooldown} {onContinue}
       hasDraft={text.trim().length > 0 || attachments.length > 0}
       canSend={canSend && !voice.active && !savingEdit && (!editing || !editBlocked)}
-      voiceSupported={voice.supported}
-      voiceListening={voice.state === "listening"}
+      voiceSupported={voice.supported} voiceListening={voice.state === "listening"}
       voicePending={voice.state === "requesting" || voice.state === "processing"}
-      voiceActive={voice.active}
-      voiceStatus={voice.status}
-      voiceProvider={voice.provider}
-      onVoiceStart={() => voice.start()}
-      onVoiceStop={() => voice.stop()}
-      onVoiceCancel={() => voice.cancel()}
-      {context}
-      {onCompact}
-      {providers}
-      {provider}
-      {model}
-      {reasoning}
-      {variant}
-      onSend={(mode) => sendDraft(mode)}
-      onAttach={() => void pickFiles()}
-      {onModelSelect}
-      {onReasoningChange}
-      {onVariantChange}
-      {onStop}
+      voiceActive={voice.active} voiceStatus={voice.status} voiceProvider={voice.provider}
+      onVoiceStart={() => voice.start()} onVoiceStop={() => voice.stop()} onVoiceCancel={() => voice.cancel()}
+      {context} {onCompact} {providers} {provider} {model} {reasoning} {variant}
+      onSend={(mode) => sendDraft(mode)} onAttach={() => void pickFiles()}
+      {onModelSelect} {onReasoningChange} {onVariantChange} {onStop}
     />
   </form>
   </div>

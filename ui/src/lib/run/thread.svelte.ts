@@ -1,13 +1,4 @@
-import {
-  doneData,
-  fileDiff,
-  fileKind,
-  formatDuration,
-  terminalData,
-  terminalLines,
-  toolAction,
-} from "../agent";
-import { splitAnswerStream } from "../markdown/summary-stream";
+import { doneData, toolAction } from "../agent";
 import { nextId, nowIso } from "../run-helpers";
 import type {
   AgentRunResult,
@@ -18,20 +9,22 @@ import type {
   NoticeItem,
   PendingToolCall,
   RunAction,
-  RunSummary,
   RunTurn,
   TerminalLine,
   ThreadItem,
 } from "../types";
-import { answerDisplayText } from "../ui-polish";
-
-type AnswerItem = Extract<ThreadItem, { kind: "answer" }>;
-
-/** The call saved a checkpoint: the history pane has a new entry. */
-export function hasCheckpoint(result: AgentToolResult): boolean {
-  const data = result.data;
-  return Boolean(data && typeof data === "object" && "checkpointId" in data);
-}
+import {
+  type AnswerItem,
+  appendTerminalOutput,
+  applyAnswerChunk,
+  applyAnswerText,
+  buildRunProgress,
+  type ContinuationSnapshot,
+  createAnswerItem,
+  createRunItem,
+  hasCheckpoint,
+  recordFileDiff,
+} from "./thread-artifacts";
 
 /**
  * The visible thread of the task on screen, built from its events: user messages, the run
@@ -58,6 +51,9 @@ export class ThreadView {
   #answerFinished = false;
   #runIndex: number | null = null;
   #runStarted = 0;
+  #runElapsedMs = 0;
+  #turnOffset = 0;
+  #continuationSnapshot: ContinuationSnapshot | null = null;
   #turnStartedAt = 0;
   #thinkingStartedAt = 0;
   #actions = new Map<string, RunAction>();
@@ -79,12 +75,15 @@ export class ThreadView {
     this.resetSession();
   }
 
-  resetRun(): void {
+  resetRun(preservePrompt = false): void {
     this.#answerIndex = null;
     this.#answerFinished = false;
     this.#runIndex = null;
     this.#answerRaw = "";
     this.#runStarted = 0;
+    this.#runElapsedMs = 0;
+    this.#turnOffset = 0;
+    this.#continuationSnapshot = null;
     this.#turnStartedAt = 0;
     this.#thinkingStartedAt = 0;
     this.#actions = new Map();
@@ -92,7 +91,7 @@ export class ThreadView {
     this.#turns = [];
     this.#currentTurn = null;
     this.pendingCalls = [];
-    this.#currentPrompt = "";
+    if (!preservePrompt) this.#currentPrompt = "";
     this.#done = null;
   }
 
@@ -114,10 +113,10 @@ export class ThreadView {
     timestamp = Date.now(),
     actor?: "user" | "twin",
   ): void {
-    this.resetRun();
+    this.resetRun(prompt === null);
     this.#runStarted = timestamp;
-    this.#currentPrompt = prompt ?? "";
     if (prompt !== null) {
+      this.#currentPrompt = prompt;
       this.push({
         kind: "message",
         id: nextId("msg"),
@@ -128,9 +127,68 @@ export class ThreadView {
     }
   }
 
+  /** Continues the active run seamlessly without adding a user message to the thread. */
+  continueRun(timestamp = Date.now(), optimistic = false): void {
+    const last = this.items.at(-1);
+    if (
+      this.#runIndex !== null &&
+      this.#runIndex === this.items.length - 1 &&
+      last?.kind === "run"
+    ) {
+      this.#continuationSnapshot = optimistic
+        ? {
+            runIndex: this.#runIndex,
+            runStarted: this.#runStarted,
+            runElapsedMs: this.#runElapsedMs,
+            turnOffset: this.#turnOffset,
+            summary: last.summary,
+          }
+        : null;
+      this.#turnOffset = this.#turns.reduce(
+        (max, turn) => Math.max(max, turn.index),
+        this.#turnOffset,
+      );
+      this.#runStarted = timestamp - this.#runElapsedMs;
+      this.#answerIndex = null;
+      this.#answerFinished = false;
+      this.#answerRaw = "";
+      this.#turnStartedAt = 0;
+      this.#thinkingStartedAt = 0;
+      this.#currentTurn = null;
+      this.pendingCalls = [];
+      this.#done = null;
+      last.summary = {
+        ...last.summary,
+        startedAt: this.#runStarted,
+        live: true,
+        failed: false,
+        stopped: false,
+      };
+      return;
+    }
+    this.resetRun(true);
+    this.#runStarted = timestamp;
+  }
+
+  /** Reverts an optimistic continuation when the send fails or Worker takes over instead. */
+  abortContinuation(): void {
+    const snap = this.#continuationSnapshot;
+    if (!snap) return;
+    this.#continuationSnapshot = null;
+    this.#runIndex = snap.runIndex;
+    this.#runStarted = snap.runStarted;
+    this.#runElapsedMs = snap.runElapsedMs;
+    this.#turnOffset = snap.turnOffset;
+    const item = this.items[snap.runIndex];
+    if (item?.kind === "run") item.summary = snap.summary;
+  }
+
   /** The core started the run this window sent: the message is already on screen. */
   startClock(timestamp = Date.now()): void {
-    this.#runStarted = timestamp;
+    this.#continuationSnapshot = null;
+    this.#runStarted = timestamp - this.#runElapsedMs;
+    const run = this.#run();
+    if (run?.summary.live) run.summary = { ...run.summary, startedAt: this.#runStarted };
   }
 
   /** Only the latest notice offers to continue: a new run settles the older ones. */
@@ -149,10 +207,11 @@ export class ThreadView {
     if (this.#currentTurn) this.#currentTurn.reasoningStreaming = false;
     this.#turnStartedAt = timestamp;
     this.#thinkingStartedAt = 0;
+    const turnIndex = this.#turnOffset + index;
     // Compaction and hook notices can create this turn before its start event arrives.
-    const existing = this.#turns.find((turn) => turn.index === index);
+    const existing = this.#turns.find((turn) => turn.index === turnIndex);
     this.#currentTurn = existing ?? {
-      index,
+      index: turnIndex,
       reasoning: "",
       reasoningStreaming: false,
       actions: [],
@@ -164,6 +223,7 @@ export class ThreadView {
   reasoningDelta(text: string, timestamp = Date.now()): void {
     const turn = this.#ensureTurn();
     if (this.#thinkingStartedAt === 0) this.#thinkingStartedAt = timestamp;
+    turn.reasoningStartedAt ??= this.#thinkingStartedAt;
     turn.reasoning += text;
     turn.reasoningStreaming = true;
     this.#ensureRun();
@@ -171,6 +231,7 @@ export class ThreadView {
   }
 
   progressToolCall(index: number, name?: string, delta?: string): void {
+    this.#endReasoning();
     const existing = this.pendingCalls.find((call) => call.index === index);
     this.pendingCalls = existing
       ? this.pendingCalls.map((call) =>
@@ -182,16 +243,10 @@ export class ThreadView {
   }
 
   appendText(text: string): void {
+    this.#endReasoning();
     const item = this.#ensureAnswer();
     this.#answerRaw += text;
-    const split = splitAnswerStream(this.#answerRaw);
-    item.text = split.text;
-    if (split.started) {
-      item.summaryHtml = split.summary;
-      item.complete = false;
-    } else if (item.summaryHtml !== undefined) {
-      delete item.summaryHtml;
-    }
+    applyAnswerChunk(item, this.#answerRaw);
   }
 
   messageReset(): void {
@@ -240,6 +295,7 @@ export class ThreadView {
   }
 
   startTool(call: AgentToolCall): RunAction {
+    this.#endReasoning();
     let action = this.#actions.get(call.id);
     if (action) action.running = true;
     else {
@@ -278,26 +334,9 @@ export class ThreadView {
   }
 
   recordResult(result: AgentToolResult): void {
-    const diff = fileDiff(result);
-    if (
-      diff &&
-      (diff.add > 0 || diff.del > 0 || diff.state === "A" || !this.#files.has(diff.path))
-    ) {
-      // ponytail: the pane shows the latest diff per file, not a cumulative session diff.
-      this.#files.set(diff.path, {
-        path: diff.path,
-        kind: fileKind(diff.path),
-        state: diff.state,
-        add: diff.add,
-        del: diff.del,
-        hunks: diff.hunks,
-      });
-      this.changeFiles = [...this.#files.values()];
-    }
-    const terminal = terminalData(result);
-    if (terminal) {
-      this.terminalLines = [...this.terminalLines, ...terminalLines(terminal)].slice(-600);
-    }
+    if (recordFileDiff(this.#files, result)) this.changeFiles = [...this.#files.values()];
+    const lines = appendTerminalOutput(this.terminalLines, result);
+    if (lines) this.terminalLines = lines;
   }
 
   /** An inline lifecycle note inside the run, such as "Context compacted". */
@@ -332,6 +371,9 @@ export class ThreadView {
   }
 
   finishRun(result: AgentRunResult, timestamp?: number): void {
+    const end = timestamp ?? Date.now();
+    this.#runElapsedMs = Math.max(0, end - (this.#runStarted || end));
+    this.#continuationSnapshot = null;
     for (const turn of this.#turns) {
       if (turn.reasoningStreaming && (!this.restoring || timestamp !== undefined)) {
         const started = this.#thinkingStartedAt || this.#turnStartedAt || this.#runStarted;
@@ -368,24 +410,7 @@ export class ThreadView {
   }
 
   #showAnswer(text: string, summary: string | undefined): void {
-    const item = this.#ensureAnswer();
-    const streamed = splitAnswerStream(text);
-    const html = summary !== undefined ? summary : streamed.started ? streamed.summary : undefined;
-    const display =
-      summary !== undefined
-        ? answerDisplayText(text, summary)
-        : streamed.started
-          ? streamed.text
-          : text;
-    item.text = display;
-    this.#answerRaw = display;
-    if (html !== undefined && html.trim().length > 0) {
-      item.summaryHtml = html;
-      item.complete = true;
-      item.streaming = false;
-    } else if (item.summaryHtml !== undefined) {
-      delete item.summaryHtml;
-    }
+    this.#answerRaw = applyAnswerText(this.#ensureAnswer(), text, summary);
   }
 
   #answer(): AnswerItem | undefined {
@@ -402,12 +427,9 @@ export class ThreadView {
 
   #ensureTurn(): RunTurn {
     if (this.#currentTurn) return this.#currentTurn;
-    const turn: RunTurn = {
-      index: this.#turns.length + 1,
-      reasoning: "",
-      reasoningStreaming: false,
-      actions: [],
-    };
+    const index =
+      this.#turns.reduce((max, turn) => Math.max(max, turn.index), this.#turnOffset) + 1;
+    const turn: RunTurn = { index, reasoning: "", reasoningStreaming: false, actions: [] };
     this.#turns.push(turn);
     this.#currentTurn = turn;
     return turn;
@@ -422,62 +444,36 @@ export class ThreadView {
     this.#actionTurns.set(action.id, turn);
   }
 
-  #visibleTurns(): RunTurn[] {
-    return this.#turns
-      .filter((turn) => turn.reasoning.length > 0 || turn.actions.length > 0)
-      .map((turn) => ({
-        ...turn,
-        reasoningStreaming: turn.reasoningStreaming ?? false,
-        actions: [...turn.actions],
-      }));
-  }
-
   #ensureAnswer(): AnswerItem {
     const existing = this.#answer();
     if (existing && !this.#answerFinished) return existing;
     this.#answerRaw = "";
     this.#answerFinished = false;
-    const item: AnswerItem = {
-      kind: "answer",
-      id: nextId("ans"),
-      text: "",
-      at: nowIso(),
-      streaming: true,
-    };
+    const item = createAnswerItem();
     this.push(item);
     this.#answerIndex = this.items.length - 1;
     return item;
   }
 
-  #progress(
-    timestamp = Date.now(),
-  ): Pick<RunSummary, "duration" | "startedAt" | "actions" | "list" | "turns" | "files"> {
-    return {
-      duration: formatDuration(Math.max(0, timestamp - (this.#runStarted || timestamp))),
-      ...(this.#runStarted ? { startedAt: this.#runStarted } : {}),
-      actions: this.#actions.size,
-      list: [...this.#actions.values()],
-      turns: this.#visibleTurns(),
-      files: [...this.#files.values()].map((file) => ({
-        path: file.path,
-        kind: file.kind,
-        add: file.add,
-        ...(file.del === undefined ? {} : { del: file.del }),
-      })),
-    };
+  #endReasoning(timestamp = Date.now()): void {
+    const turn = this.#currentTurn;
+    if (!turn?.reasoningStreaming) return;
+    turn.reasoningStreaming = false;
+    const started =
+      turn.reasoningStartedAt ??
+      (this.#thinkingStartedAt || this.#turnStartedAt || this.#runStarted);
+    if (turn.reasoningMs === undefined && started > 0)
+      turn.reasoningMs = Math.max(0, timestamp - started);
+    this.#updateRun();
+  }
+
+  #progress(timestamp = Date.now()) {
+    return buildRunProgress(this.#runStarted, this.#actions, this.#turns, this.#files, timestamp);
   }
 
   #ensureRun(): void {
     if (this.#runIndex !== null) return;
-    const summary: RunSummary = {
-      ...this.#progress(),
-      criteria: 0,
-      text: "",
-      files: [],
-      prompt: this.#currentPrompt,
-      live: true,
-    };
-    const item: Extract<ThreadItem, { kind: "run" }> = { kind: "run", id: nextId("run"), summary };
+    const item = createRunItem(this.#progress(), this.#currentPrompt);
     if (this.#answerIndex !== null) {
       this.#runIndex = this.#answerIndex;
       this.items.splice(this.#answerIndex++, 0, item);

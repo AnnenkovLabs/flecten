@@ -4,22 +4,33 @@ function hash(content: string): string {
   return hasher.digest("hex");
 }
 
+function trackerKey(path: string, platform: NodeJS.Platform = process.platform): string {
+  return platform === "win32" ? path.replaceAll("\\", "/").toLowerCase() : path;
+}
+
 export class ReadTracker {
   readonly #hashes = new Map<string, string>();
   readonly #shownSymbols = new Map<string, string>();
+  readonly #platform: NodeJS.Platform;
+
+  constructor(platform: NodeJS.Platform = process.platform) {
+    this.#platform = platform;
+  }
 
   record(path: string, content: string): void {
+    const key = trackerKey(path, this.#platform);
     const nextHash = hash(content);
-    const prevHash = this.#hashes.get(path);
+    const prevHash = this.#hashes.get(key);
     if (prevHash !== undefined && prevHash !== nextHash) {
-      this.#clearSymbolsForPath(path);
+      this.#clearSymbolsForPath(key);
     }
-    this.#hashes.set(path, nextHash);
+    this.#hashes.set(key, nextHash);
   }
 
   forget(path: string): void {
-    this.#hashes.delete(path);
-    this.#clearSymbolsForPath(path);
+    const key = trackerKey(path, this.#platform);
+    this.#hashes.delete(key);
+    this.#clearSymbolsForPath(key);
   }
 
   clear(): void {
@@ -28,7 +39,7 @@ export class ReadTracker {
   }
 
   verify(path: string, content: string): "ok" | "unread" | "changed" {
-    const stored = this.#hashes.get(path);
+    const stored = this.#hashes.get(trackerKey(path, this.#platform));
     if (!stored) return "unread";
     return stored === hash(content) ? "ok" : "changed";
   }
@@ -40,7 +51,7 @@ export class ReadTracker {
    * in future tool outputs without mutating earlier messages.
    */
   markSymbolShown(path: string, startLine: number, endLine: number, body: string): boolean {
-    const key = `${path}:${startLine}-${endLine}`;
+    const key = `${trackerKey(path, this.#platform)}:${startLine}-${endLine}`;
     const bodyHash = hash(body);
     if (this.#shownSymbols.get(key) === bodyHash) return true;
     this.#shownSymbols.set(key, bodyHash);

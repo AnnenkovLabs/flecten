@@ -28,7 +28,8 @@ export function attachedEvents(
     last.prompt === live.prompt &&
     last.queueId === live.queueId &&
     Boolean(last.internal) === Boolean(live.internal) &&
-    Boolean(last.resumed) === Boolean(live.resumed);
+    Boolean(last.resumed) === Boolean(live.resumed) &&
+    Boolean(last.continuation) === Boolean(live.continuation);
   const before = same ? stored.slice(0, lastStart) : [...stored];
   return [...before, ...replay.events];
 }

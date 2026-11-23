@@ -1,5 +1,5 @@
 // Loading of external catalogs: memory and disk cache with TTL, last-known-good on errors.
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { HarnessError } from "../errors";
 import { atomicWrite } from "../util/atomic";
@@ -31,7 +31,7 @@ interface CacheEntry {
 async function readCacheFile(path: string): Promise<CacheEntry | undefined> {
   try {
     const info = await stat(path);
-    return { raw: await Bun.file(path).json(), mtimeMs: info.mtimeMs };
+    return { raw: JSON.parse(await readFile(path, "utf8")) as unknown, mtimeMs: info.mtimeMs };
   } catch {
     return undefined;
   }

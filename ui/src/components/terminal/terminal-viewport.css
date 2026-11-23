@@ -1,0 +1,188 @@
+/* Individual xterm viewport, find overlay, status bar, and floating menus. */
+.term-viewport {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.term-xterm-host {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 6px 4px 10px;
+  overflow: hidden;
+}
+
+.term-xterm-host .xterm {
+  height: 100%;
+  width: 100%;
+  padding: 0;
+}
+
+.term-xterm-host .xterm-viewport {
+  overflow-y: auto !important;
+  scrollbar-gutter: stable;
+}
+
+.term-xterm-host .xterm-screen {
+  outline: none;
+}
+
+.term-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  flex: none;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.term-status-bar.is-error {
+  color: var(--error);
+}
+
+.term-status-bar span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.term-status-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding-inline: 10px;
+  border-radius: 5px;
+  background: var(--raised);
+  color: var(--text);
+  font-size: 12px;
+  flex: none;
+}
+
+.term-status-action:hover {
+  background: var(--raised-hover);
+}
+
+.term-find {
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--raised);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.term-find input {
+  width: 180px;
+  height: 26px;
+  padding-inline: 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.term-find input:focus {
+  border-color: var(--primary);
+}
+
+.term-find-count {
+  min-width: 48px;
+  padding-inline: 4px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.term-find-btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding-inline: 4px;
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-family: var(--mono);
+}
+
+.term-find-btn:hover:not(:disabled) {
+  background: var(--raised-hover);
+  color: var(--text);
+}
+
+.term-find-btn[aria-pressed="true"] {
+  background: rgba(183, 161, 232, 0.18);
+  color: var(--primary);
+}
+
+.term-find-btn:disabled {
+  opacity: 0.35;
+}
+
+.term-menu {
+  position: fixed;
+  z-index: 40;
+  min-width: 180px;
+  max-width: 260px;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--raised);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.48);
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+
+.term-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  text-align: start;
+  color: var(--text-2);
+}
+
+.term-menu-item:hover:not(:disabled) {
+  background: var(--raised-hover);
+  color: var(--text);
+}
+
+.term-menu-item:disabled {
+  opacity: 0.38;
+}
+
+.term-menu-item kbd {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.term-menu-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}

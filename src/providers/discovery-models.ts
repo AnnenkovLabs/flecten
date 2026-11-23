@@ -53,7 +53,8 @@ function reasoningOptions(model: Record<string, unknown>): ReasoningFields {
   return {
     ...(mode === undefined ? {} : { reasoningMode: mode }),
     ...(levels.length === 0 ? {} : { reasoningLevels: levels }),
-    ...(typeof budget?.min === "number" ? { reasoningBudget: budget.min } : {}),
+    // models.dev uses -1 for automatic budgets; config stores only explicit positive budgets.
+    ...(typeof budget?.min === "number" && budget.min > 0 ? { reasoningBudget: budget.min } : {}),
     ...(toggle ? { reasoningToggle: true } : {}),
   };
 }

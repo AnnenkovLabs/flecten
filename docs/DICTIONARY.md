@@ -9,11 +9,11 @@ Shared upstream source: [AnnenkovLabs/flecten, src/dictionary/data](https://gith
 - `src/dictionary/data/index.json` lists category files.
 - `src/dictionary/data/design.json` contains design terminology.
 - `src/dictionary/data/ai-development.json` contains AI and software engineering terminology.
-- Remaining categories cover agents, models, benchmarks, MCP, CSS and the web platform, developer tooling, infrastructure, mobile platforms, and product concepts.
+- Remaining categories cover agents, models, benchmarks, MCP, CSS and the web platform, developer tooling, infrastructure, mobile platforms, product concepts, and internet culture.
 
 111 entries were imported from `mera-os-public/os/memory/terms.jsonl` in `mera-os-public-0.3.9.zip` (version `0.3.9`, snapshot dated September 11, 2026; SHA-256 `f512595698f3190edc05ddfa805fb03ef8e74a3de564f294fa15f6d68e8db489`). Two overlapping entries, `Liquid Glass` and `Vibe coding`, kept their existing definitions. Imported entries retain their original HTTPS sources and common-pitfall clarifications; version and status notes in those definitions reflect the archive snapshot.
 
-`Oh My Pi` was added from [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi). The entry covers `OMP` (in both Latin and Cyrillic scripts), Russian and Ukrainian inflected forms, the website and package name, and all 80 phonetic and transliterated combinations of its three parts (`oh`/`o`, `my`, `pi`). Spaces, hyphens, concatenated spelling, and case are handled by the shared matcher. The bundled dataset totals 114 definitions.
+`Oh My Pi` was added from [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi). The entry covers `OMP` (in both Latin and Cyrillic scripts), Russian and Ukrainian inflected forms, the website and package name, and all 80 phonetic and transliterated combinations of its three parts (`oh`/`o`, `my`, `pi`). `Brainrot`, `Funk` (the modern phonk branch, its subgenres, and remix formats), `Dreamcore / Liminal music` (including Weirdcore, Backrooms/Poolrooms versions, and Mallsoft), and `Эдит (Video Edit)` (high-craft beat-synced AE/3D video edits) were added under `internet-culture.json` with English, Russian, and Ukrainian forms. Spaces, hyphens, concatenated spelling, and case are handled by the shared matcher. The bundled dataset totals 118 definitions.
 
 Index format:
 

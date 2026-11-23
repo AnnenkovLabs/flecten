@@ -13,13 +13,9 @@ export default {
   "Allow this action?": "この操作を許可しますか？",
   "More options": "その他の選択肢",
   "Add a note (optional)": "メモを追加（任意）",
-  "Only this action in this folder.": "このフォルダーでの同一操作のみ。",
   "Tasks in progress: {0}. Permissions apply to the next action; other settings apply to the next run.":
     ["実行中のタスク: ", 0, "。権限は次の操作から、その他の設定は次回の実行から適用されます。"],
   Chat: "チャット",
-  "Always ask a person": "常に手動承認を要求",
-  "These checkpoints cannot be bypassed by saved approvals or automatic review.":
-    "保存済みルールや自動モードでもこれらの確認は省略されません。",
   "Human approval required every time": "毎回、人による承認が必要です",
   "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.":
     "安全なプロジェクト内操作を自動許可し、判断が分かれるコマンドは確認します。",
@@ -32,35 +28,22 @@ export default {
   "Affected paths": "対象パス",
   "Applying decision…": "判断を適用中…",
   "Expired: waiting for confirmation": "期限切れ: 確認待ち",
-  "Save this exact action for this project?": "この操作をこのプロジェクト用に保存しますか？",
   "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
     "すべての引数、パス、作業ディレクトリが一致する場合のみ適用します。権限設定から取り消せます。",
   "For this chat": "このチャットで許可",
   "Save exact rule": "完全一致ルールを保存",
   "Remember…": "記憶する…",
-  "Allow bounded built-in actions. Ask before arbitrary code or external tools.":
-    "安全な組み込み操作を許可し、シェルコマンドや外部ツールの前に確認します。",
-  "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
-    "通常の操作を許可します。破壊的操作のルールとサンドボックスの制限は引き続き適用されます。",
   "Saved rules": "保存済みルール",
   "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
     "ルールはグローバルに保存されます。ルールの削除は保存時に反映され、実行中のタスクにも適用されます。",
-  "No saved rules.": "保存済みルールはありません。",
   "All matching actions": "一致するすべての操作",
   "Exact arguments and resources": "引数とリソースの完全一致",
-  "Configured scope": "設定された範囲",
   "Remove rule": "ルールを削除",
   "Destructive actions": "元に戻せない操作",
-  "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.":
-    "通常の操作が許可されていても、元に戻せない操作は個別に確認します。",
-  "Execution boundary": "サンドボックス境界",
-  "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.":
-    "OS サンドボックスはツール権限に関係なく、コマンドをプロジェクトと承認済みフォルダ内に制限します。",
-  "Workspace isolation enabled": "作業フォルダーの隔離は有効",
-  "Workspace isolation disabled": "作業フォルダーの隔離は無効",
+  "Irreversible operations like force push or deleting outside the project.":
+    "force push やプロジェクト外の削除など、元に戻せない操作。",
   "Only the requests shown here are included. New requests remain pending.":
     "表示されたリクエストのみが対象です。新しいリクエストは保留されます。",
-  "What should the agent do instead? (optional)": "代わりに何をすべきですか？（任意）",
   "Feedback for the agent": "エージェントへのコメント",
   "OS sandbox available": "OSサンドボックスは利用可能",
   "OS sandbox unavailable": "OSサンドボックスは利用不可",
@@ -76,16 +59,17 @@ export default {
   "Works across your computer without routine approvals. Process isolation is off.":
     "通常の許可確認なしでコンピューター全体を操作します。プロセスの隔離は無効です。",
   "Advanced settings differ from these modes.": "詳細設定がこれらのモードと異なります。",
-  "Saved rules and human checkpoints still apply in every mode.":
-    "保存済みルールと人による確認は、すべてのモードで引き続き適用されます。",
+  "Saved rules still apply in every mode.":
+    "保存済みルールはすべてのモードで引き続き適用されます。",
   "Advanced access settings": "アクセスの詳細設定",
   "Action permissions": "操作ごとの許可",
   "Process isolation": "プロセスの隔離",
   "Isolate processes": "プロセスを隔離する",
   "Limit commands to the project and approved folders.":
     "コマンドの実行範囲をプロジェクトと許可済みフォルダーに制限します。",
-  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
-    "隔離が有効な場合、コマンドの実行範囲はプロジェクトとこのチャットで許可されたフォルダーに制限されます。",
+  "Allow network in isolated commands": "隔離されたコマンドでネットワークを許可",
+  "Allow shell commands inside the sandbox to reach websites and external services.":
+    "サンドボックス内のシェルコマンドがウェブサイトや外部サービスへ接続できるようにします。",
   "Allow folder access?": "フォルダーへのアクセスを許可しますか？",
   "Folder access covers the displayed paths and their subfolders.":
     "表示されたパスとそのサブフォルダーがアクセス対象になります。",
@@ -93,9 +77,4 @@ export default {
     "アクセス許可は、このチャットのエージェント間で共有されます。",
   "Repeat this action in this chat": "このチャットで許可",
   "Remember folder access": "フォルダーへのアクセスを記憶",
-  "Access mode: {0}": ["アクセスモード: ", 0],
-  "Could not change access. Try again. {0}": [
-    "アクセスを変更できませんでした。もう一度お試しください。",
-    0,
-  ],
 } as const;

@@ -2,8 +2,8 @@ import { createInterface } from "node:readline";
 
 /** Each reader belongs to one child generation, including already buffered lines. */
 export function watchAgentOutput(child, { current, message, stderr, invalid, exited, failed }) {
-  const stdout = createInterface({ input: child.stdout });
-  const errorOutput = createInterface({ input: child.stderr });
+  const stdout = createInterface({ input: child.stdout, crlfDelay: Infinity });
+  const errorOutput = createInterface({ input: child.stderr, crlfDelay: Infinity });
   const close = () => { stdout.close(); errorOutput.close(); };
   stdout.on("line", (line) => {
     if (!current() || line.trim().length === 0) return;

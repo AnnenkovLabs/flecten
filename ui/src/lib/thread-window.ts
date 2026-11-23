@@ -85,6 +85,14 @@ export class ThreadWindow {
     return index === undefined ? undefined : this.offset(index);
   }
 
+  indexOf(id: string): number | undefined {
+    return this.#indices.get(id);
+  }
+
+  heightOf(id: string): number {
+    return this.#heights.get(id) ?? INITIAL_ROW_HEIGHT;
+  }
+
   indexAt(top: number): number {
     if (this.length === 0) return 0;
     let index = 0;

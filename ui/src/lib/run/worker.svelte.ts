@@ -14,6 +14,7 @@ import type { AgentJob, ApprovalItem, RunAction, WorkerItem } from "../types";
 import { interruptedNotice, interruptedResult, jobNotice } from "./notices";
 import { ThreadView } from "./thread.svelte";
 import { emptyTokenUsage, tokenUsageEvent } from "./token-usage";
+import type { WorkerReasoning } from "./worker-mirrors";
 
 /** Canonical live card state. References and the activity list read the same objects. */
 export class WorkerView {
@@ -24,6 +25,9 @@ export class WorkerView {
   #retryKind = $state<string | null>(null);
   #state: SessionState | null = null;
   #retiredEpochs = new Set<string>();
+  #turnIndex = 0;
+  #turnStartedAt = 0;
+  #currentThought: WorkerReasoning | undefined;
   readonly transcript = new ThreadView();
   retryUntil = $state(0);
   usage = $state(emptyTokenUsage());
@@ -70,6 +74,9 @@ export class WorkerView {
     this.#continuationSettled = false;
     this.#state = null;
     this.#retiredEpochs.clear();
+    this.#turnIndex = 0;
+    this.#turnStartedAt = 0;
+    this.#currentThought = undefined;
     this.stopping = false;
     this.usage = emptyTokenUsage();
     this.jobs = [];
@@ -94,6 +101,7 @@ export class WorkerView {
     if (this.#acceptance?.phase === "running" || this.#acceptance?.phase === "reviewing") {
       this.acceptance({ ...this.#acceptance, phase: "unconfirmed" });
     }
+    this.#finishThought();
     if (this.#current?.status === "running") {
       this.transcript.finishRun(interruptedResult(this.#current.sessionId));
       this.#finish(this.#current, "interrupted");
@@ -117,30 +125,43 @@ export class WorkerView {
       if (event.type === "session.started") {
         this.#state = null;
         this.#retiredEpochs.clear();
+        this.#turnIndex = 0;
+        this.#turnStartedAt = 0;
+        this.#currentThought = undefined;
       }
       this.stopping = false;
       this.#continuationSettled = false;
       this.#status("Thinking");
-      this.transcript.beginRun(
-        event.type === "session.started" && !event.resumed && !event.internal
-          ? (event.prompt ?? null)
-          : null,
-        new Date(envelope.timestamp ?? Date.now()).toISOString(),
-        envelope.timestamp,
-      );
-      const item: WorkerItem = {
-        kind: "worker",
-        id: nextId("worker"),
-        sessionId: envelope.sessionId,
-        status: "running",
-        actions: [],
-        ...(this.#acceptance ? { acceptance: this.#acceptance } : {}),
-      };
-      this.thread.push(item);
-      // Read the reactive object owned by ThreadView, not the pre-proxy local value.
-      this.#current = this.thread.items.find(
-        (entry): entry is WorkerItem => entry.kind === "worker" && entry.id === item.id,
-      );
+      if (event.type === "session.started" && event.continuation && this.#current) {
+        this.transcript.continueRun(envelope.timestamp);
+        this.#current.status = "running";
+        if (this.#acceptance) this.#current.acceptance = this.#acceptance;
+      } else {
+        this.transcript.beginRun(
+          event.type === "session.started" &&
+            !event.resumed &&
+            !event.internal &&
+            !event.continuation
+            ? (event.prompt ?? null)
+            : null,
+          new Date(envelope.timestamp ?? Date.now()).toISOString(),
+          envelope.timestamp,
+        );
+        const item: WorkerItem = {
+          kind: "worker",
+          id: nextId("worker"),
+          sessionId: envelope.sessionId,
+          status: "running",
+          actions: [],
+          thoughts: [],
+          ...(this.#acceptance ? { acceptance: this.#acceptance } : {}),
+        };
+        this.thread.push(item);
+        // Read the reactive object owned by ThreadView, not the pre-proxy local value.
+        this.#current = this.thread.items.find(
+          (entry): entry is WorkerItem => entry.kind === "worker" && entry.id === item.id,
+        );
+      }
     }
     const item = this.#current;
     if (!item) return;
@@ -202,15 +223,20 @@ export class WorkerView {
         return;
       }
       case "turn.started":
+        this.#finishThought(envelope.timestamp);
+        this.#turnIndex = event.turn;
+        this.#turnStartedAt = envelope.timestamp ?? Date.now();
         this.transcript.turnStarted(event.turn, envelope.timestamp);
         this.#status("Thinking");
         return;
       case "reasoning.delta":
         this.transcript.reasoningDelta(event.text, envelope.timestamp);
+        this.#reasoningDelta(item, event.text, envelope.timestamp);
         this.#status("Thinking");
         return;
       case "message.started":
       case "message.delta":
+        this.#stopThought(envelope.timestamp);
         this.transcript.appendText(event.type === "message.delta" ? event.text : "");
         this.#status("Writing");
         return;
@@ -218,10 +244,12 @@ export class WorkerView {
         this.transcript.messageReset();
         this.#status("Thinking");
         return;
-      case "message.finished":
+      case "message.finished": {
+        const reasoning = event.display?.reasoning ?? event.reasoning;
+        this.#finishThought(envelope.timestamp, reasoning, envelope.reasoningStartedAt, item);
         this.transcript.finishMessage(
           event.display?.text ?? event.text,
-          event.display?.reasoning ?? event.reasoning,
+          reasoning,
           event.toolCalls,
           event.display?.summary ?? event.summary,
           envelope.timestamp,
@@ -229,7 +257,9 @@ export class WorkerView {
         );
         this.#status(event.toolCalls.length > 0 ? "Working" : "Writing");
         return;
+      }
       case "tool_call.progress":
+        this.#stopThought(envelope.timestamp);
         this.transcript.progressToolCall(event.index, event.name, event.delta);
         this.#status("Preparing a call");
         return;
@@ -239,6 +269,7 @@ export class WorkerView {
         if (event.type === "job.finished") this.transcript.push(jobNotice(event.job));
         return;
       case "tool.started":
+        this.#stopThought(envelope.timestamp);
         this.#set(item, this.transcript.startTool(event.call));
         this.#status("Working");
         return;
@@ -363,7 +394,72 @@ export class WorkerView {
     this.transcript.push(approval);
   }
 
+  #appendThought(item: WorkerItem, thought: WorkerReasoning): WorkerReasoning {
+    if (!item.thoughts) item.thoughts = [];
+    item.thoughts.push(thought);
+    const id = nextId("worker-reasoning");
+    this.thread.push({ kind: "worker-reasoning", id, reference: thought.id });
+    return item.thoughts[item.thoughts.length - 1] ?? thought;
+  }
+
+  #reasoningDelta(item: WorkerItem, text: string, timestamp?: number): void {
+    if (!text) return;
+    if (!this.#currentThought) {
+      const thought = $state<WorkerReasoning>({
+        id: nextId("worker-thought"),
+        turn: this.#turnIndex || 1,
+        text,
+        streaming: true,
+        startedAt: timestamp ?? Date.now(),
+      });
+      this.#currentThought = this.#appendThought(item, thought);
+      return;
+    }
+    this.#currentThought.text += text;
+    this.#currentThought.streaming = true;
+  }
+
+  #stopThought(timestamp?: number): void {
+    const thought = this.#currentThought;
+    if (!thought?.streaming) return;
+    thought.streaming = false;
+    if (thought.startedAt !== undefined && thought.reasoningMs === undefined)
+      thought.reasoningMs = Math.max(0, (timestamp ?? Date.now()) - thought.startedAt);
+  }
+
+  #finishThought(
+    timestamp?: number,
+    reasoning?: string,
+    reasoningStartedAt?: number,
+    item?: WorkerItem,
+  ): void {
+    const thought = this.#currentThought;
+    const started = reasoningStartedAt ?? thought?.startedAt ?? this.#turnStartedAt;
+    const ms =
+      (!this.thread.restoring || timestamp !== undefined) && started > 0
+        ? Math.max(0, (timestamp ?? Date.now()) - started)
+        : undefined;
+    if (thought) {
+      if (reasoning) thought.text = reasoning;
+      thought.streaming = false;
+      if (ms !== undefined) thought.reasoningMs = ms;
+      this.#currentThought = undefined;
+      return;
+    }
+    if (!item || !reasoning) return;
+    const created = $state<WorkerReasoning>({
+      id: nextId("worker-thought"),
+      turn: this.#turnIndex || 1,
+      text: reasoning,
+      streaming: false,
+      ...(started > 0 ? { startedAt: started } : {}),
+      ...(ms === undefined ? {} : { reasoningMs: ms }),
+    });
+    this.#appendThought(item, created);
+  }
+
   #finish(item: WorkerItem, status: WorkerItem["status"]): void {
+    this.#finishThought();
     this.stopping = false;
     const label: Record<WorkerItem["status"], MessageKey> = {
       running: "Working",

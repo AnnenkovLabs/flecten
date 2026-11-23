@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, rmSync } from "node:fs";
-import { link, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
 import { z } from "zod";
 import { migrateDataDirectory } from "../config/data-directory";
 import { ProjectLockedError } from "../errors";
 import { projectPaths } from "../store/paths";
+import { renameWithRetry } from "../util/atomic";
 import { isObject } from "../util/json";
 
 /** How long a starting core waits for the previous core of the project to let go, in ms. */
@@ -13,7 +14,8 @@ export const LOCK_WAIT_MS = 5_000;
 const POLL_MS = 100;
 
 /** The project folder takes no lock file: the core runs unlocked rather than not at all. */
-const UNLOCKABLE = new Set(["EACCES", "EPERM", "EROFS", "ENOTSUP", "ENOSYS"]);
+const UNLOCKABLE = new Set(["EACCES", "EPERM", "EROFS", "ENOTSUP", "ENOSYS", "EINVAL", "EXDEV"]);
+const NO_HARDLINK = new Set(["EINVAL", "EXDEV", "ENOTSUP", "ENOSYS", "EPERM"]);
 
 const HolderSchema = z.object({
   pid: z.number().int().positive(),
@@ -62,15 +64,26 @@ function holds(holder: Holder | null): holder is Holder {
   return holder !== null && holder.pid !== process.pid && alive(holder.pid);
 }
 
-/** Publishes a whole lock file in one step: a hard link fails when the name is taken. */
+/** Publishes a whole lock file in one step; falls back to exclusive create on FAT32/exFAT/SMB. */
 async function create(path: string, self: Holder): Promise<boolean> {
+  const payload = JSON.stringify(self);
   const temp = `${path}.${self.token}.tmp`;
-  await writeFile(temp, JSON.stringify(self), { mode: 0o600 });
+  await writeFile(temp, payload, { mode: 0o600 });
   try {
     await link(temp, path);
     return true;
   } catch (error) {
-    if (codeOf(error) === "EEXIST") return false;
+    const code = codeOf(error);
+    if (code === "EEXIST") return false;
+    if (process.platform === "win32" && NO_HARDLINK.has(code)) {
+      try {
+        await writeFile(path, payload, { mode: 0o600, flag: "wx" });
+        return true;
+      } catch (fallbackError) {
+        if (codeOf(fallbackError) === "EEXIST") return false;
+        throw fallbackError;
+      }
+    }
     throw error;
   } finally {
     await rm(temp, { force: true });
@@ -84,14 +97,16 @@ async function create(path: string, self: Holder): Promise<boolean> {
 async function takeOver(path: string, stale: Holder | null): Promise<void> {
   const aside = `${path}.${randomUUID()}.stale`;
   try {
-    await rename(path, aside);
+    await renameWithRetry(path, aside);
   } catch (error) {
     if (codeOf(error) === "ENOENT") return;
     throw error;
   }
   const moved = parseHolder(await readFile(aside, "utf8").catch(() => ""));
   if (moved !== null && moved.token !== stale?.token) {
-    await link(aside, path).catch(() => undefined);
+    await link(aside, path)
+      .catch(() => writeFile(path, JSON.stringify(moved), { mode: 0o600, flag: "wx" }))
+      .catch(() => undefined);
   }
   await rm(aside, { force: true });
 }

@@ -1,5 +1,6 @@
 import { ACCESS_MODES } from "../../shared/access-mode";
 import { HooksConfigSchema } from "../../shared/hooks";
+import { defaultTerminalEnvAllowlist } from "../terminal/settings";
 import {
   CONFIG_SCHEMA_VERSION,
   type HarnessConfig,
@@ -115,7 +116,7 @@ export function defaultConfig(): HarnessConfig {
       failureThreshold: 3,
     },
     mcp: { servers: {} },
-    skills: { sources: [...SKILL_SOURCES] },
+    skills: { sources: [...SKILL_SOURCES], builtin: true },
     terminal: {
       scrollback: 1000,
       commandTimeoutMs: 120_000,
@@ -150,7 +151,7 @@ export function defaultConfig(): HarnessConfig {
       ...ACCESS_MODES.agent.sandbox,
       readDenyPrefixes: [],
       writeDenyPrefixes: [],
-      envAllowlist: ["PATH", "HOME", "USER", "SHELL", "TERM", "LANG", "LC_ALL", "TMPDIR", "PWD"],
+      envAllowlist: defaultTerminalEnvAllowlist(),
     },
     ui: { sendShortcut: "enter", followUpBehavior: "queue" },
     maxOutputTokens: 0,

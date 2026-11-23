@@ -13,7 +13,6 @@ export default {
   "Allow this action?": "¿Permitir esta acción?",
   "More options": "Más opciones",
   "Add a note (optional)": "Añadir nota (opcional)",
-  "Only this action in this folder.": "Solo esta acción en esta carpeta.",
   "Tasks in progress: {0}. Permissions apply to the next action; other settings apply to the next run.":
     [
       "Tareas en curso: ",
@@ -21,9 +20,6 @@ export default {
       ". Los permisos se aplican a la siguiente acción; los demás ajustes, a la siguiente ejecución.",
     ],
   Chat: "Chat",
-  "Always ask a person": "Requerir aprobación manual",
-  "These checkpoints cannot be bypassed by saved approvals or automatic review.":
-    "Las reglas guardadas y el modo Auto nunca omiten estos controles.",
   "Human approval required every time": "Se requiere aprobación humana cada vez",
   "Allow bounded built-in actions. Review eligible calls separately; ask when uncertain.":
     "Permite acciones seguras en el proyecto; revisa comandos ambiguos y pregunta si hay dudas.",
@@ -36,36 +32,22 @@ export default {
   "Affected paths": "Rutas afectadas",
   "Applying decision…": "Aplicando decisión…",
   "Expired: waiting for confirmation": "Caducó: esperando confirmación",
-  "Save this exact action for this project?": "¿Guardar esta acción exacta para este proyecto?",
   "Only identical arguments, paths and working directory will match. You can revoke this rule in Access settings.":
     "Deben coincidir todos los argumentos, rutas y el directorio de trabajo. Puedes revocar la regla en Acceso.",
   "For this chat": "Para este chat",
   "Save exact rule": "Guardar regla exacta",
   "Remember…": "Recordar…",
-  "Allow bounded built-in actions. Ask before arbitrary code or external tools.":
-    "Permite acciones integradas seguras; pregunta antes de comandos o herramientas externas.",
-  "Allows ordinary actions. Destructive rules and sandbox limits still apply.":
-    "Permite acciones habituales. Siguen vigentes las reglas destructivas y los límites del entorno aislado.",
   "Saved rules": "Reglas guardadas",
   "Rules are saved globally. Removing a rule takes effect when you save, including during an active run.":
     "Las reglas se guardan globalmente. Al guardar, las reglas eliminadas dejan de aplicarse, incluso durante una ejecución.",
-  "No saved rules.": "No hay reglas guardadas.",
   "All matching actions": "Todas las acciones coincidentes",
   "Exact arguments and resources": "Argumentos y recursos exactos",
-  "Configured scope": "Alcance configurado",
   "Remove rule": "Eliminar regla",
   "Destructive actions": "Acciones irreversibles",
-  "A separate checkpoint for irreversible operations, even when ordinary actions are allowed.":
-    "Confirmación independiente para operaciones irreversibles, aunque las acciones habituales estén permitidas.",
-  "Execution boundary": "Límite del sandbox",
-  "Sandbox limits apply independently of permissions. External paths stay blocked while workspace isolation is enabled.":
-    "El sandbox del sistema limita los comandos al proyecto y carpetas aprobadas, sin importar los permisos.",
-  "Workspace isolation enabled": "Aislamiento de la carpeta activado",
-  "Workspace isolation disabled": "Aislamiento de la carpeta desactivado",
+  "Irreversible operations like force push or deleting outside the project.":
+    "Operaciones irreversibles como force push o borrar archivos fuera del proyecto.",
   "Only the requests shown here are included. New requests remain pending.":
     "Solo se incluyen las solicitudes mostradas. Las nuevas quedarán pendientes.",
-  "What should the agent do instead? (optional)":
-    "¿Qué debería hacer el agente en su lugar? (opcional)",
   "Feedback for the agent": "Comentario para el agente",
   "OS sandbox available": "Entorno aislado del SO disponible",
   "OS sandbox unavailable": "Entorno aislado del SO no disponible",
@@ -81,16 +63,16 @@ export default {
   "Works across your computer without routine approvals. Process isolation is off.":
     "Trabaja en todo el equipo sin pedir permisos de rutina. El aislamiento de procesos está desactivado.",
   "Advanced settings differ from these modes.": "La configuración avanzada difiere de estos modos.",
-  "Saved rules and human checkpoints still apply in every mode.":
-    "Las reglas guardadas y las confirmaciones humanas se siguen aplicando en todos los modos.",
+  "Saved rules still apply in every mode.": "Las reglas guardadas se aplican en todos los modos.",
   "Advanced access settings": "Configuración avanzada de acceso",
   "Action permissions": "Permisos por acción",
   "Process isolation": "Aislamiento de procesos",
   "Isolate processes": "Aislar procesos",
   "Limit commands to the project and approved folders.":
     "Limitar los comandos al proyecto y las carpetas autorizadas.",
-  "Commands stay inside the project and folders approved for this chat while isolation is enabled.":
-    "Con el aislamiento activado, los comandos se limitan al proyecto y las carpetas autorizadas para este chat.",
+  "Allow network in isolated commands": "Permitir red en comandos aislados",
+  "Allow shell commands inside the sandbox to reach websites and external services.":
+    "Permitir que los comandos dentro del entorno aislado accedan a sitios web y servicios externos.",
   "Allow folder access?": "¿Permitir acceso a la carpeta?",
   "Folder access covers the displayed paths and their subfolders.":
     "El acceso abarca las rutas indicadas y sus subcarpetas.",
@@ -98,9 +80,4 @@ export default {
     "El acceso se comparte con los agentes de este chat.",
   "Repeat this action in this chat": "Permitir en este chat",
   "Remember folder access": "Recordar acceso a la carpeta",
-  "Access mode: {0}": ["Modo de acceso: ", 0],
-  "Could not change access. Try again. {0}": [
-    "No se pudo cambiar el acceso. Vuelve a intentarlo. ",
-    0,
-  ],
 } as const;

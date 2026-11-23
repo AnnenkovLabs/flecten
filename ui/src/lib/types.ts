@@ -74,6 +74,7 @@ export interface RunTurn {
   index: number;
   reasoning: string;
   reasoningStreaming?: boolean;
+  reasoningStartedAt?: number;
   reasoningMs?: number;
   actions: RunAction[];
 }
@@ -135,12 +136,14 @@ export interface WorkerItem {
   sessionId: string;
   status: "running" | "done" | "stopped" | "error" | "interrupted";
   actions: RunAction[];
+  thoughts?: import("./run/worker-mirrors").WorkerReasoning[];
   acceptance?: import("../../../shared/worker-assignment").WorkerAcceptance;
 }
 
 export type ThreadItem =
   | WorkerItem
   | { kind: "worker-tool"; id: string; reference: string }
+  | { kind: "worker-reasoning"; id: string; reference: string }
   | UserMessageItem
   | ApprovalItem
   | NoticeItem
@@ -387,6 +390,7 @@ export interface HarnessSettings {
   };
   skills?: {
     sources: import("./settings/skill-sources").SkillSourceId[];
+    builtin?: boolean;
     trust?: Record<string, "trusted" | "untrusted">;
   };
   voice?: import("./voice-settings").VoiceSettingsConfig;

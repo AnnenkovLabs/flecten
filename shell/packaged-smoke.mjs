@@ -57,10 +57,16 @@ export async function probeRenderer() {
 export function bundledAgent(command, resourcesPath, packaged, platform = process.platform) {
   if (!packaged) throw new Error("packaged smoke requires an installed package");
   const expected = join(resourcesPath, platform === "win32" ? "flecten-agent.exe" : "flecten-agent");
-  if (realpathSync(command) !== realpathSync(expected)) {
+  const actualPath = realpathSync(command);
+  const expectedPath = realpathSync(expected);
+  const same =
+    platform === "win32"
+      ? actualPath.toLowerCase() === expectedPath.toLowerCase()
+      : actualPath === expectedPath;
+  if (!same) {
     throw new Error("packaged smoke must run the bundled agent executable");
   }
-  return { command: realpathSync(command), expected: realpathSync(expected), packaged: true };
+  return { command: actualPath, expected: expectedPath, packaged: true };
 }
 
 export function smokeRenderer(win) {

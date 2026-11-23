@@ -7,9 +7,7 @@ export default {
   Deny: "拒否",
   "Always block.": "常にブロックします。",
   Auto: "自動",
-  "Allow safe actions and ask about the rest.": "安全な操作は実行し、それ以外は確認します。",
   Ask: "確認",
-  "Ask before every call.": "呼び出すたびに確認します。",
   Allow: "許可",
   "Allow without asking.": "確認せずに実行します。",
   Read: "読み取り",
@@ -19,39 +17,20 @@ export default {
   "Create, edit, and delete files.": "ファイルの作成、変更、削除。",
   Terminal: "ターミナル",
   "Shell commands and child processes.": "シェルコマンドと子プロセス。",
-  "Commands can change files outside the project and send data out.":
-    "コマンドがプロジェクト外のファイルを変更したり、データを外部に送信したりする可能性があります。",
   Network: "ネットワーク",
   "External addresses, downloads, and web requests.":
     "外部アドレスへのアクセス、ダウンロード、ウェブリクエスト。",
-  "Requests go to an external server. The address and request body leave your machine.":
-    "リクエストは外部サーバーに送信されます。アドレスとリクエスト本文がこの端末の外に送信されます。",
   "Tools from connected MCP servers.": "接続中のMCPサーバーのツール。",
   Skills: "スキル",
   "Activate skills and read their resources.": "スキルの有効化とリソースの読み取り。",
   "External paths": "外部パス",
   "Files outside the working folder.": "作業フォルダー外のファイル。",
-  "Paths may lead outside the working folder, including to system files and secrets.":
-    "パスが作業フォルダーの外を指し、システムファイルや機密情報にアクセスする可能性があります。",
   "Read-only": "読み取り専用",
-  "Reads the project and skills. Writing, shell commands, and external paths are blocked. Network and MCP access require approval.":
-    "プロジェクトとスキルを読み取れます。書き込み、シェル、外部パスへのアクセスは禁止し、ネットワークとMCPは確認します。",
-  "Working folder": "作業フォルダー",
-  "Writes within the project. Shell commands, network, MCP, and external paths require approval.":
-    "プロジェクト内に書き込めます。シェル、ネットワーク、MCP、外部パスへのアクセスは確認します。",
   "Full access": "フルアクセス",
-  "Allows all actions without asking. Use only in a trusted project.":
-    "すべての操作を確認せずに許可します。信頼できるプロジェクトでのみ使用してください。",
-  "These settings don't match any preset. Check each row before saving.":
-    "カスタムルールの組み合わせです。",
-  "just now": "たった今",
   "{0} sec": [0, "秒"],
   "{0} min": [0, "分"],
   "{0} hr": [0, "時間"],
   "{0} d": [0, "日"],
-  "Policies must be an object.": "権限ポリシーの形式が無効です。",
-  "Unknown action: {0}.": ["不明な操作: ", 0, "。"],
-  "Unknown policy for action {0}: {1}.": ["操作「", 0, "」のポリシーが不明です: ", 1, "。"],
   "Opening a browser is available in the desktop app":
     "ブラウザリンクはデスクトップアプリでのみ開けます",
   "the core returned no file": "ファイルの内容を取得できません",

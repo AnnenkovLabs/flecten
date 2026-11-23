@@ -152,7 +152,7 @@ export async function prepareSshCapability(
       },
       arguments: [
         "-F",
-        "/dev/null",
+        process.platform === "win32" ? "NUL" : "/dev/null",
         "-o",
         "ForwardAgent=no",
         "-o",
@@ -160,7 +160,7 @@ export async function prepareSshCapability(
         "-o",
         `UserKnownHostsFile=${knownHosts}`,
         "-o",
-        "GlobalKnownHostsFile=/dev/null",
+        `GlobalKnownHostsFile=${process.platform === "win32" ? "none" : "/dev/null"}`,
         "-o",
         "IdentityFile=none",
       ],

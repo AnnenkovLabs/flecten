@@ -1,3 +1,23 @@
+.prompt-motion-svg {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.prompt-stage {
+  position: relative;
+}
+.prompt-stage.is-rolling {
+  margin-block: -10px;
+  padding-block: 10px;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, transparent 0px, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0px, #000 10px, #000 calc(100% - 10px), transparent 100%);
+}
+.prompt-stage.is-rolling .prompt-editor {
+  caret-color: transparent;
+}
 .prompt-editor {
   position: relative;
   width: 100%;
@@ -8,7 +28,7 @@
   outline: none;
   color: var(--text);
   caret-color: var(--primary);
-  font-size: 16px;
+  font-size: calc(16px * var(--text-scale, 1));
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -40,3 +60,13 @@
 .prompt-mention-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prompt-mention.ProseMirror-selectednode { outline: 2px solid var(--primary); outline-offset: 1px; }
 .composer-wrap.is-hero .prompt-editor { min-height: 72px; max-height: 240px; }
+.prompt-stage > .prompt-roll-ghost {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}

@@ -70,6 +70,7 @@ export class SessionTwinDriver {
       event.type === "session.started" &&
       !event.internal &&
       !event.resumed &&
+      !event.continuation &&
       event.role !== "worker" &&
       event.actor !== "twin"
     ) {
@@ -107,6 +108,7 @@ export class SessionTwinDriver {
       event.type === "session.started" &&
       !event.internal &&
       !event.resumed &&
+      !event.continuation &&
       event.role !== "worker" &&
       event.actor !== "twin"
     ) {

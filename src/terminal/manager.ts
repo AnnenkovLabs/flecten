@@ -15,7 +15,9 @@ export type TerminalManagerEvent =
       notify: boolean;
       /** What the finalizer of `startJob` returned, as the job's checkpoint. */
       extra?: Record<string, unknown>;
-    };
+    }
+  | { type: "session.created"; session: TerminalSession; title?: string }
+  | { type: "session.closed"; id: string };
 
 /** Runs after the job exits and before `job.completed` goes out. */
 export type JobFinalizer = (
@@ -57,6 +59,11 @@ export class TerminalManager {
     const error = session.start(this.applySettings(options));
     if (error !== null) throw error;
     this.sessions.set(id, session);
+    this.emit({
+      type: "session.created",
+      session,
+      ...(options.title ? { title: options.title } : {}),
+    });
     return session;
   }
 
@@ -127,6 +134,7 @@ export class TerminalManager {
     if (session === undefined) return;
     this.sessions.delete(id);
     await session.dispose();
+    this.emit({ type: "session.closed", id });
   }
 
   list(): TerminalSession[] {
@@ -142,6 +150,7 @@ export class TerminalManager {
       ...sessions.map((session) => session.dispose()),
       ...jobs.map((job) => (job.persistent ? Promise.resolve(job.detach()) : job.stop())),
     ]);
+    for (const session of sessions) this.emit({ type: "session.closed", id: session.id });
   }
 
   private applySettings(

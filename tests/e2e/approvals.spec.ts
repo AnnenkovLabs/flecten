@@ -190,35 +190,12 @@ test("mandatory checkpoint and queued denial preserve human feedback", async () 
   const h = await launchApprovalApp({
     models,
     locale: "en",
+    permissionRules: [{ action: "shell", policy: "ask", checkpoint: true }],
     firstCalls: [{ name: "bash", arguments: { command: "printf checkpoint-test" } }],
   });
   try {
     const { page } = h;
-    await page.getByRole("button", { name: "Settings", exact: true }).dispatchEvent("click");
     const dialog = page.locator("dialog.settings-dialog");
-    await dialog
-      .locator(".rail")
-      .getByRole("button", { name: "Access", exact: true })
-      .dispatchEvent("click");
-    await dialog.getByText("Advanced access settings", { exact: true }).dispatchEvent("click");
-    await dialog
-      .getByRole("group", { name: "Require manual approval", exact: true })
-      .getByRole("checkbox", { name: "Terminal", exact: true })
-      .dispatchEvent("click");
-    await dialog.getByRole("button", { name: "Save", exact: true }).dispatchEvent("click");
-    await expect
-      .poll(async () =>
-        JSON.parse(
-          await readFile(join(h.cwd, "flecten.config.json"), "utf8"),
-        ).permissions.rules.some(
-          (rule: { action: string; checkpoint?: boolean }) =>
-            rule.action === "shell" && rule.checkpoint,
-        ),
-      )
-      .toBe(true);
-    await dialog
-      .getByRole("button", { name: "Close settings", exact: true })
-      .dispatchEvent("click");
     await page.locator("#prompt").fill("Run the checkpoint command.");
     await page.getByRole("button", { name: "Send", exact: true }).dispatchEvent("click");
     const card = page.locator("section.approval").last();

@@ -115,7 +115,8 @@ test("tools explain their purpose and subagents show tasks and readable reports"
       },
     ]);
     await expect(run.locator(".delegation")).toContainText("Причина найдена");
-    await expect(subagent).toContainText("Готово");
+    await expect(subagent).not.toContainText("Выполняется");
+    await expect(subagent).not.toContainText("Готово");
     for (const [width, height] of [
       [1480, 940],
       [1180, 640],

@@ -2,6 +2,7 @@
   import type { SummaryInteraction } from "../../../shared/summary-interaction";
   import { t } from "../lib/i18n.svelte";
   import type { PickedFile } from "../lib/composer/attachments";
+  import { userPrompts } from "../lib/composer/prompt-history";
   import type { MentionItem, QueuedMessage, SendMode, SkillCommand } from "../lib/composer/types";
   import type { ContextReference } from "../lib/composer/context-types";
   import type { ComposerEdit } from "../lib/message-types";
@@ -44,6 +45,7 @@
     items: ThreadItem[];
     live: boolean;
     liveLabel: string;
+    retryUntil?: number | undefined;
     pendingCalls: PendingToolCall[];
     busy: boolean;
     isTalker: boolean;
@@ -95,6 +97,7 @@
     items,
     live,
     liveLabel,
+    retryUntil,
     pendingCalls,
     busy,
     isTalker,
@@ -162,6 +165,7 @@
     {queued}
     {files}
     {contexts}
+    historyPrompts={userPrompts(items)}
     {onRequestFiles}
     {onCommand}
     {onCompact}
@@ -204,6 +208,7 @@
       {items}
       {live}
       {liveLabel}
+      {retryUntil}
       {pendingCalls}
       {busy}
       {historyDisabled}

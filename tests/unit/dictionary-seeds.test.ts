@@ -12,7 +12,7 @@ test("every published dictionary category is bundled and all imported archive te
   );
   const published = categories.flatMap((category) => category.entries);
   const bundled = new PublicDictionary("/unused").snapshot().entries;
-  expect(published).toHaveLength(114);
+  expect(published).toHaveLength(118);
   expect(new Set(published.map((entry) => entry.id)).size).toBe(published.length);
   expect(bundled.filter((entry) => entry.id.startsWith("mera-"))).toHaveLength(111);
   expect(

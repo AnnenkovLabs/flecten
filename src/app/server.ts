@@ -109,6 +109,7 @@ async function main(): Promise<void> {
 
   const ready = async (): Promise<void> => write(await status());
   app.session.subscribeStamped((event) => write(event));
+  app.ideTerminal.subscribe((event) => write({ type: "terminal.event", event }));
   const handlers = createHandlers(
     app,
     (message, context) => write({ type: "error", code: "run_failed", message, ...context }),

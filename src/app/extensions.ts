@@ -22,6 +22,25 @@ export interface AppExtensions {
   dispose(): Promise<void>;
 }
 
+export function discoverAppSkills(
+  cwd: string,
+  config: HarnessConfig,
+  projectRoot?: string | null,
+): Promise<SkillDiscovery> {
+  return discoverSkills(cwd, {
+    ...(projectRoot === undefined ? {} : { projectRoot }),
+    sources: config.skills?.sources,
+    builtin: config.skills?.builtin ?? true,
+    ...(config.skills?.trust ? { trust: config.skills.trust } : {}),
+  });
+}
+
+export function activeSkills(discovery: SkillDiscovery, trusted: boolean): SkillDiscovery {
+  return trusted
+    ? discovery
+    : { ...discovery, skills: discovery.skills.filter((skill) => skill.source === "builtin") };
+}
+
 export async function createExtensions(
   cwd: string,
   config: HarnessConfig,
@@ -30,11 +49,7 @@ export async function createExtensions(
   projectRoot?: string | null,
 ): Promise<AppExtensions> {
   const [skills, mcp] = await Promise.all([
-    discoverSkills(cwd, {
-      ...(projectRoot === undefined ? {} : { projectRoot }),
-      sources: config.skills?.sources,
-      ...(config.skills?.trust ? { trust: config.skills.trust } : {}),
-    }),
+    discoverAppSkills(cwd, config, projectRoot),
     connectMcpServers(config.mcp.servers, cwd, options),
   ]);
   return withSkills(

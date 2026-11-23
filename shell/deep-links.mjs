@@ -11,7 +11,8 @@ export function parseSessionLink(value) {
     if (!SCHEMES.has(url.protocol) || url.hostname !== "session" || url.username || url.password || url.port || url.hash) return null;
     if ([...url.searchParams.keys()].some((key) => key !== "project")) return null;
     if (url.searchParams.getAll("project").length !== 1) return null;
-    const id = decodeURIComponent(url.pathname.slice(1));
+    const rawId = decodeURIComponent(url.pathname.slice(1));
+    const id = rawId.endsWith("/") ? rawId.slice(0, -1) : rawId;
     if (!id || id.length > 128 || [...id].some((char) => !"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-".includes(char))) return null;
     const project = url.searchParams.get("project");
     if (!project || !isAbsolute(project) || project.includes("\0")) return null;

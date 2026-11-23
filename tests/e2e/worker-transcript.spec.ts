@@ -65,9 +65,36 @@ test("Worker uses the agent transcript for thinking, writing and tools without a
         text: "I will compare the current implementation with the project guidance before making changes.",
       },
     ]);
+    const conversation = page.locator("#pane-thread");
+    await expect(conversation.locator(".reasoning-mirror .reasoning-body")).toContainText(
+      "compare the current implementation",
+    );
+    await expect(conversation.locator(".live-run")).toContainText("Thinking");
+    for (const [width, height] of [
+      [1480, 940],
+      [1180, 640],
+    ] as const) {
+      await app.evaluate(
+        ({ BrowserWindow }, size) => {
+          BrowserWindow.getAllWindows()[0]?.setContentSize(size.width, size.height);
+        },
+        { width, height },
+      );
+      await page.setViewportSize({ width, height });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await hiddenScreenshot(
+        h,
+        test.info().outputPath(`conversation-worker-thinking-${width}.png`),
+      );
+    }
     await page.getByRole("tab", { name: /^Worker activity/ }).click();
     const worker = page.locator("#pane-worker");
     await expect(worker.locator(".live-run")).toContainText("Thinking");
+    await expect(worker.locator(".run-thinking-preview")).toContainText(
+      "compare the current implementation",
+    );
     await expect(worker.locator(".thread")).toHaveCount(1);
     await expect(worker.locator('#prompt, [contenteditable="true"]')).toHaveCount(0);
     await expect(page.locator("#prompt")).toHaveCount(1);

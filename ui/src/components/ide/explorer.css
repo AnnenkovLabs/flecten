@@ -1,0 +1,42 @@
+/* File explorer tree, indent guides, Git badges, and context menu. */
+.explorer { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--sidebar); font-size: 13px; }
+.explorer button { color: var(--muted); }
+.explorer .project-head { display: flex; align-items: center; height: 34px; flex: none; padding-inline: 12px 6px; gap: 4px; border-bottom: 1px solid var(--line); }
+.explorer .project-head strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-2); }
+.explorer .project-head > div { display: flex; flex: none; gap: 1px; }
+.explorer .project-head button { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 4px; }
+.explorer .filter { display: flex; align-items: center; gap: 6px; margin: 8px 8px 6px; padding-inline: 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--muted); }
+.explorer .filter:focus-within { border-color: var(--primary); }
+.explorer .filter input { width: 100%; min-width: 0; height: 26px; border: 0; background: none; font-size: 12px; color: var(--text); outline: none; }
+.explorer .tree { overflow: auto; flex: 1; min-height: 0; padding-bottom: 12px; }
+.explorer .tree-row { display: flex; align-items: center; min-height: 25px; position: relative; }
+.explorer .indent-guides { position: absolute; inset: 0; pointer-events: none; }
+.explorer .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(240, 239, 237, 0.06); transition: background-color 140ms var(--ease); }
+.explorer .tree:hover .guide { background: rgba(240, 239, 237, 0.12); }
+.explorer .entry { display: flex; gap: 6px; align-items: center; min-width: 0; flex: 1; min-height: 25px; padding-inline-end: 6px; color: var(--text-2); text-align: start; font-size: 12.5px; }
+.explorer .file-tint { display: inline-flex; align-items: center; flex: none; }
+.explorer .node-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.explorer .file-indent { width: 12px; flex: none; }
+.explorer .git-badge { flex: none; padding-inline: 4px; font-size: 11px; font-weight: 600; font-family: var(--mono); }
+.explorer .tree-row.git-modified .node-name, .explorer .tree-row.git-modified .git-badge { color: var(--warning); }
+.explorer .tree-row.git-added .node-name, .explorer .tree-row.git-added .git-badge { color: var(--add); }
+.explorer .tree-row.git-deleted .node-name, .explorer .tree-row.git-deleted .git-badge { color: var(--del); text-decoration: line-through; }
+.explorer .row-actions { width: 24px; height: 25px; flex: none; opacity: 0; }
+.explorer .tree-row:hover .row-actions, .explorer .tree-row:focus-within .row-actions { opacity: 1; }
+.explorer .tree-row:hover, .explorer .project-head button:hover { background: var(--surface); color: var(--text); }
+.explorer .tree-row.active { background: var(--raised); box-shadow: inset 2px 0 var(--primary); }
+.explorer .tree-row.active .entry { color: var(--text); }
+.explorer p { padding: 12px; color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.explorer .retry { margin-inline: 12px; text-decoration: underline; }
+.explorer .file-limit { flex: none; padding-bottom: var(--space-2); }
+.explorer .file-limit p { padding-block: var(--space-2); }
+.explorer .file-limit button { min-height: 30px; text-align: start; font-size: 12px; }
+.file-menu { position: fixed; margin: 0; padding: 4px; min-width: 210px; max-width: calc(100vw - 16px); background: var(--raised); color: var(--text-2); border: 1px solid var(--line-strong); border-radius: 6px; box-shadow: 0 8px 24px #0005; }
+.file-menu button { display: flex; gap: 8px; align-items: center; width: 100%; min-height: 30px; padding: 4px 8px; border-radius: 3px; font-size: 12px; color: var(--text-2); }
+.file-menu button:hover { background: var(--raised-hover); }
+.file-menu kbd { margin-inline-start: auto; font-size: 11px; color: var(--muted); }
+.file-menu .danger { color: var(--error); }
+@media (pointer: coarse) {
+  .explorer .entry, .explorer .row-actions, .explorer .project-head button, .explorer .file-limit button { min-height: 44px; }
+  .explorer .row-actions { opacity: 1; }
+}

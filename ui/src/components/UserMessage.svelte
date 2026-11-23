@@ -96,7 +96,7 @@
     position: relative;
     padding: 2px 0 2px 14px;
     color: var(--text-body);
-    font-size: 16px;
+    font-size: calc(16px * var(--text-scale, 1));
     line-height: 1.6;
     white-space: pre-wrap;
     overflow-wrap: anywhere;

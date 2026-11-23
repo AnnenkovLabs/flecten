@@ -87,7 +87,7 @@
 
 <style>
   .viewer {
-    --line: 19px;
+    --line: calc(var(--code-font-size, 13px) * 1.46);
     display: none;
     width: min(980px, calc(100vw - 64px));
     height: min(760px, calc(100vh - 64px));
@@ -219,7 +219,7 @@
     margin: 0;
     padding: 12px 0;
     font-family: var(--mono);
-    font-size: 12.5px;
+    font-size: calc(var(--code-font-size, 13px) - 0.5px);
     line-height: var(--line);
     tab-size: 2;
   }

@@ -204,6 +204,11 @@
   color: var(--success);
 }
 
+.st-badge--error {
+  background: color-mix(in srgb, var(--error) 14%, transparent);
+  color: var(--error);
+}
+
 .st-switch {
   position: relative;
   display: flex;

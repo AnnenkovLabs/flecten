@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import electron from "electron";
 import { registerAttachmentIpc } from "./attachments.mjs";
 import { watchAgentOutput } from "./agent-output.mjs";
+import { resolveAgentLaunch, terminateChildProcess } from "./agent-process.mjs";
 import { AgentStartup } from "./agent-startup.mjs";
 import { bundledAgent, smokeRenderer } from "./packaged-smoke.mjs";
 import { MODULE_FRAME_DOCUMENT } from "./module-frame.mjs";
@@ -31,6 +32,7 @@ import {
 const { app, BrowserWindow, WebContentsView, clipboard, dialog, ipcMain, Menu, nativeTheme, protocol, screen, shell } =
   electron;
 const require = createRequire(import.meta.url);
+const { sameProjectPath } = require("../shared/project-index.cjs");
 const { isTrustedSenderUrl, validateAgentCommand } = require("./preload.cjs");
 
 const shellDir = dirname(fileURLToPath(import.meta.url));
@@ -47,6 +49,7 @@ const windowActions = new Set(["minimize", "maximize", "close"]);
 const commandTypes = new Set(require("./agent-commands.json"));
 const automated = headless || smoke || screenshotPath !== null;
 preserveUserData(app);
+if (process.platform === "win32") app.setAppUserModelId("dev.flecten.app");
 if (smoke && smokeOut) app.setPath("userData", join(dirname(smokeOut), "profile"));
 let mainWindow = null;
 const primary = claimSingleInstance(app, () => focusWindow(mainWindow), automated);
@@ -85,6 +88,8 @@ const contentTypeByExtension = {
   ".json": "application/json; charset=utf-8",
   ".png": "image/png",
   ".svg": "image/svg+xml",
+  ".ttf": "font/ttf",
+  ".woff": "font/woff",
   ".woff2": "font/woff2",
 };
 
@@ -161,7 +166,7 @@ let smokeDone = false;
 const queued = [];
 let pendingSession = null;
 const sessionLinks = installSessionLinks({ app, automated, emit: sendToRenderer, focus: () => focusWindow(mainWindow), openProject: (path) => {
-  if (agentCwd === path) return false;
+  if (sameProjectPath(agentCwd, path)) return false;
   switchProject(path);
   return true;
 } });
@@ -201,29 +206,21 @@ function sendUpdaterStatus(status) {
   }
 }
 
-function resolveAgent() {
-  const script = join(repoRoot, "src/app/server.ts");
-  if (devUrl) return { command: "bun", args: ["run", script] };
-  const explicit = productEnv("AGENT_BIN");
-  if (explicit && existsSync(explicit)) return { command: explicit, args: [] };
-  const names = process.platform === "win32" ? ["flecten-agent.exe", "flecten-agent"] : ["flecten-agent"];
-  for (const name of names) {
-    const packaged = process.resourcesPath ? join(process.resourcesPath, name) : null;
-    if (packaged && existsSync(packaged)) return { command: packaged, args: [] };
-    const built = join(repoRoot, "dist", name);
-    if (existsSync(built)) return { command: built, args: [] };
-  }
-  return { command: "bun", args: ["run", script] };
-}
-
 function startAgent() {
   if (agent) return;
-  const { command, args } = resolveAgent();
-  if (smoke) smokeAgent = bundledAgent(command, process.resourcesPath, app.isPackaged);
-  const child = spawn(command, args, {
+  if (!existsSync(agentCwd)) agentCwd = selection.select(null);
+  const launch = resolveAgentLaunch({
+    repoRoot,
+    resourcesPath: process.resourcesPath,
+    devUrl,
+    explicitBin: productEnv("AGENT_BIN"),
+  });
+  if (smoke) smokeAgent = bundledAgent(launch.executable, process.resourcesPath, app.isPackaged);
+  const child = spawn(launch.command, launch.args, {
     cwd: agentCwd,
     env: { ...process.env, FLECTEN_CWD: agentCwd, FLECTEN_PROFILE: app.getPath("userData"), FLECTEN_PROJECTLESS: selection.projectless ? "1" : "0", BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
     stdio: ["pipe", "pipe", "pipe"],
+    ...launch.options,
   });
   agent = child;
 
@@ -240,7 +237,7 @@ function startAgent() {
     },
     invalid: () => sendToRenderer({ type: "error", code: "protocol", message: "agent sent invalid JSON" }),
     stderr: (line) => console.error(`[agent] ${line}`),
-    failed: (error) => sendToRenderer({ type: "agent.exit", code: null, message: error.message }),
+    failed: (error) => { agent = null; closeAgentOutput = null; sendToRenderer({ type: "agent.exit", code: null, message: error.message }); },
     exited: (code, signal) => { agent = null; closeAgentOutput = null; sendToRenderer({ type: "agent.exit", code, signal }); },
   });
 
@@ -256,7 +253,7 @@ function stopAgent() {
   closeAgentOutput = null;
   const child = agent;
   agent = null;
-  child?.kill("SIGTERM");
+  terminateChildProcess(child);
 }
 
 function sendToAgent(command) {

@@ -157,6 +157,7 @@ function configFor(
   models?: Record<string, ModelInfo>,
   modules?: LaunchOptions["modules"],
   conversation: LaunchOptions["conversation"] = false,
+  permissionRules: LaunchOptions["permissionRules"] = [],
 ): unknown {
   return {
     useDefaults: false,
@@ -186,7 +187,7 @@ function configFor(
       mcp: "auto",
       skill: "allow",
       externalPath: "deny",
-      rules: [],
+      rules: permissionRules,
     },
     sandbox: { enabled: false },
     ...(conversation === null ? {} : { conversation: { enabled: conversation } }),
@@ -246,6 +247,7 @@ export interface LaunchOptions {
   fakeMicrophoneFile?: string;
   voiceHome?: string;
   models?: Record<string, ModelInfo>;
+  permissionRules?: Array<Record<string, unknown>>;
   /** Existing modules must be present at startup to exercise the project trust gate. */
   modules?: Pick<ModulesConfig, "dirs" | "trusted">;
   delayMs?: number;
@@ -310,7 +312,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<AppHarness
       writeFileSync(join(cwd, "README.md"), `# Flecten E2E\n\n${README_MARKER}\n`);
       writeFileSync(
         configPath,
-        `${JSON.stringify(configFor(mock.url, options.models, options.modules, options.conversation), null, 2)}\n`,
+        `${JSON.stringify(configFor(mock.url, options.models, options.modules, options.conversation, options.permissionRules), null, 2)}\n`,
       );
     }
     if (!options.projectless) setProjectTrust(userData, cwd, options.projectTrust ?? "trusted");

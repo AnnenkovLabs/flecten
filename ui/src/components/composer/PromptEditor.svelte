@@ -3,9 +3,11 @@
   import { Editor } from "@tiptap/core";
   import { closeHistory } from "@tiptap/pm/history";
   import { Slice } from "@tiptap/pm/model";
-  import { EditorState } from "@tiptap/pm/state";
+  import { EditorState, TextSelection } from "@tiptap/pm/state";
   import { onMount } from "svelte";
   import type { MentionItem } from "../../lib/composer/types";
+  import type { HistoryDirection } from "../../lib/composer/prompt-history";
+  import { PromptRoller } from "../../lib/composer/prompt-roll";
   import { editorPosition, sourceOffset, promptContent, promptSnapshot, type MentionSpan } from "../../lib/composer/prompt-document";
   import { promptExtensions } from "../../lib/composer/prompt-schema";
   import { PROMPT_CLIPBOARD_TYPE, readPromptClipboard, selectionSnapshot } from "../../lib/composer/prompt-clipboard";
@@ -17,6 +19,8 @@
     placeholder: string;
     menu?: "mention" | "slash" | undefined;
     oninput: () => void;
+    onselection?: (() => void) | undefined;
+    oninteract?: (() => void) | undefined;
     onkeydown: (event: KeyboardEvent) => void;
     onpaste: (event: ClipboardEvent) => void;
     ondragover: (event: DragEvent) => void;
@@ -25,13 +29,21 @@
   }
   let {
     value = $bindable(), mentions = $bindable(), placeholder, menu,
-    oninput, onkeydown, onpaste, ondragover, ondragleave, ondrop,
+    oninput, onselection, oninteract, onkeydown, onpaste, ondragover, ondragleave, ondrop,
   }: Props = $props();
+  const uid = $props.id();
+  const blurInId = `${uid}-prompt-blur-in`;
+  const blurOutId = `${uid}-prompt-blur-out`;
+  let stage: HTMLDivElement;
   let host: HTMLDivElement;
+  let blurIn: SVGFEGaussianBlurElement;
+  let blurOut: SVGFEGaussianBlurElement;
   let editor = $state<Editor | null>(null);
+  let roller: PromptRoller | null = null;
 
   function publish(): void {
     if (!editor) return;
+    roller?.cancel();
     const snapshot = promptSnapshot(editor.state.doc);
     value = snapshot.text;
     mentions = snapshot.mentions;
@@ -66,6 +78,7 @@
         handleDOMEvents: {
           copy: (_view, event) => copySelection(event),
           cut: (_view, event) => copySelection(event, true),
+          pointerdown: () => { oninteract?.(); return false; },
           keydown: (_view, event) => { onkeydown(event); return event.defaultPrevented; },
           paste: (_view, event) => {
             if (!event.clipboardData) return false;
@@ -92,9 +105,22 @@
           node.type.name === "mention" ? `@${String(node.attrs.path)}` : ""),
       },
       onUpdate: publish,
-      onSelectionUpdate: () => oninput(),
+      onSelectionUpdate: () => (onselection ? onselection() : oninput()),
     });
-    return () => editor?.destroy();
+    roller = new PromptRoller({
+      stage,
+      host,
+      editor: () => editor?.view.dom ?? null,
+      blurIn: () => blurIn ?? null,
+      blurOut: () => blurOut ?? null,
+      blurInId,
+      blurOutId,
+    });
+    return () => {
+      roller?.cancel();
+      roller = null;
+      editor?.destroy();
+    };
   });
 
   $effect(() => {
@@ -160,6 +186,71 @@
     editor.view.dispatch(editor.state.tr.insertText(next.slice(start, next.length - suffix), from, to));
     setSelectionRange(nextCaret, nextCaret);
   }
+
+  export function isAtBoundary(direction: HistoryDirection): boolean {
+    if (!editor) return false;
+    const { selection, doc } = editor.state;
+    if (!selection.empty) return false;
+    if (value.length === 0) return true;
+    const startPos = 1;
+    const endPos = Math.max(1, doc.content.size - 1);
+    if (direction === "up" && selection.from <= startPos) return true;
+    if (direction === "down" && selection.to >= endPos) return true;
+    try {
+      const caretCoords = editor.view.coordsAtPos(selection.from);
+      const edgeCoords = editor.view.coordsAtPos(direction === "up" ? startPos : endPos);
+      if (caretCoords.bottom > caretCoords.top && edgeCoords.bottom > edgeCoords.top) {
+        return direction === "up"
+          ? Math.abs(caretCoords.top - edgeCoords.top) < 4
+          : Math.abs(caretCoords.bottom - edgeCoords.bottom) < 4;
+      }
+    } catch {
+      // Fall back to logical newline boundaries when layout coordinates are unavailable.
+    }
+    const offset = sourceOffset(selection.from, mentions);
+    return direction === "up"
+      ? value.lastIndexOf("\n", Math.max(0, offset - 1)) === -1
+      : value.indexOf("\n", offset) === -1;
+  }
+
+  export function replaceWithRoll(
+    nextText: string,
+    nextMentions: MentionSpan[],
+    direction: HistoryDirection,
+  ): void {
+    if (!editor) {
+      value = nextText;
+      mentions = nextMentions;
+      return;
+    }
+    const snapshot = roller?.prepareSnapshot() ?? null;
+    value = nextText;
+    mentions = nextMentions;
+    const { schema, plugins } = editor.state;
+    const doc = schema.nodeFromJSON(promptContent(nextText, nextMentions));
+    editor.view.updateState(
+      EditorState.create({ schema, plugins, doc, selection: TextSelection.atEnd(doc) }),
+    );
+    editor.view.dom.dataset.empty = String(nextText.length === 0);
+    editor.view.dom.scrollTop = editor.view.dom.scrollHeight;
+    roller?.play(direction, snapshot);
+  }
+
+  export function cancelRoll(): void {
+    roller?.cancel();
+  }
 </script>
 
-<div class="prompt-host" bind:this={host}></div>
+<div class="prompt-stage" bind:this={stage}>
+  <svg class="prompt-motion-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id={blurInId} x="-10%" y="-90%" width="120%" height="280%" color-interpolation-filters="sRGB">
+        <feGaussianBlur bind:this={blurIn} in="SourceGraphic" stdDeviation="0 0" />
+      </filter>
+      <filter id={blurOutId} x="-10%" y="-90%" width="120%" height="280%" color-interpolation-filters="sRGB">
+        <feGaussianBlur bind:this={blurOut} in="SourceGraphic" stdDeviation="0 0" />
+      </filter>
+    </defs>
+  </svg>
+  <div class="prompt-host" bind:this={host}></div>
+</div>

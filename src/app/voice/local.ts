@@ -66,7 +66,13 @@ async function run(cmd: string[], signal: AbortSignal, audio?: Uint8Array): Prom
       stdin: "pipe",
       stdout: "pipe",
       stderr: "pipe",
-      env: { ...process.env, PYTHONUNBUFFERED: "1", HF_HUB_DISABLE_TELEMETRY: "1" },
+      env: {
+        ...process.env,
+        PYTHONUNBUFFERED: "1",
+        PYTHONUTF8: "1",
+        PYTHONIOENCODING: "utf-8",
+        HF_HUB_DISABLE_TELEMETRY: "1",
+      },
     });
   } catch {
     throw new Error("Python not found. Set a Python 3.9+ binary in Voice settings.");
@@ -148,6 +154,35 @@ export async function checkLocalVoice(
   return SetupResult.parse(await invoke("check", engine, options, signal));
 }
 
+function isWindowsStorePythonStub(path: string): boolean {
+  return path.replaceAll("\\", "/").toLowerCase().includes("/microsoft/windowsapps/");
+}
+
+/** Resolves a real Python interpreter on Windows when the default `python3` is missing or a Store stub. */
+export function resolvePythonCommand(
+  configured: string,
+  options: {
+    platform?: NodeJS.Platform;
+    which?: (name: string) => string | null;
+  } = {},
+): string[] {
+  const platform = options.platform ?? process.platform;
+  if (platform !== "win32" || configured !== "python3") return [configured];
+  const which = options.which ?? ((name: string) => Bun.which(name));
+  const candidates: Array<{ name: string; args: string[] }> = [
+    { name: "python3", args: [] },
+    { name: "python", args: [] },
+    { name: "py", args: ["-3"] },
+  ];
+  for (const candidate of candidates) {
+    const resolved = which(candidate.name);
+    if (resolved && !isWindowsStorePythonStub(resolved)) {
+      return [resolved, ...candidate.args];
+    }
+  }
+  return [configured];
+}
+
 export async function prepareLocalVoice(
   engine: LocalVoiceEngine,
   options: LocalVoiceOptions,
@@ -157,7 +192,7 @@ export async function prepareLocalVoice(
   await mkdir(join(localVoiceHome(), "runtimes"), { recursive: true });
   if (!existsSync(pythonFor(engine))) {
     try {
-      await run([options.python, "-m", "venv", runtime], signal);
+      await run([...resolvePythonCommand(options.python), "-m", "venv", runtime], signal);
     } catch (error) {
       await rm(runtime, { recursive: true, force: true });
       throw error;

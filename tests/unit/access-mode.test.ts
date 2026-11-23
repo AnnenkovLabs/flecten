@@ -2,7 +2,11 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AccessModeSchema, activeAccessMode } from "../../shared/access-mode";
+import {
+  AccessModeSchema,
+  activeAccessMode,
+  defaultSandboxEnabled,
+} from "../../shared/access-mode";
 import { configWithAccessMode } from "../../src/app/access";
 import { createHandlers } from "../../src/app/server-handlers";
 import { createAppService } from "../../src/app/service";
@@ -68,7 +72,7 @@ test("access.set persists the real boundary through the app without replacing co
     expect(stored.providers).toEqual(providers);
     await handlers["access.set"]({ type: "access.set", mode: "confirm" });
     expect(app.settings().config.permissions?.shell).toBe("ask");
-    expect(app.info().sandbox.enabled).toBe(true);
+    expect(app.info().sandbox.enabled).toBe(defaultSandboxEnabled());
     await expect(
       Promise.resolve().then(() => handlers["access.set"]({ type: "access.set", mode: "invalid" })),
     ).rejects.toThrow();

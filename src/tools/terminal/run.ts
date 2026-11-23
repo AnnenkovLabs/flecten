@@ -136,6 +136,7 @@ export async function runTerminal(args: TerminalArgs, context: ToolContext): Pro
       await prepareScratch(context.scratchDir);
       session = manager.create(id, {
         cwd,
+        ...(args.title ? { title: args.title } : {}),
         env: { ...context.env, ...scratchEnvironment(context.scratchDir) },
         ...(context.osSandbox
           ? {

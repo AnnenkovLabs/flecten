@@ -21,7 +21,7 @@ Per-provider secret protection, reversible secret placeholders, and mandatory hu
 
 ## Access Modes, Permissions, and Protected Paths
 
-Fresh configurations default to `agent` mode: workspace reads, writes, shell commands, network access, MCP calls, and skills run inside the OS sandbox (with network enabled), while accessing external directories or running destructive shell commands prompts for confirmation. Existing saved project configs are never silently rewritten.
+Fresh configurations default to `agent` mode: workspace reads, writes, shell commands, network access, MCP calls, and skills run inside the OS sandbox on Linux and macOS (with network enabled), while accessing external directories or running destructive shell commands prompts for confirmation. On Windows, `sandbox.enabled` defaults to `false` until native Windows AppContainer isolation is implemented, so shell commands and persistent terminals work out of the box while permission prompts and destructive checkpoints remain active. Existing saved project configs are never silently rewritten.
 
 `shared/access-mode.ts` defines three presets synchronized across permissions and sandbox settings (`access.set` accepts `agent | confirm | full`, reporting `custom` whenever baseline fields diverge):
 

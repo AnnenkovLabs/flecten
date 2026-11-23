@@ -1,8 +1,9 @@
-function isMac(): boolean {
+export function isMac(): boolean {
   return typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
 }
 
-export const modLabel = isMac() ? "⌘" : "Ctrl";
+export const macPlatform = isMac();
+export const modLabel = macPlatform ? "⌘" : "Ctrl";
 
 export function isModifier(event: KeyboardEvent): boolean {
   return event.metaKey || event.ctrlKey;

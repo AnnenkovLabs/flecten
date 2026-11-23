@@ -22,6 +22,12 @@ export async function prepareScratch(path: string | undefined): Promise<void> {
   }
 }
 
-export function scratchEnvironment(path: string | undefined): Record<string, string> {
-  return path ? { TMPDIR: path, FLECTEN_SCRATCH: path } : {};
+export function scratchEnvironment(
+  path: string | undefined,
+  platform: NodeJS.Platform = process.platform,
+): Record<string, string> {
+  if (!path) return {};
+  return platform === "win32"
+    ? { TMPDIR: path, TEMP: path, TMP: path, FLECTEN_SCRATCH: path }
+    : { TMPDIR: path, FLECTEN_SCRATCH: path };
 }

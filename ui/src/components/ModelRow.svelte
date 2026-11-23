@@ -2,6 +2,7 @@
   import { i18n, t } from "../lib/i18n.svelte";
   import { formatNumber, formatTokens } from "../lib/format";
   import { formatModelName } from "../lib/model-name";
+  import { modelIssues } from "../lib/settings/validation";
   import type { ModelInfo } from "../lib/types";
   import Icon from "./Icon.svelte";
   import SelectBox from "./SelectBox.svelte";
@@ -19,6 +20,7 @@
   let { modelId, model, current, selected, onselect, onedit, onkeydown }: Props = $props();
 
   const name = $derived(model.name || formatModelName(modelId));
+  const firstIssue = $derived(Object.values(modelIssues(model))[0] ?? "");
   const badges = $derived.by(() => {
     const result: Array<{ label: string; title: string }> = [];
     if (model.context) {
@@ -59,6 +61,9 @@
         <span class="model-name" data-tooltip={`${name} · ${modelId}`}>{name}</span>
       </span>
       <span class="model-badges">
+        {#if firstIssue}
+          <span class="st-badge st-badge--error" data-tooltip={firstIssue}>{t("Error")}</span>
+        {/if}
         {#each badges as badge (badge.label)}
           <span class="st-badge" data-tooltip={badge.title}>{badge.label}</span>
         {/each}

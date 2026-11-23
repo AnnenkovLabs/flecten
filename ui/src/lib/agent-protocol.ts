@@ -84,6 +84,7 @@ type AgentLeafEvent =
       system?: AgentPromptStamp;
       queueId?: string;
       resumed?: boolean;
+      continuation?: boolean;
       internal?: boolean;
       actor?: "user" | "twin";
       budget?: AgentBudget;
@@ -253,6 +254,7 @@ type AgentLeafEvent =
       approval?: { id: string; choice: "allow_once" | "allow_session" | "allow_always" | "deny" };
     })
   | ({ type: "status" } & AgentInfo)
+  | { type: "terminal.event"; event: import("../../../shared/terminal").TerminalStreamEvent }
   | { type: "agent.exit"; code: number | null; signal?: string; message?: string }
   | { type: "project.changed"; cwd: string }
   | { type: "projects.changed" }
@@ -260,6 +262,7 @@ type AgentLeafEvent =
 
 export type AgentCommand =
   | (import("../../../shared/storage-migration").StorageMigrationCommand & { requestId: string })
+  | import("../../../shared/terminal").IdeTerminalCommand
   | ModuleCommand
   | ProviderCommand
   | import("../../../shared/twin-protocol").TwinCommand
@@ -330,6 +333,7 @@ export type AgentCommand =
       /** Id of this send; the same id twice starts one run. */
       clientId?: string;
       resumed?: boolean;
+      continuation?: boolean;
       internal?: boolean;
     }
   | {
@@ -398,15 +402,6 @@ export type AgentCommand =
       caseSensitive: boolean;
       wholeWord: boolean;
       include: string;
-    }
-  | {
-      type: "ide.terminal";
-      requestId: string;
-      action: "read" | "write" | "resize" | "restart" | "stop";
-      data?: string;
-      cursor?: number;
-      cols?: number;
-      rows?: number;
     }
   | { type: "files.git"; requestId: string; action: "status" }
   | { type: "files.git"; requestId: string; action: "diff"; path: string; staged: boolean }

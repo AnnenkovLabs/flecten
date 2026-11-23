@@ -12,10 +12,11 @@ A skill is a directory containing `SKILL.md` with YAML frontmatter and Markdown 
 
 | Scope | Discovery roots (highest priority last or per override rule below) |
 |---|---|
+| Built-in | Bundled in `prompts/skills` (`convert-plugin`, `self-config`, enabled by `skills.builtin: true`) |
 | User | `~/.claude/skills`, `~/.agents/skills`, `~/.flecten/skills` |
 | Project | `.claude/skills`, `.agents/skills`, `.flecten/skills` |
 
-Project skills override user skills of the same name. Within each scope, `.flecten` overrides `.agents`, which overrides `.claude`; shadowed definitions are reported in diagnostics. `skills.sources` enables discovery roots individually, and `[]` disables all skill discovery.
+Project skills override user skills, and user/project skills override built-in skills of the same name. Within each scope, `.flecten` overrides `.agents`, which overrides `.claude`; shadowed definitions are reported in diagnostics. `skills.sources` enables folder discovery roots individually (`[]` disables folder discovery), while `skills.builtin` toggles Flecten's built-in skills (`true` by default). Bundled skill reference/playbook files load on demand via `skill({ name, resource })` without entering the initial system prompt.
 
 - Skill catalogs refresh before each new run and when opening the slash menu; an active run keeps its snapshot until a safe boundary.
 - Project trust is verified before loading a skill body. Settings let users allow or block individual skills and inspect their source, revision, and bundled files.
