@@ -19,6 +19,7 @@ import { installSessionLinks } from "./deep-links.mjs";
 import { projectSelection, registerProjectIpc } from "./projects.mjs";
 import { installUpdateRuntime } from "./update-runtime.mjs";
 import { migrateRendererPreferences, preferenceMigrationDocument } from "./renderer-preferences.mjs";
+import { createShellTelemetry } from "./telemetry.mjs";
 import {
   claimSingleInstance,
   DEFAULT_BOUNDS,
@@ -165,7 +166,8 @@ let updateRuntime = null;
 let smokeDone = false;
 const queued = [];
 let pendingSession = null;
-const sessionLinks = installSessionLinks({ app, automated, emit: sendToRenderer, focus: () => focusWindow(mainWindow), openProject: (path) => {
+const shellTelemetry = createShellTelemetry({ sendToAgent: (command) => sendToAgent(command), packaged: app.isPackaged });
+const sessionLinks = installSessionLinks({ app, automated, emit: (message) => { if (message?.type === "session.open") shellTelemetry.onDeepLink(); sendToRenderer(message); }, focus: () => focusWindow(mainWindow), openProject: (path) => {
   if (sameProjectPath(agentCwd, path)) return false;
   switchProject(path);
   return true;
@@ -201,6 +203,7 @@ function sendToRenderer(message) {
 }
 
 function sendUpdaterStatus(status) {
+  shellTelemetry.onUpdaterStatus(status);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("updater:status", status);
   }
@@ -218,7 +221,7 @@ function startAgent() {
   if (smoke) smokeAgent = bundledAgent(launch.executable, process.resourcesPath, app.isPackaged);
   const child = spawn(launch.command, launch.args, {
     cwd: agentCwd,
-    env: { ...process.env, FLECTEN_CWD: agentCwd, FLECTEN_PROFILE: app.getPath("userData"), FLECTEN_PROJECTLESS: selection.projectless ? "1" : "0", BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
+    env: { ...process.env, ...shellTelemetry.env(), FLECTEN_CWD: agentCwd, FLECTEN_PROFILE: app.getPath("userData"), FLECTEN_PROJECTLESS: selection.projectless ? "1" : "0", BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
     stdio: ["pipe", "pipe", "pipe"],
     ...launch.options,
   });
@@ -229,16 +232,20 @@ function startAgent() {
     message: (message) => {
       agentStartup.note(message);
       sendToRenderer(message);
+      if (message.type === "error" && (message.code === "project_locked" || message.code === "startup_failed")) {
+        shellTelemetry.onShellError(message.code);
+      }
       if (message.type === "status") {
+        shellTelemetry.onStatus(message);
         updateRuntime?.applyStatus(message);
         sessionLinks.status();
         if (pendingSession) { const id = pendingSession; pendingSession = null; sendToRenderer({ type: "session.open", id }); }
       }
     },
-    invalid: () => sendToRenderer({ type: "error", code: "protocol", message: "agent sent invalid JSON" }),
+    invalid: () => { shellTelemetry.onShellError("agent_invalid_json"); sendToRenderer({ type: "error", code: "protocol", message: "agent sent invalid JSON" }); },
     stderr: (line) => console.error(`[agent] ${line}`),
-    failed: (error) => { agent = null; closeAgentOutput = null; sendToRenderer({ type: "agent.exit", code: null, message: error.message }); },
-    exited: (code, signal) => { agent = null; closeAgentOutput = null; sendToRenderer({ type: "agent.exit", code, signal }); },
+    failed: (error) => { agent = null; closeAgentOutput = null; shellTelemetry.onAgentExit(null, "spawn_failed"); sendToRenderer({ type: "agent.exit", code: null, message: error.message }); },
+    exited: (code, signal) => { agent = null; closeAgentOutput = null; shellTelemetry.onAgentExit(code, signal); sendToRenderer({ type: "agent.exit", code, signal }); },
   });
 
   for (const line of queued.splice(0)) {
@@ -331,6 +338,7 @@ function createWindow() {
   win.on("closed", () => {
     if (mainWindow === win) mainWindow = null;
   });
+  shellTelemetry.attachWindow(win);
   win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   win.webContents.on("context-menu", (_event, params) => {
     const template = [];
@@ -434,6 +442,7 @@ ipcMain.on("agent:command", (event, command) => {
   if (!isTrustedIpcSender(event)) return;
   const issue = validateAgentCommand(command, commandTypes);
   if (issue !== "") {
+    shellTelemetry.onShellError("ipc_validation_failed");
     const requestId = typeof command?.requestId === "string" ? command.requestId : undefined;
     sendToRenderer(
       requestId

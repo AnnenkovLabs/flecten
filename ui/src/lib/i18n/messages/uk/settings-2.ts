@@ -58,14 +58,25 @@ export default {
   "Copy report": "Копіювати звіт",
   "Collecting report": "Збирання звіту",
   "Saved: {0}": ["Збережено: ", 0],
-  "Send technical metrics": "Надсилати технічні лічильники",
-  "Event counts, version, and platform only. No messages, files, or keys.":
-    "Лише кількість подій, версія та платформа. Без повідомлень, файлів і ключів.",
-  "Metrics endpoint": "Адреса для надсилання статистики",
-  "After saving this setting, use the button to send metrics. The diagnostic report stays on your computer.":
-    "Після збереження налаштувань лічильники можна надіслати кнопкою. Діагностичний звіт залишається на комп’ютері.",
+  Telemetry: "Телеметрія",
+  "Send anonymous telemetry": "Надсилати анонімну телеметрію",
+  "Anonymous usage, error, and performance metrics via PostHog. No prompts, code, file paths, or keys.":
+    "Анонімні метрики використання, помилок і швидкодії через PostHog. Без промптів, коду, шляхів і ключів.",
+  "Paused by DO_NOT_TRACK or FLECTEN_TELEMETRY=0.":
+    "Призупинено змінною DO_NOT_TRACK або FLECTEN_TELEMETRY=0.",
+  "Telemetry details": "Деталі телеметрії",
+  Status: "Стан",
+  Active: "Активна",
+  "Disabled in settings": "Вимкнено в налаштуваннях",
+  "Paused by environment": "Призупинено середовищем",
+  "Not configured in this build": "Не налаштовано в цій збірці",
+  "Anonymous ID": "Анонімний ID",
+  "PostHog host": "Адреса PostHog",
+  "Set DO_NOT_TRACK=1 or FLECTEN_TELEMETRY=0 to disable telemetry in any workspace.":
+    "Встановіть DO_NOT_TRACK=1 або FLECTEN_TELEMETRY=0, щоб вимкнути телеметрію в будь-якому проєкті.",
   "Could not send": "Не вдалося надіслати",
-  "Send metrics": "Надіслати лічильники",
+  "Send test event": "Надіслати тестову подію",
+  "Test event sent": "Тестову подію надіслано",
   Updates: "Оновлення",
   "This build does not include an update feed.": "У цій збірці немає джерела оновлень.",
   "Up to date": "Встановлено останню версію",

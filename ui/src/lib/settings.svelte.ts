@@ -73,7 +73,7 @@ export class SettingsStore {
   actualizeResult = $state<ProviderActualizeResult | null>(null);
   clearApiKeys = $state<string[]>([]);
   custom = $state({
-    protocol: "openai-chat" as ProviderProtocol,
+    protocol: "auto" as ProviderProtocol | "auto",
     baseUrl: "",
     apiKey: "",
     checkConnection: true,
@@ -319,6 +319,7 @@ export class SettingsStore {
     this.#added(id);
     this.custom.apiKey = "";
     this.custom.baseUrl = "";
+    this.custom.protocol = "auto";
     this.custom.checkConnection = true;
     if (checkConnection) void this.test(id);
   }

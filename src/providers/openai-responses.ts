@@ -1,27 +1,18 @@
-import type { Message } from "../core/types";
 import { isObject, parseToolArgs } from "../util/json";
 import {
   apiModel,
-  effectiveParallelTools,
+  hasHeader,
   modelConfig,
-  normalizeEffort,
   promptCacheEnabled,
-  requestExtra,
   requestHeaders,
+  supportsPromptCacheKey,
 } from "./compat";
 import { endpoint, postStream } from "./http";
-import { responsesMedia } from "./input-media";
-import {
-  defaultWarn,
-  jsonSchemaFormat,
-  openaiSchema,
-  strictSchema,
-  structuredOutputFormat,
-  type Warn,
-} from "./schema";
-import { parseSse, StreamEvents } from "./sse";
+import { buildResponsesBody } from "./openai-responses-body";
+import { defaultWarn, type Warn } from "./schema";
+import { classifyStreamError, parseSse, StreamEvents } from "./sse";
 import type { StreamFinishReason } from "./stream-recovery";
-import type { ModelEvent, ModelProvider, ModelRequest, ProviderRuntime } from "./types";
+import type { ModelEvent, ModelProvider, ProviderRuntime } from "./types";
 
 interface ResponsesUsage {
   input_tokens?: number;
@@ -40,138 +31,12 @@ interface StreamCall {
   emitted: boolean;
 }
 
-function responseItems(message: Message): unknown[] | undefined {
-  if (message.role !== "assistant" || !isObject(message.providerData)) return undefined;
-  if (message.providerData.kind !== "openai-responses") return undefined;
-  return Array.isArray(message.providerData.items) ? message.providerData.items : undefined;
-}
-
-function convertInput(message: Message): Record<string, unknown>[] {
-  if (message.role === "user") {
-    return [
-      {
-        role: "user",
-        content: [
-          { type: "input_text", text: message.content },
-          ...(message.images ?? []).map(responsesMedia),
-        ],
-      },
-    ];
-  }
-  if (message.role === "assistant") {
-    const items = responseItems(message);
-    if (items && items.length > 0) return items as Record<string, unknown>[];
-    const output: Record<string, unknown>[] = [];
-    if (message.content.length > 0) {
-      output.push({
-        type: "message",
-        role: "assistant",
-        content: [{ type: "output_text", text: message.content }],
-      });
-    }
-    for (const call of message.toolCalls) {
-      output.push({
-        type: "function_call",
-        call_id: call.id,
-        name: call.name,
-        arguments: JSON.stringify(call.args ?? {}),
-      });
-    }
-    return output;
-  }
-  return [{ type: "function_call_output", call_id: message.toolCallId, output: message.content }];
-}
-
-function reasoningPayload(
-  request: ModelRequest,
-  runtime: ProviderRuntime,
-  model: ReturnType<typeof modelConfig>,
-): Record<string, unknown> {
-  if (model?.reasoning === false || runtime.config.thinking === "disabled") return {};
-  if (request.reasoning === "none") {
-    return model?.reasoningLevels?.includes("none") ? { reasoning: { effort: "none" } } : {};
-  }
-  if (request.reasoning !== undefined) {
-    return {
-      reasoning: {
-        effort: normalizeEffort(request.reasoning, model),
-        summary: "auto",
-      },
-    };
-  }
-  return model?.reasoning ? { reasoning: { summary: "auto" } } : {};
-}
-
-function buildBody(
-  request: ModelRequest,
-  runtime: ProviderRuntime,
-  warn: Warn,
-): Record<string, unknown> {
-  const model = modelConfig(runtime, request.model);
-  const reasoning = reasoningPayload(request, runtime, model);
-  const parallel = effectiveParallelTools(runtime, model, request);
-  const cacheEnabled = promptCacheEnabled(runtime, model);
-  const cacheKey = request.promptCacheKey || runtime.config.promptCacheKey;
-  const strictTools = model?.compat?.strictTools ?? runtime.config.strictTools;
-  const format = structuredOutputFormat(model);
-  const text = format
-    ? {
-        text: {
-          format: { type: "json_schema", name: format.name, ...jsonSchemaFormat(format, warn) },
-        },
-      }
-    : {};
-  const body: Record<string, unknown> = {
-    model: apiModel(request),
-    instructions: request.system,
-    input: request.messages.flatMap(convertInput),
-    tools:
-      request.tools.length > 0
-        ? request.tools.map((tool) => {
-            let parameters = openaiSchema(tool.parameters);
-            let strict = false;
-            if (strictTools) {
-              const transformed = strictSchema(parameters);
-              parameters = transformed.schema;
-              strict = transformed.strict;
-              if (!strict) {
-                warn(`strict tools disabled for "${tool.name}": ${transformed.reason}`);
-              }
-            }
-            return {
-              type: "function",
-              name: tool.name,
-              description: tool.description,
-              parameters,
-              ...(strict ? { strict: true } : {}),
-            };
-          })
-        : undefined,
-    stream: true,
-    store: false,
-    ...(model?.reasoning === false ? {} : { include: ["reasoning.encrypted_content"] }),
-    max_output_tokens: request.maxTokens,
-    ...text,
-    ...(request.temperature === undefined || model?.temperature === false
-      ? {}
-      : { temperature: request.temperature }),
-    ...reasoning,
-    ...(parallel === undefined ? {} : { parallel_tool_calls: parallel }),
-    ...(cacheEnabled && cacheKey ? { prompt_cache_key: cacheKey } : {}),
-    ...(request.toolChoice === "required" ||
-    request.toolChoice === "none" ||
-    request.toolChoice === "auto"
-      ? { tool_choice: request.toolChoice }
-      : {}),
-    ...requestExtra(runtime, model, request),
-  };
-  body.stream = true;
-  return body;
-}
-
 function readUsage(value: unknown): ModelEvent | undefined {
   if (!isObject(value)) return undefined;
   const usage = value as ResponsesUsage;
+  if (typeof usage.input_tokens !== "number" && typeof usage.output_tokens !== "number") {
+    return undefined;
+  }
   const reasoning = usage.output_tokens_details?.reasoning_tokens;
   return {
     type: "usage",
@@ -224,11 +89,15 @@ export function createOpenAiResponses(
     async *stream(request, signal): AsyncGenerator<ModelEvent> {
       const model = modelConfig(runtime, request.model);
       const headers = requestHeaders(runtime, model, request);
-      if (runtime.apiKey && !headers.authorization) {
+      if (runtime.apiKey && !hasHeader(headers, "authorization")) {
         headers.authorization = `Bearer ${runtime.apiKey}`;
       }
       const cacheKey = request.promptCacheKey || runtime.config.promptCacheKey;
-      if (promptCacheEnabled(runtime, model) && cacheKey) {
+      if (
+        promptCacheEnabled(runtime, model) &&
+        supportsPromptCacheKey(runtime, model) &&
+        cacheKey
+      ) {
         headers.session_id ??= cacheKey;
         headers.conversation_id ??= cacheKey;
       }
@@ -236,7 +105,7 @@ export function createOpenAiResponses(
       const response = await postStream({
         url: endpoint(runtime.baseUrl, "/responses"),
         headers,
-        body: buildBody(request, runtime, warn),
+        body: buildResponsesBody(request, runtime, warn),
         signal,
         providerId: runtime.providerId,
         model: apiModel(request),
@@ -279,13 +148,10 @@ export function createOpenAiResponses(
             continue;
           }
 
-          const type = typeof event.type === "string" ? event.type : "";
-          if (type === "error") {
-            const error = isObject(event.error) ? event.error : event;
-            events.fail(
-              "server",
-              typeof error.message === "string" ? error.message : "provider stream error",
-            );
+          const type = typeof event.type === "string" ? event.type : message.event;
+          if (type === "error" || (type === "" && isObject(event.error))) {
+            const classified = classifyStreamError(event, "provider stream error");
+            events.fail(classified.kind, classified.message);
           }
 
           if (type === "response.output_text.delta" && typeof event.delta === "string") {
@@ -311,11 +177,12 @@ export function createOpenAiResponses(
               const callId = typeof item.call_id === "string" ? item.call_id : itemId;
               const index =
                 typeof event.output_index === "number" ? event.output_index : calls.size;
+              const key = itemId || callId || `idx_${index}`;
               const name = typeof item.name === "string" ? item.name : "";
               const initial = typeof item.arguments === "string" ? item.arguments : "";
-              calls.set(itemId, {
+              calls.set(key, {
                 itemId,
-                callId,
+                callId: callId || key,
                 index,
                 name,
                 arguments: initial,
@@ -330,7 +197,11 @@ export function createOpenAiResponses(
 
           if (type === "response.function_call_arguments.delta") {
             const itemId = typeof event.item_id === "string" ? event.item_id : "";
-            const call = calls.get(itemId);
+            const call =
+              calls.get(itemId) ??
+              (typeof event.output_index === "number"
+                ? calls.get(`idx_${event.output_index}`)
+                : undefined);
             if (call && typeof event.delta === "string") {
               call.arguments += event.delta;
               yield events.emit({
@@ -344,7 +215,11 @@ export function createOpenAiResponses(
 
           if (type === "response.function_call_arguments.done") {
             const itemId = typeof event.item_id === "string" ? event.item_id : "";
-            const call = calls.get(itemId);
+            const call =
+              calls.get(itemId) ??
+              (typeof event.output_index === "number"
+                ? calls.get(`idx_${event.output_index}`)
+                : undefined);
             if (call) {
               if (typeof event.arguments === "string") call.arguments = event.arguments;
               call.done = true;
@@ -360,13 +235,18 @@ export function createOpenAiResponses(
             if (item.type === "function_call") {
               const itemId = typeof item.id === "string" ? item.id : "";
               const callId = typeof item.call_id === "string" ? item.call_id : itemId;
-              const key = itemId || callId;
-              let call = calls.get(key);
+              const index =
+                typeof event.output_index === "number" ? event.output_index : calls.size;
+              const key = itemId || callId || `idx_${index}`;
+              let call =
+                calls.get(key) ??
+                (callId ? calls.get(callId) : undefined) ??
+                calls.get(`idx_${index}`);
               if (!call) {
                 call = {
                   itemId,
-                  callId,
-                  index: typeof event.output_index === "number" ? event.output_index : calls.size,
+                  callId: callId || key,
+                  index,
                   name: typeof item.name === "string" ? item.name : "",
                   arguments: typeof item.arguments === "string" ? item.arguments : "",
                   done: true,
@@ -376,6 +256,7 @@ export function createOpenAiResponses(
               } else {
                 if (typeof item.arguments === "string") call.arguments = item.arguments;
                 if (typeof item.name === "string" && !call.name) call.name = item.name;
+                if (callId && !call.callId) call.callId = callId;
                 call.done = true;
               }
               const toolEvent = emitCall(call);
@@ -406,11 +287,8 @@ export function createOpenAiResponses(
             const failure = isObject(event.response) ? event.response : event;
             const nextUsage = readUsage(failure.usage);
             if (nextUsage) usage = nextUsage;
-            const error = isObject(failure.error) ? failure.error : {};
-            events.fail(
-              "server",
-              typeof error.message === "string" ? error.message : "response failed",
-            );
+            const classified = classifyStreamError(failure, "response failed");
+            events.fail(classified.kind, classified.message);
           }
         }
       } catch (error) {
@@ -422,6 +300,43 @@ export function createOpenAiResponses(
       if (!sawTerminal) {
         if (usage) yield events.emit(usage);
         events.requireDone("response.completed or response.incomplete");
+      }
+
+      if (Array.isArray(terminal?.output)) {
+        for (const item of terminal.output) {
+          if (!isObject(item)) continue;
+          if (item.type === "function_call") {
+            const itemId = typeof item.id === "string" ? item.id : "";
+            const callId = typeof item.call_id === "string" ? item.call_id : itemId;
+            const key = itemId || callId || `idx_${calls.size}`;
+            if (
+              !calls.has(key) &&
+              !(callId && [...calls.values()].some((c) => c.callId === callId))
+            ) {
+              calls.set(key, {
+                itemId,
+                callId: callId || key,
+                index: calls.size,
+                name: typeof item.name === "string" ? item.name : "",
+                arguments: typeof item.arguments === "string" ? item.arguments : "",
+                done: true,
+                emitted: false,
+              });
+            }
+          } else if (item.type === "message" && !sawText) {
+            const text = itemText(item);
+            if (text.length > 0) {
+              sawText = true;
+              yield events.emit({ type: "text", delta: text });
+            }
+          } else if (item.type === "reasoning" && !sawReasoning) {
+            const text = itemReasoning(item);
+            if (text.length > 0) {
+              sawReasoning = true;
+              yield events.emit({ type: "reasoning", delta: text });
+            }
+          }
+        }
       }
 
       const provisionalReason = readReason(terminal, calls.size > 0);

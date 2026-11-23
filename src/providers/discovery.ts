@@ -1,13 +1,7 @@
 import { z } from "zod";
-import {
-  type HarnessConfig,
-  type ModelConfig,
-  ModelConfigSchema,
-  type Protocol,
-  type ProviderConfig,
-} from "../config/schema";
+import { type ModelConfig, ModelConfigSchema, type Protocol } from "../config/schema";
 import { HarnessError } from "../errors";
-import { dashSlug, trimTrailingSlashes, withoutPrefix } from "../util/text";
+import { dashSlug, withoutPrefix } from "../util/text";
 import {
   findModel,
   formatModelName,
@@ -15,14 +9,19 @@ import {
   loadModelsDev,
   providerNameFromUrl,
 } from "./catalog";
+import { hasHeader } from "./compat";
+import { type DiscoverProtocol, discoverAutoEndpoints } from "./discovery-auto";
 import { anthropicModel, geminiModel, object, openAiModel } from "./discovery-models";
+import { endpoint, normalizeBaseUrl } from "./http";
 import { discoverNativeLocal, mergeNativeModels } from "./local-discovery";
 import { findFallbackModel } from "./model-identity";
-import { createProvider } from "./registry";
 import { createProviderFetch, type ProviderFetch } from "./transport";
 
+export type { DiscoverProtocol } from "./discovery-auto";
+export { testProvider } from "./provider-test";
+
 export interface DiscoverInput {
-  protocol: Protocol;
+  protocol?: DiscoverProtocol;
   baseUrl: string;
   apiKey?: string;
   headers?: Record<string, string>;
@@ -36,6 +35,8 @@ export interface DiscoverResult {
   providerName: string;
   protocol: Protocol;
   baseUrl: string;
+  protocolBaseUrls?: Partial<Record<Protocol, string>>;
+  detectedProtocols?: Protocol[];
   models: Record<string, ModelConfig>;
   warnings: string[];
 }
@@ -78,12 +79,16 @@ function schemaError(protocol: Protocol): HarnessError {
 }
 
 function candidates(baseUrl: string, protocol: Protocol): string[] {
-  const base = trimTrailingSlashes(baseUrl);
+  const base = normalizeBaseUrl(baseUrl);
   const output = [base];
   if (protocol === "gemini") {
     if (!["/v1", "/v1beta", "/v1alpha"].some((suffix) => base.endsWith(suffix))) {
       output.push(`${base}/v1beta`);
     }
+    return output;
+  }
+  if (protocol === "anthropic-messages") {
+    if (base.endsWith("/v1")) output.push(base.slice(0, -3));
     return output;
   }
   if (!base.endsWith("/v1")) output.push(`${base}/v1`);
@@ -118,18 +123,42 @@ async function getJson(
   }
 }
 
-function mergeModel(api: ModelConfig, catalog: ModelConfig | undefined): ModelConfig {
-  if (!catalog) return api;
-  return {
-    ...catalog,
-    ...api,
-    name: api.name ?? catalog.name,
-    reasoningLevels:
-      api.reasoningLevels && api.reasoningLevels.length > 0
-        ? api.reasoningLevels
-        : catalog.reasoningLevels,
-    source: api.source ?? catalog.source,
-  };
+function mergeModel(
+  api: ModelConfig,
+  catalog: ModelConfig | undefined,
+): { model: ModelConfig; clamped?: string } {
+  const merged: ModelConfig = !catalog
+    ? { ...api }
+    : {
+        ...catalog,
+        ...api,
+        name: api.name ?? catalog.name,
+        reasoningLevels:
+          api.reasoningLevels && api.reasoningLevels.length > 0
+            ? api.reasoningLevels
+            : catalog.reasoningLevels,
+        source: api.source ?? catalog.source,
+      };
+  let clamped: string | undefined;
+  if (
+    merged.context !== undefined &&
+    merged.output !== undefined &&
+    merged.output > merged.context
+  ) {
+    const rawOutput = merged.output;
+    merged.output =
+      catalog?.output !== undefined && catalog.output <= merged.context
+        ? catalog.output
+        : merged.context;
+    clamped = `clamped output limit ${rawOutput} to ${merged.output}`;
+  }
+  if (merged.context !== undefined && merged.input !== undefined && merged.input > merged.context) {
+    merged.input =
+      catalog?.input !== undefined && catalog.input <= merged.context
+        ? catalog.input
+        : merged.context;
+  }
+  return { model: merged, ...(clamped ? { clamped } : {}) };
 }
 
 function slug(value: string): string {
@@ -137,14 +166,16 @@ function slug(value: string): string {
 }
 
 async function discoverOpenAi(
-  input: DiscoverInput,
+  input: DiscoverInput & { protocol: Protocol },
 ): Promise<{ models: unknown[]; baseUrl: string; warnings: string[] }> {
   const headers: Record<string, string> = { ...input.headers };
-  if (input.apiKey) headers.authorization = `Bearer ${input.apiKey}`;
+  if (input.apiKey && !hasHeader(headers, "authorization")) {
+    headers.authorization = `Bearer ${input.apiKey}`;
+  }
   const fetchFn = createProviderFetch(transportOptions(input));
   let lastError = "";
   for (const base of candidates(input.baseUrl, input.protocol)) {
-    const result = await getJson(`${base}/models`, headers, fetchFn);
+    const result = await getJson(endpoint(base, "/models"), headers, fetchFn);
     if (result.ok) {
       const parsed = OpenAiListSchema.safeParse(result.data);
       if (!parsed.success) {
@@ -164,17 +195,19 @@ async function discoverOpenAi(
 }
 
 async function discoverAnthropic(
-  input: DiscoverInput,
+  input: DiscoverInput & { protocol: Protocol },
 ): Promise<{ models: unknown[]; baseUrl: string; warnings: string[] }> {
   const headers: Record<string, string> = {
     "anthropic-version": "2023-06-01",
     ...input.headers,
   };
-  if (input.apiKey) headers["x-api-key"] = input.apiKey;
+  if (input.apiKey && !hasHeader(headers, "x-api-key") && !hasHeader(headers, "authorization")) {
+    headers["x-api-key"] = input.apiKey;
+  }
   const fetchFn = createProviderFetch(transportOptions(input));
   let lastError = "";
   for (const base of candidates(input.baseUrl, input.protocol)) {
-    const result = await getJson(`${base}/v1/models`, headers, fetchFn);
+    const result = await getJson(endpoint(base, "/v1/models"), headers, fetchFn);
     if (result.ok) {
       const parsed = DataListSchema.safeParse(result.data);
       if (!parsed.success) {
@@ -193,10 +226,12 @@ async function discoverAnthropic(
 }
 
 async function discoverGemini(
-  input: DiscoverInput,
+  input: DiscoverInput & { protocol: Protocol },
 ): Promise<{ models: unknown[]; baseUrl: string; warnings: string[] }> {
   const headers: Record<string, string> = { ...input.headers };
-  if (input.apiKey) headers["x-goog-api-key"] = input.apiKey;
+  if (input.apiKey && !hasHeader(headers, "x-goog-api-key")) {
+    headers["x-goog-api-key"] = input.apiKey;
+  }
   const fetchFn = createProviderFetch(transportOptions(input));
   let lastError = "";
   for (const base of candidates(input.baseUrl, input.protocol)) {
@@ -221,59 +256,103 @@ async function discoverGemini(
 }
 
 export async function discoverProvider(cwd: string, input: DiscoverInput): Promise<DiscoverResult> {
-  const result =
-    input.protocol === "anthropic-messages"
-      ? await discoverAnthropic(input)
-      : input.protocol === "gemini"
-        ? await discoverGemini(input)
-        : await discoverOpenAi(input);
+  const requested = input.protocol ?? "auto";
   const [catalog, fallback] = await Promise.all([
     loadModelsDev(cwd),
     loadAgentOne(cwd).catch(() => ({})),
   ]);
   const models: Record<string, ModelConfig> = {};
   const warnings: string[] = [];
-  const seen = new Set<string>();
-  for (const entry of result.models) {
-    const raw = object(entry);
-    if (!raw) continue;
-    const model =
-      input.protocol === "anthropic-messages"
-        ? anthropicModel(raw)
-        : input.protocol === "gemini"
-          ? geminiModel(raw)
-          : openAiModel(raw);
-    if (!model) continue;
-    const id =
-      typeof raw.id === "string"
-        ? raw.id
-        : typeof raw.name === "string"
-          ? withoutPrefix(raw.name, "models/")
-          : undefined;
-    if (!id) continue;
-    const key = id.trim().toLowerCase();
-    if (seen.has(key)) {
-      throw new HarnessError(
-        "provider_failed",
-        `${input.protocol} discovery returned duplicate model id "${id}"`,
-      );
+  let resolvedProtocol: Protocol;
+  let resolvedBaseUrl: string;
+  let protocolBaseUrls: Partial<Record<Protocol, string>> | undefined;
+  let detectedProtocols: Protocol[] | undefined;
+
+  if (requested === "auto") {
+    const fetchFn = createProviderFetch(transportOptions(input));
+    const auto = await discoverAutoEndpoints(input.baseUrl, input.apiKey, input.headers, fetchFn);
+    resolvedProtocol = auto.protocol;
+    resolvedBaseUrl = auto.baseUrl;
+    protocolBaseUrls = auto.protocolBaseUrls;
+    detectedProtocols = auto.detectedProtocols;
+    warnings.push(...auto.warnings);
+    for (const entry of auto.entries) {
+      const known =
+        findModel(catalog, entry.id, resolvedBaseUrl) ?? findFallbackModel(fallback, entry.id);
+      const merged = mergeModel(entry.model, known);
+      if (entry.protocol !== resolvedProtocol) merged.model.protocol = entry.protocol;
+      const parsed = ModelConfigSchema.safeParse(merged.model);
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        warnings.push(
+          `${formatModelName(entry.id)}: dropped invalid metadata${issue ? ` (${issue.path.join(".")}: ${issue.message})` : ""}`,
+        );
+        continue;
+      }
+      models[entry.id] = parsed.data;
+      if (merged.clamped) warnings.push(`${formatModelName(entry.id)}: ${merged.clamped}`);
+      if (!known)
+        warnings.push(`${formatModelName(entry.id)}: no catalog metadata, using API fields only`);
     }
-    seen.add(key);
-    const known = findModel(catalog, id, result.baseUrl) ?? findFallbackModel(fallback, id);
-    const parsed = ModelConfigSchema.safeParse(mergeModel(model, known));
-    if (!parsed.success) {
-      const issue = parsed.error.issues[0];
-      warnings.push(
-        `${formatModelName(id)}: dropped invalid metadata${issue ? ` (${issue.path.join(".")}: ${issue.message})` : ""}`,
-      );
-      continue;
+  } else {
+    const singleInput = { ...input, protocol: requested };
+    const result =
+      requested === "anthropic-messages"
+        ? await discoverAnthropic(singleInput)
+        : requested === "gemini"
+          ? await discoverGemini(singleInput)
+          : await discoverOpenAi(singleInput);
+    resolvedProtocol = requested;
+    resolvedBaseUrl = result.baseUrl;
+    detectedProtocols = [requested];
+    const seen = new Set<string>();
+    for (const entry of result.models) {
+      const raw = object(entry);
+      if (!raw) continue;
+      const model =
+        requested === "anthropic-messages"
+          ? anthropicModel(raw)
+          : requested === "gemini"
+            ? geminiModel(raw)
+            : openAiModel(raw);
+      if (!model) continue;
+      const id =
+        typeof raw.id === "string"
+          ? raw.id
+          : typeof raw.name === "string"
+            ? withoutPrefix(raw.name, "models/")
+            : undefined;
+      if (!id) continue;
+      const key = id.trim().toLowerCase();
+      if (seen.has(key)) {
+        throw new HarnessError(
+          "provider_failed",
+          `${requested} discovery returned duplicate model id "${id}"`,
+        );
+      }
+      seen.add(key);
+      const known = findModel(catalog, id, resolvedBaseUrl) ?? findFallbackModel(fallback, id);
+      const merged = mergeModel(model, known);
+      const parsed = ModelConfigSchema.safeParse(merged.model);
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        warnings.push(
+          `${formatModelName(id)}: dropped invalid metadata${issue ? ` (${issue.path.join(".")}: ${issue.message})` : ""}`,
+        );
+        continue;
+      }
+      models[id] = parsed.data;
+      if (merged.clamped) warnings.push(`${formatModelName(id)}: ${merged.clamped}`);
+      if (!known)
+        warnings.push(`${formatModelName(id)}: no catalog metadata, using API fields only`);
     }
-    models[id] = parsed.data;
-    if (!known) warnings.push(`${formatModelName(id)}: no catalog metadata, using API fields only`);
   }
+
   const nativeHeaders = { ...(input.headers ?? {}) };
-  if (input.apiKey) nativeHeaders.authorization = `Bearer ${input.apiKey}`;
-  const native = await discoverNativeLocal(result.baseUrl, nativeHeaders);
+  if (input.apiKey && !hasHeader(nativeHeaders, "authorization")) {
+    nativeHeaders.authorization = `Bearer ${input.apiKey}`;
+  }
+  const native = await discoverNativeLocal(resolvedBaseUrl, nativeHeaders);
   mergeNativeModels(models, native);
   if (native.sources.length > 0) {
     warnings.push(`native discovery: ${native.sources.join(", ")}`);
@@ -291,90 +370,20 @@ export async function discoverProvider(cwd: string, input: DiscoverInput): Promi
   }
   const knownProvider = Object.values(catalog).find((provider) => {
     try {
-      return new URL(provider.baseUrl).host === new URL(result.baseUrl).host;
+      return new URL(provider.baseUrl).host === new URL(resolvedBaseUrl).host;
     } catch {
       return false;
     }
   });
-  const providerName = knownProvider?.name ?? providerNameFromUrl(result.baseUrl);
+  const providerName = knownProvider?.name ?? providerNameFromUrl(resolvedBaseUrl);
   return {
     providerId: slug(providerName),
     providerName,
-    protocol: input.protocol,
-    baseUrl: result.baseUrl,
+    protocol: resolvedProtocol,
+    baseUrl: resolvedBaseUrl,
+    ...(protocolBaseUrls ? { protocolBaseUrls } : {}),
+    ...(detectedProtocols ? { detectedProtocols } : {}),
     models,
     warnings,
   };
-}
-
-export async function testProvider(
-  definition: ProviderConfig,
-  model: string,
-  providerId = "test",
-): Promise<{ ok: boolean; message: string; latencyMs: number }> {
-  const started = performance.now();
-  const config: HarnessConfig = {
-    useDefaults: false,
-    provider: providerId,
-    model,
-    providers: { [providerId]: definition },
-    mcp: { servers: {} },
-    hooks: {
-      sessionStart: [],
-      userPromptSubmit: [],
-      preToolUse: [],
-      postToolUse: [],
-      stop: [],
-      sessionEnd: [],
-      permission: [],
-      compact: [],
-      notification: [],
-      subagent: [],
-      toolBatch: [],
-    },
-    maxOutputTokens: 256,
-    catalog: { autoRefresh: false, ttlMs: 43_200_000 },
-    context: { window: 128_000, reserve: 1_000 },
-    loop: { maxTurns: 1, continuations: 0, parallelTools: false },
-    tools: {
-      maxOutputBytes: 10_000,
-      maxOutputLines: 100,
-      bashTimeoutMs: 5_000,
-      readLimitLines: 100,
-    },
-  };
-  try {
-    const active = createProvider(config, providerId);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(new Error("test timed out")), 30_000);
-    let text = "";
-    try {
-      for await (const event of active.provider.stream(
-        {
-          model,
-          system: "Reply with the single word OK.",
-          messages: [{ role: "user", content: "ping" }],
-          tools: [],
-          maxTokens: 256,
-        },
-        controller.signal,
-      )) {
-        if (event.type === "text") text += event.delta;
-        if (event.type === "done") break;
-      }
-    } finally {
-      clearTimeout(timer);
-    }
-    return {
-      ok: true,
-      message: text.trim().length > 0 ? text.trim().slice(0, 200) : "connected",
-      latencyMs: Math.round(performance.now() - started),
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      message: error instanceof Error ? error.message : String(error),
-      latencyMs: Math.round(performance.now() - started),
-    };
-  }
 }

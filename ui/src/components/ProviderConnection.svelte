@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cleanProviderBaseUrl } from "../../../shared/provider-url";
   import { t } from "../lib/i18n.svelte";
   import { requestAgent } from "../lib/desktop";
   import { settings } from "../lib/settings.svelte";
@@ -31,19 +32,22 @@
   let reauthorizing = $state(false);
   let confirmFor = "";
 
+  const cleanedUrl = $derived(cleanProviderBaseUrl(provider?.baseUrl ?? ""));
+
   const urlError = $derived.by(() => {
     const raw = provider?.baseUrl.trim() ?? "";
     if (!raw) return t("Enter an API address.");
-    try {
-      const url = new URL(raw);
-      if (url.protocol !== "http:" && url.protocol !== "https:") {
-        return t("Only http and https are supported.");
-      }
-      return "";
-    } catch {
-      return t("Full URL, for example https://api.example.com/v1.");
-    }
+    if (cleanedUrl.ok) return "";
+    return cleanedUrl.error === "unsupported_scheme"
+      ? t("Only http and https are supported.")
+      : t("Full URL, for example https://api.example.com/v1.");
   });
+
+  function normalizeBaseUrlInput(): void {
+    if (provider && cleanedUrl.ok && cleanedUrl.changed) {
+      provider.baseUrl = cleanedUrl.baseUrl;
+    }
+  }
 
   const envError = $derived.by(() => {
     if (!envName) return "";
@@ -129,6 +133,7 @@
         <input
           class="st-input"
           bind:value={provider.baseUrl}
+          onblur={normalizeBaseUrlInput}
           placeholder="https://api.example.com/v1"
           spellcheck="false"
           data-settings-field={t("Base URL API address")}

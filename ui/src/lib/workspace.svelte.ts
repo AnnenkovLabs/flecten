@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { trackUiAction } from "./telemetry";
 import type { TabId } from "./types";
 
 export type SubagentTab = `subagent:${string}`;
@@ -37,5 +38,6 @@ export class Workspace {
     } else {
       this.layout = this.layout === "split" ? "focus" : "split";
     }
+    trackUiAction("split_toggle", this.layout);
   }
 }

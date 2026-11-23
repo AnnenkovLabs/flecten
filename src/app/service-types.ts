@@ -7,7 +7,7 @@ import type { PromptStamp } from "../core/prompt";
 import type { Event, ReasoningEffort } from "../core/types";
 import type { McpServerStatus } from "../mcp/session";
 import type { CatalogProvider, CatalogStatus } from "../providers/catalog";
-import type { DiscoverResult } from "../providers/discovery";
+import type { DiscoverProtocol, DiscoverResult } from "../providers/discovery";
 import type { ModelMetadata } from "../providers/model-metadata";
 import type { ProbeResult } from "../providers/probe";
 import type { SandboxDetection } from "../security/os-sandbox";
@@ -64,6 +64,7 @@ export interface AppInfo {
   system: PromptStamp;
   /** Snapshots around shell commands: ready, still indexing, off in settings, or broken. */
   shellCheckpoints: ShellCheckpointState;
+  telemetry?: import("../../shared/telemetry").TelemetryStatus;
 }
 
 export interface ShellCheckpointState {
@@ -147,7 +148,7 @@ export interface AppService {
     baseUrl: string,
   ): Promise<import("../../shared/provider-protection").ProviderGatewayInspection>;
   discover(input: {
-    protocol: ProviderConfig["protocol"];
+    protocol?: DiscoverProtocol;
     baseUrl: string;
     apiKey?: string;
     headers?: Record<string, string>;
@@ -156,6 +157,8 @@ export interface AppService {
     ok: boolean;
     message: string;
     latencyMs: number;
+    errorKind?: string;
+    status?: number;
   }>;
   modelMetadata(input: {
     model: string;

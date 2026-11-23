@@ -97,12 +97,17 @@ function createSingleProvider(
   let apiKey = resolveApiKey(id, definition);
   const transport = { ...config.transport, ...definition.transport };
   const timeoutMs = definition.transportTimeoutMs ?? transport.timeoutMs;
+  const idleTimeoutMs =
+    definition.transport?.idleTimeoutMs ??
+    (definition.transportTimeoutMs !== undefined
+      ? Math.max(transport.idleTimeoutMs ?? 0, definition.transportTimeoutMs)
+      : transport.idleTimeoutMs);
   const providerFetch = createProviderFetch({
     httpErrors: "response",
     headers: definition.headers,
     ...(definition.proxy ? { proxy: definition.proxy } : {}),
     ...(timeoutMs ? { timeoutMs } : {}),
-    ...(transport.idleTimeoutMs ? { idleTimeoutMs: transport.idleTimeoutMs } : {}),
+    ...(idleTimeoutMs ? { idleTimeoutMs } : {}),
   });
   const baseRuntime: ProviderRuntime = {
     providerId: id,
@@ -132,7 +137,8 @@ function createSingleProvider(
   const adapterFor = (protocol: Protocol): ModelProvider => {
     const cached = adapters.get(protocol);
     if (cached) return cached;
-    const adapter = createAdapter(protocol, { ...baseRuntime, protocol });
+    const baseUrl = definition.protocolBaseUrls?.[protocol] ?? baseRuntime.baseUrl;
+    const adapter = createAdapter(protocol, { ...baseRuntime, protocol, baseUrl });
     adapters.set(protocol, adapter);
     return adapter;
   };

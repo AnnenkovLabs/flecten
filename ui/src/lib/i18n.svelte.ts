@@ -1,5 +1,6 @@
 import { catalogs, english, type MessageKey } from "./i18n/catalogs";
 import { isLocale, LOCALE_STORAGE_KEY, savedLocale } from "./i18n/locales";
+import { syncTelemetryLocale, trackUiAction } from "./telemetry";
 
 export const i18n = $state({ locale: savedLocale() });
 
@@ -9,6 +10,8 @@ export function setLocale(value: unknown): void {
   i18n.locale = value;
   if (typeof document !== "undefined") document.documentElement.lang = value;
   if (typeof window !== "undefined") window.desktop?.setLocale?.(value);
+  syncTelemetryLocale(value);
+  trackUiAction("locale_changed", value);
   try {
     globalThis.localStorage?.setItem(LOCALE_STORAGE_KEY, value);
   } catch {
@@ -28,11 +31,13 @@ export function initializeLocale(): () => void {
   if (typeof window === "undefined") return () => {};
   document.documentElement.lang = i18n.locale;
   window.desktop?.setLocale?.(i18n.locale);
+  syncTelemetryLocale(i18n.locale);
   const sync = (event: StorageEvent): void => {
     if (event.key === LOCALE_STORAGE_KEY) {
       i18n.locale = isLocale(event.newValue) ? event.newValue : "en";
       document.documentElement.lang = i18n.locale;
       window.desktop?.setLocale?.(i18n.locale);
+      syncTelemetryLocale(i18n.locale);
     }
   };
   window.addEventListener("storage", sync);

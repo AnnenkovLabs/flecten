@@ -28,6 +28,8 @@ export interface ToolResult {
   error?: string;
   fullOutputPath?: string;
   durationMs?: number;
+  attempts?: number;
+  repaired?: boolean;
   terminate?: boolean;
   data?: unknown;
 }

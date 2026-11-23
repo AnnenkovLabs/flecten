@@ -37,6 +37,7 @@
   import { readPreference } from "./lib/preference-storage";
   import { revealWhenShown } from "./lib/motion";
   import { conversationLiveState } from "./lib/run/worker-mirrors";
+  import { trackAppScreen, trackSlashCommand } from "./lib/telemetry";
   import { isTerminalFocused } from "./lib/terminal/xterm-config";
 
   const run = new RunStore();
@@ -167,6 +168,7 @@
   }
 
   function handleCommand(name: string, args: string): void {
+    trackSlashCommand(name);
     switch (name) {
       case "undo":
         void run.checkpoints.undo();
@@ -302,6 +304,7 @@
 
   $effect(() => {
     document.title = windowTitle(startScreen ? "" : run.title);
+    trackAppScreen({ mode, twinOpen, surface: workspace.surface, layout: workspace.layout, viewportWidth, settingsOpen: settings.open });
   });
 </script>
 

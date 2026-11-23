@@ -1,4 +1,5 @@
 import { HarnessError } from "../errors";
+import { isObject } from "../util/json";
 import {
   assessStream,
   type StreamErrorKind,
@@ -6,6 +7,67 @@ import {
   StreamTracker,
 } from "./stream-recovery";
 import type { ModelEvent, StopReason } from "./types";
+
+const RATE_LIMIT_ERROR_CODES = new Set([
+  "rate_limit",
+  "rate_limit_error",
+  "rate_limit_exceeded",
+  "rate_limited",
+  "upstream_rate_limited",
+  "too_many_requests",
+  "resource_exhausted",
+  "quota_exceeded",
+]);
+
+const NON_RETRYABLE_ERROR_CODES = new Set([
+  "invalid_request",
+  "invalid_request_error",
+  "bad_request",
+  "authentication_error",
+  "permission_error",
+  "not_found_error",
+  "context_length_exceeded",
+  "content_policy_violation",
+  "insufficient_quota",
+  "insufficient_credits",
+  "billing_hard_limit_reached",
+  "billing_not_active",
+  "payment_required",
+]);
+
+export function classifyStreamError(
+  payload: unknown,
+  fallback = "provider returned a stream error",
+): { kind: StreamErrorKind; message: string } {
+  const err = isObject(payload) && isObject(payload.error) ? payload.error : payload;
+  if (typeof err === "string" && err.trim().length > 0) {
+    return { kind: "server", message: err.trim() };
+  }
+  if (!isObject(err)) return { kind: "server", message: fallback };
+  const rawMessage = typeof err.message === "string" ? err.message.trim() : "";
+  const code = typeof err.code === "string" ? err.code.trim().toLowerCase() : "";
+  const type = typeof err.type === "string" ? err.type.trim().toLowerCase() : "";
+  const status = typeof err.status === "number" ? err.status : undefined;
+  const markers = [code, type].filter(Boolean);
+  let kind: StreamErrorKind = "server";
+  if (status === 429 || markers.some((m) => RATE_LIMIT_ERROR_CODES.has(m))) {
+    kind = "rate_limit";
+  } else if (
+    (status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429) ||
+    markers.some((m) => NON_RETRYABLE_ERROR_CODES.has(m))
+  ) {
+    kind = "unknown";
+  }
+  const tag = code && code !== type ? `${type || "error"} (${code})` : type || code;
+  const message = rawMessage
+    ? tag
+      ? `${tag}: ${rawMessage}`
+      : rawMessage
+    : tag
+      ? `${fallback} (${tag})`
+      : fallback;
+  return { kind, message };
+}
 
 export interface SseMessage {
   event: string;

@@ -154,8 +154,13 @@ export function providerOps(context: ProviderOpsContext): ProviderOps {
       if (!current) throw new Error(`unknown provider: ${id}`);
       await syncCatalog(context.cwd);
       const apiKey = resolveApiKey(id, current);
+      const isMultiProtocol =
+        Boolean(current.protocolBaseUrls && Object.keys(current.protocolBaseUrls).length > 1) ||
+        Object.values(current.models).some(
+          (entry) => entry.protocol && entry.protocol !== current.protocol,
+        );
       const result = await discoverProvider(context.cwd, {
-        protocol: current.protocol,
+        protocol: isMultiProtocol ? "auto" : current.protocol,
         baseUrl: current.baseUrl,
         ...(apiKey ? { apiKey } : {}),
         headers: current.headers,
@@ -170,6 +175,9 @@ export function providerOps(context: ProviderOpsContext): ProviderOps {
       const next = structuredClone(config);
       const definition = next.providers[id];
       if (!definition) throw new Error(`unknown provider: ${id}`);
+      if (result.protocolBaseUrls && Object.keys(result.protocolBaseUrls).length > 0) {
+        definition.protocolBaseUrls = result.protocolBaseUrls;
+      }
       const merged = actualizeModels(definition.models, discovered);
       const active = id === next.provider;
       const warnings = [...result.warnings];

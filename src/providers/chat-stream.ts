@@ -2,7 +2,7 @@ import { isObject } from "../util/json";
 import { type ChatChunk, ChatChunkSchema } from "./chat-stream-schema";
 import { isOpenRouter } from "./compat";
 import { type ProviderResponse, ProviderResponseError, responseLabel } from "./response";
-import { parseSse, StreamEvents } from "./sse";
+import { classifyStreamError, parseSse, StreamError, StreamEvents } from "./sse";
 import type { StreamFinishReason } from "./stream-recovery";
 import { sanitizeBody } from "./transport";
 import type { ModelEvent, ModelRequest, ProviderRuntime } from "./types";
@@ -111,6 +111,10 @@ export async function* streamChatResponse(
   };
   const events = new StreamEvents();
   const calls = new Map<number, PendingCall>();
+  const slotById = new Map<string, number>();
+  const slotByIndex = new Map<number, number>();
+  let nextSlot = 0;
+  let lastSlot: number | undefined;
   const details: unknown[] = [];
   const encoder = new TextEncoder();
   let finish: string | undefined;
@@ -138,7 +142,17 @@ export async function* streamChatResponse(
         fail("invalid_chunk");
       }
       const chunk = parsed.data;
-      if (chunk.error !== undefined) events.fail("server", "provider returned a stream error");
+      if (chunk.error !== undefined) {
+        const classified = classifyStreamError(chunk.error);
+        const safeMessage = sanitizeBody(classified.message, {
+          ...runtime.headers,
+          authorization: runtime.apiKey ?? "",
+        });
+        throw new ProviderResponseError(
+          snapshot("provider_error"),
+          new StreamError(safeMessage, classified.kind),
+        );
+      }
       const promptTokens = chunk.usage?.prompt_tokens ?? chunk.usage?.input_tokens;
       const completionTokens = chunk.usage?.completion_tokens ?? chunk.usage?.output_tokens;
       if (chunk.usage && typeof promptTokens === "number" && typeof completionTokens === "number") {
@@ -164,10 +178,6 @@ export async function* streamChatResponse(
       }
       const delta = choice.delta;
       if (!delta) {
-        if (!choice.finish_reason) {
-          evidence.unsupportedFrames += 1;
-          fail("unsupported_choice");
-        }
         continue;
       }
       const known = [
@@ -180,19 +190,22 @@ export async function* streamChatResponse(
         "refusal",
         "tool_calls",
       ];
-      if (
-        "function_call" in delta ||
-        (Object.keys(delta).length > 0 && !known.some((key) => key in delta))
-      ) {
+      const fnCall = delta.function_call;
+      const hasActiveFunctionCall =
+        fnCall !== undefined &&
+        fnCall !== null &&
+        ((typeof fnCall.name === "string" && fnCall.name.length > 0) ||
+          (typeof fnCall.arguments === "string" && fnCall.arguments.length > 0));
+      const deltaKeys = Object.keys(delta).filter(
+        (key) => !(key === "function_call" && !hasActiveFunctionCall),
+      );
+      if (hasActiveFunctionCall || (deltaKeys.length > 0 && !known.some((key) => key in delta))) {
         evidence.unsupportedFrames += 1;
         fail("unsupported_delta");
       }
       if (delta.refusal) fail("refusal");
       if (delta.reasoning_details) mergeDetails(details, delta.reasoning_details);
-      const reasoning =
-        delta.reasoning_content ??
-        delta.reasoning ??
-        delta.reasoning_text ??
+      const detailReasoning =
         delta.reasoning_details
           ?.map((part) =>
             isObject(part)
@@ -203,8 +216,11 @@ export async function* streamChatResponse(
                   : ""
               : "",
           )
-          .join("") ??
-        "";
+          .join("") ?? "";
+      const reasoning =
+        [delta.reasoning_content, delta.reasoning, delta.reasoning_text, detailReasoning].find(
+          (value): value is string => typeof value === "string" && value.length > 0,
+        ) ?? "";
       if (reasoning.length > 0) {
         evidence.reasoningBytes += encoder.encode(reasoning).byteLength;
         yield events.emit({ type: "reasoning", delta: reasoning });
@@ -216,34 +232,74 @@ export async function* streamChatResponse(
         yield events.emit({ type: "text", delta: text });
       }
       for (const part of delta.tool_calls ?? []) {
-        const previous = calls.get(part.index) ?? { id: "", name: "", arguments: "" };
-        if (part.id) previous.id = part.id;
+        const partId = typeof part.id === "string" && part.id.length > 0 ? part.id : "";
+        const partIndex = typeof part.index === "number" ? part.index : undefined;
+        let slot: number;
+        if (partId && slotById.has(partId)) {
+          slot = slotById.get(partId) as number;
+        } else if (partIndex !== undefined && slotByIndex.has(partIndex)) {
+          const candidate = slotByIndex.get(partIndex) as number;
+          const existing = calls.get(candidate);
+          if (partId && existing?.id && existing.id !== partId) {
+            slot = nextSlot++;
+            slotByIndex.set(partIndex, slot);
+          } else {
+            slot = candidate;
+          }
+        } else if (partIndex === undefined && !partId && lastSlot !== undefined) {
+          slot = lastSlot;
+        } else {
+          slot = nextSlot++;
+        }
+        if (partId) slotById.set(partId, slot);
+        if (partIndex !== undefined) slotByIndex.set(partIndex, slot);
+        lastSlot = slot;
+        const previous = calls.get(slot) ?? { id: "", name: "", arguments: "" };
+        if (partId) previous.id = partId;
         if (part.extra_content !== undefined) previous.extraContent = part.extra_content;
         if (part.function?.name) {
-          previous.name += part.function.name;
-          yield events.emit({ type: "tool_call_progress", index: part.index, name: previous.name });
+          const chunkName = part.function.name;
+          if (!previous.name) {
+            previous.name = chunkName;
+            yield events.emit({ type: "tool_call_progress", index: slot, name: previous.name });
+          } else if (
+            chunkName !== previous.name &&
+            !request.tools.some((tool) => tool.name === previous.name)
+          ) {
+            previous.name += chunkName;
+            yield events.emit({ type: "tool_call_progress", index: slot, name: previous.name });
+          }
         }
         if (part.function?.arguments) {
           previous.arguments += part.function.arguments;
           yield events.emit({
             type: "tool_call_progress",
-            index: part.index,
+            index: slot,
             delta: part.function.arguments,
           });
         }
-        calls.set(part.index, previous);
+        calls.set(slot, previous);
       }
     }
     if (!evidence.terminal) events.requireDone("[DONE]");
     // Compatible providers may omit finish_reason even after an explicit [DONE].
-    const reason = finish ? FINISH[finish] : calls.size > 0 ? "tool_use" : "end";
+    const mappedFinish = finish ? FINISH[finish] : undefined;
+    const reason = mappedFinish
+      ? mappedFinish === "end" && calls.size > 0
+        ? "tool_use"
+        : mappedFinish
+      : finish
+        ? undefined
+        : calls.size > 0
+          ? "tool_use"
+          : "end";
     if (!reason) fail("unknown_finish_reason");
     if (reason === "content_filter" || reason === "refusal") fail(reason);
     const completed: Array<Extract<ModelEvent, { type: "tool_call" }>> = [];
     for (const [, call] of [...calls].sort(([a], [b]) => a - b)) {
       let args: unknown;
       const rawArgs =
-        call.arguments.trim().length === 0 && finish === "tool_calls" ? "{}" : call.arguments;
+        call.arguments.trim().length === 0 && call.id && call.name ? "{}" : call.arguments;
       try {
         args = JSON.parse(rawArgs);
       } catch {

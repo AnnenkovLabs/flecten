@@ -14,6 +14,7 @@
   import { isModifier, shortcutLabel } from "../lib/platform";
   import { settingsSection } from "../lib/motion";
   import { settings } from "../lib/settings.svelte";
+  import { trackScreen } from "../lib/telemetry";
   import { closeAction } from "../lib/settings-utils";
   import { searchSettingsSections, type SettingsSectionId } from "../lib/settings/sections";
   import AddProviderModal from "./AddProviderModal.svelte";
@@ -66,6 +67,7 @@
     void section;
     void settings.selected;
     if (scrollEl) scrollEl.scrollTop = 0;
+    if (settings.open) trackScreen("settings", `settings:${section}`, "focus", window.innerWidth);
   });
 
   $effect(() => {

@@ -3,6 +3,7 @@ import { productEnv } from "../../shared/environment.cjs";
 import { ProjectLockedError } from "../errors";
 import { runModuleHost } from "../modules/host";
 import { DiagnosticsRuntime } from "../observability/runtime";
+import { TelemetryRuntime } from "../observability/telemetry";
 import { isObject } from "../util/json";
 import { redact } from "../util/redact";
 import { lockProject } from "./project-lock";
@@ -52,6 +53,7 @@ function fail(requestId: string | undefined) {
 }
 
 async function main(): Promise<void> {
+  const bootStartedAt = performance.now();
   const cwd = productEnv("CWD")?.trim() || process.cwd();
   const migration = new StorageBootstrap(cwd, write);
   const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
@@ -88,23 +90,50 @@ async function main(): Promise<void> {
   process.once("SIGTERM", closeBootstrap);
   process.once("SIGINT", closeBootstrap);
   await initialized;
+  const migrationNeeded = migration.blocked;
+  const migrationStartedAt = performance.now();
   await migration.ready;
+  const migrationDurationMs = performance.now() - migrationStartedAt;
   // One core per project: a second window or app on the same folder waits, then gets project_locked.
   const lock = await lockProject(cwd);
   process.once("exit", () => lock.release());
   const app = await createAppService(cwd, productEnv("PROJECTLESS") === "1" ? null : cwd, () => {
     void ready().catch(fail(undefined));
   });
+  let cachedConfig = app.settings().config;
+  let cachedInfo = app.info();
+  const refreshTelemetryCache = (): void => {
+    cachedConfig = app.settings().config;
+    cachedInfo = app.info();
+  };
   const diagnostics = new DiagnosticsRuntime(cwd);
-  app.session.subscribe((event) => diagnostics.record(event));
+  const telemetry = new TelemetryRuntime({
+    cwd,
+    getConfig: () => cachedConfig,
+    getInfo: () => cachedInfo,
+  });
+  await telemetry.init();
+  if (migrationNeeded) telemetry.recordMigration({ ok: true, durationMs: migrationDurationMs });
+  app.session.subscribe((event) => {
+    diagnostics.record(event);
+    telemetry.recordEvent(event);
+  });
   process.on("uncaughtExceptionMonitor", (error) => {
     void diagnostics.crash(error);
+    void telemetry.recordCrash(error);
   });
 
   const status = async (): Promise<Record<string, unknown>> => {
+    refreshTelemetryCache();
     const session = (await app.session.send({ type: "status" })) as Record<string, unknown>;
     const { sessionId: _sessionId, ...runtime } = session;
-    return { ...runtime, type: "status", ...app.info(), sessions: app.session.activity() };
+    return {
+      ...runtime,
+      type: "status",
+      ...cachedInfo,
+      telemetry: telemetry.status(),
+      sessions: app.session.activity(),
+    };
   };
 
   const ready = async (): Promise<void> => write(await status());
@@ -112,8 +141,12 @@ async function main(): Promise<void> {
   app.ideTerminal.subscribe((event) => write({ type: "terminal.event", event }));
   const handlers = createHandlers(
     app,
-    (message, context) => write({ type: "error", code: "run_failed", message, ...context }),
+    (message, context) => {
+      telemetry.capture("run.error", { code: "run_failed", role: "single" });
+      write({ type: "error", code: "run_failed", message, ...context });
+    },
     diagnostics,
+    telemetry,
   );
   dispatch = async (input) => {
     const requestId = requestIdOf(input);
@@ -125,14 +158,35 @@ async function main(): Promise<void> {
       write({ type: "error", code: "invalid_input", message: `unknown command: ${input.type}` });
       return;
     }
+    const startedAt = performance.now();
+    const track = input.type !== "telemetry.track";
     const handler = handlers[input.type as keyof typeof handlers];
     await Promise.resolve()
       .then(() => handler(input))
       .then(async (reply) => {
+        if (REFRESH_AFTER.has(input.type) || input.type === "provider.actualize") {
+          refreshTelemetryCache();
+        }
+        if (track) {
+          telemetry.recordCommand(input, {
+            ok: true,
+            durationMs: performance.now() - startedAt,
+            ...(reply !== undefined ? { reply } : {}),
+          });
+        }
         if (reply !== undefined) respond(requestId, { ok: true, ...reply });
         if (REFRESH_AFTER.has(input.type)) await ready();
       })
-      .catch(fail(requestId));
+      .catch((error: unknown) => {
+        if (track) {
+          telemetry.recordCommand(input, {
+            ok: false,
+            durationMs: performance.now() - startedAt,
+            error,
+          });
+        }
+        fail(requestId)(error);
+      });
   };
 
   let closing = false;
@@ -141,7 +195,7 @@ async function main(): Promise<void> {
     closing = true;
     lines.close();
     await app.dispose().catch(() => undefined);
-    await diagnostics.flush();
+    await Promise.all([diagnostics.flush(), telemetry.shutdown()]);
     process.exit(0);
   };
   lines.removeListener("close", closeBootstrap);
@@ -154,10 +208,23 @@ async function main(): Promise<void> {
   await ready();
   void app
     .resumeInterrupted()
+    .catch(() => ({ interrupted: [] as string[], resumed: [] as string[] }))
     .then((result) => {
+      const startupMs = performance.now() - bootStartedAt;
+      const launchTsRaw = Number(productEnv("LAUNCH_TS"));
+      const electronStartupMs =
+        Number.isFinite(launchTsRaw) && launchTsRaw > 0
+          ? Math.max(0, Date.now() - launchTsRaw)
+          : undefined;
+      telemetry.recordStartup({
+        startupMs,
+        ...(electronStartupMs !== undefined ? { electronStartupMs } : {}),
+        migrationNeeded,
+        interruptedRunsCount: result.interrupted.length,
+        resumedRunsCount: result.resumed.length,
+      });
       if (result.interrupted.length > 0) write({ type: "sessions.interrupted", ...result });
-    })
-    .catch(() => undefined);
+    });
 }
 
 const moduleEntry = process.argv[2] === "--module-host" ? process.argv[3] : undefined;

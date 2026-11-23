@@ -93,4 +93,9 @@ export default {
   Output: "Output",
   "Open weights": "Open weights",
   "Files and attachments": "Files and attachments",
+  "Tests all endpoints and combines protocols under one provider.":
+    "Tests all endpoints and combines protocols under one provider.",
+  "Paste a domain, base URL, endpoint, or curl command.":
+    "Paste a domain, base URL, endpoint, or curl command.",
+  "Will use {0}": ["Will use ", 0],
 } as const;

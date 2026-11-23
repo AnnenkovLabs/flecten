@@ -36,16 +36,34 @@ export function checkAgentSize(
 }
 
 if (import.meta.main) {
+  const buildEnv = {
+    ...process.env,
+    FLECTEN_BUILD_POSTHOG_API_KEY: (
+      process.env.FLECTEN_POSTHOG_API_KEY ??
+      process.env.POSTHOG_API_KEY ??
+      ""
+    ).trim(),
+    FLECTEN_BUILD_POSTHOG_HOST: (
+      process.env.FLECTEN_POSTHOG_HOST ??
+      process.env.POSTHOG_HOST ??
+      "https://eu.i.posthog.com"
+    ).trim(),
+    FLECTEN_BUILD_COMMIT: (process.env.FLECTEN_COMMIT ?? process.env.GITHUB_SHA ?? "")
+      .trim()
+      .slice(0, 12),
+  };
   const build = Bun.spawnSync({
     cmd: [
       "bun",
       "build",
       "--compile",
       "--minify",
+      "--env=FLECTEN_BUILD_*",
       "src/app/server.ts",
       "--outfile",
       AGENT_BINARY_PATH,
     ],
+    env: buildEnv,
     stdout: "inherit",
     stderr: "inherit",
   });

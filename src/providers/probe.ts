@@ -32,6 +32,10 @@ function probeConfig(definition: ProviderConfig, modelId: string): HarnessConfig
   const providers: Record<string, ProviderConfig> = {
     probe: {
       ...definition,
+      transport: {
+        ...definition.transport,
+        retries: 0,
+      },
       models: { ...definition.models, [modelId]: model },
     },
   };
@@ -71,7 +75,7 @@ async function collect(
   definition: ProviderConfig,
   modelId: string,
   request: ModelRequest,
-  timeoutMs = 45_000,
+  timeoutMs = 25_000,
 ): Promise<{ events: ModelEvent[]; text: string; error?: string }> {
   const provider = createProvider(probeConfig(definition, modelId), "probe");
   const controller = new AbortController();
@@ -101,10 +105,12 @@ export async function probeModel(
   modelId: string,
 ): Promise<ProbeResult> {
   const started = performance.now();
+  const limit = definition.models[modelId]?.output;
+  const probeTokens = limit !== undefined && limit > 0 ? Math.min(1024, limit) : 1024;
   const base = {
     model: modelId,
     system: "You are a capability probe. Follow the instruction exactly.",
-    maxTokens: 256,
+    maxTokens: probeTokens,
   };
   const text = await collect(definition, modelId, {
     ...base,
@@ -121,7 +127,7 @@ export async function probeModel(
     ],
     tools: [readTool],
     toolChoice: "required",
-    maxTokens: 256,
+    maxTokens: probeTokens,
   });
   if (!tools.events.some((event) => event.type === "tool_call")) {
     tools = await collect(definition, modelId, {
@@ -134,7 +140,7 @@ export async function probeModel(
       ],
       tools: [readTool],
       toolChoice: "auto",
-      maxTokens: 256,
+      maxTokens: probeTokens,
     });
   }
   const reasoning = await collect(definition, modelId, {
@@ -147,7 +153,7 @@ export async function probeModel(
     ],
     tools: [],
     reasoning: "high",
-    maxTokens: 1024,
+    maxTokens: probeTokens,
   });
   const sawReasoning = reasoning.events.some((event) => event.type === "reasoning");
   const sawTool = tools.events.some((event) => event.type === "tool_call" && event.name === "read");

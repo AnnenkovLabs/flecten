@@ -94,4 +94,9 @@ export default {
   Output: "Saída",
   "Open weights": "Pesos abertos",
   "Files and attachments": "Arquivos e anexos",
+  "Tests all endpoints and combines protocols under one provider.":
+    "Testa todos os endpoints e combina protocolos em um único provedor.",
+  "Paste a domain, base URL, endpoint, or curl command.":
+    "Cole um domínio, URL base, endpoint ou comando curl.",
+  "Will use {0}": ["Vai usar ", 0],
 } as const;

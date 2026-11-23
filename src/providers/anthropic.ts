@@ -1,21 +1,12 @@
-import type { Message, ToolCall } from "../core/types";
+import type { ToolCall } from "../core/types";
 import { isObject, parseToolArgs } from "../util/json";
-import {
-  apiModel,
-  budgetFor,
-  isAdaptiveAnthropic,
-  modelConfig,
-  normalizeEffort,
-  promptCacheEnabled,
-  requestExtra,
-  requestHeaders,
-} from "./compat";
+import { anthropicThinkingConfig, buildAnthropicBody } from "./anthropic-body";
+import { apiModel, hasHeader, modelConfig, requestHeaders } from "./compat";
 import { endpoint, postStream } from "./http";
-import { anthropicMedia } from "./input-media";
-import { anthropicSchema, strictSchema, structuredOutputFormat } from "./schema";
-import { parseSse, StreamEvents } from "./sse";
+import { structuredOutputFormat } from "./schema";
+import { classifyStreamError, parseSse, StreamEvents } from "./sse";
 import type { StreamFinishReason } from "./stream-recovery";
-import type { ModelEvent, ModelProvider, ModelRequest, ProviderRuntime } from "./types";
+import type { ModelEvent, ModelProvider, ProviderRuntime } from "./types";
 
 interface AnthropicUsage {
   input_tokens?: number;
@@ -34,189 +25,6 @@ interface StreamBlock {
   signature: string;
   data: string;
   stopped: boolean;
-}
-
-function pushUserBlocks(
-  output: Record<string, unknown>[],
-  blocks: Record<string, unknown>[],
-): void {
-  const last = output.at(-1);
-  if (last?.role === "user" && Array.isArray(last.content)) {
-    last.content.push(...blocks);
-    return;
-  }
-  output.push({ role: "user", content: blocks });
-}
-
-function anthropicBlocks(message: Message): unknown[] | undefined {
-  if (message.role !== "assistant" || !isObject(message.providerData)) return undefined;
-  if (message.providerData.kind !== "anthropic") return undefined;
-  return Array.isArray(message.providerData.blocks) ? message.providerData.blocks : undefined;
-}
-
-function convertMessages(messages: Message[], caching = false): Record<string, unknown>[] {
-  const output: Record<string, unknown>[] = [];
-  let index = 0;
-
-  while (index < messages.length) {
-    const message = messages[index];
-    if (!message) break;
-
-    if (message.role === "user") {
-      pushUserBlocks(output, [
-        { type: "text", text: message.content },
-        ...(message.images ?? []).map(anthropicMedia),
-      ]);
-      index += 1;
-      continue;
-    }
-
-    if (message.role === "assistant") {
-      const raw = anthropicBlocks(message);
-      if (raw && raw.length > 0) {
-        output.push({
-          role: "assistant",
-          content: raw.map((entry) => (isObject(entry) ? { ...entry } : entry)),
-        });
-        index += 1;
-        continue;
-      }
-      const content: Record<string, unknown>[] = [];
-      if (message.content.trim().length > 0) {
-        content.push({ type: "text", text: message.content });
-      }
-      for (const call of message.toolCalls) {
-        content.push({
-          type: "tool_use",
-          id: call.id,
-          name: call.name,
-          input: isObject(call.args) ? call.args : {},
-        });
-      }
-      if (content.length > 0) output.push({ role: "assistant", content });
-      index += 1;
-      continue;
-    }
-
-    const results: Record<string, unknown>[] = [];
-    while (index < messages.length && messages[index]?.role === "tool") {
-      const toolMessage = messages[index];
-      if (toolMessage?.role !== "tool") break;
-      results.push({
-        type: "tool_result",
-        tool_use_id: toolMessage.toolCallId,
-        content: toolMessage.content,
-        ...(toolMessage.isError ? { is_error: true } : {}),
-      });
-      index += 1;
-    }
-    if (results.length > 0) pushUserBlocks(output, results);
-  }
-
-  if (caching) {
-    let remainingBreakpoints = 2;
-    for (let msgIdx = output.length - 1; msgIdx >= 0 && remainingBreakpoints > 0; msgIdx -= 1) {
-      const item = output[msgIdx];
-      if (msgIdx < output.length - 1 && item?.role !== "user") continue;
-      const blocks = Array.isArray(item?.content) ? item.content : undefined;
-      for (let at = (blocks?.length ?? 0) - 1; blocks && at >= 0; at -= 1) {
-        const block = blocks[at];
-        if (!isObject(block)) continue;
-        if (block.type === "thinking" || block.type === "redacted_thinking") continue;
-        if (block.type === "text" && typeof block.text === "string" && block.text.length === 0) {
-          continue;
-        }
-        blocks[at] = { ...block, cache_control: { type: "ephemeral" } };
-        remainingBreakpoints -= 1;
-        break;
-      }
-    }
-  }
-
-  return output;
-}
-
-function thinkingConfig(request: ModelRequest, runtime: ProviderRuntime): Record<string, unknown> {
-  const model = modelConfig(runtime, request.model);
-  const effort =
-    request.reasoning ?? (runtime.config.thinking === "enabled" ? ("medium" as const) : undefined);
-
-  if (runtime.config.thinking === "disabled" || effort === "none") {
-    return { thinking: { type: "disabled" } };
-  }
-  if (!effort) return {};
-  if (!isAdaptiveAnthropic(request.model, model)) {
-    const budget = budgetFor(effort, request.maxTokens);
-    if (budget < 1024) return {};
-    return {
-      thinking: { type: "enabled", budget_tokens: budget },
-      beta: "interleaved-thinking-2025-05-14",
-    };
-  }
-  return {
-    thinking: { type: "adaptive", display: "summarized" },
-    output_config: { effort: normalizeEffort(effort, model) },
-  };
-}
-
-function buildBody(request: ModelRequest, runtime: ProviderRuntime): Record<string, unknown> {
-  const model = modelConfig(runtime, request.model);
-  const thinking = thinkingConfig(request, runtime);
-  const caching = promptCacheEnabled(runtime, model);
-  const strictTools = model?.compat?.strictTools ?? runtime.config.strictTools;
-  const tools =
-    request.tools.length > 0
-      ? request.tools.map((tool, index) => {
-          const strict = strictTools ? strictSchema(tool.parameters) : undefined;
-          return {
-            name: tool.name,
-            description: tool.description,
-            input_schema: strict?.strict ? strict.schema : anthropicSchema(tool.parameters),
-            ...(strict?.strict ? { strict: true } : {}),
-            ...(caching && index === request.tools.length - 1
-              ? { cache_control: { type: "ephemeral" } }
-              : {}),
-          };
-        })
-      : undefined;
-  const format = structuredOutputFormat(model);
-  const transformed = format?.strict ? strictSchema(format.schema) : undefined;
-  const formatSchema = format
-    ? transformed?.strict
-      ? transformed.schema
-      : anthropicSchema(format.schema)
-    : undefined;
-  const outputConfig = {
-    ...(isObject(thinking.output_config) ? thinking.output_config : {}),
-    ...(format && formatSchema ? { format: { type: "json_schema", schema: formatSchema } } : {}),
-  };
-
-  const thinkingActive = isObject(thinking.thinking) && thinking.thinking.type !== "disabled";
-  const body: Record<string, unknown> = {
-    model: apiModel(request),
-    max_tokens: request.maxTokens,
-    system: caching
-      ? [{ type: "text", text: request.system, cache_control: { type: "ephemeral" } }]
-      : request.system,
-    messages: convertMessages(request.messages, caching),
-    tools,
-    stream: true,
-    ...(request.temperature === undefined || thinkingActive || model?.temperature === false
-      ? {}
-      : { temperature: request.temperature }),
-    ...(thinking.thinking ? { thinking: thinking.thinking } : {}),
-    ...(Object.keys(outputConfig).length > 0 ? { output_config: outputConfig } : {}),
-    ...(request.toolChoice === "required"
-      ? { tool_choice: { type: "any" } }
-      : request.toolChoice === "none"
-        ? { tool_choice: { type: "none" } }
-        : request.toolChoice === "auto"
-          ? { tool_choice: { type: "auto" } }
-          : {}),
-    ...requestExtra(runtime, model, request),
-  };
-  body.stream = true;
-  return body;
 }
 
 interface UsageTotal {
@@ -258,11 +66,9 @@ function mapStop(reason: string | undefined, hasCalls: boolean): StreamFinishRea
 
 function rawBlock(block: StreamBlock): Record<string, unknown> | undefined {
   if (block.type === "thinking") {
-    return {
-      type: "thinking",
-      thinking: block.text,
-      signature: block.signature,
-    };
+    return block.signature.length > 0
+      ? { type: "thinking", thinking: block.text, signature: block.signature }
+      : undefined;
   }
   if (block.type === "redacted_thinking") {
     return { type: "redacted_thinking", data: block.data };
@@ -290,9 +96,15 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
         "anthropic-version": "2023-06-01",
         ...requestHeaders(runtime, model, request),
       };
-      if (runtime.apiKey && !headers["x-api-key"]) headers["x-api-key"] = runtime.apiKey;
-      const thinking = thinkingConfig(request, runtime);
-      const format = structuredOutputFormat(model);
+      if (
+        runtime.apiKey &&
+        !hasHeader(headers, "x-api-key") &&
+        !hasHeader(headers, "authorization")
+      ) {
+        headers["x-api-key"] = runtime.apiKey;
+      }
+      const thinking = anthropicThinkingConfig(request, runtime);
+      const format = request.responseFormat ?? structuredOutputFormat(model);
       const strictTools = model?.compat?.strictTools ?? runtime.config.strictTools;
       const betas = [
         ...(typeof thinking.beta === "string" && model?.interleavedReasoning !== false
@@ -308,7 +120,7 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
       const response = await postStream({
         url: endpoint(runtime.baseUrl, "/v1/messages"),
         headers,
-        body: buildBody(request, runtime),
+        body: buildAnthropicBody(request, runtime),
         signal,
         providerId: runtime.providerId,
         model: apiModel(request),
@@ -326,6 +138,7 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
       let usage: UsageTotal = { input: 0, output: 0, cached: 0 };
       let stopReason: string | undefined;
       let sawStop = false;
+      let lastIndex = -1;
 
       try {
         for await (const message of parseSse(response.body, signal)) {
@@ -339,12 +152,9 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
           }
 
           const type = typeof event.type === "string" ? event.type : message.event;
-          if (type === "error") {
-            const error = isObject(event.error) ? event.error : event;
-            events.fail(
-              "server",
-              typeof error.message === "string" ? error.message : "provider stream error",
-            );
+          if (type === "error" || (type === "" && isObject(event.error))) {
+            const classified = classifyStreamError(event, "provider stream error");
+            events.fail(classified.kind, classified.message);
           }
 
           if (type === "message_start") {
@@ -357,6 +167,7 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
           if (type === "content_block_start" && isObject(event.content_block)) {
             const block = event.content_block;
             const index = typeof event.index === "number" ? event.index : blocks.size;
+            lastIndex = index;
             if (block.type === "text" || block.type === "thinking") {
               const isText = block.type === "text";
               const initial =
@@ -412,7 +223,7 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
           }
 
           if (type === "content_block_delta" && isObject(event.delta)) {
-            const index = typeof event.index === "number" ? event.index : -1;
+            const index = typeof event.index === "number" ? event.index : lastIndex;
             const block = blocks.get(index);
             const delta = event.delta;
             if (!block) continue;
@@ -435,7 +246,7 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
           }
 
           if (type === "content_block_stop") {
-            const index = typeof event.index === "number" ? event.index : -1;
+            const index = typeof event.index === "number" ? event.index : lastIndex;
             const block = blocks.get(index);
             if (block?.type === "tool_use" && !block.stopped) {
               block.stopped = true;
@@ -470,6 +281,22 @@ export function createAnthropic(runtime: ProviderRuntime): ModelProvider {
       if (!sawStop) {
         if (usage.input > 0 || usage.output > 0) yield events.emit({ type: "usage", ...usage });
         events.requireDone("message_stop");
+      }
+      if (stopReason !== "max_tokens") {
+        for (const block of blocks.values()) {
+          if (block.type !== "tool_use" || block.stopped || !block.name) continue;
+          const rawJson = block.partialJson.trim();
+          let args: unknown = {};
+          if (rawJson.length > 0) {
+            try {
+              args = JSON.parse(rawJson);
+            } catch {
+              continue;
+            }
+          }
+          block.stopped = true;
+          calls.push({ id: block.id, name: block.name, args: isObject(args) ? args : {} });
+        }
       }
       for (const call of calls) {
         yield events.emit({ type: "tool_call", id: call.id, name: call.name, args: call.args });

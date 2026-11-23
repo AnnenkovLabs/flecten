@@ -185,10 +185,10 @@ export const UpdateConfigSchema = z
 
 export const TelemetryConfigSchema = z
   .object({
-    enabled: z.boolean().default(false),
+    enabled: z.boolean().default(true),
     endpoint: z.string().min(1).optional(),
   })
-  .default({ enabled: false })
+  .default({ enabled: true })
   .optional();
 
 export const CommandsConfigSchema = z

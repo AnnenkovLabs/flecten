@@ -91,18 +91,24 @@ function costFromApi(raw: Record<string, unknown>): ModelConfig["cost"] | undefi
     if (parsed === undefined) return undefined;
     return parsed > 0 && parsed < 0.001 ? parsed * 1e6 : parsed;
   };
-  const input = toMillion(pricing?.prompt ?? pricing?.input);
-  const output = toMillion(pricing?.completion ?? pricing?.output);
+  const input =
+    numeric(pricing?.price_input_per_1m_usd ?? pricing?.input_per_1m) ??
+    toMillion(pricing?.prompt ?? pricing?.input);
+  const output =
+    numeric(pricing?.price_output_per_1m_usd ?? pricing?.output_per_1m) ??
+    toMillion(pricing?.completion ?? pricing?.output);
   if (input === undefined || output === undefined) return undefined;
+  const cacheRead =
+    numeric(pricing?.price_cache_read_per_1m_usd ?? pricing?.cache_read_per_1m) ??
+    toMillion(pricing?.input_cache_read ?? pricing?.cache_read);
+  const cacheWrite =
+    numeric(pricing?.price_cache_write_per_1m_usd ?? pricing?.cache_write_per_1m) ??
+    toMillion(pricing?.input_cache_write ?? pricing?.cache_write);
   return {
     input,
     output,
-    ...(toMillion(pricing?.input_cache_read ?? pricing?.cache_read) === undefined
-      ? {}
-      : { cacheRead: toMillion(pricing?.input_cache_read ?? pricing?.cache_read) }),
-    ...(toMillion(pricing?.input_cache_write ?? pricing?.cache_write) === undefined
-      ? {}
-      : { cacheWrite: toMillion(pricing?.input_cache_write ?? pricing?.cache_write) }),
+    ...(cacheRead === undefined ? {} : { cacheRead }),
+    ...(cacheWrite === undefined ? {} : { cacheWrite }),
   };
 }
 
@@ -139,18 +145,44 @@ export function openAiModel(raw: Record<string, unknown>): ModelConfig | undefin
   const tools = boolean(
     capabilities?.function_calling,
     capabilities?.tools,
+    capabilities?.tool_use,
     raw.tool_call,
     raw.supports_tools,
+    raw.supports_tool_use,
+    raw.supportsTools,
+    raw.supports_function_calling,
     features?.tool_call,
   );
   const explicitReasoning = boolean(
     capabilities?.reasoning,
+    capabilities?.thinking,
     raw.reasoning,
     raw.supports_reasoning,
+    raw.supports_thinking,
+    raw.supportsThinking,
     features?.reasoning,
+    features?.thinking,
   );
   const reasoning =
     explicitReasoning ?? (id.toLowerCase().endsWith("-thinking") ? true : undefined);
+  const vision =
+    inputs.includes("image") || inputs.includes("vision")
+      ? true
+      : boolean(
+          raw.vision,
+          raw.supports_vision,
+          raw.supportsVision,
+          raw.supports_images,
+          raw.supportsImages,
+          capabilities?.vision,
+          capabilities?.image_input,
+          features?.vision,
+        );
+  const promptCache = boolean(
+    raw.supportsPromptCache,
+    raw.supports_prompt_cache,
+    capabilities?.prompt_cache,
+  );
   const structuredOutput = boolean(
     capabilities?.structured_output,
     raw.structured_output,
@@ -158,8 +190,10 @@ export function openAiModel(raw: Record<string, unknown>): ModelConfig | undefin
   );
   const cost = costFromApi(raw);
   const name =
+    (typeof raw.display_name === "string" && raw.display_name.length > 0
+      ? raw.display_name
+      : undefined) ??
     (typeof raw.name === "string" && raw.name !== id ? raw.name : undefined) ??
-    (typeof raw.display_name === "string" ? raw.display_name : undefined) ??
     formatModelName(id);
   return {
     name,
@@ -168,9 +202,10 @@ export function openAiModel(raw: Record<string, unknown>): ModelConfig | undefin
     ...(output === undefined ? {} : { output }),
     ...(tools === undefined ? {} : { tools }),
     ...(reasoning === undefined ? {} : { reasoning }),
+    ...(vision === undefined ? {} : { vision }),
+    ...(promptCache === undefined ? {} : { promptCache }),
     ...(structuredOutput === undefined ? {} : { structuredOutput }),
     ...reasoningOptions(raw),
-    ...(inputs.includes("image") || inputs.includes("vision") ? { vision: true } : {}),
     ...(cost ? { cost } : {}),
     ...(typeof raw.knowledge === "string" ? { knowledge: raw.knowledge } : {}),
     ...(typeof raw.release_date === "string" ? { releaseDate: raw.release_date } : {}),
@@ -190,13 +225,8 @@ export function openAiModel(raw: Record<string, unknown>): ModelConfig | undefin
 }
 
 export function anthropicModel(raw: Record<string, unknown>): ModelConfig | undefined {
-  const id = typeof raw.id === "string" ? raw.id : undefined;
-  if (!id) return undefined;
-  const name =
-    typeof raw.display_name === "string" && raw.display_name.length > 0
-      ? raw.display_name
-      : formatModelName(id);
-  return { name, source: "api" };
+  if (typeof raw.id !== "string") return undefined;
+  return openAiModel(raw);
 }
 
 // ponytail: the Gemini list has no thinking flag; these families are known to think.

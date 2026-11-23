@@ -72,6 +72,8 @@ jobs:
           APPLE_ID: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && secrets.APPLE_TEAM_ID || '' }}
+          POSTHOG_API_KEY: ${{ vars.POSTHOG_API_KEY || secrets.POSTHOG_API_KEY || '' }}
+          POSTHOG_HOST: ${{ vars.POSTHOG_HOST || 'https://eu.i.posthog.com' }}
         run: |
           set -o pipefail
           mkdir -p diagnostics

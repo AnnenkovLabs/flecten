@@ -39,7 +39,7 @@ export type ProviderCommand =
   | {
       type: "provider.discover";
       requestId: string;
-      protocol: ProviderProtocol;
+      protocol?: ProviderProtocol | "auto";
       baseUrl: string;
       apiKey?: string;
       headers?: Record<string, string>;

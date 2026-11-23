@@ -54,14 +54,25 @@ export default {
   "Copy report": "レポートをコピー",
   "Collecting report": "レポートを作成中",
   "Saved: {0}": ["保存先: ", 0],
-  "Send technical metrics": "技術的な統計を送信",
-  "Event counts, version, and platform only. No messages, files, or keys.":
-    "イベント数、バージョン、プラットフォームのみ。メッセージ、ファイル、キーは含まれません。",
-  "Metrics endpoint": "統計の送信先アドレス",
-  "After saving this setting, use the button to send metrics. The diagnostic report stays on your computer.":
-    "設定を保存した後、ボタンで統計を送信できます。診断レポートはこのコンピューターに残ります。",
+  Telemetry: "テレメトリー",
+  "Send anonymous telemetry": "匿名テレメトリーを送信",
+  "Anonymous usage, error, and performance metrics via PostHog. No prompts, code, file paths, or keys.":
+    "PostHog 経由で匿名の利用状況・エラー・パフォーマンス指標を送信します。プロンプト、コード、ファイルパス、キーは含まれません。",
+  "Paused by DO_NOT_TRACK or FLECTEN_TELEMETRY=0.":
+    "DO_NOT_TRACK または FLECTEN_TELEMETRY=0 により一時停止中です。",
+  "Telemetry details": "テレメトリーの詳細",
+  Status: "状態",
+  Active: "有効",
+  "Disabled in settings": "設定で無効",
+  "Paused by environment": "環境変数により停止",
+  "Not configured in this build": "このビルドでは未設定",
+  "Anonymous ID": "匿名 ID",
+  "PostHog host": "PostHog ホスト",
+  "Set DO_NOT_TRACK=1 or FLECTEN_TELEMETRY=0 to disable telemetry in any workspace.":
+    "すべてのワークスペースでテレメトリーを無効にするには DO_NOT_TRACK=1 または FLECTEN_TELEMETRY=0 を設定してください。",
   "Could not send": "送信できませんでした",
-  "Send metrics": "統計を送信",
+  "Send test event": "テストイベントを送信",
+  "Test event sent": "テストイベントを送信しました",
   Updates: "アップデート",
   "This build does not include an update feed.":
     "このビルドにはアップデートフィードが含まれていません。",

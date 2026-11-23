@@ -1,10 +1,16 @@
 import type { Message, ToolCall } from "../core/types";
 import { isObject } from "../util/json";
-import { trimTrailingSlashes } from "../util/text";
-import { apiModel, geminiThinking, modelConfig, requestExtra, requestHeaders } from "./compat";
-import { postStream } from "./http";
+import {
+  apiModel,
+  geminiThinking,
+  hasHeader,
+  modelConfig,
+  requestExtra,
+  requestHeaders,
+} from "./compat";
+import { normalizeBaseUrl, postStream } from "./http";
 import { geminiSchema, structuredOutputFormat } from "./schema";
-import { parseSse, StreamEvents } from "./sse";
+import { classifyStreamError, parseSse, StreamEvents } from "./sse";
 import type { StreamFinishReason } from "./stream-recovery";
 import type { ModelEvent, ModelProvider, ModelRequest, ProviderRuntime } from "./types";
 
@@ -13,8 +19,8 @@ interface GeminiPart {
   inlineData?: { mimeType: string; data: string };
   thought?: boolean;
   thoughtSignature?: string;
-  functionCall?: { name?: string; args?: unknown };
-  functionResponse?: { name?: string; response?: unknown };
+  functionCall?: { id?: string; name?: string; args?: unknown };
+  functionResponse?: { id?: string; name?: string; response?: unknown };
 }
 
 interface GeminiUsage {
@@ -75,7 +81,11 @@ function convertMessages(messages: Message[]): Record<string, unknown>[] {
       if (message.content.length > 0) parts.push({ text: message.content });
       for (const call of message.toolCalls) {
         parts.push({
-          functionCall: { name: call.name, args: call.args },
+          functionCall: {
+            ...(call.id && !call.id.startsWith("call_gemini_") ? { id: call.id } : {}),
+            name: call.name,
+            args: call.args,
+          },
           ...(isObject(call.extraContent) && typeof call.extraContent.thoughtSignature === "string"
             ? { thoughtSignature: call.extraContent.thoughtSignature }
             : {}),
@@ -92,6 +102,9 @@ function convertMessages(messages: Message[]): Record<string, unknown>[] {
       if (toolMessage?.role !== "tool") break;
       parts.push({
         functionResponse: {
+          ...(toolMessage.toolCallId && !toolMessage.toolCallId.startsWith("call_gemini_")
+            ? { id: toolMessage.toolCallId }
+            : {}),
           name: toolMessage.name,
           response: {
             result: toolMessage.content,
@@ -112,22 +125,24 @@ function buildBody(request: ModelRequest, runtime: ProviderRuntime): Record<stri
   const thinking = geminiThinking(request.model, model, request.reasoning) as {
     thinkingConfig?: Record<string, unknown>;
   };
-  const format = structuredOutputFormat(model);
+  const format = request.responseFormat ?? structuredOutputFormat(model);
+  const hasTools = request.tools.length > 0;
   const body: Record<string, unknown> = {
     contents: convertMessages(request.messages),
-    systemInstruction: { parts: [{ text: request.system }] },
-    tools:
-      request.tools.length > 0
-        ? [
-            {
-              functionDeclarations: request.tools.map((tool) => ({
-                name: tool.name,
-                description: tool.description,
-                parameters: geminiSchema(tool.parameters),
-              })),
-            },
-          ]
-        : undefined,
+    ...(request.system.length > 0
+      ? { systemInstruction: { parts: [{ text: request.system }] } }
+      : {}),
+    tools: hasTools
+      ? [
+          {
+            functionDeclarations: request.tools.map((tool) => ({
+              name: tool.name,
+              description: tool.description,
+              parameters: geminiSchema(tool.parameters),
+            })),
+          },
+        ]
+      : undefined,
     generationConfig: {
       maxOutputTokens: request.maxTokens,
       ...(request.temperature === undefined || model?.temperature === false
@@ -141,11 +156,11 @@ function buildBody(request: ModelRequest, runtime: ProviderRuntime): Record<stri
           }
         : {}),
     },
-    ...(request.toolChoice === "required"
+    ...(hasTools && request.toolChoice === "required"
       ? { toolConfig: { functionCallingConfig: { mode: "ANY" } } }
-      : request.toolChoice === "none"
+      : hasTools && request.toolChoice === "none"
         ? { toolConfig: { functionCallingConfig: { mode: "NONE" } } }
-        : request.toolChoice === "auto"
+        : hasTools && request.toolChoice === "auto"
           ? { toolConfig: { functionCallingConfig: { mode: "AUTO" } } }
           : {}),
     ...requestExtra(runtime, model, request),
@@ -154,7 +169,7 @@ function buildBody(request: ModelRequest, runtime: ProviderRuntime): Record<stri
 }
 
 function streamUrl(baseUrl: string, model: string): string {
-  const base = trimTrailingSlashes(baseUrl);
+  const base = normalizeBaseUrl(baseUrl);
   return `${base}/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
 }
 
@@ -217,7 +232,8 @@ export function createGemini(runtime: ProviderRuntime): ModelProvider {
         "content-type": "application/json",
         ...requestHeaders(runtime, model, request),
       };
-      if (runtime.apiKey && !headers["x-goog-api-key"]) headers["x-goog-api-key"] = runtime.apiKey;
+      if (runtime.apiKey && !hasHeader(headers, "x-goog-api-key"))
+        headers["x-goog-api-key"] = runtime.apiKey;
 
       const response = await postStream({
         url: streamUrl(runtime.baseUrl, apiModel(request)),
@@ -249,7 +265,10 @@ export function createGemini(runtime: ProviderRuntime): ModelProvider {
           } catch {
             continue;
           }
-          if (chunk.error) events.fail("server", chunk.error.message ?? "provider stream error");
+          if (chunk.error) {
+            const classified = classifyStreamError(chunk, "provider stream error");
+            events.fail(classified.kind, classified.message);
+          }
           if (chunk.promptFeedback?.blockReason) {
             events.fail(
               "safety",
@@ -270,7 +289,10 @@ export function createGemini(runtime: ProviderRuntime): ModelProvider {
               if (part.functionCall?.name) {
                 const name = part.functionCall.name;
                 const args = isObject(part.functionCall.args) ? part.functionCall.args : {};
-                const id = `call_gemini_${callIndex}_${Date.now()}`;
+                const id =
+                  typeof part.functionCall.id === "string" && part.functionCall.id.length > 0
+                    ? part.functionCall.id
+                    : `call_gemini_${callIndex}_${Date.now()}`;
                 callIndex += 1;
                 const call: ToolCall = {
                   id,
@@ -349,6 +371,9 @@ export function createGemini(runtime: ProviderRuntime): ModelProvider {
             ? {}
             : { reasoning: usage.thoughtsTokenCount }),
         });
+      }
+      if (finish === "MALFORMED_FUNCTION_CALL" || finish === "UNEXPECTED_TOOL_CALL") {
+        events.fail("unknown", `Gemini stopped with ${finish}`);
       }
       yield events.done(mapFinish(finish, calls.length));
     },

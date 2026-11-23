@@ -58,14 +58,25 @@ export default {
   "Copy report": "Copiar informe",
   "Collecting report": "Recopilando datos para el informe",
   "Saved: {0}": ["Guardado en: ", 0, ""],
-  "Send technical metrics": "Enviar contadores técnicos",
-  "Event counts, version, and platform only. No messages, files, or keys.":
-    "Solo el número de eventos, la versión y la plataforma. Sin mensajes, archivos ni claves.",
-  "Metrics endpoint": "Dirección de envío de estadísticas",
-  "After saving this setting, use the button to send metrics. The diagnostic report stays on your computer.":
-    "Tras guardar los ajustes, los contadores se envían con el botón. El informe de diagnóstico permanece en tu equipo.",
+  Telemetry: "Telemetría",
+  "Send anonymous telemetry": "Enviar telemetría anónima",
+  "Anonymous usage, error, and performance metrics via PostHog. No prompts, code, file paths, or keys.":
+    "Métricas anónimas de uso, errores y rendimiento mediante PostHog. Sin mensajes, código, rutas ni claves.",
+  "Paused by DO_NOT_TRACK or FLECTEN_TELEMETRY=0.":
+    "Pausada por DO_NOT_TRACK o FLECTEN_TELEMETRY=0.",
+  "Telemetry details": "Detalles de telemetría",
+  Status: "Estado",
+  Active: "Activa",
+  "Disabled in settings": "Desactivada en los ajustes",
+  "Paused by environment": "Pausada por el entorno",
+  "Not configured in this build": "No configurada en esta compilación",
+  "Anonymous ID": "ID anónimo",
+  "PostHog host": "Servidor de PostHog",
+  "Set DO_NOT_TRACK=1 or FLECTEN_TELEMETRY=0 to disable telemetry in any workspace.":
+    "Define DO_NOT_TRACK=1 o FLECTEN_TELEMETRY=0 para desactivar la telemetría en cualquier proyecto.",
   "Could not send": "No se pudo enviar",
-  "Send metrics": "Enviar contadores",
+  "Send test event": "Enviar evento de prueba",
+  "Test event sent": "Evento de prueba enviado",
   Updates: "Actualizaciones",
   "This build does not include an update feed.":
     "Esta compilación no incluye una fuente de actualizaciones.",

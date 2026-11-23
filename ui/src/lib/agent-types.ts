@@ -117,6 +117,7 @@ export interface AgentInfo {
   /** Version, hash and budget of the system prompt the next run uses. */
   system?: AgentPromptStamp;
   shellCheckpoints?: { state: "ready" | "indexing" | "off" | "unavailable"; reason?: string };
+  telemetry?: import("../../../shared/telemetry").TelemetryStatus;
   budget?: AgentBudget;
   taskBudget?: AgentBudget;
   jobs?: AgentJob[];

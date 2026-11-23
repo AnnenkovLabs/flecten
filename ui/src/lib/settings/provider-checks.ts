@@ -107,6 +107,37 @@ export async function probeModel(host: CheckHost, providerId: string, modelId: s
   }
 }
 
+function pickTestModels(host: CheckHost, providerId: string, selectedModel?: string): string[] {
+  const provider = host.settings?.providers[providerId];
+  if (!provider) return [];
+  if (selectedModel) return provider.models[selectedModel] ? [selectedModel] : [];
+  const ordered: string[] = [];
+  const push = (id: string | undefined) => {
+    if (id && provider.models[id] && !provider.models[id]?.disabled && !ordered.includes(id)) {
+      ordered.push(id);
+    }
+  };
+  if (host.settings?.provider === providerId) push(host.settings.model);
+  const entries = Object.entries(provider.models).filter(([, m]) => !m.disabled);
+  for (const [id, m] of entries) {
+    if (m.tools !== false && m.source !== "api") push(id);
+  }
+  for (const [id, m] of entries) {
+    if (m.tools !== false) push(id);
+  }
+  for (const [id] of entries) push(id);
+  if (ordered.length === 0) {
+    const first = Object.keys(provider.models)[0];
+    if (first) ordered.push(first);
+  }
+  return ordered.slice(0, 2);
+}
+
+function isProviderLevelFailure(result: ProviderTestResult): boolean {
+  if (result.errorKind === "missing_api_key" || result.errorKind === "transport_proxy") return true;
+  return result.status === 401 || result.status === 403;
+}
+
 /** Tests the draft provider as typed, before it is saved. */
 export async function testProvider(
   host: CheckHost,
@@ -115,12 +146,8 @@ export async function testProvider(
 ): Promise<void> {
   const provider = host.settings?.providers[providerId];
   if (!provider) return;
-  const model =
-    selectedModel ??
-    (host.settings?.provider === providerId && host.settings.model
-      ? host.settings.model
-      : Object.keys(provider.models)[0]);
-  if (!model || !provider.models[model]) {
+  const candidates = pickTestModels(host, providerId, selectedModel);
+  if (candidates.length === 0) {
     host.error = t("Add a model first");
     return;
   }
@@ -138,11 +165,16 @@ export async function testProvider(
     );
     const token = (draft.result as unknown as { draftToken?: string } | undefined)?.draftToken;
     if (!token) throw new Error("draft provider token is missing");
-    const response = await requestAgent<Response>(
-      { type: "provider.test", draftToken: token, model },
-      45_000,
-    );
-    host.testResult = (response.result as ProviderTestResult | undefined) ?? null;
+    let latest: ProviderTestResult | null = null;
+    for (const model of candidates) {
+      const response = await requestAgent<Response>(
+        { type: "provider.test", draftToken: token, model },
+        45_000,
+      );
+      latest = (response.result as ProviderTestResult | undefined) ?? null;
+      if (!latest || latest.ok || selectedModel || isProviderLevelFailure(latest)) break;
+    }
+    host.testResult = latest;
   } catch (error) {
     failed(host, error);
   } finally {

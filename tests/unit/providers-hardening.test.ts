@@ -318,7 +318,7 @@ describe("catalog sources", () => {
 });
 
 describe("discovery validation", () => {
-  test("drops metadata with output larger than the context window", async () => {
+  test("clamps metadata with output larger than the context window instead of dropping the model", async () => {
     const base = serve(() =>
       Response.json({
         data: [{ id: "broken", context_length: 1_000, max_output_tokens: 5_000 }],
@@ -332,8 +332,9 @@ describe("discovery validation", () => {
       protocol: "openai-chat",
       baseUrl: `${base}/v1`,
     });
-    expect(result.models.broken).toBeUndefined();
-    expect(result.warnings.join(" ")).toContain("dropped invalid metadata");
+    expect(result.models.broken?.context).toBe(1_000);
+    expect(result.models.broken?.output).toBe(1_000);
+    expect(result.warnings.join(" ")).toContain("clamped output limit");
   });
 
   test("rejects duplicate model ids from the provider", async () => {

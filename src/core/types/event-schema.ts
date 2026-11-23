@@ -42,6 +42,8 @@ export const toolResultSchema = z.object({
   notice: z.string().optional(),
   trailer: z.string().optional(),
   durationMs: z.number().optional(),
+  attempts: z.number().int().positive().optional(),
+  repaired: z.boolean().optional(),
   terminate: z.boolean().optional(),
   data: z.unknown().optional(),
 });
@@ -296,6 +298,9 @@ const sessionEventSchema = z.discriminatedUnion("type", [
     sessionId: z.string().optional(),
     code: z.string(),
     message: z.string(),
+    reason: z.string().optional(),
+    status: z.number().optional(),
+    providerCode: z.string().optional(),
     limit: z.enum(["rate", "five_hour", "weekly", "billing", "model_quota"]).optional(),
     resetAt: z.number().optional(),
   }),

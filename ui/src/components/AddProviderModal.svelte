@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cleanProviderBaseUrl } from "../../../shared/provider-url";
   import { t } from "../lib/i18n.svelte";
   import { modal } from "../lib/modal";
   import { overlayPresence } from "../lib/overlay-presence";
@@ -11,8 +12,16 @@
 
   let searchEl = $state<HTMLInputElement | null>(null);
 
-  function choose(protocol: ProviderProtocol): void {
+  const cleanedUrl = $derived(cleanProviderBaseUrl(settings.custom.baseUrl));
+
+  function choose(protocol: ProviderProtocol | "auto"): void {
     settings.custom.protocol = protocol;
+  }
+
+  function normalizeInputUrl(): void {
+    if (cleanedUrl.ok && cleanedUrl.changed) {
+      settings.custom.baseUrl = cleanedUrl.baseUrl;
+    }
   }
 
   function close(): void {
@@ -121,7 +130,49 @@
         {/if}
       {:else}
         <div class="custom">
+          <label class="st-field">
+            <span class="st-label">{t("API URL")}</span>
+            <input
+              class="st-input"
+              disabled={settings.discovering}
+              bind:value={settings.custom.baseUrl}
+              onblur={normalizeInputUrl}
+              placeholder="api.example.com"
+              spellcheck="false"
+            />
+            {#if cleanedUrl.ok && cleanedUrl.changed}
+              <span class="st-hint st-mono">{t("Will use {0}", [cleanedUrl.baseUrl])}</span>
+            {:else}
+              <span class="st-hint">{t("Paste a domain, base URL, endpoint, or curl command.")}</span>
+            {/if}
+          </label>
+
+          <label class="st-field">
+            <span class="st-label">{t("API key")}</span>
+            <input
+              class="st-input"
+              type="password"
+              disabled={settings.discovering}
+              bind:value={settings.custom.apiKey}
+              placeholder={t("optional for a local server")}
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+
           <div class="protocols" role="radiogroup" aria-label={t("Protocol")}>
+            <button
+              class="protocol protocol--auto"
+              class:is-on={settings.custom.protocol === "auto"}
+              type="button"
+              role="radio"
+              aria-checked={settings.custom.protocol === "auto"}
+              disabled={settings.discovering}
+              onclick={() => choose("auto")}
+            >
+              <strong>{t("Auto")}</strong>
+              <span>{t("Tests all endpoints and combines protocols under one provider.")}</span>
+            </button>
             {#each PROTOCOLS as protocol}
               <button
                 class="protocol"
@@ -137,31 +188,6 @@
               </button>
             {/each}
           </div>
-
-          <label class="st-field">
-            <span class="st-label">{t("API URL")}</span>
-            <input
-              class="st-input"
-              disabled={settings.discovering}
-              bind:value={settings.custom.baseUrl}
-              placeholder="https://api.example.com/v1"
-              spellcheck="false"
-            />
-            <span class="st-hint">{t("Base URL, usually ending in /v1.")}</span>
-          </label>
-
-          <label class="st-field">
-            <span class="st-label">{t("API key")}</span>
-            <input
-              class="st-input"
-              type="password"
-              disabled={settings.discovering}
-              bind:value={settings.custom.apiKey}
-              placeholder={t("optional for a local server")}
-              autocomplete="off"
-              spellcheck="false"
-            />
-          </label>
 
           <div class="st-field">
             <label class="check-connection">
@@ -382,6 +408,11 @@
     transition:
       background var(--t-touch) var(--ease),
       box-shadow var(--t-touch) var(--ease);
+  }
+
+  .protocol--auto {
+    grid-column: 1 / -1;
+    min-height: 60px;
   }
 
 @media (hover: hover) and (pointer: fine) {

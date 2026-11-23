@@ -232,6 +232,7 @@ export class ToolRegistry {
           ok: false,
           output: "",
           error: "Activate this external tool through tool_catalog before calling it.",
+          data: { errorKind: "mcp_inactive" },
         },
       };
     if (!tool) {
@@ -240,19 +241,33 @@ export class ToolRegistry {
           ok: false,
           output: "",
           error: `Unknown tool: ${call.name}. Available tools: ${[...this.#tools.keys()].join(", ")}`,
+          data: { errorKind: "unknown_tool" },
         },
       };
     }
     const repaired = repairToolInput(tool, structuredClone(call.args));
     if (repaired.correction) {
       return {
-        error: { ok: false, output: "", error: repaired.correction, durationMs: 0 },
+        error: {
+          ok: false,
+          output: "",
+          error: repaired.correction,
+          durationMs: 0,
+          data: { errorKind: "invalid_args" },
+        },
       };
     }
     // Use schema output too: defaults and transforms are part of the operation being authorized.
     const parsed = tool.schema.safeParse(repaired.input);
     if (!parsed.success || !isObject(parsed.data)) {
-      return { error: { ok: false, output: "", error: "Tool arguments must produce an object" } };
+      return {
+        error: {
+          ok: false,
+          output: "",
+          error: "Tool arguments must produce an object",
+          data: { errorKind: "invalid_args" },
+        },
+      };
     }
     freezeInput(parsed.data);
     const normalized = Object.freeze({ ...call, name: alias.name, args: parsed.data });
@@ -276,8 +291,10 @@ export class ToolRegistry {
     const started = performance.now();
     const maxAttempts = retryAttempts(tool, call);
     let result: ToolResult = { ok: false, output: "", error: "tool did not run" };
+    let attemptsTaken = 0;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      attemptsTaken = attempt;
       result = await this.#executeOnce(tool, input, { ...context, callId: call.id });
       if (context.providerProtection) result = context.providerProtection.vault.protect(result);
       if (result.ok || attempt === maxAttempts) break;
@@ -330,6 +347,8 @@ export class ToolRegistry {
       trailer,
       fullOutputPath: log.path,
       durationMs,
+      ...(attemptsTaken > 1 ? { attempts: attemptsTaken } : {}),
+      ...(notes.length > 0 ? { repaired: true } : {}),
     };
   }
 
@@ -374,11 +393,22 @@ export class ToolRegistry {
       return await Promise.race([execution, expired]);
     } catch (error) {
       const kind = thrownFailureKind(error);
+      const errorCode =
+        error instanceof Error && typeof (error as NodeJS.ErrnoException).code === "string"
+          ? (error as NodeJS.ErrnoException).code
+          : undefined;
       return {
         ok: false,
         output: "",
         error: errorMessage(error),
-        ...(kind ? { data: { errorKind: kind } } : {}),
+        ...(kind || errorCode
+          ? {
+              data: {
+                ...(kind ? { errorKind: kind } : {}),
+                ...(errorCode ? { errorCode } : {}),
+              },
+            }
+          : {}),
       };
     } finally {
       timeout.cancel();

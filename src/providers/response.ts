@@ -27,23 +27,29 @@ export const ProviderResponseSchema = z.object({
 export type ProviderResponse = z.infer<typeof ProviderResponseSchema>;
 
 export class ProviderResponseError extends HarnessError {
-  readonly kind: "bad_request" | "network" | "server";
+  readonly kind: "bad_request" | "network" | "rate_limit" | "server";
   readonly retryable: boolean;
 
   constructor(
     readonly response: ProviderResponse,
     cause?: unknown,
   ) {
-    super(
-      "provider_failed",
-      `provider stream contract failed: ${response.outcome}${response.outcome === "incomplete" ? "; missing [DONE]" : ""}`,
-      cause === undefined ? undefined : { cause },
-    );
+    const causeMessage = cause instanceof Error && cause.message ? cause.message : undefined;
+    const message =
+      response.outcome === "provider_error" && causeMessage
+        ? causeMessage
+        : `provider stream contract failed: ${response.outcome}${response.outcome === "incomplete" ? "; missing [DONE]" : ""}`;
+    super("provider_failed", message, cause === undefined ? undefined : { cause });
     this.name = "ProviderResponseError";
     const kind =
       typeof cause === "object" && cause !== null && "kind" in cause ? cause.kind : undefined;
-    this.kind = kind === "network" || kind === "server" ? kind : "bad_request";
-    this.retryable = this.kind !== "bad_request";
+    this.kind =
+      kind === "network" || kind === "server" || kind === "rate_limit" ? kind : "bad_request";
+    const causeRetryable =
+      typeof cause === "object" && cause !== null && "retryable" in cause
+        ? Boolean(cause.retryable)
+        : undefined;
+    this.retryable = causeRetryable ?? this.kind !== "bad_request";
   }
 }
 

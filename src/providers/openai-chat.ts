@@ -7,6 +7,7 @@ import {
   effectiveParallelTools,
   effortField,
   emptyReasoningValue,
+  hasHeader,
   isOpenRouter,
   modelConfig,
   normalizeEffort,
@@ -15,6 +16,7 @@ import {
   replayMode,
   requestExtra,
   requestHeaders,
+  supportsPromptCacheKey,
 } from "./compat";
 import { endpoint, postStream } from "./http";
 import { chatMedia } from "./input-media";
@@ -141,11 +143,12 @@ function buildBody(
           };
         })
       : undefined;
-  const format = structuredOutputFormat(model);
+  const format = request.responseFormat ?? structuredOutputFormat(model);
   const responseFormat = format
     ? { type: "json_schema", json_schema: { name: format.name, ...jsonSchemaFormat(format, warn) } }
     : undefined;
-  const parallel = effectiveParallelTools(runtime, model, request);
+  const hasTools = request.tools.length > 0;
+  const parallel = hasTools ? effectiveParallelTools(runtime, model, request) : undefined;
   const cacheEnabled = promptCacheEnabled(runtime, model);
   const cacheKey = request.promptCacheKey || runtime.config.promptCacheKey;
   const streamUsage = model?.compat?.streamUsage ?? runtime.config.streamUsage;
@@ -167,11 +170,14 @@ function buildBody(
     ...(cacheEnabled && cacheKey
       ? isOpenRouter(runtime)
         ? { session_id: cacheKey }
-        : { prompt_cache_key: cacheKey }
+        : supportsPromptCacheKey(runtime, model)
+          ? { prompt_cache_key: cacheKey }
+          : {}
       : {}),
-    ...(request.toolChoice === "required" ||
-    request.toolChoice === "none" ||
-    request.toolChoice === "auto"
+    ...(hasTools &&
+    (request.toolChoice === "required" ||
+      request.toolChoice === "none" ||
+      request.toolChoice === "auto")
       ? { tool_choice: request.toolChoice }
       : {}),
     ...(responseFormat ? { response_format: responseFormat } : {}),
@@ -191,7 +197,7 @@ export function createOpenAiChat(
     async *stream(request, signal): AsyncGenerator<ModelEvent> {
       const model = modelConfig(runtime, request.model);
       const headers = requestHeaders(runtime, model, request);
-      if (runtime.apiKey && !headers.authorization) {
+      if (runtime.apiKey && !hasHeader(headers, "authorization")) {
         headers.authorization = `Bearer ${runtime.apiKey}`;
       }
 

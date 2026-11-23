@@ -92,4 +92,9 @@ export default {
   Output: "出力",
   "Open weights": "重みの公開",
   "Files and attachments": "ファイルと添付ファイル",
+  "Tests all endpoints and combines protocols under one provider.":
+    "すべてのエンドポイントを検出し、1つのプロバイダーに統合します。",
+  "Paste a domain, base URL, endpoint, or curl command.":
+    "ドメイン、ベースURL、エンドポイント、またはcurlコマンドを貼り付けてください。",
+  "Will use {0}": ["使用先: ", 0],
 } as const;

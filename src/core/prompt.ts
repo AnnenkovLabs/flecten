@@ -233,6 +233,7 @@ export async function buildPrompt(
       id: "instructions",
       text: `# Instructions\n\n${instructions.text}`,
       required: true,
+      ...(instructions.sources.length === 0 ? { workingLanguage: "en" as const } : {}),
     });
   }
   if (options.tools !== undefined && options.tools.length > 0) {

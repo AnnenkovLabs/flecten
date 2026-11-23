@@ -13,6 +13,7 @@ import {
   extraction,
   type InferenceTarget,
   infer,
+  TWIN_EXTRACTION_FORMAT,
   type TwinToolOptions,
 } from "./inference-core";
 import { TwinInferenceError } from "./inference-error";
@@ -193,6 +194,7 @@ export async function learn(
         [],
         toolOptions ? { ...toolOptions, messages: batch } : undefined,
         onTrace,
+        TWIN_EXTRACTION_FORMAT,
       );
     } catch (error) {
       if (signal.aborted) throw error;

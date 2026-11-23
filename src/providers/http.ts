@@ -1,3 +1,5 @@
+import { cleanProviderBaseUrl } from "../../shared/provider-url";
+import { isObject } from "../util/json";
 import { redact } from "../util/redact";
 import { trimTrailingSlashes } from "../util/text";
 import {
@@ -8,6 +10,7 @@ import {
   rateLimitState,
   recordRateLimit,
 } from "./rate-limit";
+import { classifyStreamError } from "./sse";
 import { type ProviderFetch, parseRetryAfterMs, sanitizeBody, TransportError } from "./transport";
 
 export interface PostOptions {
@@ -78,12 +81,19 @@ function waitsLong(limit: RateLimitState | undefined): boolean {
   return (limit.retryAfterMs ?? 0) > MAX_RETRY_AFTER_MS;
 }
 
+/** Strips accidentally pasted endpoint suffixes and repairs user-typed URLs cleanly. */
+export function normalizeBaseUrl(baseUrl: string): string {
+  const cleaned = cleanProviderBaseUrl(baseUrl);
+  return cleaned.ok ? cleaned.baseUrl : trimTrailingSlashes(baseUrl.trim());
+}
+
 export function endpoint(baseUrl: string, path: string): string {
-  const base = trimTrailingSlashes(baseUrl);
-  if (base.endsWith("/v1") && path.startsWith("/v1/")) {
-    return `${base}${path.slice(3)}`;
+  const base = normalizeBaseUrl(baseUrl);
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (base.endsWith("/v1") && normalizedPath.startsWith("/v1/")) {
+    return `${base}${normalizedPath.slice(3)}`;
   }
-  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${base}${normalizedPath}`;
 }
 
 export async function postStream(options: PostOptions): Promise<Response> {
@@ -170,6 +180,68 @@ export async function postStream(options: PostOptions): Promise<Response> {
           options.model,
           options.quotaGroup,
         );
+      }
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      if (contentType.includes("application/json") && !contentType.includes("text/event-stream")) {
+        const rawText = await response.text();
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch {
+          parsed = undefined;
+        }
+        if (isObject(parsed) && parsed.error !== undefined) {
+          const safeBody = sanitizeBody(rawText, options.headers);
+          const classified = classifyStreamError(parsed);
+          const safeMessage = sanitizeBody(classified.message, options.headers);
+          const limit = parseRateLimit({
+            status: response.status,
+            headers: response.headers,
+            body: safeBody,
+          });
+          if (options.providerId && limit?.limited) {
+            recordRateLimit(options.providerId, limit, options.model, options.quotaGroup);
+          }
+          const retryable =
+            (classified.kind === "server" || classified.kind === "rate_limit") &&
+            limit?.kind !== "billing";
+          const failure = {
+            reason: "http" as const,
+            status:
+              classified.kind === "rate_limit" ? 429 : classified.kind === "unknown" ? 400 : 502,
+            retryAfterMs: limit?.limited ? limit.retryAfterMs : undefined,
+            bodyText: safeBody,
+            limitKind: limit?.kind,
+            resetAt: limit?.resetAt,
+            providerCode: providerErrorCode(safeBody),
+          };
+          if (!retryable || attempt === retries || waitsLong(limit)) {
+            throw new TransportError(`provider error: ${safeMessage}`, {
+              ...failure,
+              retryable,
+            });
+          }
+          lastError = new TransportError(`provider error: ${safeMessage}`, {
+            ...failure,
+            retryable: true,
+          });
+          await sleep(
+            retryDelayMs(
+              attempt,
+              failure.retryAfterMs,
+              options.random,
+              options.retryBaseMs,
+              options.retryMaxMs,
+            ),
+            options.signal,
+          );
+          continue;
+        }
+        return new Response(rawText, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+        });
       }
       return response;
     }

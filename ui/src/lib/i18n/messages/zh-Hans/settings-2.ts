@@ -53,14 +53,25 @@ export default {
   "Copy report": "复制报告",
   "Collecting report": "正在收集报告",
   "Saved: {0}": ["已保存：", 0],
-  "Send technical metrics": "发送技术统计数据",
-  "Event counts, version, and platform only. No messages, files, or keys.":
-    "仅包含事件次数、版本和平台，不包含消息、文件或密钥。",
-  "Metrics endpoint": "统计数据接收地址",
-  "After saving this setting, use the button to send metrics. The diagnostic report stays on your computer.":
-    "保存设置后，可点击按钮发送统计数据。诊断报告保留在本机。",
+  Telemetry: "遥测",
+  "Send anonymous telemetry": "发送匿名遥测数据",
+  "Anonymous usage, error, and performance metrics via PostHog. No prompts, code, file paths, or keys.":
+    "通过 PostHog 发送匿名的使用情况、错误与性能指标。不包含提示词、代码、文件路径或密钥。",
+  "Paused by DO_NOT_TRACK or FLECTEN_TELEMETRY=0.":
+    "已由 DO_NOT_TRACK 或 FLECTEN_TELEMETRY=0 暂停。",
+  "Telemetry details": "遥测详情",
+  Status: "状态",
+  Active: "已启用",
+  "Disabled in settings": "已在设置中禁用",
+  "Paused by environment": "已由环境变量暂停",
+  "Not configured in this build": "此构建未配置",
+  "Anonymous ID": "匿名 ID",
+  "PostHog host": "PostHog 地址",
+  "Set DO_NOT_TRACK=1 or FLECTEN_TELEMETRY=0 to disable telemetry in any workspace.":
+    "设置 DO_NOT_TRACK=1 或 FLECTEN_TELEMETRY=0 可在所有工作区中禁用遥测。",
   "Could not send": "发送失败",
-  "Send metrics": "发送统计数据",
+  "Send test event": "发送测试事件",
+  "Test event sent": "测试事件已发送",
   Updates: "更新",
   "This build does not include an update feed.": "此版本未包含更新源。",
   "Up to date": "已是最新版本",

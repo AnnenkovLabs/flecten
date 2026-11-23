@@ -101,7 +101,8 @@ When translation is enabled, `session.started.prompt` keeps the user's original 
 | `sessions.export` | no | `id` | `exported.path`: atomic redacted JSONL + attachments bundle in `.flecten/exports/` |
 | `context.pull-request` | no | `url` | `contextReference`: public GitHub PR metadata and summary |
 | `diagnostics.export` | no | none | `diagnostics.path`, `diagnostics.report` |
-| `telemetry.send` | no | none | sends opt-in event counters when consent is saved |
+| `telemetry.send` | no | none | flushes queued PostHog telemetry and sends a test ping when enabled |
+| `telemetry.track` | no | `event`, `properties` | records schema-validated anonymous UI or shell telemetry |
 | `hooks.test` | no | `event`, `index` | `hookTest`: dry-run execution result for a configured hook |
 | `modules.list` | optional | `sessionId?` | `moduleState`: catalog, active revisions, and surfaces |
 | `modules.marketplace` | no | `action: list/install/addSource/removeSource`, `refresh?`, `url?`, `source?`, `name?`, `revision?` | `moduleMarketplace`, `moduleState`: catalog browsing, source management, and verified installs with dependencies |
@@ -276,7 +277,7 @@ These messages originate from the sidecar wrapper (`src/app/server.ts`) or Elect
 
 | Message | Source | Payload |
 |---|---|---|
-| `status` | sidecar | workspace, Git branch, user, default provider/model, context window, providers list, skills, MCP, sandbox, `accessMode`, prompt info, shell snapshots, `configError?`, `sessions` |
+| `status` | sidecar | workspace, Git branch, user, default provider/model, context window, providers list, skills, MCP, sandbox, `accessMode`, prompt info, shell snapshots, `telemetry`, `configError?`, `sessions` |
 | `response` | sidecar and shell | `requestId`, `ok`, response payload fields or `error` |
 | `sessions.interrupted` | sidecar | `interrupted`, `resumed` |
 | `terminal.event` | sidecar | `event`: live push stream of terminal tab lists, PTY chunks, exits, and errors |

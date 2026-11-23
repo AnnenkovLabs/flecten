@@ -1,5 +1,6 @@
 import { requestAgent } from "./desktop";
 import { t } from "./i18n.svelte";
+import { trackUiAction } from "./telemetry";
 import type { AgentEvent, AgentFilePreview } from "./types";
 
 type Response = Extract<AgentEvent, { type: "response" }>;
@@ -20,6 +21,7 @@ class FileViewer {
   #request = 0;
 
   async open(path: string, line?: number): Promise<void> {
+    trackUiAction("file_viewer_open");
     const request = ++this.#request;
     const base = { path, ...(line !== undefined && line > 1 ? { line } : {}) };
     this.current = { ...base, loading: true };

@@ -57,14 +57,25 @@ export default {
   "Copy report": "Copy report",
   "Collecting report": "Collecting report",
   "Saved: {0}": ["Saved: ", 0],
-  "Send technical metrics": "Send technical metrics",
-  "Event counts, version, and platform only. No messages, files, or keys.":
-    "Event counts, version, and platform only. No messages, files, or keys.",
-  "Metrics endpoint": "Metrics endpoint",
-  "After saving this setting, use the button to send metrics. The diagnostic report stays on your computer.":
-    "After saving this setting, use the button to send metrics. The diagnostic report stays on your computer.",
+  Telemetry: "Telemetry",
+  "Send anonymous telemetry": "Send anonymous telemetry",
+  "Anonymous usage, error, and performance metrics via PostHog. No prompts, code, file paths, or keys.":
+    "Anonymous usage, error, and performance metrics via PostHog. No prompts, code, file paths, or keys.",
+  "Paused by DO_NOT_TRACK or FLECTEN_TELEMETRY=0.":
+    "Paused by DO_NOT_TRACK or FLECTEN_TELEMETRY=0.",
+  "Telemetry details": "Telemetry details",
+  Status: "Status",
+  Active: "Active",
+  "Disabled in settings": "Disabled in settings",
+  "Paused by environment": "Paused by environment",
+  "Not configured in this build": "Not configured in this build",
+  "Anonymous ID": "Anonymous ID",
+  "PostHog host": "PostHog host",
+  "Set DO_NOT_TRACK=1 or FLECTEN_TELEMETRY=0 to disable telemetry in any workspace.":
+    "Set DO_NOT_TRACK=1 or FLECTEN_TELEMETRY=0 to disable telemetry in any workspace.",
   "Could not send": "Could not send",
-  "Send metrics": "Send metrics",
+  "Send test event": "Send test event",
+  "Test event sent": "Test event sent",
   Updates: "Updates",
   "This build does not include an update feed.": "This build does not include an update feed.",
   "Up to date": "Up to date",

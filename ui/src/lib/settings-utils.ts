@@ -133,6 +133,7 @@ export function hostName(baseUrl: string): string {
 
 export function cleanSettings(input: HarnessSettings): HarnessSettings {
   const cleaned = clone(input);
+  if (cleaned.telemetry && cleaned.telemetry.endpoint === "") delete cleaned.telemetry.endpoint;
   for (const provider of Object.values(cleaned.providers)) {
     if (provider.name === "") delete provider.name;
     if (provider.apiKey === "") delete provider.apiKey;

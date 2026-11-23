@@ -94,4 +94,9 @@ export default {
   Output: "Вихід",
   "Open weights": "Відкриті ваги",
   "Files and attachments": "Файли та вкладення",
+  "Tests all endpoints and combines protocols under one provider.":
+    "Перевірить усі ендпоінти та об'єднає протоколи в одному провайдері.",
+  "Paste a domain, base URL, endpoint, or curl command.":
+    "Вставте домен, базовий URL, ендпоінт або команду curl.",
+  "Will use {0}": ["Буде використано ", 0],
 } as const;

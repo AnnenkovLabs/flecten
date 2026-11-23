@@ -87,4 +87,9 @@ export default {
   Output: "输出",
   "Open weights": "开放权重",
   "Files and attachments": "文件和附件",
+  "Tests all endpoints and combines protocols under one provider.":
+    "自动检测所有接口并将多种协议合并到同一个提供商下。",
+  "Paste a domain, base URL, endpoint, or curl command.":
+    "粘贴域名、基础 URL、完整接口地址或 curl 命令。",
+  "Will use {0}": ["将使用 ", 0],
 } as const;

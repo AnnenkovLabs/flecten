@@ -67,7 +67,7 @@ Missing OS sandbox binaries are surfaced explicitly in `status`. `grep`'s JS reg
 
 ## Auditability, Session Grants, and SSH
 
-Logs and diagnostics stay local under `.flecten/`, telemetry is opt-in counters-only ([PRIVACY.md](PRIVACY.md)), new dependencies require decision-log entries, `bun audit` runs in CI, and auto-updates verify pinned Ed25519 signatures plus SHA-512 installer hashes before user-triggered installation ([RELEASE.md](RELEASE.md)).
+Logs and diagnostics stay local under `.flecten/`, anonymous PostHog telemetry excludes prompts, paths, code, and credentials with opt-out and `DO_NOT_TRACK=1` / `FLECTEN_TELEMETRY=0` controls ([PRIVACY.md](PRIVACY.md)), new dependencies require decision-log entries, `bun audit` runs in CI, and auto-updates verify pinned Ed25519 signatures plus SHA-512 installer hashes before user-triggered installation ([RELEASE.md](RELEASE.md)).
 
 Durable `allow_session` resolutions record canonical scope/request hashes, owner session, and policy epoch in `approval.resolved`: replay restores grants only within that exact chat and policy epoch, never across new chats, forks, or legacy unhashed events.
 

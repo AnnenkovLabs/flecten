@@ -233,6 +233,9 @@ export type LeafSessionEvent =
       sessionId?: SessionId;
       code: string;
       message: string;
+      reason?: string;
+      status?: number;
+      providerCode?: string;
       /** Set when a provider limit ended the run. */
       limit?: "rate" | "five_hour" | "weekly" | "billing" | "model_quota";
       resetAt?: number;

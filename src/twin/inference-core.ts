@@ -8,11 +8,13 @@ import {
   type TwinSnapshot,
   type TwinTraceStep,
 } from "../../shared/twin";
+import type { StructuredOutputFormat } from "../config/schema";
 import { toolMessage } from "../core/loop/tool-message";
 import { safeMemoryText } from "../core/memory/sources";
 import type { ImagePart, Message, ReasoningEffort, ToolCall, Usage } from "../core/types";
 import { addUsage } from "../core/types/message";
 import { type ProviderResponse, responseOfError } from "../providers/response";
+import { TransportError } from "../providers/transport";
 import type { ModelProvider } from "../providers/types";
 import { markdownData } from "../util/markdown";
 import { TwinInferenceError } from "./inference-error";
@@ -20,6 +22,73 @@ import { twinResponse } from "./response";
 import { buildTwinTools, type TwinToolOptions } from "./tools";
 
 export type { TwinToolOptions } from "./tools";
+
+export const TWIN_DECISION_FORMAT: StructuredOutputFormat = {
+  name: "twin_decision",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: {
+      verdict: { type: "string", enum: ["pass", "revise", "ask_user"] },
+      voice: { type: "string" },
+      instructions: { type: "string" },
+      entryIds: { type: "array", items: { type: "string" } },
+      emotion: { type: "string", enum: ["calm", "pleased", "angry", "furious"] },
+    },
+    required: ["verdict", "voice", "instructions", "entryIds", "emotion"],
+    additionalProperties: false,
+  },
+};
+
+export const TWIN_EXTRACTION_FORMAT: StructuredOutputFormat = {
+  name: "twin_extraction",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: {
+      candidates: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            kind: { type: "string", enum: ["preference", "lesson", "decision"] },
+            reaction: { type: "string", enum: ["anger", "like", "delight"] },
+            strength: { type: "integer", minimum: 1, maximum: 3 },
+            voice: { type: "string" },
+            summary: { type: "string" },
+            content: { type: "string" },
+            appliesWhen: { type: "string" },
+            evidence: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  sourceMessageId: { type: "string" },
+                  quote: { type: "string" },
+                },
+                required: ["sourceMessageId", "quote"],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: [
+            "kind",
+            "reaction",
+            "strength",
+            "voice",
+            "summary",
+            "content",
+            "appliesWhen",
+            "evidence",
+          ],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ["candidates"],
+    additionalProperties: false,
+  },
+};
 
 export const proposed = TwinCandidateSchema.omit({ id: true, evidence: true }).extend({
   reaction: TwinReactionSchema,
@@ -69,6 +138,7 @@ export async function infer(
   images: ImagePart[] = [],
   toolOptions?: TwinToolOptions,
   onTrace?: (step: TwinTraceStep) => void,
+  responseFormat?: StructuredOutputFormat,
 ) {
   let text = "";
   let complete = false;
@@ -104,6 +174,7 @@ export async function infer(
   const history: Message[] = [
     { role: "user", content: data, ...(images.length ? { images } : {}) },
   ];
+  let useResponseFormat = responseFormat !== undefined;
   try {
     for (let turn = 0; turn < maxTurns; turn++) {
       signal.throwIfAborted();
@@ -114,61 +185,82 @@ export async function infer(
       complete = false;
       const toolCalls: ToolCall[] = [];
       const allowTools = toolkit.specs.length > 0 && turn + 1 < maxTurns;
-      for await (const event of target.provider.stream(
-        {
-          model: target.model,
-          system,
-          messages: history,
-          tools: allowTools ? toolkit.specs : [],
-          toolChoice: allowTools ? "auto" : "none",
-          maxTokens: 4096,
-          ...(target.reasoning ? { reasoning: target.reasoning } : {}),
-          ...(target.variant ? { variant: target.variant } : {}),
-        },
-        signal,
-      )) {
-        if (event.type === "text") {
-          text += event.delta;
-          if (text.length > 48_000) throw new Error("Twin response exceeded the output boundary");
-        }
-        if (event.type === "reasoning") {
-          reasoning += event.delta;
-          if (!reasoningNoted && reasoning.trim().length > 0) {
-            reasoningNoted = true;
-            onTrace?.({
-              id: `reasoning-${turn}`,
-              kind: "reasoning",
-              label: "Analyzing reactions and patterns",
-              status: "running",
+      const runStream = async () => {
+        for await (const event of target.provider.stream(
+          {
+            model: target.model,
+            system,
+            messages: history,
+            tools: allowTools ? toolkit.specs : [],
+            ...(allowTools ? { toolChoice: "auto" as const } : {}),
+            ...(useResponseFormat && responseFormat ? { responseFormat } : {}),
+            maxTokens: 4096,
+            ...(target.reasoning ? { reasoning: target.reasoning } : {}),
+            ...(target.variant ? { variant: target.variant } : {}),
+          },
+          signal,
+        )) {
+          if (event.type === "text") {
+            text += event.delta;
+            if (text.length > 48_000) throw new Error("Twin response exceeded the output boundary");
+          }
+          if (event.type === "reasoning") {
+            reasoning += event.delta;
+            if (!reasoningNoted && reasoning.trim().length > 0) {
+              reasoningNoted = true;
+              onTrace?.({
+                id: `reasoning-${turn}`,
+                kind: "reasoning",
+                label: "Analyzing reactions and patterns",
+                status: "running",
+              });
+            }
+          }
+          if (event.type === "usage") {
+            observed = true;
+            usage = addUsage(usage, event);
+            const provider = event.provider ?? route.provider;
+            const model = event.model ?? route.model;
+            const price =
+              target.priceFor?.(provider, model) ??
+              (provider === target.providerId && model === target.model ? target.price : undefined);
+            const costUsd = price?.(event);
+            charges.push({ ...event, ...(costUsd === undefined ? {} : { costUsd }) });
+          }
+          if (event.type === "route") route = { provider: event.provider, model: event.model };
+          if (event.type === "response") recordResponse(event.response);
+          if (event.type === "done" && event.response) recordResponse(event.response);
+          signal.throwIfAborted();
+          if (event.type === "tool_call") {
+            if (!allowTools) throw new Error("Twin extraction cannot execute tools");
+            toolCalls.push({
+              id: event.id,
+              name: event.name,
+              args: event.args,
+              ...(event.extraContent === undefined ? {} : { extraContent: event.extraContent }),
             });
           }
+          if (event.type === "done") {
+            complete = event.reason === "end" || (allowTools && event.reason === "tool_use");
+          }
         }
-        if (event.type === "usage") {
-          observed = true;
-          usage = addUsage(usage, event);
-          const provider = event.provider ?? route.provider;
-          const model = event.model ?? route.model;
-          const price =
-            target.priceFor?.(provider, model) ??
-            (provider === target.providerId && model === target.model ? target.price : undefined);
-          const costUsd = price?.(event);
-          charges.push({ ...event, ...(costUsd === undefined ? {} : { costUsd }) });
-        }
-        if (event.type === "route") route = { provider: event.provider, model: event.model };
-        if (event.type === "response") recordResponse(event.response);
-        if (event.type === "done" && event.response) recordResponse(event.response);
-        signal.throwIfAborted();
-        if (event.type === "tool_call") {
-          if (!allowTools) throw new Error("Twin extraction cannot execute tools");
-          toolCalls.push({
-            id: event.id,
-            name: event.name,
-            args: event.args,
-            ...(event.extraContent === undefined ? {} : { extraContent: event.extraContent }),
-          });
-        }
-        if (event.type === "done") {
-          complete = event.reason === "end" || (allowTools && event.reason === "tool_use");
+      };
+      try {
+        await runStream();
+      } catch (streamError) {
+        if (
+          useResponseFormat &&
+          streamError instanceof TransportError &&
+          (streamError.status === 400 || streamError.status === 422)
+        ) {
+          useResponseFormat = false;
+          text = "";
+          reasoning = "";
+          complete = false;
+          toolCalls.length = 0;
+          await runStream();
+        } else {
+          throw streamError;
         }
       }
       if (reasoningNoted) {
@@ -298,6 +390,8 @@ export async function delegate(
       ...(image.name === undefined ? {} : { name: image.name }),
     })),
     toolOptions ?? (target.cwd ? { cwd: target.cwd } : undefined),
+    undefined,
+    TWIN_DECISION_FORMAT,
   );
   return checked(target, result.usage, () => {
     const decision = TwinDecisionSchema.parse({

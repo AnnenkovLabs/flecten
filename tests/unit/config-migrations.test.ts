@@ -81,7 +81,7 @@ describe("config migrations", () => {
       autoDownload: true,
       installOnQuit: true,
     });
-    expect(config.telemetry).toEqual({ enabled: false });
+    expect(config.telemetry).toEqual({ enabled: true });
     expect(config).not.toHaveProperty("plugins");
     expect(config.commands).toEqual({ dirs: [] });
     expect(config.modes).toEqual({ dirs: [] });

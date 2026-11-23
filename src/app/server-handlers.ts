@@ -2,6 +2,7 @@ import { AccessModeSchema } from "../../shared/access-mode";
 import { configPath } from "../config/load";
 import { isReasoningEffort } from "../core/types";
 import { DiagnosticsRuntime } from "../observability/runtime";
+import type { TelemetryRuntime } from "../observability/telemetry";
 import { invalidateProviderAuthorization } from "../providers/registry";
 import { isObject } from "../util/json";
 import {
@@ -50,6 +51,7 @@ const APP_COMMANDS = [
   "hooks.test",
   "diagnostics.export",
   "telemetry.send",
+  "telemetry.track",
   "catalog.list",
   "catalog.provider",
   "catalog.status",
@@ -137,9 +139,10 @@ export function createHandlers(
   app: AppService,
   onRunError: RunErrorReporter,
   diagnostics?: DiagnosticsRuntime,
+  telemetry?: TelemetryRuntime,
 ): Record<CommandType, Handler> {
   return {
-    ...appHandlers(app, diagnostics),
+    ...appHandlers(app, diagnostics, telemetry),
     ...sessionHandlers(app, onRunError),
     ...extensionHandlers(app),
     ...moduleHandlers(app),
@@ -151,6 +154,7 @@ export function createHandlers(
 function appHandlers(
   app: AppService,
   diagnostics?: DiagnosticsRuntime,
+  telemetry?: TelemetryRuntime,
 ): Record<(typeof APP_COMMANDS)[number], Handler> {
   return {
     "projects.list": async () => ({ projects: await projectList(app) }),
@@ -162,10 +166,17 @@ function appHandlers(
       ),
     }),
     "telemetry.send": async () => {
-      await (diagnostics ?? new DiagnosticsRuntime(app.info().cwd)).telemetry(
-        app.settings().config,
-      );
+      if (telemetry) await telemetry.sendManual();
+      else {
+        await (diagnostics ?? new DiagnosticsRuntime(app.info().cwd)).telemetry(
+          app.settings().config,
+        );
+      }
       return {};
+    },
+    "telemetry.track": (command) => {
+      telemetry?.trackClient(command);
+      return typeof command.requestId === "string" ? {} : undefined;
     },
     hello: () => undefined,
     "context.pull-request": async (command) => ({
@@ -234,7 +245,14 @@ function appHandlers(
       };
       return { session: await app.forkSession(id, options) };
     },
-    "settings.get": () => ({ settings: app.settings() }),
+    "settings.get": () => {
+      const payload = app.settings();
+      return {
+        settings: telemetry
+          ? { ...payload, info: { ...payload.info, telemetry: telemetry.status() } }
+          : payload,
+      };
+    },
     "access.set": async (command) => ({
       info: await app.setAccessMode(AccessModeSchema.parse(command.mode)),
     }),
@@ -271,8 +289,12 @@ function appHandlers(
       result: await app.inspectProvider(required(command, "baseUrl").trim()),
     }),
     "provider.discover": async (command) => {
-      const protocol = PROTOCOLS.find((item) => item === command.protocol);
-      if (!protocol) throw new Error(`protocol must be ${PROTOCOLS.join(", ")}`);
+      const rawProtocol = command.protocol;
+      const protocol =
+        rawProtocol === undefined || rawProtocol === "auto"
+          ? "auto"
+          : PROTOCOLS.find((item) => item === rawProtocol);
+      if (!protocol) throw new Error(`protocol must be auto or ${PROTOCOLS.join(", ")}`);
       const apiKey = typeof command.apiKey === "string" ? command.apiKey : "";
       const extra = headers(command.headers);
       const result = await app.discover({

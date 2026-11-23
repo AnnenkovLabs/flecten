@@ -58,14 +58,25 @@ export default {
   "Copy report": "Скопировать отчёт",
   "Collecting report": "Сбор отчёта",
   "Saved: {0}": ["Сохранён: ", 0],
-  "Send technical metrics": "Отправлять технические счётчики",
-  "Event counts, version, and platform only. No messages, files, or keys.":
-    "Только число событий, версия и платформа. Без сообщений, файлов и ключей.",
-  "Metrics endpoint": "Адрес для отправки статистики",
-  "After saving this setting, use the button to send metrics. The diagnostic report stays on your computer.":
-    "После сохранения настроек счётчики можно отправить кнопкой. Диагностический отчёт остаётся на компьютере.",
+  Telemetry: "Телеметрия",
+  "Send anonymous telemetry": "Отправлять анонимную телеметрию",
+  "Anonymous usage, error, and performance metrics via PostHog. No prompts, code, file paths, or keys.":
+    "Анонимные метрики использования, ошибок и скорости через PostHog. Без промтов, кода, путей и ключей.",
+  "Paused by DO_NOT_TRACK or FLECTEN_TELEMETRY=0.":
+    "Остановлено переменной DO_NOT_TRACK или FLECTEN_TELEMETRY=0.",
+  "Telemetry details": "Подробности телеметрии",
+  Status: "Статус",
+  Active: "Активна",
+  "Disabled in settings": "Отключена в настройках",
+  "Paused by environment": "Отключена окружением",
+  "Not configured in this build": "Не настроена в этой сборке",
+  "Anonymous ID": "Анонимный ID",
+  "PostHog host": "Адрес PostHog",
+  "Set DO_NOT_TRACK=1 or FLECTEN_TELEMETRY=0 to disable telemetry in any workspace.":
+    "Задай DO_NOT_TRACK=1 или FLECTEN_TELEMETRY=0, чтобы отключить телеметрию в любом проекте.",
   "Could not send": "Не удалось отправить",
-  "Send metrics": "Отправить счётчики",
+  "Send test event": "Отправить тестовое событие",
+  "Test event sent": "Тестовое событие отправлено",
   Updates: "Обновления",
   "This build does not include an update feed.": "В этой сборке нет источника обновлений.",
   "Up to date": "Установлена последняя версия",

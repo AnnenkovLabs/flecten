@@ -33,9 +33,15 @@ const LIMITED_MARKERS = new Set([
   "rate_limit_error",
   "rate_limit_exceeded",
   "rate_limited",
+  "upstream_rate_limited",
+  "requests_per_minute_exceeded",
   "too_many_requests",
   "resource_exhausted",
   "quota_exceeded",
+  "overloaded",
+  "overloaded_error",
+  "service_unavailable",
+  "capacity_exceeded",
 ]);
 
 /** Subscription usage windows: ChatGPT/Codex `usage_limit_reached`. */

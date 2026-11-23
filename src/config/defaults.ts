@@ -136,7 +136,7 @@ export function defaultConfig(): HarnessConfig {
     },
     budgets: {},
     update: { channel: "beta", autoCheck: true, autoDownload: true, installOnQuit: true },
-    telemetry: { enabled: false },
+    telemetry: { enabled: true },
     commands: { dirs: [] },
     modes: { dirs: [] },
     subagents: { dirs: [] },

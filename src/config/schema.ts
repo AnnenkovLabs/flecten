@@ -170,6 +170,14 @@ export const TransportConfigSchema = z.object({
 export const ProviderConfigSchema = z
   .object({
     protocol: ProtocolSchema,
+    protocolBaseUrls: z
+      .object({
+        "openai-chat": z.string().min(1).optional(),
+        "openai-responses": z.string().min(1).optional(),
+        "anthropic-messages": z.string().min(1).optional(),
+        gemini: z.string().min(1).optional(),
+      })
+      .optional(),
     protection: ProviderProtectionSchema.optional(),
     baseUrl: z.string().min(1),
     proxy: z.string().min(1).optional(),

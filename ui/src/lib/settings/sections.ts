@@ -241,7 +241,14 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
     },
     icon: "mark",
     get fields() {
-      return [t("Version"), t("Directory"), t("Secrets"), t("Diagnostics"), t("Report")];
+      return [
+        t("Version"),
+        t("Directory"),
+        t("Secrets"),
+        t("Diagnostics"),
+        t("Report"),
+        t("Telemetry"),
+      ];
     },
   },
 ];

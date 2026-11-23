@@ -1,4 +1,4 @@
-import type { ModelConfig, ProviderConfig } from "../config/schema";
+import type { ModelConfig, ProviderConfig, StructuredOutputFormat } from "../config/schema";
 import type { Message, ReasoningEffort, ToolCall } from "../core/types";
 import type { ProviderResponse } from "./response";
 import type { ProviderFetch } from "./transport";
@@ -24,6 +24,7 @@ export interface ModelRequest {
   toolChoice?: "auto" | "required" | "none";
   parallelToolCalls?: boolean;
   promptCacheKey?: string;
+  responseFormat?: StructuredOutputFormat;
 }
 
 export type ModelEvent =

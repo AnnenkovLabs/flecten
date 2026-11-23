@@ -82,6 +82,7 @@
   "subagent.stop",
   "summary.interaction",
   "telemetry.send",
+  "telemetry.track",
   "tool.cancel",
   "trust.accept",
   "trust.reject",

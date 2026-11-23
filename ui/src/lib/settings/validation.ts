@@ -1,4 +1,5 @@
 import { HOOK_NAMES } from "../../../../shared/hooks";
+import { cleanProviderBaseUrl } from "../../../../shared/provider-url";
 import { canDescribeImages } from "../../../../shared/vision";
 import { t } from "../i18n.svelte";
 import { cleanSettings, clone, contextIssue } from "../settings-utils";
@@ -200,12 +201,11 @@ export function prepareSettingsForSave(
 }
 
 export function providerIssue(provider: ProviderSettings): string {
-  try {
-    const url = new URL(provider.baseUrl);
-    if (url.protocol !== "http:" && url.protocol !== "https:")
-      return t("Only http and https are supported.");
-  } catch {
-    return t("Enter the full API URL.");
+  const cleaned = cleanProviderBaseUrl(provider.baseUrl);
+  if (!cleaned.ok) {
+    return cleaned.error === "unsupported_scheme"
+      ? t("Only http and https are supported.")
+      : t("Enter the full API URL.");
   }
   const timeout = numberIssue(provider.transportTimeoutMs, 1000, 600_000);
   if (timeout) return t("Request timeout: {0}", [timeout]);

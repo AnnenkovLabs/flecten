@@ -285,6 +285,7 @@ export interface ProviderInfo {
 export interface ProviderSettings {
   protection?: import("../../../shared/provider-protection").ProviderProtection;
   protocol: ProviderProtocol;
+  protocolBaseUrls?: Partial<Record<ProviderProtocol, string>>;
   baseUrl: string;
   proxy?: string;
   transportTimeoutMs?: number;
@@ -472,6 +473,8 @@ export interface DiscoverResult {
   providerName: string;
   protocol: ProviderProtocol;
   baseUrl: string;
+  protocolBaseUrls?: Partial<Record<ProviderProtocol, string>>;
+  detectedProtocols?: ProviderProtocol[];
   models: Record<string, ModelInfo>;
   warnings: string[];
 }
@@ -480,6 +483,8 @@ export interface ProviderTestResult {
   ok: boolean;
   message: string;
   latencyMs: number;
+  errorKind?: string;
+  status?: number;
 }
 
 export interface CatalogStatus {

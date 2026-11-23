@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { trackUiAction } from "./telemetry";
 
 export const INTERFACE_SCALE = { min: 75, max: 125, step: 5, default: 100 } as const;
 const KEY = "flecten.interfaceScale";
@@ -33,6 +34,7 @@ export function setInterfaceScale(value: unknown): void {
   if (!parsed.success) return;
   interfaceScale.percent = parsed.data;
   window.desktop?.setInterfaceScale?.(parsed.data);
+  trackUiAction("scale_changed");
   try {
     localStorage.setItem(KEY, String(parsed.data));
   } catch {

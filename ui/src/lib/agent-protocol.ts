@@ -276,6 +276,7 @@ export type AgentCommand =
     }
   | { type: "dictionary.forget"; requestId: string; id: string; expectedRevision: number }
   | { type: "diagnostics.export" | "telemetry.send"; requestId: string }
+  | import("../../../shared/telemetry").TelemetryTrackCommand
   | {
       type: "hooks.test";
       requestId: string;

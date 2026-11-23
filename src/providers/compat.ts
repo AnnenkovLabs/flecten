@@ -41,6 +41,26 @@ export function requestHeaders(
   return { ...runtime.headers, ...model?.headers, ...variant?.headers };
 }
 
+export function hasHeader(headers: Record<string, string>, name: string): boolean {
+  const needle = name.toLowerCase();
+  return Object.keys(headers).some((key) => key.toLowerCase() === needle);
+}
+
+export function supportsPromptCacheKey(
+  runtime: { providerId: string; baseUrl: string; config: { promptCacheKey?: string | undefined } },
+  model: ModelConfig | undefined,
+): boolean {
+  if (runtime.config.promptCacheKey) return true;
+  if (model?.promptCache === true || model?.compat?.promptCaching === true) return true;
+  if (runtime.providerId === "openai") return true;
+  const url = runtime.baseUrl.toLowerCase();
+  return (
+    url.includes("api.openai.com") ||
+    url.includes("chatgpt.com") ||
+    url.includes("openai.azure.com")
+  );
+}
+
 export function requestExtra(
   runtime: { config: { extraBody?: Record<string, unknown> | undefined } },
   model: ModelConfig | undefined,
@@ -195,16 +215,23 @@ export function effortField(
   model: ModelConfig | undefined,
   effort: ReasoningEffort | undefined,
 ): Record<string, unknown> {
-  if (!effort || effort === "none") return {};
+  if (!effort) return {};
   if (model?.reasoning === false) return {};
   if (reasoningMode(model) !== "effort") return {};
+  if (effort === "none") {
+    return model?.reasoningLevels?.includes("none") ? { reasoning_effort: "none" } : {};
+  }
   const fixedThinking = ["kimi-k2.6", "kimi-k2.7"].some((name) => modelId.includes(name));
   if (runtime.providerId === "moonshotai" && fixedThinking) return {};
   return { reasoning_effort: normalizeEffort(effort, model) };
 }
 
-export function budgetFor(effort: ReasoningEffort, maxTokens: number): number {
-  const target = BUDGETS[effort] ?? BUDGETS.medium;
+export function budgetFor(
+  effort: ReasoningEffort,
+  maxTokens: number,
+  configuredBudget?: number,
+): number {
+  const target = configuredBudget ?? BUDGETS[effort] ?? BUDGETS.medium;
   if (target === 0) return 0;
   if (maxTokens <= 1024) return 0;
   return Math.max(1024, Math.min(target, maxTokens - 1024));
@@ -240,7 +267,7 @@ export function geminiThinking(
     return {
       thinkingConfig: {
         includeThoughts: effort !== "none",
-        thinkingBudget: effort === "none" ? 0 : budgetFor(effort, 32768),
+        thinkingBudget: effort === "none" ? 0 : budgetFor(effort, 32768, model?.reasoningBudget),
       },
     };
   }
