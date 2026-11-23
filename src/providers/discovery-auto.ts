@@ -68,9 +68,13 @@ async function fetchListJson(
     if (!response.ok) return { ok: false, status: response.status, error: text.slice(0, 300) };
     return { ok: true, status: response.status, data: JSON.parse(text) as unknown };
   } catch (error) {
+    const status =
+      typeof (error as { status?: unknown })?.status === "number"
+        ? (error as { status: number }).status
+        : 0;
     return {
       ok: false,
-      status: 0,
+      status,
       error: error instanceof Error ? error.message : String(error),
     };
   }
@@ -101,6 +105,7 @@ async function scanOpenAi(
   root: string,
   headers: Record<string, string>,
   fetchFn: ProviderFetch,
+  statuses: number[],
 ): Promise<EndpointScan | undefined> {
   const bases = unique([
     base,
@@ -109,7 +114,10 @@ async function scanOpenAi(
   ]);
   for (const candidate of bases) {
     const res = await fetchListJson(endpoint(candidate, "/models"), headers, fetchFn);
-    if (!res.ok) continue;
+    if (!res.ok) {
+      if (res.status > 0) statuses.push(res.status);
+      continue;
+    }
     const parsed = OpenAiListSchema.safeParse(res.data);
     if (!parsed.success) continue;
     const items = Array.isArray(parsed.data)
@@ -125,11 +133,15 @@ async function scanAnthropic(
   root: string,
   headers: Record<string, string>,
   fetchFn: ProviderFetch,
+  statuses: number[],
 ): Promise<EndpointScan | undefined> {
   const bases = unique([base, root, `${root}/anthropic`]);
   for (const candidate of bases) {
     const res = await fetchListJson(endpoint(candidate, "/v1/models"), headers, fetchFn);
-    if (!res.ok) continue;
+    if (!res.ok) {
+      if (res.status > 0) statuses.push(res.status);
+      continue;
+    }
     const parsed = DataListSchema.safeParse(res.data);
     if (!parsed.success) continue;
     if (parsed.data.data.length > 0) return { baseUrl: candidate, items: parsed.data.data };
@@ -143,6 +155,7 @@ async function scanGemini(
   headers: Record<string, string>,
   apiKey: string | undefined,
   fetchFn: ProviderFetch,
+  statuses: number[],
 ): Promise<EndpointScan | undefined> {
   const bases = unique([
     base.toLowerCase().endsWith("/v1beta") || base.toLowerCase().endsWith("/v1alpha") ? base : "",
@@ -153,7 +166,10 @@ async function scanGemini(
     const url = new URL(`${candidate}/models`);
     if (apiKey && !hasHeader(headers, "x-goog-api-key")) url.searchParams.set("key", apiKey);
     const res = await fetchListJson(url.toString(), headers, fetchFn);
-    if (!res.ok) continue;
+    if (!res.ok) {
+      if (res.status > 0) statuses.push(res.status);
+      continue;
+    }
     const parsed = ModelsListSchema.safeParse(res.data);
     if (!parsed.success) continue;
     if (parsed.data.models.length > 0) return { baseUrl: candidate, items: parsed.data.models };
@@ -237,13 +253,22 @@ export async function discoverAutoEndpoints(
     geminiHeaders["x-goog-api-key"] = apiKey;
   }
 
+  const statuses: number[] = [];
   const [openAiScan, anthScan, geminiScan] = await Promise.all([
-    scanOpenAi(base, root, openAiHeaders, fetchFn),
-    scanAnthropic(base, root, anthHeaders, fetchFn),
-    scanGemini(base, root, geminiHeaders, apiKey, fetchFn),
+    scanOpenAi(base, root, openAiHeaders, fetchFn, statuses),
+    scanAnthropic(base, root, anthHeaders, fetchFn, statuses),
+    scanGemini(base, root, geminiHeaders, apiKey, fetchFn, statuses),
   ]);
 
   if (!openAiScan && !anthScan && !geminiScan) {
+    const authStatus = statuses.find((code) => code === 401 || code === 403);
+    if (authStatus !== undefined) {
+      throw new Error(`cannot read models from ${base}: HTTP ${authStatus}`);
+    }
+    const serverStatus = statuses.find((code) => code === 429 || code >= 500);
+    if (serverStatus !== undefined) {
+      throw new Error(`cannot read models from ${base}: HTTP ${serverStatus}`);
+    }
     throw new Error(
       `cannot read models from ${base}: none of OpenAI, Anthropic, or Gemini model endpoints responded`,
     );

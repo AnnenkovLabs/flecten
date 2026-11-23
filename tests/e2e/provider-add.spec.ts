@@ -121,7 +121,7 @@ test("custom providers can skip discovery and persist manual models after a 401"
     await dialog.getByRole("button", { name: "Свой сервер", exact: true }).click();
     const checkbox = dialog.getByRole("checkbox");
     await expect(checkbox).toBeChecked();
-    await dialog.getByPlaceholder("https://api.example.com/v1", { exact: true }).fill(baseUrl);
+    await dialog.getByPlaceholder("api.example.com", { exact: true }).fill(baseUrl);
     await dialog.getByLabel("Ключ API", { exact: true }).fill("qa-restricted-router-key");
     await dialog.getByRole("button", { name: "Подключить и найти модели", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText("401");
@@ -135,7 +135,7 @@ test("custom providers can skip discovery and persist manual models after a 401"
     await auditAddDialog(h, dialog, checkbox);
     await expect(checkbox).not.toBeChecked();
     const add = dialog.getByRole("button", { name: "Добавить без проверки", exact: true });
-    const url = dialog.getByPlaceholder("https://api.example.com/v1", { exact: true });
+    const url = dialog.getByPlaceholder("api.example.com", { exact: true });
     await url.fill("not-a-url");
     if (await add.isEnabled()) await add.click();
     await expect(dialog).toBeVisible();

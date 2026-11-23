@@ -47,7 +47,7 @@ test("gateway consent requires a decision, scopes protection and persists its ad
     const add = page.getByRole("dialog", { name: "Добавить провайдера", exact: true });
     await add.getByRole("button", { name: "Свой сервер", exact: true }).click();
     await add.getByRole("checkbox").uncheck();
-    await add.getByPlaceholder("https://api.example.com/v1", { exact: true }).fill(baseUrl);
+    await add.getByPlaceholder("api.example.com", { exact: true }).fill(baseUrl);
     await add
       .getByLabel("Ключ API", { exact: true })
       .fill("fixture-secret-must-not-reach-public-probes");
