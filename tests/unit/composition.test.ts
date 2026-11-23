@@ -302,10 +302,8 @@ describe("app service composition", () => {
         env: { LOCAL_TOKEN: "[saved]" },
       });
       expect(payload.info.memory.records).toBe(1);
-      expect(payload.info.sandbox.enabled).toBe(process.platform !== "win32");
-      expect(payload.info.sandbox.available).toBe(
-        !payload.info.sandbox.enabled || payload.info.sandbox.kind !== "none",
-      );
+      expect(payload.info.sandbox.enabled).toBe(true);
+      expect(payload.info.sandbox.available).toBe(payload.info.sandbox.kind !== "none");
       expect(payload.info.sandbox.warning !== undefined).toBe(!payload.info.sandbox.available);
 
       const result = (await service.session.send({

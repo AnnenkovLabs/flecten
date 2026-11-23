@@ -235,7 +235,7 @@
     if (atBottom) {
       seenMessages = messageCount;
       unread = 0;
-      followEnd();
+      untrack(() => followEnd());
       return;
     }
     unread = Math.max(0, messageCount - seenMessages);

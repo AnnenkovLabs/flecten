@@ -160,14 +160,19 @@ test("long threads mount a bounded window while search, task restoration and fol
     // smoothly upward without snapping back toward the bottom.
     const scroller = h.page.locator(".thread");
     await scroller.hover();
+    const anchorOrder = (id: string): number => {
+      const [kind, raw] = id.split(":");
+      const n = Number(raw);
+      return kind === "message" || kind === "answer" ? n : 401 + n;
+    };
     const initialAnchor = await anchor(h.page);
-    const initialIndex = Number(initialAnchor.id.split(":")[1]);
+    const initialIndex = anchorOrder(initialAnchor.id);
     let previousIndex = initialIndex;
     for (let step = 0; step < 12; step += 1) {
       await h.page.mouse.wheel(0, -320);
       await h.page.waitForTimeout(40);
       const current = await anchor(h.page);
-      const currentIndex = Number(current.id.split(":")[1]);
+      const currentIndex = anchorOrder(current.id);
       expect(currentIndex).toBeLessThanOrEqual(previousIndex + 1);
       previousIndex = Math.min(previousIndex, currentIndex);
     }

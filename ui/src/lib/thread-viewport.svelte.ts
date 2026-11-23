@@ -20,6 +20,7 @@ function sameRange(a: ThreadRange, b: ThreadRange): boolean {
 export class ThreadViewport {
   readonly window = new ThreadWindow();
   #range = $state<ThreadRange>({ start: 0, end: 0, before: 0, after: 0 });
+  #lastRange: ThreadRange = { start: 0, end: 0, before: 0, after: 0 };
   #top = 0;
   #height = 600;
   #insetValue = 0;
@@ -128,12 +129,44 @@ export class ThreadViewport {
 
   /** Measure mounted rows right after a window slice renders so scroll compensation runs before paint. */
   syncAfterRender(): void {
-    if (!this.#scroller || !this.#content || this.#scroller.clientHeight === 0) return;
-    if (this.#frame) {
-      cancelAnimationFrame(this.#frame);
-      this.#frame = 0;
+    const scroller = this.#scroller;
+    const content = this.#content;
+    if (!scroller || !content || scroller.clientHeight === 0) return;
+    this.refreshInset();
+    this.#height = scroller.clientHeight;
+    this.#top = Math.max(0, scroller.scrollTop - this.#insetValue);
+    if (this.#width > 0 && Math.abs(content.clientWidth - this.#width) > 1) {
+      this.#schedule();
+      return;
     }
-    this.#measure();
+    this.#width = content.clientWidth;
+    const first = this.window.indexAt(this.#top);
+    let deltaAbove = 0;
+    let changed = false;
+    for (const [id, element] of this.#rows) {
+      if (!element.isConnected) continue;
+      const index = this.window.indexOf(id);
+      const previous = this.window.heightOf(id);
+      if (this.window.measure(id, element.getBoundingClientRect().height)) {
+        changed = true;
+        if (index !== undefined && index < first) {
+          deltaAbove += this.window.heightOf(id) - previous;
+        }
+      }
+    }
+    if (this.#follow()) {
+      scroller.scrollTop = scroller.scrollHeight;
+      this.#onAdjust(scroller.scrollTop);
+      if (changed) this.#schedule();
+      return;
+    }
+    if (Math.abs(deltaAbove) >= 0.5) {
+      const nextTop = Math.max(0, scroller.scrollTop + deltaAbove);
+      scroller.scrollTop = nextTop;
+      this.#onAdjust(nextTop);
+      this.#top = Math.max(0, nextTop - this.#insetValue);
+    }
+    if (changed) this.#schedule();
   }
 
   anchor(): ThreadAnchor | undefined {
@@ -169,7 +202,10 @@ export class ThreadViewport {
 
   #updateRange(): void {
     const next = this.window.range(this.#top, this.#height);
-    if (!sameRange(this.#range, next)) this.#range = next;
+    if (!sameRange(this.#lastRange, next)) {
+      this.#lastRange = next;
+      this.#range = next;
+    }
   }
 
   #schedule(): void {

@@ -26,7 +26,7 @@ test("skill sources can be selected, saved and discarded at both window sizes", 
     const sources = section.locator(".st-group").getByRole("checkbox");
     const loadedSkill = (name: string) =>
       section.locator(".st-details > summary").filter({ hasText: name });
-    await expect(sources).toHaveCount(6);
+    await expect(sources).toHaveCount(7);
     for (const checkbox of await sources.all()) await checkbox.uncheck();
     await expect(section.getByText("Все источники отключены.", { exact: false })).toBeVisible();
     await section.getByRole("checkbox", { name: "~/.agents/skills", exact: true }).check();
