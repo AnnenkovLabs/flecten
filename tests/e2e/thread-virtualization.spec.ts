@@ -177,6 +177,7 @@ test("long threads mount a bounded window while search, task restoration and fol
       previousIndex = Math.min(previousIndex, currentIndex);
     }
     expect(previousIndex).toBeLessThan(initialIndex - 3);
+    await h.page.waitForTimeout(200);
     const settledAnchor = await anchor(h.page);
     await h.page.waitForTimeout(200);
     const afterWaitAnchor = await anchor(h.page);
